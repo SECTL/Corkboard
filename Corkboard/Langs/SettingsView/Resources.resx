@@ -18,6 +18,18 @@
   <data name="SettingsView_RestartRequired" xml:space="preserve">
     <value>该设置需要重启程序后生效</value>
   </data>
+  <data name="SettingsView_NeedsRestarting" xml:space="preserve">
+    <value>需要重启</value>
+  </data>
+  <data name="SettingsView_NeedsRestartingMessage" xml:space="preserve">
+    <value>部分设置需要重启以应用更改</value>
+  </data>
+  <data name="SettingsView_NeedsRestartingTooltip" xml:space="preserve">
+    <value>部分设置需要重启才能生效，点击以重启应用</value>
+  </data>
+  <data name="SettingsView_RestartNow" xml:space="preserve">
+    <value>重启</value>
+  </data>
   <data name="SettingsView_NoResult" xml:space="preserve">
     <value>没有匹配的设置项</value>
   </data>

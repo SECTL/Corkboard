@@ -64,4 +64,38 @@ public static class PageItemsExtensions
 
         return navigationViewItems;
     }
+
+    /// <summary>
+    ///     展开包含 <paramref name="item" /> 的分组项，返回是否真的展开了分组。
+    /// </summary>
+    /// <remarks>
+    ///     <para>
+    ///         FluentAvalonia 的 <c>FANavigationView</c> 必须先实例化出选中项的容器，才能给它做选择动画。
+    ///         折叠分组里的子项不会生成容器，于是 <c>AnimateSelectionChanged</c> 会把自己无限重新投递到
+    ///         Dispatcher：UI 线程被自己的消息循环饿死，窗口被系统判定为无响应（卡死），CPU 也会被打满。
+    ///     </para>
+    ///     <para>
+    ///         因此选中分组内的页面前，必须先把祖先分组展开（并在展开后走一次布局，容器才会实例化）。
+    ///     </para>
+    /// </remarks>
+    public static bool ExpandGroupsContaining(
+        this IEnumerable<FANavigationViewItemBase> navigationItems,
+        FANavigationViewItemBase item)
+    {
+        var expanded = false;
+        foreach (var navigationItem in navigationItems)
+        {
+            if (navigationItem is not FANavigationViewItem group || group.IsExpanded)
+                continue;
+
+            var children = group.MenuItems;
+            if (children is null || !children.Contains(item))
+                continue;
+
+            group.IsExpanded = true;
+            expanded = true;
+        }
+
+        return expanded;
+    }
 }

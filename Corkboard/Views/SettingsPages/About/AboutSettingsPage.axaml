@@ -2,33 +2,30 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fa="using:FluentAvalonia.UI.Controls"
              xmlns:vm="using:Corkboard.ViewModels.SettingsPages"
              xmlns:core="using:Corkboard.Core.Langs.Common"
              mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="450"
              x:Class="Corkboard.Views.SettingsPages.About.AboutSettingsPage"
              x:DataType="vm:AboutSettingsPageViewModel">
     <ScrollViewer>
-        <StackPanel Margin="12" Spacing="12">
-            <TextBlock Classes="h1" Text="{x:Static core:Resources.Settings_About_Title}" />
+        <StackPanel Classes="page-container">
+            <fa:FASettingsExpander Header="{Binding AppName}"
+                                   Description="{x:Static core:Resources.Settings_About_License}">
+                <Grid Margin="0 4 0 0"
+                      ColumnDefinitions="Auto,*"
+                      RowDefinitions="Auto,Auto,Auto"
+                      ColumnSpacing="12" RowSpacing="4">
+                    <TextBlock Grid.Row="0" Grid.Column="0" Text="{x:Static core:Resources.Settings_About_Version}" />
+                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Version}" />
 
-            <Border Classes="card">
-                <StackPanel Spacing="8">
-                    <TextBlock Classes="h2" Text="{Binding AppName}" />
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Commit" />
+                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Commit}" />
 
-                    <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="4">
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="{x:Static core:Resources.Settings_About_Version}" />
-                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Version}" />
-
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Commit" />
-                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Commit}" />
-
-                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Runtime" />
-                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Platform}" />
-                    </Grid>
-
-                    <TextBlock Classes="caption" Text="{x:Static core:Resources.Settings_About_License}" />
-                </StackPanel>
-            </Border>
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Runtime" />
+                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Platform}" />
+                </Grid>
+            </fa:FASettingsExpander>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

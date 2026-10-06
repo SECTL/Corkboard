@@ -1,0 +1,59 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:core="clr-namespace:Corkboard.Core"
+        xmlns:icons="clr-namespace:Corkboard.Core.Icons">
+    <!--
+        标题栏返回按钮：按钮挂 Classes="nav-back"，箭头由这个模板画，不给 Content 塞字形。
+        沿用上游 SecRandom-C 的写法（Core/Styles/NavigationBackButton.axaml），这样：
+        1. 字形只有一个来源（icons:FluentIcons.ArrowLeftFilled，码位来自 Fluent System Icons 映射表），
+           不会出现「照抄 Segoe MDL2 码位画成别的图标」这种错；
+        2. 图标字体固定为 GlobalConstants.FluentIconsFontFamily，不受应用字体（MiSans）影响。
+    -->
+    <Style Selector="Button.nav-back">
+        <Setter Property="Theme" Value="{StaticResource PaneToggleButtonStyle}" />
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Border Name="LayoutRoot"
+                        Background="{TemplateBinding Background}"
+                        Margin="{TemplateBinding Padding}"
+                        Height="{TemplateBinding MinHeight}"
+                        HorizontalAlignment="Stretch"
+                        CornerRadius="{DynamicResource ControlCornerRadius}">
+                    <Grid Name="ContentRoot" ColumnDefinitions="Auto,*">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="{DynamicResource PaneToggleButtonHeightGridLength}" />
+                        </Grid.RowDefinitions>
+
+                        <Border Width="{TemplateBinding MinWidth}">
+                            <Viewbox Name="IconHost"
+                                     Width="16" Height="16"
+                                     HorizontalAlignment="Center"
+                                     VerticalAlignment="{TemplateBinding VerticalContentAlignment}">
+                                <TextBlock Name="Icon"
+                                           Text="{x:Static icons:FluentIcons.ArrowLeftFilled}"
+                                           FontFamily="{x:Static core:GlobalConstants.FluentIconsFontFamily}"
+                                           FontSize="{TemplateBinding FontSize}"
+                                           RenderTransformOrigin="100%, 50%"
+                                           RenderTransform="none">
+                                    <TextBlock.Transitions>
+                                        <Transitions>
+                                            <TransformOperationsTransition Duration="00:00:00.083"
+                                                                           Property="RenderTransform" />
+                                        </Transitions>
+                                    </TextBlock.Transitions>
+                                </TextBlock>
+                            </Viewbox>
+                        </Border>
+
+                        <ContentPresenter Name="ContentPresenter"
+                                          VerticalContentAlignment="Center"
+                                          Content="{TemplateBinding Content}"
+                                          FontSize="{TemplateBinding FontSize}"
+                                          Padding="4,0,0,0"
+                                          Grid.Column="1" />
+                    </Grid>
+                </Border>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+</Styles>

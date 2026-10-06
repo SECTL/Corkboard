@@ -7,7 +7,7 @@ using Corkboard.ViewModels.SettingsPages;
 
 namespace Corkboard.Views.SettingsPages.About;
 
-[PageInfo("settings.about", FluentIcons.InfoFilled, groupId: "settings.about")]
+[PageInfo("settings.about", FluentIcons.InfoFilled)]
 public partial class AboutSettingsPage : UserControl
 {
     public AboutSettingsPage()
