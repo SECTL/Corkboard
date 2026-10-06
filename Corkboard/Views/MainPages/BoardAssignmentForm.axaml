@@ -1,0 +1,341 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Corkboard.ViewModels.MainPages"
+             xmlns:core="using:Corkboard.Core.Langs.Common"
+             xmlns:controls="using:Corkboard.Core.Controls"
+             xmlns:converters="using:Corkboard.Core.Converters"
+             mc:Ignorable="d" d:DesignWidth="620" d:DesignHeight="520"
+             x:Class="Corkboard.Views.MainPages.BoardAssignmentForm"
+             x:DataType="vm:BoardAssignmentFormViewModel">
+    <UserControl.Resources>
+        <!-- 色板里存的是 Color，画色块要显式转成画刷（见 ColorToBrushConverter 的说明）。 -->
+        <converters:ColorToBrushConverter x:Key="ColorToBrush" />
+    </UserControl.Resources>
+
+    <UserControl.Styles>
+        <!-- 预览区：比卡片背景浅一档，让人一眼看出「这块只是看效果，不是输入区」。 -->
+        <Style Selector="Border.preview">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Padding" Value="8" />
+        </Style>
+
+        <!--
+            格式浮窗：浮在卡片上层的一小条工具，比卡片本身亮一档、带一圈阴影，一眼看出是浮着的。
+            **底色必须是不透明的刷子**：这里原本用的是 CardBackgroundFillColorDefaultBrush，
+            那个刷子本身带透明度（浅色 #B3FFFFFF、深色 #0DFFFFFF）。卡片用它没问题——下面垫着
+            不透明的页面底；但浮窗是 Popup，宿主层是透明的，深色模式下 5% 的白等于全透，
+            底下的文字会直接透上来。SolidBackgroundFillColorTertiaryBrush 两个主题下都不透明。
+        -->
+        <Style Selector="Border.format-bar">
+            <Setter Property="Background" Value="{DynamicResource SolidBackgroundFillColorTertiaryBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="6" />
+            <Setter Property="BoxShadow" Value="0 4 12 0 #40000000" />
+        </Style>
+
+        <!-- 浮窗上的色块：按钮本体不画颜色（否则指针悬停时会被主题的 hover 底色盖掉），颜色画在里面的小方块上。 -->
+        <Style Selector="Button.swatch">
+            <Setter Property="Padding" Value="2" />
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="MinHeight" Value="0" />
+        </Style>
+        <Style Selector="Border.swatch-chip">
+            <Setter Property="Width" Value="16" />
+            <Setter Property="Height" Value="16" />
+            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
+        </Style>
+    </UserControl.Styles>
+
+    <Panel>
+        <!--
+            卡片：宽度有下限也有上限；高度上限按「看得见的宿主」算——壳内弹层用窗口内容区、
+            独立窗口（SizeToContent）用屏幕工作区，都只占其 70%（见 code-behind 的 ApplySheetSizeLimits）。
+            内容比上限还高时卡片自己滚动，不会把窗口一直撑下去，也不会长成一条竖长的板子。
+            ⚠️ 整张卡片标 WindowDragGesture.Suppress：卡片的手势归表单自己，壳的整窗长按拖动让出去
+            （壳在弹层打开时本来就已让出，这里是显式声明，别删）。
+        -->
+        <Border Classes="sheet"
+                x:Name="Sheet"
+                MinWidth="380"
+                MaxWidth="720"
+                controls:WindowDragGesture.Suppress="True">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel x:Name="SheetBody" Spacing="12">
+                    <!--
+                        卡片没有标题栏：第一行就是表单标题（布置作业 / 编辑作业）。
+                        **整张卡片都是拖动面**——按住卡片上任何非输入控件的地方都能把它拖走，
+                        所以标题行不再放抓手图标：那是「只有这里能拖」的暗示，反而让人以为别处拖不动。
+                        光标与提示留在标题行上，作为「能动」的唯一提示（见 code-behind 的 OnSheetPressed）。
+                    -->
+                    <TextBlock Classes="h2"
+                               Background="Transparent"
+                               Cursor="SizeAll"
+                               ToolTip.Tip="{x:Static core:Resources.Board_MoveSheet}"
+                               Text="{Binding FormTitle}" />
+
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                        <TextBlock Grid.Column="0"
+                                   Classes="caption"
+                                   VerticalAlignment="Center"
+                                   Text="{x:Static core:Resources.Board_TypeLabel}" />
+                        <ComboBox Grid.Column="1"
+                                  HorizontalAlignment="Stretch"
+                                  ItemsSource="{Binding TypeOptions}"
+                                  SelectedItem="{Binding SelectedOption, Mode=TwoWay}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:BoardTypeOption">
+                                    <TextBlock Text="{Binding Name}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </Grid>
+
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                        <TextBlock Grid.Column="0" Classes="caption" VerticalAlignment="Center"
+                                   Text="{x:Static core:Resources.Board_SubjectLabel}" />
+                        <ComboBox Grid.Column="1"
+                                  HorizontalAlignment="Stretch"
+                                  ItemsSource="{Binding SubjectOptions}"
+                                  SelectedItem="{Binding DraftSubject, Mode=TwoWay}"
+                                  PlaceholderText="{x:Static core:Resources.Board_SubjectLabel}" />
+                    </Grid>
+
+                    <!--
+                        作业内容：左边写 Markdown 原文，右边实时看效果。
+                        格式（颜色 / 字号 / Markdown 记号）不在卡片上常驻一排控件，而是**选中文字后
+                        在选段上方弹一小条浮窗**（下面的 FormatBar，Office 那种手感）——卡片干净，
+                        普通用户也不用先看懂一排工具栏。
+                        两个尺寸都写死（而不是跟内容自适应），因为「能手动拉」这件事本身就要求尺寸是用户定的；
+                        能拉多大由 code-behind 的 ResolveContentSizeLimit 算，右下角手柄拉的是整个区块。
+                        Grid 跟着内容区走（HorizontalAlignment=Left），手柄才会贴在区块右下角而不是卡片右下角。
+                    -->
+                    <Grid x:Name="ContentArea"
+                          Width="540"
+                          Height="300"
+                          MinWidth="340"
+                          MinHeight="150"
+                          HorizontalAlignment="Left">
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                            <TextBox x:Name="ContentBox"
+                                     Grid.Column="0"
+                                     AcceptsReturn="True"
+                                     TextWrapping="Wrap"
+                                     Text="{Binding DraftContent, Mode=TwoWay}"
+                                     PlaceholderText="{x:Static core:Resources.Board_NoteContentPlaceholder}" />
+
+                            <Border Grid.Column="1" Classes="preview">
+                                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                              HorizontalScrollBarVisibility="Disabled">
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Classes="caption" Text="{x:Static core:Resources.Board_Preview}" />
+                                        <controls:MarkdownTextBlock TextWrapping="Wrap"
+                                                                    VerticalAlignment="Top"
+                                                                    IsVisible="{Binding HasPreviewContent}"
+                                                                    Document="{Binding Preview}" />
+                                        <TextBlock Classes="caption"
+                                                   TextWrapping="Wrap"
+                                                   IsVisible="{Binding !HasPreviewContent}"
+                                                   Text="{x:Static core:Resources.Board_PreviewEmpty}" />
+                                    </StackPanel>
+                                </ScrollViewer>
+                            </Border>
+                        </Grid>
+
+                        <Border x:Name="ResizeGrip"
+                                Width="18"
+                                Height="18"
+                                Margin="0 0 3 3"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Bottom"
+                                Background="Transparent"
+                                Cursor="BottomRightCorner"
+                                ToolTip.Tip="{x:Static core:Resources.Board_ResizeContent}"
+                                PointerPressed="OnResizeGripPressed"
+                                PointerMoved="OnResizeGripMoved"
+                                PointerReleased="OnResizeGripReleased"
+                                PointerCaptureLost="OnResizeGripCaptureLost">
+                            <Path Data="M7,15 L15,7 M11,15 L15,11"
+                                  Stroke="#88909090"
+                                  StrokeThickness="1.2"
+                                  HorizontalAlignment="Right"
+                                  VerticalAlignment="Bottom" />
+                        </Border>
+                    </Grid>
+
+                    <!-- 字段控件全部用 Avalonia 自带控件：数字与页数用 NumericUpDown。 -->
+                    <ItemsControl x:Name="FieldList" ItemsSource="{Binding DraftFields}" IsVisible="{Binding HasDraftFields}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal" ItemSpacing="12" LineSpacing="8" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.DataTemplates>
+                            <DataTemplate DataType="vm:BoardTextFieldDraft">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <TextBlock VerticalAlignment="Center" Text="{Binding Label}" />
+                                    <TextBox MinWidth="140" Text="{Binding Text, Mode=TwoWay}" />
+                                </StackPanel>
+                            </DataTemplate>
+
+                            <DataTemplate DataType="vm:BoardParagraphFieldDraft">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Text="{Binding Label}" />
+                                    <TextBox MinWidth="300"
+                                             MinHeight="56"
+                                             AcceptsReturn="True"
+                                             TextWrapping="Wrap"
+                                             Text="{Binding Text, Mode=TwoWay}" />
+                                </StackPanel>
+                            </DataTemplate>
+
+                            <DataTemplate DataType="vm:BoardNumberFieldDraft">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <TextBlock VerticalAlignment="Center" Text="{Binding Label}" />
+                                    <NumericUpDown MinWidth="110"
+                                                   Minimum="0"
+                                                   Maximum="9999"
+                                                   Increment="1"
+                                                   FormatString="0"
+                                                   Value="{Binding Value, Mode=TwoWay}" />
+                                </StackPanel>
+                            </DataTemplate>
+
+                            <DataTemplate DataType="vm:BoardPageRangeFieldDraft">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <TextBlock VerticalAlignment="Center" Text="{Binding Label}" />
+                                    <NumericUpDown MinWidth="100"
+                                                   Minimum="1"
+                                                   Maximum="9999"
+                                                   Increment="1"
+                                                   FormatString="0"
+                                                   Value="{Binding From, Mode=TwoWay}" />
+                                    <TextBlock VerticalAlignment="Center" Text="–" />
+                                    <NumericUpDown MinWidth="100"
+                                                   Minimum="1"
+                                                   Maximum="9999"
+                                                   Increment="1"
+                                                   FormatString="0"
+                                                   Value="{Binding To, Mode=TwoWay}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.DataTemplates>
+                    </ItemsControl>
+
+                    <!--
+                        底部动作行。它是「卡片高度上限」里必须留出来的那一块（见 ResolveContentSizeLimit）：
+                        算上限时逐个量这行与其它行的实际高度，不靠「整高减内容区」倒推。
+                    -->
+                    <StackPanel x:Name="FooterActions"
+                                Orientation="Horizontal"
+                                HorizontalAlignment="Right"
+                                Spacing="8">
+                        <Button Command="{Binding CancelCommand}"
+                                Content="{x:Static core:Resources.Common_Cancel}" />
+                        <Button Command="{Binding ConfirmCommand}"
+                                IsEnabled="{Binding CanConfirm}"
+                                Content="{Binding ConfirmText}" />
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+
+        <!--
+            格式浮窗的锚点层。浮窗按「锚点」定位（Placement=Top → 出现在选段正上方），
+            锚点由 code-behind 挪到松开指针的地方；Canvas 自己没有背景，不参与命中测试，
+            所以卡片该怎么点还怎么点（见 board 的 IsInteractiveSource）。
+        -->
+        <Canvas x:Name="FormatLayer">
+            <Border x:Name="FormatAnchor" Width="1" Height="1" IsHitTestVisible="False" />
+
+            <Popup x:Name="FormatBar" Placement="Top" VerticalOffset="-6">
+                <!--
+                    两行摆：第一行「字号 + 颜色」，第二行「加粗 / 斜体 / 清除格式」。
+                    颜色给一排预设色块，**点一下就套上**——不用先开取色器再选色（那是两次点击）；
+                    想要别的颜色再点最后的「+」开取色器。字号下拉显示的是**选段当前正在生效的字号**。
+                    MaxWidth 只是一道保险：屏幕很窄时让这两行自己折行，别横着跑出屏幕。
+                -->
+                <Border Classes="format-bar" MaxWidth="420">
+                    <StackPanel Spacing="6">
+                        <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="4">
+                            <TextBlock Classes="caption" VerticalAlignment="Center"
+                                       Text="{x:Static core:Resources.Board_FontSize}" />
+                            <!-- 选段字号：选中项就是选段当前的字号（由 code-behind 同步，见 SyncFormatBarValues）。 -->
+                            <ComboBox x:Name="SelectionSizeBox"
+                                      MinWidth="72"
+                                      ItemsSource="{Binding SizeOptions}"
+                                      SelectionChanged="OnSelectionSizeChanged"
+                                      DropDownOpened="OnFormatComboDropDownOpened"
+                                      DropDownClosed="OnFormatComboDropDownClosed"
+                                      ToolTip.Tip="{x:Static core:Resources.Board_FontSize}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:BoardFontSizeOption">
+                                        <TextBlock Text="{Binding DisplayName}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+
+                            <TextBlock Classes="caption" VerticalAlignment="Center" Margin="6 0 0 0"
+                                       Text="{x:Static core:Resources.Board_TextColor}" />
+                            <!--
+                                预设色板：色块本身就是按钮的内容，点哪个一次就套哪个。
+                                颜色来自「设置 → 作业板 → 快速颜色」，最多 BoardPalette.MaxColors 个。
+                            -->
+                            <ItemsControl ItemsSource="{Binding PaletteColors}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="4" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Button Classes="swatch" Click="OnPaletteColorClicked">
+                                            <Border Classes="swatch-chip"
+                                                    Background="{Binding Converter={StaticResource ColorToBrush}}" />
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <!-- 想要色板以外的颜色，再点这个开取色器（这一次要「开 + 选」两次点击）。 -->
+                            <Button Classes="swatch"
+                                    Click="OnSelectionColorClicked"
+                                    ToolTip.Tip="{x:Static core:Resources.Board_CustomColor}">
+                                <Button.Flyout>
+                                    <Flyout Placement="Bottom"
+                                            Opened="OnSelectionColorFlyoutOpened"
+                                            Closed="OnSelectionColorFlyoutClosed">
+                                        <ColorPicker IsAlphaEnabled="False"
+                                                     Color="{Binding SelectionColorDraft, Mode=TwoWay}" />
+                                    </Flyout>
+                                </Button.Flyout>
+                                <Border Classes="swatch-chip" Background="Transparent">
+                                    <TextBlock Text="+" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                            </Button>
+                        </WrapPanel>
+
+                        <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="4">
+                            <!-- Markdown 记号：加粗 / 斜体，同一个按钮再点一次取消。 -->
+                            <Button Content="{x:Static core:Resources.Board_MarkdownBold}"
+                                    FontWeight="Bold"
+                                    Click="OnMarkdownBoldClicked" />
+                            <Button Content="{x:Static core:Resources.Board_MarkdownItalic}"
+                                    FontStyle="Italic"
+                                    Click="OnMarkdownItalicClicked" />
+                            <Button Content="{x:Static core:Resources.Board_ClearFormat}"
+                                    Click="OnClearSelectionFormatClicked" />
+                        </WrapPanel>
+                    </StackPanel>
+                </Border>
+            </Popup>
+        </Canvas>
+    </Panel>
+</UserControl>
