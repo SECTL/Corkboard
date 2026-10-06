@@ -5,7 +5,7 @@
         mc:Ignorable="d" d:DesignWidth="480" d:DesignHeight="560"
         x:Class="Corkboard.Views.PageOverlayWindow"
         Title="Corkboard"
-        SystemDecorations="None"
+        WindowDecorations="None"
         CanResize="False"
         ShowInTaskbar="False"
         SizeToContent="WidthAndHeight"
