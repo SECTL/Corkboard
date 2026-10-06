@@ -113,8 +113,11 @@ dotnet run --project Corkboard.Desktop\Corkboard.Desktop.csproj
   `Corkboard/Services/Auth/SectlAuthEndpoints.cs`（`6ac3d35400241eff9fbe`），
   平台标识 `platform_id` 在 `Corkboard.Core/GlobalConstants.cs`（`platform_29648fc4ac3ba07d`）。
   上游 SecRandom 两者恰好同值，本项目不是；改统计不影响登录，反之亦然。
-- `NuGet.config` 里的 `fallbackPackageFolders` 指向本机的 SecRandom-C 包缓存（离线提速用），
-  换机器或 CI 上删掉那一段即可正常联网还原。
-- 版本元数据来自 SDK 生成的 `AssemblyInformationalVersion`；将来接入自有 GitInfo 生成器时，
-  按 `Global.props` 里的注释把 `GenerateAssemblyInfo` 关掉并补 `AssemblyInfo.cs`。
+- `NuGet.config` 只声明公共源（nuget.org + ClassIsland MyGet）。**不要**把开发机专属的
+  `fallbackPackageFolders` 提交进去：NuGet 遇到不存在的目录会直接 NU1301 失败，CI 与其他机器都还原不了。
+  本机想复用已有包缓存时用环境变量 `NUGET_FALLBACK_PACKAGES`（详见 NuGet.config 注释）。
+- 版本元数据由 git 提供：`GitInfo.props` 在构建期跑 git，`roslyn/Corkboard.GitInfoGenerator`
+  把 tag/分支/提交号生成成 `Corkboard.GitInfo`，只有 `EnableGitInfoGenerator=true` 的头程序集
+  （当前是 `Corkboard.Desktop`）编译根 `AssemblyInfo.cs` 并因此关闭 SDK 的程序集信息生成。
+  没有 git 仓库或没有 tag 时回退成 `0.0.0` / `Unknown`，构建不失败。
 - 尚未移植的上游能力清单见 `docs/backlog.md`，其中包括视图引擎、插件 SDK、移动端头、图标源生成器。

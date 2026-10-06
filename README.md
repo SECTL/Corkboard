@@ -71,6 +71,21 @@ dotnet publish Corkboard.Desktop\Corkboard.Desktop.csproj -c Release -r win-x64
 数据目录规则（与上游一致）：安装版默认写在可执行文件旁的 `data/`，那里不可写时退回
 `%LOCALAPPDATA%\Corkboard\data`；便携包（`Corkboard.package.json` 标记 + `app-*` 目录）必须留在原地。
 
+### 版本号来自 git
+
+头程序集（`Corkboard.Desktop`）的版本在构建期由 git 决定：
+
+- `GitInfo.props` 跑 `git describe --tags --abbrev=0` / `git rev-parse`，把值经 `CompilerVisibleProperty` 传给生成器；
+- `roslyn/Corkboard.GitInfoGenerator` 生成 `Corkboard.GitInfo`（`Tag` / `Branch` / `CommitHash` / `AssemblyVersion`）；
+- 根 `AssemblyInfo.cs` 用它写 `AssemblyVersion` 与 `AssemblyInformationalVersion`（形如 `v0.1.0+<提交号>`）。
+
+所以发版流程是：改代码 → 打 tag（例如 `git tag -a v0.2.0 -m "..."`）→ 重新构建。
+tag 之后的提交仍算同一个版本（与上游一致，服务端按版本字符串归并人数），但提交号会体现在 `AssemblyInformationalVersion` 里。
+没有 git 仓库或没有 tag 时回退成 `0.0.0` / `Unknown`，构建不会失败。
+
+想复用本机已有的 NuGet 包缓存（例如 SecRandom-C 的 `.nuget/packages`）时，用机器环境变量
+`NUGET_FALLBACK_PACKAGES` —— 不要把路径写进仓库的 `NuGet.config`，NuGet 遇到不存在的目录会直接 `NU1301` 失败。
+
 ## SECTL 集成的两个标识
 
 两个值**不是同一个东西**（上游 SecRandom 恰好同值，本项目不是），不要互相替代：

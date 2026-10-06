@@ -18,8 +18,8 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      # NuGet.config 里的 fallbackPackageFolders 指向开发机缓存，CI 上不存在时会被忽略，
-      # 包会从 nuget.org / ClassIsland MyGet 正常还原。
+      # 仓库内的 NuGet.config 只有公共源，因此这里是从 nuget.org / ClassIsland MyGet 冷还原；
+      # 本机若想复用已有包缓存，把路径放进机器环境变量 NUGET_FALLBACK_PACKAGES（见 NuGet.config 注释）。
       - name: Restore
         run: dotnet restore Corkboard.sln
 
