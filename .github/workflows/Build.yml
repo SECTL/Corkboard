@@ -1,0 +1,30 @@
+name: Build
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    # 桌面工程默认选择 Windows 平台实现；Linux/macOS 上改 runs-on 并设置 CorkboardPlatform 也可构建。
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      # NuGet.config 里的 fallbackPackageFolders 指向开发机缓存，CI 上不存在时会被忽略，
+      # 包会从 nuget.org / ClassIsland MyGet 正常还原。
+      - name: Restore
+        run: dotnet restore Corkboard.sln
+
+      - name: Build
+        run: dotnet build Corkboard.sln -c Release --no-restore -v m
+
+      - name: Test
+        run: dotnet test Corkboard.Core.Tests\Corkboard.Core.Tests.csproj -c Release --no-build -v m

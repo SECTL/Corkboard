@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+        <CetCompat>false</CetCompat>
+        <ApplicationManifest>app.manifest</ApplicationManifest>
+        <!--
+            头程序集：版本元数据交给 git（Corkboard.GitInfoGenerator + 根 AssemblyInfo.cs），
+            见 Global.props。新增平台头（移动端等）时同样打开这个开关。
+        -->
+        <EnableGitInfoGenerator>true</EnableGitInfoGenerator>
+    </PropertyGroup>
+
+    <Import Project="..\Platforms.props" />
+
+    <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+        <OutputType>WinExe</OutputType>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Avalonia.Desktop" Version="$(AvaloniaVersion)" />
+        <PackageReference Include="Avalonia.Fonts.Inter" Version="$(AvaloniaVersion)" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Corkboard\Corkboard.csproj" />
+        <ProjectReference Include="..\Corkboard.Platforms\Corkboard.Platforms.csproj" />
+        <ProjectReference Include="..\Corkboard.Platforms.Abstractions\Corkboard.Platforms.Abstractions.csproj" />
+    </ItemGroup>
+
+    <!-- 只编译与当前平台匹配的原生实现工程，与 Platforms.props 选择的 CorkboardPlatform 保持一致。 -->
+    <ItemGroup Condition="'$(CorkboardPlatform)' == 'Windows'">
+        <ProjectReference Include="..\Corkboard.Platforms.Windows\Corkboard.Platforms.Windows.csproj" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(CorkboardPlatform)' == 'Linux'">
+        <ProjectReference Include="..\Corkboard.Platforms.Linux\Corkboard.Platforms.Linux.csproj" />
+    </ItemGroup>
+
+    <ItemGroup Condition="'$(CorkboardPlatform)' == 'MacOs'">
+        <ProjectReference Include="..\Corkboard.Platforms.MacOs\Corkboard.Platforms.MacOs.csproj" />
+    </ItemGroup>
+
+    <Import Project="..\Global.props" />
+</Project>

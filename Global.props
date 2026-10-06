@@ -1,0 +1,59 @@
+<Project>
+    <PropertyGroup>
+        <!-- 版本元数据由根 AssemblyInfo.cs + 头程序集承载，不用 GitVersion。 -->
+        <GitVersion>false</GitVersion>
+        <EnableGitInfoGenerator Condition="'$(EnableGitInfoGenerator)' == ''">false</EnableGitInfoGenerator>
+        <!--
+            非头程序集（Shared/Core/平台/测试）用 SDK 生成的程序集信息，版本取下面的 Version。
+        -->
+        <GenerateAssemblyInfo Condition="'$(EnableGitInfoGenerator)' != 'true'">true</GenerateAssemblyInfo>
+        <Version Condition="'$(Version)' == ''">0.1.0</Version>
+        <InformationalVersion Condition="'$(InformationalVersion)' == ''">$(Version)</InformationalVersion>
+        <!--
+            头程序集（真正的可执行入口）把版本交给 git：关掉 SDK 的程序集信息生成，
+            改由根 AssemblyInfo.cs + Corkboard.GitInfoGenerator 写入
+            （两者会生成同名特性，同时开启就是 CS0579）。
+            接法沿用上游 SecRandom：只有头程序集生成 GitInfo，类库通过
+            GlobalConstants.SetVersionAssembly 发布头程序集后读取，
+            因此不会出现第二个公开的 GitInfo 类型。
+        -->
+        <GenerateAssemblyInfo Condition="'$(EnableGitInfoGenerator)' == 'true'">false</GenerateAssemblyInfo>
+        <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+        <EnableWindowsTargeting>true</EnableWindowsTargeting>
+        <NullabilityInfoContextSupport>True</NullabilityInfoContextSupport>
+        <ErrorOnDuplicatePublishOutputFiles>False</ErrorOnDuplicatePublishOutputFiles>
+        <CheckEolWorkloads>false</CheckEolWorkloads>
+        <DefaultItemExcludes>$(DefaultItemExcludes);artifacts/**;publish/**</DefaultItemExcludes>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <GitVersion_UpdateAssemblyInfo>true</GitVersion_UpdateAssemblyInfo>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
+        <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <DebugType>full</DebugType>
+        <DebugSymbols>true</DebugSymbols>
+    </PropertyGroup>
+
+    <ItemGroup Condition="'$(EnableGitInfoGenerator)' == 'true'">
+        <!-- 版本元数据源生成器：只作为 analyzer 注入，不进输出目录。 -->
+        <ProjectReference Include="$(MSBuildThisFileDirectory)roslyn\Corkboard.GitInfoGenerator\Corkboard.GitInfoGenerator.csproj"
+                          OutputItemType="Analyzer"
+                          ReferenceOutputAssembly="false" />
+
+        <Compile Include="$(MSBuildThisFileDirectory)AssemblyInfo.cs">
+            <LinkBase>Properties</LinkBase>
+        </Compile>
+    </ItemGroup>
+
+    <Import Project="$(MSBuildThisFileDirectory)GitInfo.props" Condition="'$(EnableGitInfoGenerator)' == 'true'" />
+
+    <!--
+        上游 SecRandom-C 在这里还引入了 Microsoft.SourceLink.GitHub，把仓库地址写进 PDB。
+        Corkboard 尚未接 SourceLink；接入时在这里追加 PackageReference 即可。
+    -->
+</Project>

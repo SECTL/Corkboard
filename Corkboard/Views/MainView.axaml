@@ -1,0 +1,59 @@
+<ContentPage xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fa="using:FluentAvalonia.UI.Controls"
+             xmlns:views="using:Corkboard.Views"
+             mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="600"
+             x:Class="Corkboard.Views.MainView"
+             x:DataType="views:MainView"
+             Header="Corkboard"
+             NavigationPage.HasNavigationBar="False">
+    <Grid RowDefinitions="Auto *">
+        <!-- 自定义标题栏：拖动区域与交互元素必须显式声明 ElementRole。 -->
+        <Border Grid.Row="0" Height="48"
+                Background="Transparent"
+                WindowDecorationProperties.ElementRole="TitleBar">
+            <StackPanel Orientation="Horizontal" Margin="8" Spacing="8">
+                <Border Width="60" IsVisible="{Binding IsMacOs}" />
+
+                <Button Theme="{StaticResource PaneToggleButtonStyle}"
+                        IsVisible="{Binding ViewModel.IsNavPaneToggleButtonVisible}"
+                        MinWidth="40" Width="48"
+                        VerticalAlignment="Center"
+                        Margin="-7 -8 -15 -8"
+                        Click="TogglePaneButton_OnClick"
+                        WindowDecorationProperties.ElementRole="User" />
+
+                <TextBlock Text="Corkboard"
+                           FontSize="12"
+                           VerticalAlignment="Center"
+                           Margin="8 0 0 0" />
+            </StackPanel>
+        </Border>
+
+        <fa:FANavigationView Grid.Row="1"
+                             x:Name="NavigationView"
+                             PaneDisplayMode="Left"
+                             IsSettingsVisible="False"
+                             IsPaneToggleButtonVisible="False"
+                             IsPaneOpen="True"
+                             MenuItemsSource="{Binding ViewModel.NavigationViewItems, Mode=OneWay}"
+                             FooterMenuItemsSource="{Binding ViewModel.NavigationViewFooterItems, Mode=OneWay}"
+                             SelectedItem="{Binding ViewModel.SelectedNavigationViewItem, UpdateSourceTrigger=PropertyChanged}"
+                             ItemInvoked="NavigationView_OnItemInvoked">
+            <Grid RowDefinitions="Auto, *">
+                <TextBlock Grid.Row="0" Margin="12 16 18 0"
+                           FontWeight="Normal"
+                           IsVisible="{Binding !ViewModel.SelectedPageInfo.HidePageTitle}"
+                           Text="{Binding ViewModel.SelectedPageInfo.Name}"
+                           Theme="{StaticResource TitleTextBlockStyle}" />
+
+                <fa:FAFrame Grid.Row="1"
+                            x:Name="NavigationFrame"
+                            IsNavigationStackEnabled="False"
+                            CacheSize="0" />
+            </Grid>
+        </fa:FANavigationView>
+    </Grid>
+</ContentPage>

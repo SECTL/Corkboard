@@ -1,0 +1,27 @@
+<Project>
+    <PropertyGroup>
+        <CorkboardPlatform Condition="'$(CorkboardPlatform)' == '' and $(RuntimeIdentifier.StartsWith('win-'))">Windows</CorkboardPlatform>
+        <CorkboardPlatform Condition="'$(CorkboardPlatform)' == '' and $(RuntimeIdentifier.StartsWith('linux-'))">Linux</CorkboardPlatform>
+        <CorkboardPlatform Condition="'$(CorkboardPlatform)' == '' and $(RuntimeIdentifier.StartsWith('osx-'))">MacOs</CorkboardPlatform>
+        <CorkboardPlatform Condition="'$(CorkboardPlatform)' == '' and '$(RuntimeIdentifier)' == '' and $([System.OperatingSystem]::IsWindows())">Windows</CorkboardPlatform>
+        <CorkboardPlatform Condition="'$(CorkboardPlatform)' == '' and '$(RuntimeIdentifier)' == '' and $([System.OperatingSystem]::IsLinux())">Linux</CorkboardPlatform>
+        <CorkboardPlatform Condition="'$(CorkboardPlatform)' == '' and '$(RuntimeIdentifier)' == '' and $([System.OperatingSystem]::IsMacOS())">MacOs</CorkboardPlatform>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(CorkboardPlatform)' == 'Windows'">
+        <DefineConstants>$(DefineConstants);CORKBOARD_PLATFORM_WINDOWS</DefineConstants>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(CorkboardPlatform)' == 'Linux'">
+        <DefineConstants>$(DefineConstants);CORKBOARD_PLATFORM_LINUX</DefineConstants>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(CorkboardPlatform)' == 'MacOs'">
+        <DefineConstants>$(DefineConstants);CORKBOARD_PLATFORM_MACOS</DefineConstants>
+    </PropertyGroup>
+
+    <Target Name="ValidateCorkboardPlatformSelection" BeforeTargets="PrepareForBuild"
+            Condition="'$(CorkboardPlatform)' != 'Windows' and '$(CorkboardPlatform)' != 'Linux' and '$(CorkboardPlatform)' != 'MacOs'">
+        <Error Text="Unable to select a Corkboard desktop platform for RuntimeIdentifier '$(RuntimeIdentifier)'. Set CorkboardPlatform to Windows, Linux, or MacOs." />
+    </Target>
+</Project>

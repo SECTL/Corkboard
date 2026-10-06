@@ -1,0 +1,16 @@
+<faWindowing:FAAppWindow xmlns="https://github.com/avaloniaui"
+                         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                         xmlns:faWindowing="using:FluentAvalonia.UI.Windowing"
+                         mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
+                         x:Class="Corkboard.Views.MainWindow"
+                         WindowStartupLocation="CenterScreen"
+                         MinWidth="800" MinHeight="600">
+    <faWindowing:FAAppWindow.Styles>
+        <!-- 内容页自带背景，窗口本体不再叠一层，否则 Fluent 的半透明层会互相干扰。 -->
+        <Style Selector=":is(ContentPage)">
+            <Setter Property="Background" Value="{x:Null}" />
+        </Style>
+    </faWindowing:FAAppWindow.Styles>
+</faWindowing:FAAppWindow>

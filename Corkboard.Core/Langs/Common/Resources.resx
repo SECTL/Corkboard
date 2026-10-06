@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="App_Title" xml:space="preserve">
+    <value>Corkboard</value>
+  </data>
+  <data name="Feat_Settings" xml:space="preserve">
+    <value>设置</value>
+  </data>
+  <data name="Menu_OpenMainWindow" xml:space="preserve">
+    <value>显示主窗口</value>
+  </data>
+  <data name="Menu_OpenSettings" xml:space="preserve">
+    <value>打开设置</value>
+  </data>
+  <data name="Menu_RestartProgram" xml:space="preserve">
+    <value>重启程序</value>
+  </data>
+  <data name="Menu_ExitProgram" xml:space="preserve">
+    <value>退出程序</value>
+  </data>
+  <data name="Menu_About" xml:space="preserve">
+    <value>关于 Corkboard</value>
+  </data>
+  <data name="Board_AddNote" xml:space="preserve">
+    <value>新建便签</value>
+  </data>
+  <data name="Board_Title" xml:space="preserve">
+    <value>软木板</value>
+  </data>
+  <data name="Board_DeleteNote" xml:space="preserve">
+    <value>删除便签</value>
+  </data>
+  <data name="Board_PinNote" xml:space="preserve">
+    <value>置顶便签</value>
+  </data>
+  <data name="Board_EmptyTitle" xml:space="preserve">
+    <value>这块软木板还是空的</value>
+  </data>
+  <data name="Board_EmptyHint" xml:space="preserve">
+    <value>这是骨架里的占位业务模块，需求确定后替换这一页即可。</value>
+  </data>
+  <data name="Board_NoteTitlePlaceholder" xml:space="preserve">
+    <value>标题</value>
+  </data>
+  <data name="Board_NoteContentPlaceholder" xml:space="preserve">
+    <value>写点什么…</value>
+  </data>
+  <data name="Settings_Title" xml:space="preserve">
+    <value>设置</value>
+  </data>
+  <data name="Settings_Group_General" xml:space="preserve">
+    <value>通用</value>
+  </data>
+  <data name="Settings_Group_About" xml:space="preserve">
+    <value>关于</value>
+  </data>
+  <data name="Settings_Basic_Title" xml:space="preserve">
+    <value>基础设置</value>
+  </data>
+  <data name="Settings_Basic_Language" xml:space="preserve">
+    <value>语言</value>
+  </data>
+  <data name="Settings_Basic_ShowStartupWindow" xml:space="preserve">
+    <value>启动时显示主窗口</value>
+  </data>
+  <data name="Settings_Basic_BackgroundResident" xml:space="preserve">
+    <value>关闭主窗口后继续驻留</value>
+  </data>
+  <data name="Settings_Basic_AutoSaveWindowSize" xml:space="preserve">
+    <value>记住窗口尺寸</value>
+  </data>
+  <data name="Settings_About_Title" xml:space="preserve">
+    <value>关于</value>
+  </data>
+  <data name="Settings_About_Version" xml:space="preserve">
+    <value>版本</value>
+  </data>
+  <data name="Settings_About_License" xml:space="preserve">
+    <value>本项目以 GNU GPLv3 协议发布</value>
+  </data>
+</root>

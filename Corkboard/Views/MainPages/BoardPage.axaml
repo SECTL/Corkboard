@@ -1,0 +1,63 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fa="using:FluentAvalonia.UI.Controls"
+             xmlns:vm="using:Corkboard.ViewModels.MainPages"
+             xmlns:board="using:Corkboard.Core.Models.Board"
+             xmlns:core="using:Corkboard.Core.Langs.Common"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="Corkboard.Views.MainPages.BoardPage"
+             x:DataType="vm:BoardPageViewModel">
+    <Grid RowDefinitions="Auto,*">
+        <Border Grid.Row="0" Classes="card" Margin="12 0 12 12">
+            <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="8">
+                <TextBox Grid.Column="0"
+                         Text="{Binding NewTitle}"
+                         PlaceholderText="{x:Static core:Resources.Board_NoteTitlePlaceholder}" />
+                <TextBox Grid.Column="1"
+                         Text="{Binding NewContent}"
+                         PlaceholderText="{x:Static core:Resources.Board_NoteContentPlaceholder}" />
+                <Button Grid.Column="2"
+                        x:Name="AddNoteButton"
+                        Click="OnAddNoteClick"
+                        Content="{x:Static core:Resources.Board_AddNote}" />
+            </Grid>
+        </Border>
+
+        <ScrollViewer Grid.Row="1">
+            <StackPanel Margin="12 0 12 12" Spacing="8">
+                <StackPanel Spacing="4" IsVisible="{Binding !HasNotes}">
+                    <TextBlock Classes="h2" Text="{x:Static core:Resources.Board_EmptyTitle}" />
+                    <TextBlock Classes="caption" Text="{x:Static core:Resources.Board_EmptyHint}" />
+                </StackPanel>
+
+                <ItemsControl ItemsSource="{Binding Notes}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="board:BoardNote">
+                            <Border Classes="card" Margin="0 0 0 8"
+                                    Background="{Binding ColorHex}">
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                                    <StackPanel Grid.Column="0" Spacing="4">
+                                        <TextBlock FontWeight="SemiBold" Text="{Binding Title}" />
+                                        <TextBlock TextWrapping="Wrap" Text="{Binding Content}" />
+                                    </StackPanel>
+
+                                    <Button Grid.Column="1"
+                                            Click="OnTogglePinClick"
+                                            Content="{x:Static core:Resources.Board_PinNote}"
+                                            ToolTip.Tip="{x:Static core:Resources.Board_PinNote}" />
+
+                                    <Button Grid.Column="2"
+                                            Click="OnDeleteNoteClick"
+                                            Content="{x:Static core:Resources.Board_DeleteNote}"
+                                            ToolTip.Tip="{x:Static core:Resources.Board_DeleteNote}" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

@@ -1,0 +1,56 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Corkboard.ViewModels.SettingsPages"
+             xmlns:core="using:Corkboard.Core.Langs.Common"
+             xmlns:lang="using:Corkboard.Langs.SettingsView"
+             mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="450"
+             x:Class="Corkboard.Views.SettingsPages.General.BasicSettingsPage"
+             x:DataType="vm:BasicSettingsPageViewModel">
+    <ScrollViewer>
+        <StackPanel Margin="12" Spacing="12">
+            <TextBlock Classes="h1" Text="{x:Static core:Resources.Settings_Basic_Title}" />
+
+            <Border Classes="card">
+                <StackPanel Spacing="12">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Grid.Column="0"
+                                   VerticalAlignment="Center"
+                                   Text="{x:Static core:Resources.Settings_Basic_Language}" />
+                        <ComboBox Grid.Column="1"
+                                  MinWidth="180"
+                                  ItemsSource="{Binding LanguageModes}"
+                                  SelectedItem="{Binding Basic.Language}" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Grid.Column="0"
+                                   VerticalAlignment="Center"
+                                   Text="{x:Static core:Resources.Settings_Basic_ShowStartupWindow}" />
+                        <ToggleSwitch Grid.Column="1"
+                                      IsChecked="{Binding Basic.ShowStartupWindow}" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Grid.Column="0"
+                                   VerticalAlignment="Center"
+                                   Text="{x:Static core:Resources.Settings_Basic_BackgroundResident}" />
+                        <ToggleSwitch Grid.Column="1"
+                                      IsChecked="{Binding Basic.BackgroundResident}" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Grid.Column="0"
+                                   VerticalAlignment="Center"
+                                   Text="{x:Static core:Resources.Settings_Basic_AutoSaveWindowSize}" />
+                        <ToggleSwitch Grid.Column="1"
+                                      IsChecked="{Binding Basic.AutoSaveWindowSize}" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Classes="caption" Text="{x:Static lang:Resources.SettingsView_RestartRequired}" />
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

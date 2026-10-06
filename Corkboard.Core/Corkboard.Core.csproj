@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <PackageId>Corkboard.Core</PackageId>
+        <Description>Corkboard 核心层：领域服务、配置与日志运行时、可复用 Avalonia 控件与样式，以及暴露给插件/应用层的服务契约。</Description>
+        <Authors>SECTL</Authors>
+        <Company>SECTL</Company>
+        <PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
+        <PackageTags>corkboard;core</PackageTags>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Avalonia" Version="$(AvaloniaVersion)" />
+        <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+        <PackageReference Include="DynamicData" Version="9.4.33" />
+        <PackageReference Include="FluentAvaloniaUI" Version="3.0.2" />
+        <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.10" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Corkboard.Shared\Corkboard.Shared.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- 可复用样式随程序集打包，应用层用 avares:// 引用。 -->
+        <AvaloniaResource Include="Styles\**" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <EmbeddedResource Update="Langs\Common\Resources.resx">
+            <Generator>PublicResXFileCodeGenerator</Generator>
+            <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+        </EmbeddedResource>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Compile Update="Langs\Common\Resources.Designer.cs">
+            <DesignTime>True</DesignTime>
+            <AutoGen>True</AutoGen>
+            <DependentUpon>Resources.resx</DependentUpon>
+        </Compile>
+    </ItemGroup>
+
+    <Import Project="..\Global.props" />
+
+</Project>

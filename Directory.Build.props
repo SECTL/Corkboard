@@ -1,0 +1,8 @@
+<Project>
+    <PropertyGroup>
+        <!-- 全仓库唯一的 Avalonia 版本锚点；工程文件里一律写 $(AvaloniaVersion)。 -->
+        <AvaloniaVersion>12.1.1</AvaloniaVersion>
+        <!-- 验证与发布产物不进 SDK 默认 Compile 项。 -->
+        <DefaultItemExcludes>$(DefaultItemExcludes);artifacts/**;publish/**</DefaultItemExcludes>
+    </PropertyGroup>
+</Project>

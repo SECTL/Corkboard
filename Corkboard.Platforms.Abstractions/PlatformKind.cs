@@ -1,0 +1,11 @@
+namespace Corkboard.Platforms.Abstractions;
+
+public enum PlatformKind
+{
+    Unknown,
+    Windows,
+    Linux,
+    MacOs,
+    Android,
+    Ios
+}

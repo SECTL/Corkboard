@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="App_Title" xml:space="preserve">
+    <value>Corkboard</value>
+  </data>
+  <data name="Feat_Settings" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="Menu_OpenMainWindow" xml:space="preserve">
+    <value>Show main window</value>
+  </data>
+  <data name="Menu_OpenSettings" xml:space="preserve">
+    <value>Open settings</value>
+  </data>
+  <data name="Menu_RestartProgram" xml:space="preserve">
+    <value>Restart</value>
+  </data>
+  <data name="Menu_ExitProgram" xml:space="preserve">
+    <value>Exit</value>
+  </data>
+  <data name="Menu_About" xml:space="preserve">
+    <value>About Corkboard</value>
+  </data>
+  <data name="Board_AddNote" xml:space="preserve">
+    <value>New note</value>
+  </data>
+  <data name="Board_Title" xml:space="preserve">
+    <value>Corkboard</value>
+  </data>
+  <data name="Board_DeleteNote" xml:space="preserve">
+    <value>Delete note</value>
+  </data>
+  <data name="Board_PinNote" xml:space="preserve">
+    <value>Pin note</value>
+  </data>
+  <data name="Board_EmptyTitle" xml:space="preserve">
+    <value>This corkboard is empty</value>
+  </data>
+  <data name="Board_EmptyHint" xml:space="preserve">
+    <value>This is the placeholder business module of the skeleton; replace this page once the real requirements land.</value>
+  </data>
+  <data name="Board_NoteTitlePlaceholder" xml:space="preserve">
+    <value>Title</value>
+  </data>
+  <data name="Board_NoteContentPlaceholder" xml:space="preserve">
+    <value>Write something…</value>
+  </data>
+  <data name="Settings_Title" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="Settings_Group_General" xml:space="preserve">
+    <value>General</value>
+  </data>
+  <data name="Settings_Group_About" xml:space="preserve">
+    <value>About</value>
+  </data>
+  <data name="Settings_Basic_Title" xml:space="preserve">
+    <value>Basic settings</value>
+  </data>
+  <data name="Settings_Basic_Language" xml:space="preserve">
+    <value>Language</value>
+  </data>
+  <data name="Settings_Basic_ShowStartupWindow" xml:space="preserve">
+    <value>Show main window on startup</value>
+  </data>
+  <data name="Settings_Basic_BackgroundResident" xml:space="preserve">
+    <value>Keep running after the main window closes</value>
+  </data>
+  <data name="Settings_Basic_AutoSaveWindowSize" xml:space="preserve">
+    <value>Remember window size</value>
+  </data>
+  <data name="Settings_About_Title" xml:space="preserve">
+    <value>About</value>
+  </data>
+  <data name="Settings_About_Version" xml:space="preserve">
+    <value>Version</value>
+  </data>
+  <data name="Settings_About_License" xml:space="preserve">
+    <value>Released under the GNU GPLv3 license</value>
+  </data>
+</root>

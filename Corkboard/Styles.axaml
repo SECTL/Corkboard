@@ -1,0 +1,8 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!--
+        应用层样式入口：引入 Core 的样式包，再放应用级样式。
+        Core 侧样式改动不需要动这个文件。
+    -->
+    <StyleInclude Source="avares://Corkboard.Core/Styles/StylesBase.axaml" />
+</Styles>

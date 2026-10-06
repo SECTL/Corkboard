@@ -1,0 +1,81 @@
+<Project>
+    <!--
+        构建期 git 元数据。由 Global.props 在 EnableGitInfoGenerator=true 时导入。
+        照上游 SecRandom.SimpleGitInfoGenerator.targets 的接法：MSBuild 跑 git，
+        值经 CompilerVisibleProperty 传给 Corkboard.GitInfoGenerator。
+
+        属性名带 Corkboard 前缀，避免与 GitVersion / Nerdbank.GitVersioning 等工具抢占同一批属性名。
+    -->
+    <PropertyGroup>
+        <CorkboardGitTag Condition="'$(CorkboardGitTag)' == ''">0.0.0</CorkboardGitTag>
+        <CorkboardGitBranch Condition="'$(CorkboardGitBranch)' == ''">Unknown</CorkboardGitBranch>
+        <CorkboardGitCommitHash Condition="'$(CorkboardGitCommitHash)' == ''">Unknown</CorkboardGitCommitHash>
+        <_CorkboardGitInfoResolved>false</_CorkboardGitInfoResolved>
+    </PropertyGroup>
+
+    <!--
+        与上游一致：标签取「最近的一个 tag」（git describe 的 abbrev=0 形态）而不是把后续提交展开进版本串。
+        服务端按版本字符串归并人数，tag 之后的若干提交仍应算同一个版本。
+        git 不可用或仓库没有 tag 时保持默认值，构建照常进行。
+    -->
+    <Target Name="CorkboardResolveGitInfo"
+            BeforeTargets="BeforeBuild;PrepareForBuild;GetAnalyzerSettings;CoreCompile"
+            Condition="'$(_CorkboardGitInfoResolved)' != 'true'">
+        <Exec Command="git describe --tags --abbrev=0"
+              WorkingDirectory="$(MSBuildProjectDirectory)"
+              ConsoleToMSBuild="true"
+              StandardOutputImportance="low"
+              IgnoreExitCode="true"
+              ContinueOnError="true">
+            <Output TaskParameter="ConsoleOutput" PropertyName="_CorkboardGitTagOutput" />
+        </Exec>
+        <Exec Command="git rev-parse --abbrev-ref HEAD"
+              WorkingDirectory="$(MSBuildProjectDirectory)"
+              ConsoleToMSBuild="true"
+              StandardOutputImportance="low"
+              IgnoreExitCode="true"
+              ContinueOnError="true">
+            <Output TaskParameter="ConsoleOutput" PropertyName="_CorkboardGitBranchOutput" />
+        </Exec>
+        <Exec Command="git rev-parse HEAD"
+              WorkingDirectory="$(MSBuildProjectDirectory)"
+              ConsoleToMSBuild="true"
+              StandardOutputImportance="low"
+              IgnoreExitCode="true"
+              ContinueOnError="true">
+            <Output TaskParameter="ConsoleOutput" PropertyName="_CorkboardGitCommitOutput" />
+        </Exec>
+
+        <!--
+            校验 git 的输出再采用。原因：Exec 的 ConsoleToMSBuild 会连 **stderr** 一起捕获，
+            仓库缺失/无 tag 时 git 会往 stderr 写 "fatal: not a git repository ..."，
+            不加判断就会把这个句子当成 tag 写进 AssemblyInformationalVersion，
+            甚至被版本上报原样发给服务端。这里按形态白名单过滤，不合法就当没取到。
+        -->
+        <PropertyGroup>
+            <_CorkboardGitTagOutput>$(_CorkboardGitTagOutput.Trim())</_CorkboardGitTagOutput>
+            <_CorkboardGitBranchOutput>$(_CorkboardGitBranchOutput.Trim())</_CorkboardGitBranchOutput>
+            <_CorkboardGitCommitOutput>$(_CorkboardGitCommitOutput.Trim())</_CorkboardGitCommitOutput>
+
+            <_CorkboardGitTagOutput Condition="!$([System.Text.RegularExpressions.Regex]::IsMatch('$(_CorkboardGitTagOutput)', '^[^\s]{1,128}$'))"></_CorkboardGitTagOutput>
+            <_CorkboardGitBranchOutput Condition="!$([System.Text.RegularExpressions.Regex]::IsMatch('$(_CorkboardGitBranchOutput)', '^[^\s]{1,128}$'))"></_CorkboardGitBranchOutput>
+            <_CorkboardGitCommitOutput Condition="!$([System.Text.RegularExpressions.Regex]::IsMatch('$(_CorkboardGitCommitOutput)', '^[0-9a-fA-F]{7,40}$'))"></_CorkboardGitCommitOutput>
+        </PropertyGroup>
+
+        <PropertyGroup>
+            <CorkboardGitTag Condition="'$(_CorkboardGitTagOutput)' != ''">$(_CorkboardGitTagOutput)</CorkboardGitTag>
+            <CorkboardGitBranch Condition="'$(_CorkboardGitBranchOutput)' != ''">$(_CorkboardGitBranchOutput)</CorkboardGitBranch>
+            <CorkboardGitCommitHash Condition="'$(_CorkboardGitCommitOutput)' != ''">$(_CorkboardGitCommitOutput)</CorkboardGitCommitHash>
+            <_CorkboardGitInfoResolved>true</_CorkboardGitInfoResolved>
+        </PropertyGroup>
+
+        <Message Importance="low"
+                 Text="Corkboard git 元数据：tag=$(CorkboardGitTag) branch=$(CorkboardGitBranch) commit=$(CorkboardGitCommitHash)" />
+    </Target>
+
+    <ItemGroup>
+        <CompilerVisibleProperty Include="CorkboardGitTag" />
+        <CompilerVisibleProperty Include="CorkboardGitBranch" />
+        <CompilerVisibleProperty Include="CorkboardGitCommitHash" />
+    </ItemGroup>
+</Project>

@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <LangVersion>latest</LangVersion>
+        <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+        <GenerateResourceDesigner>true</GenerateResourceDesigner>
+        <!-- 这些视图由 DI/状态构造函数创建，并把 AXAML 加载进已有实例，因此不适用 AVLN3001。 -->
+        <NoWarn>$(NoWarn);AVLN3001</NoWarn>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <AvaloniaResource Include="Assets\**" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Corkboard.Core\Corkboard.Core.csproj" />
+        <ProjectReference Include="..\Corkboard.Platforms\Corkboard.Platforms.csproj" />
+        <ProjectReference Include="..\Corkboard.Platforms.Abstractions\Corkboard.Platforms.Abstractions.csproj" />
+        <ProjectReference Include="..\Corkboard4Ci.Interface\Corkboard4Ci.Interface.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- ClassIsland 通知走官方 IPC 包。 -->
+        <PackageReference Include="ClassIsland.Shared.IPC" Version="2.1.0.1" />
+        <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.10" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <EmbeddedResource Update="Langs\SettingsView\Resources.resx">
+            <Generator>PublicResXFileCodeGenerator</Generator>
+            <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+        </EmbeddedResource>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Compile Update="Langs\SettingsView\Resources.Designer.cs">
+            <DesignTime>True</DesignTime>
+            <AutoGen>True</AutoGen>
+            <DependentUpon>Resources.resx</DependentUpon>
+        </Compile>
+    </ItemGroup>
+
+    <Import Project="..\Global.props" />
+
+</Project>
