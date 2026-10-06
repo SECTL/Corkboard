@@ -16,7 +16,7 @@ public abstract class ConfigServiceBase
         WriteIndented = true,
         PropertyNameCaseInsensitive = true,
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
-        Converters = { new ColorJsonConverter() },
+        Converters = { new ColorJsonConverter(), new LanguageModeJsonConverter() },
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
     };
 

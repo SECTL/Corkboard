@@ -12,7 +12,8 @@ public sealed class MacOsWindowFeatureService : IWindowFeatureService
 
     public WindowFeatures SupportedFeatures => WindowFeatures.Topmost |
                                                 WindowFeatures.ToolWindow |
-                                                WindowFeatures.ClickThrough;
+                                                WindowFeatures.ClickThrough |
+                                                WindowFeatures.WindowOpacity;
 
     public WindowFeatureApplyResult Apply(PlatformWindowHandle window, WindowFeatureRequest request)
     {
@@ -72,8 +73,28 @@ public sealed class MacOsWindowFeatureService : IWindowFeatureService
             }
         }
 
+        if ((requested & WindowFeatures.WindowOpacity) != 0)
+        {
+            // 关闭该能力等价于恢复完全不透明（见 WindowFeatureRequest.Opacity）。
+            var opacity = request.Enabled ? request.Opacity : 1.0;
+            if (TrySetWindowOpacity(window.Value, opacity, out var failure))
+            {
+                applied |= WindowFeatures.WindowOpacity;
+            }
+            else
+            {
+                failed |= WindowFeatures.WindowOpacity;
+                detail ??= failure;
+            }
+        }
+
         return WindowFeatureApplyResult.Partial(applied, unsupported, failed, detail);
     }
+
+    /// <summary>
+    ///     macOS 的红绿灯按钮在标题栏左侧（设置界面留了一块空白），右侧没有系统按钮。
+    /// </summary>
+    public double GetSystemCaptionButtonWidth(PlatformWindowHandle window) => 0;
 
     private static bool TrySetToolWindow(nint window, bool enabled, out string? failure)
     {
@@ -113,6 +134,33 @@ public sealed class MacOsWindowFeatureService : IWindowFeatureService
         }
     }
 
+    /// <summary>
+    ///     窗口整体不透明度：NSWindow 的 <c>alphaValue</c>（0–1，1 为不透明）。
+    ///     下限与 Windows 那边取同一个量级，免得配置里手改成 0 之后窗口再也点不到。
+    /// </summary>
+    private static bool TrySetWindowOpacity(nint window, double opacity, out string? failure)
+    {
+        var clamped = double.IsFinite(opacity) ? Math.Clamp(opacity, 0.05, 1.0) : 1.0;
+        try
+        {
+            var selector = SelRegisterName("setAlphaValue:");
+            if (selector == nint.Zero)
+            {
+                failure = "Unable to resolve Objective-C selector 'setAlphaValue:'.";
+                return false;
+            }
+
+            ObjcMsgSendDouble(window, selector, clamped);
+            failure = null;
+            return true;
+        }
+        catch (Exception exception)
+        {
+            failure = exception.Message;
+            return false;
+        }
+    }
+
     private static bool TrySendBooleanOrInteger(nint window, string selectorName, nint value, out string? failure)
     {
         try
@@ -140,6 +188,10 @@ public sealed class MacOsWindowFeatureService : IWindowFeatureService
 
     [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend", CallingConvention = CallingConvention.Cdecl)]
     private static extern void ObjcMsgSend(nint receiver, nint selector, nint argument);
+
+    /// <summary><c>objc_msgSend</c> 的另一份签名：CGFloat 参数按 double 传（alphaValue 就是这种）。</summary>
+    [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend", CallingConvention = CallingConvention.Cdecl)]
+    private static extern void ObjcMsgSendDouble(nint receiver, nint selector, double argument);
 
     [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend", CallingConvention = CallingConvention.Cdecl)]
     private static extern nint ObjcMsgSendNint(nint receiver, nint selector);

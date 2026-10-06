@@ -1,7 +1,9 @@
+using System.Runtime.Versioning;
 using Corkboard.Platforms.Abstractions;
 
 namespace Corkboard.Platforms.Linux;
 
+[SupportedOSPlatform("linux")]
 public sealed class LinuxPlatformServiceRoot : IPlatformServiceRoot
 {
     private static readonly bool IsX11Session = !string.IsNullOrWhiteSpace(
@@ -26,4 +28,6 @@ public sealed class LinuxPlatformServiceRoot : IPlatformServiceRoot
         SupportsBackgroundResidency: true);
 
     public IWindowFeatureService WindowFeatures { get; } = new LinuxWindowFeatureService();
+
+    public IAutostartService Autostart { get; } = new LinuxAutostartService();
 }

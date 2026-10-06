@@ -18,6 +18,18 @@
   <data name="SettingsView_RestartRequired" xml:space="preserve">
     <value>This setting takes effect after a restart</value>
   </data>
+  <data name="SettingsView_NeedsRestarting" xml:space="preserve">
+    <value>Needs restarting</value>
+  </data>
+  <data name="SettingsView_NeedsRestartingMessage" xml:space="preserve">
+    <value>Some settings require a restart to take effect</value>
+  </data>
+  <data name="SettingsView_NeedsRestartingTooltip" xml:space="preserve">
+    <value>Some settings require a restart to take effect. Click to restart the application</value>
+  </data>
+  <data name="SettingsView_RestartNow" xml:space="preserve">
+    <value>Restart</value>
+  </data>
   <data name="SettingsView_NoResult" xml:space="preserve">
     <value>No matching settings</value>
   </data>

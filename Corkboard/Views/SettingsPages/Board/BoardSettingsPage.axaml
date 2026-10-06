@@ -1,0 +1,244 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fa="using:FluentAvalonia.UI.Controls"
+             xmlns:vm="using:Corkboard.ViewModels.SettingsPages"
+             xmlns:board="using:Corkboard.Core.Models.Board"
+             xmlns:core="using:Corkboard.Core.Langs.Common"
+             mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="450"
+             x:Class="Corkboard.Views.SettingsPages.Board.BoardSettingsPage"
+             x:DataType="vm:BoardSettingsPageViewModel">
+    <ScrollViewer>
+        <!-- 设置卡：Header 是设置项名称，Description 是简介，Footer 放控件。见 Core/Styles/StylesBase.axaml。 -->
+        <StackPanel Classes="page-container">
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_Name}">
+                <fa:FASettingsExpander.Footer>
+                    <TextBox MinWidth="240"
+                             Text="{Binding BoardNameDraft, Mode=TwoWay}"
+                             PlaceholderText="{x:Static core:Resources.Settings_Board_NamePlaceholder}"
+                             KeyDown="OnBoardNameKeyDown" />
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <!-- 排布：主页面顶部不再有切换器，这里是唯一入口。 -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_Layout}"
+                                   Description="{x:Static core:Resources.Settings_Board_LayoutDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <ComboBox MinWidth="240"
+                              ItemsSource="{Binding LayoutOptions}"
+                              SelectedItem="{Binding SelectedLayoutOption, Mode=TwoWay}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:BoardLayoutOption">
+                                <TextBlock Text="{Binding DisplayName}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_SortMode}">
+                <fa:FASettingsExpander.Footer>
+                    <ComboBox MinWidth="240"
+                              ItemsSource="{Binding SortOptions}"
+                              SelectedItem="{Binding SelectedSortOption, Mode=TwoWay}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:BoardSortOption">
+                                <TextBlock Text="{Binding DisplayName}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_Subjects}"
+                                   Description="{x:Static core:Resources.Settings_Board_SubjectsDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <TextBox MinWidth="240"
+                             Text="{Binding SubjectsDraft, Mode=TwoWay}"
+                             LostFocus="OnEditorLostFocus" />
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_ConfirmBeforeDelete}">
+                <fa:FASettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding Board.ConfirmBeforeDelete}" />
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <!--
+                内容的默认样式：新作业没单独定「整篇字号」/颜色时用它们。
+                两个控件都绑草稿而不是配置：NumericUpDown 与取色器都是「一路动一路变」的控件，
+                直接双向绑会让每一次变化都落一遍 settings.json（见 ViewModel 的说明）。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_ContentStyle}"
+                                   Description="{x:Static core:Resources.Settings_Board_ContentStyleDescription}">
+                <StackPanel Spacing="10" Margin="0 4 0 0">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                        <TextBlock Grid.Column="0"
+                                   VerticalAlignment="Center"
+                                   Text="{x:Static core:Resources.Settings_Board_DefaultFontSize}" />
+                        <NumericUpDown Grid.Column="1"
+                                       HorizontalAlignment="Left"
+                                       MinWidth="130"
+                                       Minimum="8"
+                                       Maximum="96"
+                                       Increment="1"
+                                       FormatString="0"
+                                       Value="{Binding DefaultFontSizeDraft, Mode=TwoWay}"
+                                       LostFocus="OnEditorLostFocus" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="12">
+                        <TextBlock Grid.Column="0"
+                                   VerticalAlignment="Center"
+                                   Text="{x:Static core:Resources.Settings_Board_DefaultColor}" />
+                        <!-- 「跟随主题」时把取色器整块藏起来，而不是留一个点不动的控件。 -->
+                        <ColorPicker Grid.Column="1"
+                                     VerticalAlignment="Center"
+                                     IsAlphaEnabled="False"
+                                     IsVisible="{Binding !FollowThemeColor}"
+                                     Color="{Binding DefaultColorDraft, Mode=TwoWay}" />
+                        <StackPanel Grid.Column="2"
+                                    Orientation="Horizontal"
+                                    Spacing="8"
+                                    VerticalAlignment="Center">
+                            <ToggleSwitch IsChecked="{Binding FollowThemeColor, Mode=TwoWay}" />
+                            <TextBlock VerticalAlignment="Center"
+                                       Text="{x:Static core:Resources.Settings_Board_DefaultColorFollowTheme}" />
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </fa:FASettingsExpander>
+
+            <!--
+                工具浮窗的预设色板：选中文字后弹出来的工具条上那排色块。
+                最多 BoardPalette.MaxColors 个（到顶就把「新增」禁掉），可改色、可调序、可删。
+                取色器绑的是「色块下标 + 颜色」的一对命令参数——集合元素是 Color 结构体，
+                改它不会发通知，只能回调 ViewModel 按位替换。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_Palette}"
+                                   Description="{x:Static core:Resources.Settings_Board_PaletteDescription}">
+                <StackPanel Spacing="12" Margin="0 4 0 0">
+                    <ItemsControl ItemsSource="{Binding PaletteColors}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:BoardPaletteColorItem">
+                                <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto"
+                                      ColumnSpacing="8"
+                                      Margin="0 0 0 6">
+                                    <ColorPicker Grid.Column="0"
+                                                 VerticalAlignment="Center"
+                                                 IsAlphaEnabled="False"
+                                                 Color="{Binding Color, Mode=TwoWay}" />
+                                    <Button Grid.Column="2"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Padding="6"
+                                            FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                            Content="&#xE70E;"
+                                            ToolTip.Tip="{x:Static core:Resources.Settings_Board_PaletteMoveUp}"
+                                            Click="OnMovePaletteColorUpClick" />
+                                    <Button Grid.Column="3"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Padding="6"
+                                            FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                            Content="&#xE70D;"
+                                            ToolTip.Tip="{x:Static core:Resources.Settings_Board_PaletteMoveDown}"
+                                            Click="OnMovePaletteColorDownClick" />
+                                    <Button Grid.Column="4"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Padding="6"
+                                            FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                            Content="&#xE61C;"
+                                            ToolTip.Tip="{x:Static core:Resources.Settings_Board_PaletteDelete}"
+                                            Click="OnDeletePaletteColorClick" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <Button HorizontalAlignment="Left"
+                            Command="{Binding AddPaletteColorCommand}"
+                            IsEnabled="{Binding CanAddPaletteColor}"
+                            Content="{x:Static core:Resources.Settings_Board_PaletteAdd}" />
+                </StackPanel>
+            </fa:FASettingsExpander>
+
+            <!--
+                作业类型：每种作业有哪些字段。输入框一律用 LostFocus 触发保存，
+                避免默认的 PropertyChanged 每敲一个字符就写一遍 board.json。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_Types}"
+                                   Description="{x:Static core:Resources.Settings_Board_TypesDescription}">
+                <StackPanel Spacing="12" Margin="0 4 0 0">
+                    <ItemsControl ItemsSource="{Binding Types}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="board:BoardTypeDef">
+                                <Border BorderThickness="0,0,0,1"
+                                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                                        Padding="0 0 0 12"
+                                        Margin="0 0 0 4">
+                                    <StackPanel Spacing="8">
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                            <TextBox Grid.Column="0"
+                                                     Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                                     PlaceholderText="{x:Static core:Resources.Settings_Board_TypeNamePlaceholder}"
+                                                     LostFocus="OnEditorLostFocus" />
+                                            <Button Grid.Column="1"
+                                                    Background="Transparent"
+                                                    BorderThickness="0"
+                                                    Padding="6"
+                                                    FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                                    Content="&#xE61C;"
+                                                    ToolTip.Tip="{x:Static core:Resources.Settings_Board_TypeDelete}"
+                                                    Click="OnDeleteTypeClick" />
+                                        </Grid>
+
+                                        <ItemsControl ItemsSource="{Binding Fields}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate DataType="board:BoardTypeField">
+                                                    <Grid ColumnDefinitions="*,Auto,Auto"
+                                                          ColumnSpacing="8"
+                                                          Margin="0 0 0 6">
+                                                        <TextBox Grid.Column="0"
+                                                                 Text="{Binding Label, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                                                                 PlaceholderText="{x:Static core:Resources.Settings_Board_FieldLabelPlaceholder}"
+                                                                 LostFocus="OnEditorLostFocus" />
+                                                        <!-- 值类型下拉：显示名列表与枚举数字同序，所以直接绑 SelectedIndex。 -->
+                                                        <ComboBox Grid.Column="1"
+                                                                  MinWidth="130"
+                                                                  ItemsSource="{x:Static board:BoardFieldKinds.DisplayNames}"
+                                                                  SelectedIndex="{Binding KindIndex, Mode=TwoWay}"
+                                                                  ToolTip.Tip="{x:Static core:Resources.Settings_Board_FieldKind}" />
+                                                        <Button Grid.Column="2"
+                                                                Background="Transparent"
+                                                                BorderThickness="0"
+                                                                Padding="6"
+                                                                FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                                                Content="&#xE61C;"
+                                                                ToolTip.Tip="{x:Static core:Resources.Settings_Board_FieldDelete}"
+                                                                Click="OnDeleteFieldClick" />
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+
+                                        <Button HorizontalAlignment="Left"
+                                                Content="{x:Static core:Resources.Settings_Board_TypeFieldAdd}"
+                                                Click="OnAddFieldClick" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <Button HorizontalAlignment="Left"
+                            Command="{Binding AddTypeCommand}"
+                            Content="{x:Static core:Resources.Settings_Board_TypeAdd}" />
+                </StackPanel>
+            </fa:FASettingsExpander>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -11,9 +11,17 @@
     </Application.Styles>
 
     <Application.Resources>
-        <!-- 图标字体：Core 层的 FluentIconSource 与导航项都依赖这个键。 -->
-        <FontFamily x:Key="FluentSystemIconsResizeable">avares://Corkboard/Assets/Fonts/#FluentSystemIcons-Resizable</FontFamily>
-        <FontFamily x:Key="AppFontFamily">avares://Corkboard/Assets/Fonts/#FluentSystemIcons-Resizable</FontFamily>
+        <!--
+            应用字体：MiSans（小米 HyperOS 系统字体，随包分发，10 个字重）。
+            ContentControlThemeFontFamily 是 FluentAvalonia/Avalonia 控件主题取字体的键，
+            覆盖它才算真正换掉全应用默认字体；AppFontFamily 供页面与自定义样式引用，两者必须同值。
+            字体来源与许可见 Assets/Fonts/MiSans/。
+        -->
+        <FontFamily x:Key="AppFontFamily">avares://Corkboard/Assets/Fonts/MiSans/#MiSans</FontFamily>
+        <FontFamily x:Key="ContentControlThemeFontFamily">avares://Corkboard/Assets/Fonts/MiSans/#MiSans</FontFamily>
         <FontWeight x:Key="AppFontWeight">Normal</FontWeight>
+
+        <!-- 图标字体：Core 层的 FluentIconSource 与导航项都依赖这个键，不要指向应用字体。 -->
+        <FontFamily x:Key="FluentSystemIconsResizeable">avares://Corkboard/Assets/Fonts/#FluentSystemIcons-Resizable</FontFamily>
     </Application.Resources>
 </Application>

@@ -1,0 +1,88 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fa="using:FluentAvalonia.UI.Controls"
+             xmlns:vm="using:Corkboard.ViewModels.SettingsPages"
+             xmlns:core="using:Corkboard.Core.Langs.Common"
+             mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="450"
+             x:Class="Corkboard.Views.SettingsPages.Personalized.AppearanceSettingsPage"
+             x:DataType="vm:AppearanceSettingsPageViewModel">
+    <ScrollViewer>
+        <StackPanel Classes="page-container">
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Appearance_Theme}"
+                                   Description="{x:Static core:Resources.Settings_Appearance_ThemeDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <ComboBox MinWidth="160"
+                              ItemsSource="{Binding ThemeOptions}"
+                              SelectedItem="{Binding SelectedTheme, Mode=TwoWay}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ThemeOption">
+                                <TextBlock Text="{Binding DisplayName}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Appearance_ThemeColor}"
+                                   Description="{x:Static core:Resources.Settings_Appearance_ThemeColorDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <!--
+                            取色器只在「自定义」时出现；「跟随系统」用的是系统个性化里用户挑的那个主题色
+                            （FluentAvaloniaTheme.PreferUserAccentColor），不是随包硬编码的蓝。
+                            绑草稿而不是配置：拖光谱时每帧都在变，直接写配置会连发落盘（见 ViewModel）。
+                        -->
+                        <ColorPicker Color="{Binding ThemeColorDraft, Mode=TwoWay}"
+                                     VerticalAlignment="Center"
+                                     IsVisible="{Binding IsCustomThemeColor}" />
+
+                        <ComboBox MinWidth="160"
+                                  VerticalAlignment="Center"
+                                  ItemsSource="{Binding ThemeColorModeOptions}"
+                                  SelectedItem="{Binding SelectedThemeColorMode, Mode=TwoWay}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ThemeColorModeOption">
+                                    <TextBlock Text="{Binding DisplayName}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </StackPanel>
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Appearance_FontFamily}"
+                                   Description="{x:Static core:Resources.Settings_Appearance_FontFamilyDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <ComboBox MinWidth="220"
+                              MaxDropDownHeight="400"
+                              ItemsSource="{Binding FontOptions}"
+                              SelectedItem="{Binding SelectedFont, Mode=TwoWay}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:FontFamilyOption">
+                                <!-- 每一项按自己的字体渲染，等于自带预览。 -->
+                                <TextBlock Text="{Binding DisplayName}" FontFamily="{Binding Family}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Appearance_FontWeight}"
+                                   Description="{x:Static core:Resources.Settings_Appearance_FontWeightDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <ComboBox MinWidth="160"
+                              ItemsSource="{Binding FontWeightOptions}"
+                              SelectedItem="{Binding SelectedFontWeight, Mode=TwoWay}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:FontWeightOption">
+                                <TextBlock Text="{Binding DisplayName}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

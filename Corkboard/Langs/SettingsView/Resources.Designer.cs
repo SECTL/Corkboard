@@ -23,5 +23,9 @@ public static class Resources
 
     public static string SettingsView_Back => ResourceManager.GetString(nameof(SettingsView_Back), Culture)!;
     public static string SettingsView_RestartRequired => ResourceManager.GetString(nameof(SettingsView_RestartRequired), Culture)!;
+    public static string SettingsView_NeedsRestarting => ResourceManager.GetString(nameof(SettingsView_NeedsRestarting), Culture)!;
+    public static string SettingsView_NeedsRestartingMessage => ResourceManager.GetString(nameof(SettingsView_NeedsRestartingMessage), Culture)!;
+    public static string SettingsView_NeedsRestartingTooltip => ResourceManager.GetString(nameof(SettingsView_NeedsRestartingTooltip), Culture)!;
+    public static string SettingsView_RestartNow => ResourceManager.GetString(nameof(SettingsView_RestartNow), Culture)!;
     public static string SettingsView_NoResult => ResourceManager.GetString(nameof(SettingsView_NoResult), Culture)!;
 }

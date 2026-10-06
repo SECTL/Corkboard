@@ -20,6 +20,7 @@ public static class CoreRuntimeServiceCollectionExtensions
 
         services.AddSingleton<ConfigServiceBase, FileConfigService>();
         services.AddSingleton<MainConfigHandler>();
+        services.AddSingleton<IBoardNoteStore, BoardNoteStore>();
         services.AddSingleton<IBoardService, BoardService>();
         return services;
     }

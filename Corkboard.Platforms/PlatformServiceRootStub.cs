@@ -16,9 +16,13 @@ public sealed class PlatformServiceRootStub : IPlatformServiceRoot, IWindowFeatu
 
     public IWindowFeatureService WindowFeatures => this;
 
+    public IAutostartService Autostart => UnsupportedAutostartService.Instance;
+
     public global::Corkboard.Platforms.Abstractions.WindowFeatures SupportedFeatures =>
         global::Corkboard.Platforms.Abstractions.WindowFeatures.None;
 
     public WindowFeatureApplyResult Apply(PlatformWindowHandle window, WindowFeatureRequest request) =>
         WindowFeatureApplyResult.Unsupported(request.Features, "The active platform does not support window features.");
+
+    public double GetSystemCaptionButtonWidth(PlatformWindowHandle window) => 0;
 }

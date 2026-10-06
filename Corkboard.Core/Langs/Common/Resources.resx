@@ -15,6 +15,13 @@
   <data name="App_Title" xml:space="preserve">
     <value>Corkboard</value>
   </data>
+  <!-- 仅 Debug 构建：壳左下角版本水印的第一行（见 Core 的 DevelopmentBuildAdorner）。 -->
+  <data name="Debug_DevelopmentBuild_Notice" xml:space="preserve">
+    <value>开发中画面，不代表最终品质。</value>
+  </data>
+  <data name="Common_Cancel" xml:space="preserve">
+    <value>取消</value>
+  </data>
   <data name="Feat_Settings" xml:space="preserve">
     <value>设置</value>
   </data>
@@ -33,29 +40,197 @@
   <data name="Menu_About" xml:space="preserve">
     <value>关于 Corkboard</value>
   </data>
-  <data name="Board_AddNote" xml:space="preserve">
-    <value>新建便签</value>
+  <!--
+      主窗口最右上角的锁按钮：锁上就等于开启点击穿透。
+      锁定态主窗口收不到鼠标，那颗按钮由独立小窗口承载（见 ClickThroughLockWindow），
+      所以两条文案分别用在不同位置。
+  -->
+  <data name="MainView_LockWindow" xml:space="preserve">
+    <value>锁定窗口（开启点击穿透）</value>
   </data>
+  <data name="MainView_UnlockWindow" xml:space="preserve">
+    <value>解锁窗口（关闭点击穿透）</value>
+  </data>
+  <!-- 作业板的默认名称：用户在设置里填了名字就用用户的，没填才回退到这条。 -->
   <data name="Board_Title" xml:space="preserve">
-    <value>软木板</value>
+    <value>作业板</value>
+  </data>
+  <data name="Board_AddNote" xml:space="preserve">
+    <value>布置作业</value>
+  </data>
+  <data name="Board_ConfirmAdd" xml:space="preserve">
+    <value>布置</value>
   </data>
   <data name="Board_DeleteNote" xml:space="preserve">
-    <value>删除便签</value>
+    <value>删除作业</value>
   </data>
-  <data name="Board_PinNote" xml:space="preserve">
-    <value>置顶便签</value>
+  <data name="Board_EditNote" xml:space="preserve">
+    <value>编辑作业</value>
   </data>
-  <data name="Board_EmptyTitle" xml:space="preserve">
-    <value>这块软木板还是空的</value>
+  <data name="Board_EditTitle" xml:space="preserve">
+    <value>编辑作业</value>
   </data>
-  <data name="Board_EmptyHint" xml:space="preserve">
-    <value>这是骨架里的占位业务模块，需求确定后替换这一页即可。</value>
+  <data name="Board_SaveEdit" xml:space="preserve">
+    <value>保存</value>
   </data>
-  <data name="Board_NoteTitlePlaceholder" xml:space="preserve">
-    <value>标题</value>
+  <!-- 区块标题行用；按住即拖，不需要长按，松手落盘。 -->
+  <data name="Board_ReorderSubject" xml:space="preserve">
+    <value>拖动调整科目顺序</value>
+  </data>
+  <!-- 作业内容输入框右下角的手柄用；横竖都能拉。 -->
+  <data name="Board_ResizeContent" xml:space="preserve">
+    <value>拖动调整输入框大小</value>
+  </data>
+  <!-- 弹层卡片用；整张卡片都是拖动面（输入控件除外），按住就能把卡片拖到窗口别的角落。 -->
+  <data name="Board_MoveSheet" xml:space="preserve">
+    <value>拖动移动卡片</value>
   </data>
   <data name="Board_NoteContentPlaceholder" xml:space="preserve">
-    <value>写点什么…</value>
+    <value>作业内容：写清楚要做什么</value>
+  </data>
+  <data name="Board_FontSize" xml:space="preserve">
+    <value>字号</value>
+  </data>
+  <!-- 整篇字号下拉里「不定字号」那一项；{0} 是设置里的默认字号。 -->
+  <data name="Board_FontSizeFollowDefault" xml:space="preserve">
+    <value>跟随默认（{0}）</value>
+  </data>
+  <data name="Board_TextColor" xml:space="preserve">
+    <value>颜色</value>
+  </data>
+  <data name="Board_ClearFormat" xml:space="preserve">
+    <value>清除格式</value>
+  </data>
+  <!-- 格式浮窗上的 Markdown 按钮：点一下给选段套记号，再点一下取消。 -->
+  <data name="Board_MarkdownBold" xml:space="preserve">
+    <value>加粗</value>
+  </data>
+  <data name="Board_MarkdownItalic" xml:space="preserve">
+    <value>斜体</value>
+  </data>
+  <!-- 色板最后那个「+」：打开取色器挑色板以外的颜色。 -->
+  <data name="Board_CustomColor" xml:space="preserve">
+    <value>自定义颜色</value>
+  </data>
+  <data name="Board_Preview" xml:space="preserve">
+    <value>预览</value>
+  </data>
+  <data name="Board_PreviewEmpty" xml:space="preserve">
+    <value>预览会显示 Markdown、颜色与字号的效果</value>
+  </data>
+  <data name="Board_Uncategorized" xml:space="preserve">
+    <value>未分类</value>
+  </data>
+  <data name="Board_Untitled" xml:space="preserve">
+    <value>未命名</value>
+  </data>
+  <data name="Board_UntitledField" xml:space="preserve">
+    <value>未命名字段</value>
+  </data>
+  <data name="Board_TypeLabel" xml:space="preserve">
+    <value>类型</value>
+  </data>
+  <data name="Board_TypeDirect" xml:space="preserve">
+    <value>直接写</value>
+  </data>
+  <data name="Board_SubjectLabel" xml:space="preserve">
+    <value>科目</value>
+  </data>
+  <!-- 页数区间的显示格式：{0} 起页、{1} 止页。 -->
+  <data name="Board_PageRangeFormat" xml:space="preserve">
+    <value>P{0}–{1}</value>
+  </data>
+  <data name="Board_EmptyTitle" xml:space="preserve">
+    <value>还没有作业</value>
+  </data>
+  <data name="Board_EmptyHint" xml:space="preserve">
+    <value>点右上角「布置作业」记下第一条</value>
+  </data>
+  <!--
+    点击穿透开着时，标题栏右上角整块（含「布置作业」）是隐藏的，
+    上面那条提示就没有落点了，换成指向「先解锁」的说法。
+  -->
+  <data name="Board_EmptyHintLocked" xml:space="preserve">
+    <value>窗口已锁定，先点右上角解锁，再记下第一条</value>
+  </data>
+  <data name="Board_Replay" xml:space="preserve">
+    <value>时空回放</value>
+  </data>
+  <data name="Board_ReplayConfirm" xml:space="preserve">
+    <value>再点一次进入回放</value>
+  </data>
+  <data name="Board_ReplayEmpty" xml:space="preserve">
+    <value>还没有可回放的作业</value>
+  </data>
+  <data name="Board_ReplayStopFormat" xml:space="preserve">
+    <value>{0} · 共 {1} 项</value>
+  </data>
+  <data name="Board_ReplayBannerFormat" xml:space="preserve">
+    <value>回放中：停在 {0}，板上有 {1} 项作业</value>
+  </data>
+  <data name="Board_ReplayExit" xml:space="preserve">
+    <value>退出回放</value>
+  </data>
+  <data name="Board_ReplayReadOnlyHint" xml:space="preserve">
+    <value>回放期间不能改动作业</value>
+  </data>
+  <data name="Board_FieldKind_Text" xml:space="preserve">
+    <value>文本</value>
+  </data>
+  <data name="Board_FieldKind_Paragraph" xml:space="preserve">
+    <value>多行文本</value>
+  </data>
+  <data name="Board_FieldKind_Number" xml:space="preserve">
+    <value>数字</value>
+  </data>
+  <data name="Board_FieldKind_PageRange" xml:space="preserve">
+    <value>页数区间</value>
+  </data>
+  <!-- 首次运行打底的作业类型与科目，用户可以在设置里改。 -->
+  <data name="Board_Seed_Type_Workbook" xml:space="preserve">
+    <value>练习册</value>
+  </data>
+  <data name="Board_Seed_Type_Copy" xml:space="preserve">
+    <value>抄写</value>
+  </data>
+  <data name="Board_Seed_Type_Recite" xml:space="preserve">
+    <value>背诵</value>
+  </data>
+  <data name="Board_Seed_Type_Paper" xml:space="preserve">
+    <value>卷子</value>
+  </data>
+  <data name="Board_Seed_Field_Pages" xml:space="preserve">
+    <value>页数</value>
+  </data>
+  <data name="Board_Seed_Field_Content" xml:space="preserve">
+    <value>内容</value>
+  </data>
+  <data name="Board_Seed_Field_Times" xml:space="preserve">
+    <value>遍数</value>
+  </data>
+  <data name="Board_Seed_Subject_Chinese" xml:space="preserve">
+    <value>语文</value>
+  </data>
+  <data name="Board_Seed_Subject_Math" xml:space="preserve">
+    <value>数学</value>
+  </data>
+  <data name="Board_Seed_Subject_English" xml:space="preserve">
+    <value>英语</value>
+  </data>
+  <data name="Board_Layout_SingleColumn" xml:space="preserve">
+    <value>单列</value>
+  </data>
+  <data name="Board_Layout_Block" xml:space="preserve">
+    <value>小区块</value>
+  </data>
+  <data name="Board_Layout_Flow" xml:space="preserve">
+    <value>通铺</value>
+  </data>
+  <data name="Board_DeleteConfirmTitle" xml:space="preserve">
+    <value>删除作业</value>
+  </data>
+  <data name="Board_DeleteConfirmMessage" xml:space="preserve">
+    <value>删掉之后找不回来</value>
   </data>
   <data name="Settings_Title" xml:space="preserve">
     <value>设置</value>
@@ -72,14 +247,241 @@
   <data name="Settings_Basic_Language" xml:space="preserve">
     <value>语言</value>
   </data>
+  <!-- 语言名固定用它自己的写法（不随界面语言翻译），两边 .resx 刻意保持同值。 -->
+  <data name="Settings_Basic_Language_ChineseSimplified" xml:space="preserve">
+    <value>简体中文</value>
+  </data>
+  <data name="Settings_Basic_Language_English" xml:space="preserve">
+    <value>English</value>
+  </data>
+  <data name="Settings_DesktopIntegrationFailed" xml:space="preserve">
+    <value>无法应用「{0}」设置：{1}</value>
+  </data>
+  <data name="Settings_Basic_Autostart" xml:space="preserve">
+    <value>开机自启</value>
+  </data>
+  <data name="Settings_Basic_AutostartDescription" xml:space="preserve">
+    <value>登录系统后自动启动应用，是否显示主窗口由下面的开关决定</value>
+  </data>
   <data name="Settings_Basic_ShowStartupWindow" xml:space="preserve">
     <value>启动时显示主窗口</value>
   </data>
-  <data name="Settings_Basic_BackgroundResident" xml:space="preserve">
-    <value>关闭主窗口后继续驻留</value>
+  <data name="Settings_Basic_ShowStartupWindowDescription" xml:space="preserve">
+    <value>关闭后启动时只常驻托盘，点击托盘图标才显示窗口</value>
   </data>
   <data name="Settings_Basic_AutoSaveWindowSize" xml:space="preserve">
     <value>记住窗口尺寸</value>
+  </data>
+  <data name="Settings_Basic_AutoSaveWindowSizeDescription" xml:space="preserve">
+    <value>退出时保存主窗口与设置窗口的尺寸和最大化状态</value>
+  </data>
+  <data name="Settings_Basic_PinToDesktop" xml:space="preserve">
+    <value>置底到桌面</value>
+  </data>
+  <data name="Settings_Basic_PinToDesktopDescription" xml:space="preserve">
+    <value>把主窗口嵌进桌面层，被所有普通窗口盖住</value>
+  </data>
+  <data name="Settings_Basic_HoldToDragWindow" xml:space="preserve">
+    <value>长按拖动窗口</value>
+  </data>
+  <data name="Settings_Basic_HoldToDragWindowDescription" xml:space="preserve">
+    <value>长按主窗口任意位置即可拖动窗口；关闭后只有顶部标题栏能拖动</value>
+  </data>
+  <data name="Settings_Basic_MainWindowOpacity" xml:space="preserve">
+    <value>主窗口不透明度</value>
+  </data>
+  <data name="Settings_Basic_MainWindowOpacityDescription" xml:space="preserve">
+    <value>整块主窗口（含作业内容）一起变淡；数值越小越透明</value>
+  </data>
+  <data name="Settings_Basic_ClickThrough" xml:space="preserve">
+    <value>点击穿透</value>
+  </data>
+  <data name="Settings_Basic_ClickThroughDescription" xml:space="preserve">
+    <value>主窗口不再响应鼠标与触摸，需要改设置时从托盘菜单打开</value>
+  </data>
+  <data name="Settings_Group_Board" xml:space="preserve">
+    <value>作业板</value>
+  </data>
+  <data name="Settings_Board_Title" xml:space="preserve">
+    <value>作业板设置</value>
+  </data>
+  <data name="Settings_Board_Name" xml:space="preserve">
+    <value>名称</value>
+  </data>
+  <data name="Settings_Board_NamePlaceholder" xml:space="preserve">
+    <value>留空则用默认名称</value>
+  </data>
+  <data name="Settings_Board_Layout" xml:space="preserve">
+    <value>排布</value>
+  </data>
+  <data name="Settings_Board_LayoutDescription" xml:space="preserve">
+    <value>便签在主页面上怎么摆</value>
+  </data>
+  <data name="Settings_Board_SortMode" xml:space="preserve">
+    <value>排序方式</value>
+  </data>
+  <data name="Settings_Board_Sort_CreatedDescending" xml:space="preserve">
+    <value>创建时间 新的在前</value>
+  </data>
+  <data name="Settings_Board_Sort_CreatedAscending" xml:space="preserve">
+    <value>创建时间 旧的在前</value>
+  </data>
+  <data name="Settings_Board_Sort_UpdatedDescending" xml:space="preserve">
+    <value>最近修改的在前</value>
+  </data>
+  <data name="Settings_Board_Sort_Subject" xml:space="preserve">
+    <value>按科目</value>
+  </data>
+  <data name="Settings_Board_Sort_Manual" xml:space="preserve">
+    <value>手动 拖动区块排的</value>
+  </data>
+  <data name="Settings_Board_ConfirmBeforeDelete" xml:space="preserve">
+    <value>删除前确认</value>
+  </data>
+  <data name="Settings_Board_Subjects" xml:space="preserve">
+    <value>科目</value>
+  </data>
+  <data name="Settings_Board_SubjectsDescription" xml:space="preserve">
+    <value>用逗号分隔，新建作业时可以从这里选</value>
+  </data>
+  <data name="Settings_Board_Types" xml:space="preserve">
+    <value>作业类型</value>
+  </data>
+  <data name="Settings_Board_TypesDescription" xml:space="preserve">
+    <value>每种作业要填哪些字段；新建时选中类型就按这些字段展开输入</value>
+  </data>
+  <data name="Settings_Board_TypeAdd" xml:space="preserve">
+    <value>添加类型</value>
+  </data>
+  <data name="Settings_Board_TypeDelete" xml:space="preserve">
+    <value>删除类型</value>
+  </data>
+  <data name="Settings_Board_TypeDeleteMessage" xml:space="preserve">
+    <value>删掉之后找不回来，已经用它建的作业会变成直接写的作业</value>
+  </data>
+  <data name="Settings_Board_TypeNamePlaceholder" xml:space="preserve">
+    <value>类型名，如练习册</value>
+  </data>
+  <data name="Settings_Board_TypeFieldAdd" xml:space="preserve">
+    <value>添加字段</value>
+  </data>
+  <data name="Settings_Board_FieldLabelPlaceholder" xml:space="preserve">
+    <value>字段名，如页数</value>
+  </data>
+  <data name="Settings_Board_FieldKind" xml:space="preserve">
+    <value>值类型</value>
+  </data>
+  <data name="Settings_Board_FieldDelete" xml:space="preserve">
+    <value>删除字段</value>
+  </data>
+  <!-- 内容的默认字号/颜色：新作业没单独定的时候用它们。 -->
+  <data name="Settings_Board_ContentStyle" xml:space="preserve">
+    <value>内容默认样式</value>
+  </data>
+  <data name="Settings_Board_ContentStyleDescription" xml:space="preserve">
+    <value>新作业内容的默认字号与颜色；单条作业里可以再单独改</value>
+  </data>
+  <data name="Settings_Board_DefaultFontSize" xml:space="preserve">
+    <value>默认字号</value>
+  </data>
+  <data name="Settings_Board_DefaultColor" xml:space="preserve">
+    <value>默认颜色</value>
+  </data>
+  <data name="Settings_Board_DefaultColorFollowTheme" xml:space="preserve">
+    <value>跟随主题</value>
+  </data>
+  <data name="Settings_Board_Palette" xml:space="preserve">
+    <value>快速颜色</value>
+  </data>
+  <data name="Settings_Board_PaletteDescription" xml:space="preserve">
+    <value>选中文字后弹出的工具条上那几个颜色；最多 5 个，工具条上另外还有一个能自选任意颜色的入口</value>
+  </data>
+  <data name="Settings_Board_PaletteAdd" xml:space="preserve">
+    <value>添加颜色</value>
+  </data>
+  <data name="Settings_Board_PaletteDelete" xml:space="preserve">
+    <value>删除颜色</value>
+  </data>
+  <data name="Settings_Board_PaletteMoveUp" xml:space="preserve">
+    <value>前移一位</value>
+  </data>
+  <data name="Settings_Board_PaletteMoveDown" xml:space="preserve">
+    <value>后移一位</value>
+  </data>
+  <data name="Settings_Group_Personalized" xml:space="preserve">
+    <value>个性化</value>
+  </data>
+  <data name="Settings_Appearance_Title" xml:space="preserve">
+    <value>外观</value>
+  </data>
+  <data name="Settings_Appearance_Theme" xml:space="preserve">
+    <value>主题</value>
+  </data>
+  <data name="Settings_Appearance_ThemeDescription" xml:space="preserve">
+    <value>浅色、深色，或跟随系统</value>
+  </data>
+  <data name="Settings_Appearance_Theme_FollowSystem" xml:space="preserve">
+    <value>跟随系统</value>
+  </data>
+  <data name="Settings_Appearance_Theme_Light" xml:space="preserve">
+    <value>浅色</value>
+  </data>
+  <data name="Settings_Appearance_Theme_Dark" xml:space="preserve">
+    <value>深色</value>
+  </data>
+  <data name="Settings_Appearance_ThemeColor" xml:space="preserve">
+    <value>主题色</value>
+  </data>
+  <data name="Settings_Appearance_ThemeColorDescription" xml:space="preserve">
+    <value>用系统里挑的主题色，或自己指定一个颜色</value>
+  </data>
+  <data name="Settings_Appearance_ThemeColorMode_Default" xml:space="preserve">
+    <value>跟随系统</value>
+  </data>
+  <data name="Settings_Appearance_ThemeColorMode_Custom" xml:space="preserve">
+    <value>自定义</value>
+  </data>
+  <data name="Settings_Appearance_FontFamily" xml:space="preserve">
+    <value>字体</value>
+  </data>
+  <data name="Settings_Appearance_FontFamilyDescription" xml:space="preserve">
+    <value>界面显示用的字体，改完立即生效</value>
+  </data>
+  <data name="Settings_Appearance_FontFamilyDefault" xml:space="preserve">
+    <value>MiSans（默认）</value>
+  </data>
+  <data name="Settings_Appearance_FontWeight" xml:space="preserve">
+    <value>字体粗细</value>
+  </data>
+  <data name="Settings_Appearance_FontWeightDescription" xml:space="preserve">
+    <value>界面文字的粗细，字体没有这档粗细时取最接近的一档</value>
+  </data>
+  <data name="Settings_Appearance_FontWeight_Thin" xml:space="preserve">
+    <value>极细</value>
+  </data>
+  <data name="Settings_Appearance_FontWeight_ExtraLight" xml:space="preserve">
+    <value>特细</value>
+  </data>
+  <data name="Settings_Appearance_FontWeight_Light" xml:space="preserve">
+    <value>细体</value>
+  </data>
+  <data name="Settings_Appearance_FontWeight_Normal" xml:space="preserve">
+    <value>常规</value>
+  </data>
+  <data name="Settings_Appearance_FontWeight_Medium" xml:space="preserve">
+    <value>中等</value>
+  </data>
+  <data name="Settings_Appearance_FontWeight_SemiBold" xml:space="preserve">
+    <value>半粗</value>
+  </data>
+  <data name="Settings_Appearance_FontWeight_Bold" xml:space="preserve">
+    <value>粗体</value>
+  </data>
+  <data name="Settings_Appearance_FontWeight_ExtraBold" xml:space="preserve">
+    <value>特粗</value>
+  </data>
+  <data name="Settings_Appearance_FontWeight_Black" xml:space="preserve">
+    <value>极粗</value>
   </data>
   <data name="Settings_About_Title" xml:space="preserve">
     <value>关于</value>

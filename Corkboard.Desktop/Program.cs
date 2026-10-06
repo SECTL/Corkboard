@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Media;
 using Corkboard.Core;
 using Corkboard.Platforms;
 using Corkboard.Shared;
@@ -32,13 +33,21 @@ internal sealed class Program
     private static void ConfigurePlatformServices()
     {
 #if CORKBOARD_PLATFORM_WINDOWS
-        if (OperatingSystem.IsWindows())
-            WindowsTouchKeyboardIntegration.Initialize();
+        // Windows 头只能跑在 Windows 上，这个守卫同时让平台分析器认可下面的 Windows 专属调用。
+        if (!OperatingSystem.IsWindows())
+            throw new PlatformNotSupportedException("The Windows desktop head must run on Windows.");
 
+        WindowsTouchKeyboardIntegration.Initialize();
         PlatformStartupContext.Set(new WindowsPlatformServiceRoot());
 #elif CORKBOARD_PLATFORM_LINUX
+        if (!OperatingSystem.IsLinux())
+            throw new PlatformNotSupportedException("The Linux desktop head must run on Linux.");
+
         PlatformStartupContext.Set(new LinuxPlatformServiceRoot());
 #elif CORKBOARD_PLATFORM_MACOS
+        if (!OperatingSystem.IsMacOS())
+            throw new PlatformNotSupportedException("The macOS desktop head must run on macOS.");
+
         PlatformStartupContext.Set(new MacOsPlatformServiceRoot());
 #else
         throw new PlatformNotSupportedException("No Corkboard desktop platform implementation was selected.");
@@ -50,7 +59,11 @@ internal sealed class Program
     {
         return AppBuilder.Configure<App>()
             .UsePlatformDetect()
-            .WithInterFont()
+            .With(new FontManagerOptions
+            {
+                // 默认字体必须在这里定：只改 XAML 资源的话，首帧会先用系统字体渲染一次。
+                DefaultFamilyName = GlobalConstants.DefaultFontFamily
+            })
             .LogToTrace();
     }
 }

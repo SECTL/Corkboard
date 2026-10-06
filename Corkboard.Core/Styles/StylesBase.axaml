@@ -1,10 +1,62 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:cb="http://corkboard.sectl.cn/schemas/xaml/core">
+        xmlns:cb="http://corkboard.sectl.cn/schemas/xaml/core"
+        xmlns:fa="clr-namespace:FluentAvalonia.UI.Controls;assembly=FluentAvalonia">
+    <Styles.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!--
+                    开发构建装饰层的控件主题（Debug 构建的左下角版本水印）。
+                    主题必须挂在应用级资源里，控件只按类型查自己的 ControlTheme。
+                -->
+                <MergeResourceInclude Source="/Controls/DevelopmentBuildAdorner.axaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- 设置页内容区限宽：超宽屏幕上不让设置项横着拉满。 -->
+            <x:Double x:Key="PageContainerWidth">960</x:Double>
+        </ResourceDictionary>
+    </Styles.Resources>
+
     <!--
         Core 层样式入口：只放与业务无关的可复用样式，页面私有样式留在各自 .axaml 里。
         应用层 Styles.axaml 通过 StyleInclude 引入这个文件。
     -->
+    <StyleInclude Source="/Styles/NavigationBackButton.axaml" />
+
+    <!--
+        设置页统一容器：页面根 StackPanel 挂 Classes="page-container"，
+        自动获得限宽、边距与卡片间距（MaxWidth 触发居中，不用再写 HorizontalAlignment）。
+    -->
+    <Style Selector=":is(Panel).page-container">
+        <Setter Property="Margin" Value="12 12 18 12" />
+        <Setter Property="MaxWidth" Value="{StaticResource PageContainerWidth}" />
+        <Setter Property="StackPanel.Spacing" Value="4" />
+    </Style>
+
+    <!-- 设置卡：FASettingsExpander 自带卡片外观，这里只把开关/滑块贴回右边缘。 -->
+    <Style Selector="fa|FASettingsExpanderItem">
+        <Style Selector="^ ToggleSwitch">
+            <Setter Property="Margin" Value="0 -12" />
+        </Style>
+        <Style Selector="^ Slider">
+            <Setter Property="Margin" Value="0 -12" />
+        </Style>
+    </Style>
+
+    <!--
+        应用字体：在 Window 上设一次，靠 TextElement.FontFamily 的继承覆盖整棵可视树。
+        容器类弹窗（FAContentDialog）是独立顶层，不继承窗口字体，必须单独设。
+        字体键由应用层 App.axaml 定义，Core 只引用不定义（样式包要能被任意宿主复用）。
+    -->
+    <Style Selector=":is(Window)">
+        <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}" />
+        <Setter Property="FontWeight" Value="{DynamicResource AppFontWeight}" />
+    </Style>
+
+    <Style Selector="fa|FAContentDialog">
+        <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}" />
+        <Setter Property="FontWeight" Value="{DynamicResource AppFontWeight}" />
+    </Style>
 
     <Style Selector="TextBlock.h1">
         <Setter Property="FontSize" Value="24" />
@@ -21,11 +73,39 @@
         <Setter Property="Opacity" Value="0.7" />
     </Style>
 
+    <!--
+        开关只留本体：FluentAvalonia 的 ToggleSwitch 默认会在右侧显示 On/Off 文案。
+        全局清掉 OnContent/OffContent，页面里不用逐个开关去写。
+    -->
+    <Style Selector="ToggleSwitch">
+        <Setter Property="OnContent" Value="{x:Null}" />
+        <Setter Property="OffContent" Value="{x:Null}" />
+    </Style>
+
     <Style Selector="Border.card">
         <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="CornerRadius" Value="8" />
         <Setter Property="Padding" Value="12" />
+    </Style>
+
+    <!--
+        页面级弹层：遮罩铺满整个窗口内容（包括自绘标题栏），把底下的东西全部压暗并吃掉点击。
+        半透明黑用字面量：FluentAvalonia 没提供语义化的遮罩笔刷，动态资源找不到时会静默变成透明。
+    -->
+    <Style Selector="Border.scrim">
+        <Setter Property="Background" Value="#66000000" />
+    </Style>
+
+    <!-- 弹层里的卡片。没有标题栏，内容直接从表单开始。 -->
+    <Style Selector="Border.sheet">
+        <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="16" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
 </Styles>

@@ -72,6 +72,12 @@ public static class GlobalConstants
 
     public const string DefaultThemeColor = "#0078D4";
 
+    /// <summary>
+    ///     应用默认字体（MiSans，小米 HyperOS 系统字体）在资源中的位置。
+    ///     入口层的 <c>FontManagerOptions.DefaultFamilyName</c> 必须用这个值，否则首帧会先用系统字体渲染。
+    /// </summary>
+    public const string DefaultFontFamily = "avares://Corkboard/Assets/Fonts/MiSans/#MiSans";
+
     /// <summary>第三方图标字体（Fluent System Icons）在资源中的位置。</summary>
     public const string FluentIconsFontResource = "avares://Corkboard/Assets/Fonts/#FluentSystemIcons-Resizable";
 
@@ -82,6 +88,9 @@ public static class GlobalConstants
 #endif
 
     public static FontFamily FluentIconsFontFamily { get; } = new(FluentIconsFontResource);
+
+    /// <summary>随包分发的默认字体，供设置页把「默认」这个选项还原成真实字体。</summary>
+    public static FontFamily DefaultAvaFontFamily { get; } = new(DefaultFontFamily);
 
     internal static VersionMetadata ReadMetadata(Assembly assembly)
     {

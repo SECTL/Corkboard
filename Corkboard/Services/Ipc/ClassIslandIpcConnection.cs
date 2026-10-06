@@ -393,7 +393,14 @@ public sealed class ClassIslandIpcConnection : IClassIslandIpcConnection
             }
             catch (Exception exception)
             {
-                _logger.LogDebug(exception, "连接 ClassIsland IPC 失败，将在 {RetryDelay} 后重试。", _currentRetryDelay);
+                // 没装/没开 ClassIsland 时超时是预期结果，不要把异常堆栈刷进日志（日志里那串
+                // TimeoutException 只是「插件不在」的噪声），其它异常仍然带堆栈记录。
+                if (exception is TimeoutException or OperationCanceledException)
+                    _logger.LogDebug("连接 ClassIsland IPC 超时，将在 {RetryDelay} 后重试。", _currentRetryDelay);
+                else
+                    _logger.LogDebug(exception, "连接 ClassIsland IPC 失败，将在 {RetryDelay} 后重试。",
+                        _currentRetryDelay);
+
                 DisposeClient(client);
                 ScheduleRetry();
                 return false;

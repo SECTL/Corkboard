@@ -1,0 +1,32 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:cb="using:Corkboard.Core"
+                    xmlns:controls="using:Corkboard.Core.Controls"
+                    xmlns:lang="using:Corkboard.Core.Langs.Common">
+    <!--
+        开发构建装饰层：左下角一行版本水印，铺满被装饰的壳。
+        IsHitTestVisible=False 是硬要求——装饰层盖在整个壳上，吃掉命中测试就等于整窗点不动。
+        文案分两行：第一行是 Core 公共资源里的提示句，第二行是「产品名 + 长版本串」，
+        版本串由 GlobalConstants 在运行期从程序集元数据读（见 GlobalConstants.ReadMetadata）。
+    -->
+    <ControlTemplate x:Key="DevelopmentBuildAdornerControlTemplate"
+                     TargetType="controls:DevelopmentBuildAdorner">
+        <Grid HorizontalAlignment="Stretch"
+              VerticalAlignment="Stretch"
+              IsHitTestVisible="False">
+            <TextBlock HorizontalAlignment="Left"
+                       VerticalAlignment="Bottom"
+                       FontSize="12"
+                       Opacity="0.8">
+                <Run Text="{x:Static lang:Resources.Debug_DevelopmentBuild_Notice}" />
+                <LineBreak />
+                <Run Text="{x:Static lang:Resources.App_Title}" /><Run Text=" " /><Run Text="{x:Static cb:GlobalConstants.VersionLong}" />
+            </TextBlock>
+        </Grid>
+    </ControlTemplate>
+
+    <ControlTheme TargetType="controls:DevelopmentBuildAdorner"
+                  x:Key="{x:Type controls:DevelopmentBuildAdorner}">
+        <Setter Property="Template" Value="{StaticResource DevelopmentBuildAdornerControlTemplate}" />
+    </ControlTheme>
+</ResourceDictionary>

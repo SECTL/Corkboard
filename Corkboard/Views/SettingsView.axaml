@@ -3,6 +3,8 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:fa="using:FluentAvalonia.UI.Controls"
+             xmlns:icons="using:Corkboard.Core.Icons"
+             xmlns:lang="using:Corkboard.Langs.SettingsView"
              xmlns:views="using:Corkboard.Views"
              mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="600"
              x:Class="Corkboard.Views.SettingsView"
@@ -12,21 +14,69 @@
         <Border Grid.Row="0" Height="48"
                 Background="Transparent"
                 WindowDecorationProperties.ElementRole="TitleBar">
-            <StackPanel Orientation="Horizontal" Margin="8" Spacing="8">
-                <Border Width="60" IsVisible="{Binding ViewModel.IsMacOs}" />
+            <!--
+                标题栏分三栏：左边是「收纳 / 返回 / 标题」，右边是窗口动作（目前只有「需要重启」提示）。
+                最右侧那一带是窗口自己的最小化 / 最大化 / 关闭按钮：FAAppWindow 把它们画在标题栏右端、
+                盖在页面内容上面（本窗口内容延伸到标题栏里），所以右侧动作区的右边距要按系统按钮的宽度
+                让出来（代码里按平台查，见 ApplySystemButtonsReserve），控件才不会被那三个按钮压住。
+            -->
+            <Grid ColumnDefinitions="Auto,*,Auto" Margin="8">
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
+                    <Border Width="60" IsVisible="{Binding ViewModel.IsMacOs}" />
 
-                <Button x:Name="BackButton"
-                        IsVisible="{Binding ViewModel.CanGoBack}"
-                        Content="&#xE72B;"
-                        FontFamily="{DynamicResource FluentSystemIconsResizeable}"
-                        VerticalAlignment="Center"
-                        Click="BackButton_OnClick"
-                        WindowDecorationProperties.ElementRole="User" />
+                    <!-- 顶部「收纳」：折叠 / 展开左侧设置导航栏。 -->
+                    <Button Theme="{StaticResource PaneToggleButtonStyle}"
+                            VerticalAlignment="Center"
+                            Margin="-7 -8 -15 -8"
+                            MinWidth="40" Width="48"
+                            Click="TogglePaneButton_OnClick"
+                            WindowDecorationProperties.ElementRole="User" />
 
-                <TextBlock Text="Corkboard"
-                           FontSize="12"
-                           VerticalAlignment="Center" />
-            </StackPanel>
+                    <!--
+                        返回按钮：箭头由 Button.nav-back 的模板画（Core/Styles/NavigationBackButton.axaml），
+                        所以这里不给 Content 塞字形，也不设 FontFamily。
+                    -->
+                    <Button x:Name="BackButton"
+                            Classes="nav-back"
+                            IsVisible="{Binding ViewModel.CanGoBack}"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Margin="-7 -8 -15 -8"
+                            MinWidth="40" Width="48"
+                            Click="BackButton_OnClick"
+                            WindowDecorationProperties.ElementRole="User" />
+
+                    <TextBlock Text="Corkboard"
+                               FontSize="12"
+                               VerticalAlignment="Center" />
+                </StackPanel>
+
+                <!--
+                    右侧动作区：右边距由 ApplySystemButtonsReserve 按平台查到的系统按钮宽度补上，
+                    于是「需要重启」正好落在最小化按钮左边（不是贴着窗口最右边）。
+                    标题栏按下即拖动，所以按钮必须标 ElementRole="User"。
+                -->
+                <StackPanel x:Name="TitleBarActionArea" Grid.Column="2" Orientation="Horizontal">
+                    <!--
+                        「需要重启」提示：有设置改了重启才生效时出现（ViewModel.IsRequestedRestart），
+                        点一下弹确认框。
+                    -->
+                    <Button Classes="accent"
+                            VerticalAlignment="Center"
+                            IsVisible="{Binding ViewModel.IsRequestedRestart}"
+                            ToolTip.Tip="{x:Static lang:Resources.SettingsView_NeedsRestartingTooltip}"
+                            Click="RestartButton_OnClick"
+                            WindowDecorationProperties.ElementRole="User">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="{x:Static icons:FluentIcons.ArrowCounterclockwiseFilled}"
+                                       FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                       VerticalAlignment="Center" />
+                            <TextBlock Text="{x:Static lang:Resources.SettingsView_NeedsRestarting}"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
         </Border>
 
         <fa:FANavigationView Grid.Row="1"
@@ -42,6 +92,7 @@
             <Grid RowDefinitions="Auto, *">
                 <TextBlock Grid.Row="0" Margin="12 16 18 0"
                            FontWeight="Normal"
+                           IsVisible="{Binding !ViewModel.SelectedPageInfo.HidePageTitle}"
                            Text="{Binding ViewModel.SelectedPageInfo.Name}"
                            Theme="{StaticResource TitleTextBlockStyle}" />
 

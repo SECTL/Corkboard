@@ -4,9 +4,11 @@ using System.Text.Json;
 namespace Corkboard.Shared;
 
 /// <summary>
-///     全应用唯一的路径解析入口。移植自 SecRandom-C 的同名工具，规则保持不变：
-///     数据目录由「包根目录 + data」决定，安装版在包目录不可写时退回用户目录，
+///     全应用唯一的路径解析入口：数据目录由「包根目录 + data」决定，安装版在包目录不可写时退回用户目录，
 ///     便携版则必须留在可执行文件旁边，这样整个包才能被整体搬走。
+///     <para>
+///         <c>data/config</c> 是运行时数据目录，**刻意保持隐藏**，不摆在用户眼前。
+///     </para>
 /// </summary>
 public static class Utils
 {
@@ -127,6 +129,10 @@ public static class Utils
         return path;
     }
 
+    /// <summary>
+    ///     把 <c>data/config</c> 标成「隐藏 + 系统」：它是运行时数据目录，不摆在用户眼前。
+    ///     Windows 用文件属性，类 Unix 走同目录的 <c>.hidden</c> 清单（freedesktop 约定）。
+    /// </summary>
     private static void EnsureConfigDirectoryHidden(IReadOnlyList<string> pathSegments)
     {
         if (pathSegments.Count == 0

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Corkboard 作业板图标（源文件）
+  白色圆角底板 + 竖向空心作业板 + 顶部夹子 + 板内两条作业线
+  + 绿色完成勾压在板子右下角：勾两侧把板的描边抠开一条白缝（同参考图做法）。
+  勾的比例按参考图 SecRandom 图标实测复刻：左臂 : 右臂 ≈ 0.44，39.2° / -43.7°，
+  端头平切 + 小圆角（半径 ＝ 笔画的 0.21，不是半圆帽）。
+  主体（板 + 夹子）在画布中精确居中。
+  配色：板 #127AD2 / 夹子与作业线 #78BAE6 / 勾 #36AA75。
+  100% 几何图形，无字体依赖；底板不透明，仅圆角外侧透明。
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024"
+     role="img" aria-label="作业板">
+  <title>作业板</title>
+
+  <!-- 白色圆角底板，不透明 -->
+  <rect x="0" y="0" width="1024" height="1024" rx="192" ry="192" fill="#FFFFFF"/>
+
+  <!-- 空心板体 -->
+  <rect x="236" y="178"
+        width="552" height="712"
+        rx="72" ry="72"
+        fill="none" stroke="#127AD2" stroke-width="48"/>
+
+  <!-- 板内作业线 -->
+  <g stroke="#78BAE6" stroke-width="40" stroke-linecap="round" fill="none">
+    <path d="M320 372 H704"/>
+    <path d="M320 502 H560"/>
+  </g>
+
+  <!-- 顶部夹子 -->
+  <rect x="412" y="110" width="200" height="104"
+        rx="52" ry="52" fill="#78BAE6"/>
+
+  <!-- 完成勾：先按更大圆角半径画白层，把压住的描边抠开一条缝，再压上绿勾 -->
+  <g fill="#FFFFFF" stroke="#FFFFFF" stroke-width="59.166" stroke-linejoin="round">
+    <path d="M429.206 812.348 L582.364 936.723 L851.311 681.213 L825.473 654.016 L580.424 886.821 L452.854 783.226 Z"/>
+  </g>
+  <g fill="#36AA75" stroke="#36AA75" stroke-width="27.166" stroke-linejoin="round">
+    <path d="M429.206 812.348 L582.364 936.723 L851.311 681.213 L825.473 654.016 L580.424 886.821 L452.854 783.226 Z"/>
+  </g>
+</svg>

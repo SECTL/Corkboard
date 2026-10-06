@@ -18,6 +18,8 @@
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
         <PackageReference Include="DynamicData" Version="9.4.33" />
         <PackageReference Include="FluentAvaloniaUI" Version="3.0.2" />
+        <!-- 作业内容的 Markdown 解析；渲染成 Avalonia Inline 的活由 Core 自己干（见 MarkdownInlineRenderer）。 -->
+        <PackageReference Include="Markdig" Version="1.1.2" />
         <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.10" />
     </ItemGroup>
 

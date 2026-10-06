@@ -3,50 +3,166 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:fa="using:FluentAvalonia.UI.Controls"
+             xmlns:icons="using:Corkboard.Core.Icons"
+             xmlns:core="using:Corkboard.Core.Langs.Common"
+             xmlns:ui="using:Corkboard.Services.Ui"
              xmlns:views="using:Corkboard.Views"
              mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="600"
              x:Class="Corkboard.Views.MainView"
              x:DataType="views:MainView"
              Header="Corkboard"
              NavigationPage.HasNavigationBar="False">
-    <Grid RowDefinitions="Auto *">
-        <!-- 自定义标题栏：拖动区域与交互元素必须显式声明 ElementRole。 -->
-        <Border Grid.Row="0" Height="48"
-                Background="Transparent"
-                WindowDecorationProperties.ElementRole="TitleBar">
-            <StackPanel Orientation="Horizontal" Margin="8" Spacing="8">
-                <Border Width="60" IsVisible="{Binding IsMacOs}" />
+    <ContentPage.Styles>
+        <!--
+            标题栏右上角的动作按钮统一高度。
+            Fluent 的 Button 只给最小高度，实际高度是「内容高度 + 内边距」量出来的：
+            只有图标字形的（设置）、只有文字的（布置作业）、图标+文字的（时空回放 / 退出回放）
+            三种内容各自量出来都不一样，不统一就会高矮不齐。
+        -->
+        <Style Selector="StackPanel.titlebar-actions Button">
+            <Setter Property="Height" Value="28" />
+            <Setter Property="MinWidth" Value="28" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+    </ContentPage.Styles>
+    <Panel>
+        <Grid RowDefinitions="Auto *">
+            <!--
+                自定义标题栏：拖动区域与交互元素必须显式声明 ElementRole。
+                标题栏按下即拖（见 MainView.OnPointerPressedForDrag），所以里面的按钮一律标 User，
+                否则按下会被判成拖窗口、按钮点不动。
+            -->
+            <Border Grid.Row="0" Height="48"
+                    x:Name="TitleBar"
+                    Background="Transparent"
+                    WindowDecorationProperties.ElementRole="TitleBar">
+                <Grid ColumnDefinitions="Auto,*,Auto" Margin="8">
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
+                        <Border Width="60" IsVisible="{Binding IsMacOs}" />
 
-                <Button Theme="{StaticResource PaneToggleButtonStyle}"
-                        IsVisible="{Binding ViewModel.IsNavPaneToggleButtonVisible}"
-                        MinWidth="40" Width="48"
-                        VerticalAlignment="Center"
-                        Margin="-7 -8 -15 -8"
-                        Click="TogglePaneButton_OnClick"
-                        WindowDecorationProperties.ElementRole="User" />
+                        <TextBlock Text="Corkboard"
+                                   FontSize="12"
+                                   VerticalAlignment="Center"
+                                   Margin="8 0 0 0" />
+                    </StackPanel>
 
-                <TextBlock Text="Corkboard"
-                           FontSize="12"
-                           VerticalAlignment="Center"
-                           Margin="8 0 0 0" />
-            </StackPanel>
-        </Border>
+                    <!--
+                        右上角：平时是「设置 + 布置作业 + 时空回放」，进入回放后换成控制条。
+                        回放控件也留在标题栏，用户不用在两个地方找入口。
+                        点击穿透开着时整块隐藏：这些按钮一个都点不动，留着只会误导
+                        （那种状态下主窗口完全不收鼠标，设置要从托盘菜单打开）。
+                    -->
+                    <StackPanel Grid.Column="2"
+                                Classes="titlebar-actions"
+                                Orientation="Horizontal"
+                                Spacing="6"
+                                VerticalAlignment="Center"
+                                IsVisible="{Binding !ViewModel.Config.Basic.ClickThrough}">
+                        <!--
+                            设置入口：主窗口是 WindowDecorations.None，没有系统按钮也没有菜单栏，
+                            用户在窗口里能找到的设置入口就是这个齿轮（托盘菜单里也有一个）。
+                            标题栏按下即拖，所以按钮必须标 User，否则按下会被判成拖窗口、点不动。
+                        -->
+                        <Button VerticalAlignment="Center"
+                                ToolTip.Tip="{x:Static core:Resources.Menu_OpenSettings}"
+                                WindowDecorationProperties.ElementRole="User"
+                                Click="OpenSettingsButton_OnClick">
+                            <TextBlock Text="{x:Static icons:FluentIcons.SettingsFilled}"
+                                       FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                       VerticalAlignment="Center" />
+                        </Button>
 
-        <fa:FANavigationView Grid.Row="1"
-                             x:Name="NavigationView"
-                             PaneDisplayMode="Left"
-                             IsSettingsVisible="False"
-                             IsPaneToggleButtonVisible="False"
-                             IsPaneOpen="True"
-                             MenuItemsSource="{Binding ViewModel.NavigationViewItems, Mode=OneWay}"
-                             FooterMenuItemsSource="{Binding ViewModel.NavigationViewFooterItems, Mode=OneWay}"
-                             SelectedItem="{Binding ViewModel.SelectedNavigationViewItem, UpdateSourceTrigger=PropertyChanged}"
-                             ItemInvoked="NavigationView_OnItemInvoked">
-            <Grid RowDefinitions="Auto, *">
-                <TextBlock Grid.Row="0" Margin="12 16 18 0"
+                        <Button VerticalAlignment="Center"
+                                Content="{x:Static core:Resources.Board_AddNote}"
+                                IsVisible="{Binding !Replay.IsActive}"
+                                WindowDecorationProperties.ElementRole="User"
+                                Click="AddAssignmentButton_OnClick" />
+
+                        <!--
+                            回放入口：要点两次才真的进去（第一次变成「再点一次进入回放」，
+                            超时自动退回，见 BoardReplayService.Enter）。
+                            一条作业都没有时整颗按钮不显示（CanEnterReplay）。
+                        -->
+                        <Button VerticalAlignment="Center"
+                                IsVisible="{Binding Replay.CanEnterReplay}"
+                                ToolTip.Tip="{Binding Replay.EnterButtonText}"
+                                WindowDecorationProperties.ElementRole="User"
+                                Click="ReplayEnterButton_OnClick">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBlock Text="{x:Static icons:FluentIcons.HistoryFilled}"
+                                           FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                           VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding Replay.EnterButtonText}"
+                                           VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+
+                        <!-- 回放控制条：只留日期下拉与退出，进来就能挑任意一天往回看。 -->
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="6"
+                                    VerticalAlignment="Center"
+                                    IsVisible="{Binding Replay.IsActive}">
+
+                            <ComboBox MinWidth="180"
+                                      VerticalAlignment="Center"
+                                      ItemsSource="{Binding Replay.Stops}"
+                                      SelectedItem="{Binding Replay.SelectedStop, Mode=TwoWay}"
+                                      WindowDecorationProperties.ElementRole="User">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="ui:BoardReplayStopItem">
+                                        <TextBlock Text="{Binding DisplayName}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+
+                            <Button VerticalAlignment="Center"
+                                    Classes="accent"
+                                    ToolTip.Tip="{x:Static core:Resources.Board_ReplayExit}"
+                                    WindowDecorationProperties.ElementRole="User"
+                                    Click="ReplayExitButton_OnClick">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <TextBlock Text="{x:Static icons:FluentIcons.ArrowExitFilled}"
+                                               FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                               VerticalAlignment="Center" />
+                                    <TextBlock Text="{x:Static core:Resources.Board_ReplayExit}"
+                                               VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+
+                        <!--
+                            锁定窗口：点一下开点击穿透，主窗口就不再收鼠标。
+                            它是这一排的最右一个，因为锁定后整排会隐藏、由独立的
+                            ClickThroughLockWindow 在同一位置接着显示「开锁」图标，
+                            两态位置对齐才不会跳。图标是「开锁」= 现在还能操作、点它即锁。
+                        -->
+                        <Button VerticalAlignment="Center"
+                                ToolTip.Tip="{x:Static core:Resources.MainView_LockWindow}"
+                                WindowDecorationProperties.ElementRole="User"
+                                Click="LockWindowButton_OnClick">
+                            <TextBlock Text="{x:Static icons:FluentIcons.LockOpenFilled}"
+                                       FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                       VerticalAlignment="Center" />
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!--
+                主界面没有侧边导航栏：默认主页面（AppConsts.DefaultMainPageId）直接铺满内容区，
+                页面实例走键控 DI。主页面切换走 MainView.SelectNavigationItemById；
+                设置界面是独立窗口（打开入口在托盘菜单）。
+            -->
+            <Grid Grid.Row="1" RowDefinitions="Auto, *">
+                <!--
+                    页面标题紧贴自绘标题栏（也就是「Corkboard」那一行的正下方）：
+                    原来留 16 的上边距，标题离软件名太远，看着像另一块内容。
+                    标题本身的字号/行距由 TitleTextBlockStyle 决定，这里只收上边距。
+                -->
+                <TextBlock Grid.Row="0" Margin="12 4 18 0"
                            FontWeight="Normal"
                            IsVisible="{Binding !ViewModel.SelectedPageInfo.HidePageTitle}"
-                           Text="{Binding ViewModel.SelectedPageInfo.Name}"
+                           Text="{Binding ViewModel.PageTitle}"
                            Theme="{StaticResource TitleTextBlockStyle}" />
 
                 <fa:FAFrame Grid.Row="1"
@@ -54,6 +170,16 @@
                             IsNavigationStackEnabled="False"
                             CacheSize="0" />
             </Grid>
-        </fa:FANavigationView>
-    </Grid>
+        </Grid>
+
+        <!--
+            页面级弹层宿主。挂在壳的根 Panel 上而不是页面里，遮罩才能盖住上面的自绘标题栏。
+            内容由 PageOverlayService 提供，页面只管 Show/Close。
+        -->
+        <Border Classes="scrim" IsVisible="{Binding Overlay.IsOpen}">
+            <ContentControl Content="{Binding Overlay.Content}"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center" />
+        </Border>
+    </Panel>
 </ContentPage>
