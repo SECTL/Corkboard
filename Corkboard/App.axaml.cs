@@ -6,6 +6,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Avalonia.Media;
 using Avalonia.Styling;
 using FluentAvalonia.Styling;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,18 +24,23 @@ using Corkboard.Core.Models.SubConfigs.General;
 using Corkboard.Core.Models.SubConfigs.Personalized;
 using Corkboard.Core.Services;
 using Corkboard.Core.Services.Config;
+using Corkboard.Core.Services.Fonts;
 using Corkboard.Platforms;
 using Corkboard.Platforms.Abstractions;
 using Corkboard.Services;
 using Corkboard.Services.Auth;
+using Corkboard.Services.Desktop;
 using Corkboard.Services.Ipc;
+using Corkboard.Services.Ui;
 using Corkboard.ViewModels;
 using Corkboard.ViewModels.MainPages;
 using Corkboard.ViewModels.SettingsPages;
 using Corkboard.Views;
 using Corkboard.Views.MainPages;
 using Corkboard.Views.SettingsPages.About;
+using Corkboard.Views.SettingsPages.Board;
 using Corkboard.Views.SettingsPages.General;
+using Corkboard.Views.SettingsPages.Personalized;
 using CR = Corkboard.Core.Langs.Common.Resources;
 
 namespace Corkboard;
@@ -69,6 +75,7 @@ public partial class App : Application
         AvaloniaXamlLoader.Load(this);
 
         ApplyThemeSettings(_startupSettings.Appearance);
+        ApplyFontSettings(_startupSettings.Appearance);
         Resources[@"NavigationViewItemOnLeftIconBoxHeight"] = 20.0;
 
         // 开发期诊断（Avalonia DevTools）需要 Zeronia.Diagnostics / Avalonia.Diagnostics 包，
@@ -84,12 +91,22 @@ public partial class App : Application
 
             BuildHost(PlatformStartupContext.Current);
 
-            desktop.ShutdownMode = _startupSettings.Basic.BackgroundResident
-                ? ShutdownMode.OnExplicitShutdown
-                : ShutdownMode.OnMainWindowClose;
+            // 主窗口是桌面挂件（无系统标题栏），进程常驻由托盘菜单控制：
+            // 关掉任一个窗口都不结束进程，「退出程序」才走 StopAsync。
+            // 这也取代了原来的「关闭窗口后继续驻留」开关——常驻是固定行为。
+            desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
             desktop.Exit += (_, _) => AppStopping?.Invoke(this, EventArgs.Empty);
 
-            desktop.MainWindow = CreateMainWindow(AppConsts.MainWindowScope);
+            // 「启动时显示主窗口」：关掉时**不把窗口交给生命周期**，Avalonia 就不会在 StartCore 里
+            // 自动显示它（比先显示再隐藏稳妥：开机自启不该闪一下窗口）。窗口仍然建好放 _mainWindow，
+            // 托盘一点就补上 MainWindow 并显示。
+            var mainWindow = CreateMainWindow(AppConsts.MainWindowScope);
+            if (_startupSettings.Basic.ShowStartupWindow)
+                desktop.MainWindow = mainWindow;
+
+            // 托盘图标要在 UI 线程、平台渲染就绪之后创建；失败只写日志，不阻断启动。
+            IAppHost.TryGetService<TaskBarIconService>()?.Initialize();
+
             _hostStartupTask = StartHostAsync();
         }
 
@@ -131,19 +148,34 @@ public partial class App : Application
         // ClassIsland 通知通道：与抽取业务无关的通用 IPC 出口，连不上时按失败结果降级。
         services.AddSingleton<IClassIslandIpcConnection, ClassIslandIpcConnection>();
 
+        // 托盘图标：主窗口没有系统标题栏，托盘是显示主窗口与退出的常驻入口。
+        services.AddSingleton<TaskBarIconService>();
+
+        // 页面级弹层宿主：页面把表单塞进来，壳在窗口内容最上层画出来（遮罩才能盖住标题栏）。
+        services.AddSingleton<PageOverlayService>();
+
+        // 时空回放：入口在主界面标题栏，作业列表在主页面，两边靠这个单例共享状态。
+        services.AddSingleton<BoardReplayService>();
+
         // ViewModel 与页面。AddMainPage/AddSettingsPage 同时写导航注册表和键控 DI，两者必须成对。
         services.AddTransient<MainViewModel>();
         services.AddTransient<SettingsViewModel>();
         services.AddTransient<BoardPageViewModel>();
+        services.AddTransient<BoardAssignmentFormViewModel>();
         services.AddTransient<BasicSettingsPageViewModel>();
+        services.AddTransient<BoardSettingsPageViewModel>();
+        services.AddTransient<AppearanceSettingsPageViewModel>();
         services.AddTransient<AboutSettingsPageViewModel>();
 
+        // 主页面标题的默认文案；用户可以在作业板设置里改成别的名字。
         services.AddMainPage<BoardPage>(CR.Board_Title);
 
         services.AddSettingsPageSeparator();
-        services.AddGroup(new PageGroupInfo(CR.Settings_Group_General, "settings.general", FluentIcons.HomeFilled));
+        // 设置项直接平铺：注册表按 GroupId 是否为空决定「顶层项」还是「可折叠分组」，
+        // 单页分组只会在侧边栏多一个 chevron，所以这里不建分组（要归组再加 AddGroup + groupId）。
         services.AddSettingsPage<BasicSettingsPage>(CR.Settings_Basic_Title);
-        services.AddGroup(new PageGroupInfo(CR.Settings_Group_About, "settings.about", FluentIcons.InfoFilled));
+        services.AddSettingsPage<BoardSettingsPage>(CR.Settings_Board_Title);
+        services.AddSettingsPage<AppearanceSettingsPage>(CR.Settings_Appearance_Title);
         services.AddSettingsPage<AboutSettingsPage>(CR.Settings_About_Title);
 
         IAppHost.Host = builder.Build();
@@ -155,6 +187,9 @@ public partial class App : Application
         {
             if (IAppHost.Host is { } host)
                 await host.StartAsync().ConfigureAwait(true);
+
+            // 开机自启是系统集成：启动时按配置重新写一遍（用户可能在别处删掉了自启项）。
+            EnsureAutostartIntegration();
 
             // 账号会话恢复只影响登录态，失败不能拖住启动。
             _ = RestoreAccountSessionAsync();
@@ -171,6 +206,27 @@ public partial class App : Application
         catch (Exception exception)
         {
             IAppHost.TryGetService<ILogger<App>>()?.LogError(exception, "启动后台服务失败。");
+        }
+    }
+
+    /// <summary>
+    ///     按配置重新写一遍开机自启项：用户在系统里手动删掉自启项后，下次启动仍然按设置恢复。
+    ///     失败时把配置回滚并只写日志——自启是系统集成，不能把假成功留在配置里。
+    /// </summary>
+    private static void EnsureAutostartIntegration()
+    {
+        var handler = IAppHost.TryGetService<MainConfigHandler>();
+        var autostart = IAppHost.TryGetService<IAutostartService>();
+        if (handler is null || autostart is null || !autostart.IsSupported)
+            return;
+
+        var basic = handler.Data.Basic;
+        if (basic.Autostart && !autostart.TrySetEnabled(true, out var error))
+        {
+            basic.Autostart = false;
+            handler.Save();
+            IAppHost.TryGetService<ILogger<App>>()
+                ?.LogWarning("无法恢复开机自启设置，已回滚：{Error}", error);
         }
     }
 
@@ -232,7 +288,6 @@ public partial class App : Application
         return new CultureInfo(language switch
         {
             LanguageMode.English => "en-US",
-            LanguageMode.Japanese => "ja-JP",
             _ => "zh-Hans"
         });
     }
@@ -248,18 +303,93 @@ public partial class App : Application
         Langs.SettingsView.Resources.Culture = cultureInfo;
     }
 
+    /// <summary>
+    ///     应用主题设置：主题模式（跟随系统 / 浅色 / 深色）与主题色（跟随系统 / 自定义）。
+    ///     写法与上游 SecRandom-C 的 <c>ApplyThemeSettings</c> 一致，两点顺序不能颠倒：
+    ///     <list type="bullet">
+    ///         <item>先设 <c>PreferSystemTheme</c>、再设显式变体：FluentAvalonia 在切资源集的过程中
+    ///         会用自己的系统跟踪覆盖 <see cref="Application.RequestedThemeVariant" />，顺序反了会被吃掉。</item>
+    ///         <item>「自定义主题色」要先关掉 <c>PreferUserAccentColor</c>，否则用户系统主题色一直压着自定义值；
+    ///         切回「跟随系统」则要把 <c>CustomAccentColor</c> 清成 null，否则自定义色还挂在主题上。</item>
+    ///     </list>
+    /// </summary>
     private void ApplyThemeSettings(AppearanceSettingsConfig settings)
     {
-        RequestedThemeVariant = settings.Theme switch
+        var useSystemTheme = settings.Theme == ThemeMode.FollowSystem;
+        var requestedThemeVariant = settings.Theme switch
         {
             ThemeMode.Light => ThemeVariant.Light,
             ThemeMode.Dark => ThemeVariant.Dark,
             _ => ThemeVariant.Default
         };
 
-        if (Styles.OfType<FluentAvaloniaTheme>().FirstOrDefault() is { } theme
-            && settings.ThemeColorMode == ThemeColorMode.Custom)
-            theme.CustomAccentColor = settings.ThemeColor;
+        if (Styles.OfType<FluentAvaloniaTheme>().FirstOrDefault() is { } theme)
+        {
+            if (theme.PreferSystemTheme != useSystemTheme)
+                theme.PreferSystemTheme = useSystemTheme;
+
+            if (settings.ThemeColorMode == ThemeColorMode.Default)
+            {
+                if (theme.CustomAccentColor is not null)
+                    theme.CustomAccentColor = null;
+                if (!theme.PreferUserAccentColor)
+                    theme.PreferUserAccentColor = true;
+            }
+            else
+            {
+                if (theme.PreferUserAccentColor)
+                    theme.PreferUserAccentColor = false;
+                if (theme.CustomAccentColor is not { } accentColor || accentColor != settings.ThemeColor)
+                    theme.CustomAccentColor = settings.ThemeColor;
+            }
+        }
+
+        // 「跟随系统」时不写 Default：那时由 PreferSystemTheme 的系统跟踪决定实际变体，
+        // 再写一次 Default 会让 FluentAvalonia 刚同步好的资源集又切一遍。
+        if (!Equals(RequestedThemeVariant, requestedThemeVariant) && requestedThemeVariant != ThemeVariant.Default)
+            RequestedThemeVariant = requestedThemeVariant;
+    }
+
+    /// <summary>
+    ///     外观设置改动后重新应用（设置页改字体、字重或主题时调用）。不需要重启。
+    /// </summary>
+    public void RefreshAppearanceSettings()
+    {
+        if (IAppHost.TryGetService<MainConfigHandler>()?.Data.Appearance is not { } settings)
+            return;
+
+        ApplyThemeSettings(settings);
+        ApplyFontSettings(settings);
+    }
+
+    /// <summary>
+    ///     应用字体族与字重。三个资源缺一不可：
+    ///     <c>ContentControlThemeFontFamily</c> 是 FluentAvalonia / Avalonia 控件主题取字体的键，
+    ///     <c>AppFontFamily</c> 供页面与自定义样式引用（两者必须同值），
+    ///     <c>AppFontWeight</c> 由 Core 的 <c>:is(Window)</c> 样式继承下去。
+    /// </summary>
+    private void ApplyFontSettings(AppearanceSettingsConfig settings)
+    {
+        var fontFamily = FontFamilyCatalog.Resolve(settings.Font);
+        Resources[@"AppFontFamily"] = fontFamily;
+        Resources[@"ContentControlThemeFontFamily"] = fontFamily;
+        Resources[@"AppFontWeight"] = ToFontWeight(settings.FontWeight);
+    }
+
+    private static FontWeight ToFontWeight(FontWeightMode mode)
+    {
+        return mode switch
+        {
+            FontWeightMode.Thin => FontWeight.Thin,
+            FontWeightMode.ExtraLight => FontWeight.ExtraLight,
+            FontWeightMode.Light => FontWeight.Light,
+            FontWeightMode.Medium => FontWeight.Medium,
+            FontWeightMode.SemiBold => FontWeight.SemiBold,
+            FontWeightMode.Bold => FontWeight.Bold,
+            FontWeightMode.ExtraBold => FontWeight.ExtraBold,
+            FontWeightMode.Black => FontWeight.Black,
+            _ => FontWeight.Normal
+        };
     }
 
     public static MainWindow CreateMainWindow(string scope)
@@ -294,6 +424,11 @@ public partial class App : Application
     public static void ShowMainWindow()
     {
         var window = _mainWindow ??= CreateMainWindow(AppConsts.MainWindowScope);
+
+        // 「启动时显示主窗口」关掉时没把它交给生命周期，这里补上，让主窗口仍是生命周期认定的主窗口。
+        if (_desktopLifetime is { MainWindow: null } desktop)
+            desktop.MainWindow = window;
+
         ShowAndActivate(window);
     }
 
@@ -322,6 +457,9 @@ public partial class App : Application
 
         _isStopping = true;
         AppStopping?.Invoke(this, EventArgs.Empty);
+
+        // 托盘图标先摘掉：它挂在平台原生对象上，不能等到 Host 释放之后再清理。
+        IAppHost.TryGetService<TaskBarIconService>()?.Dispose();
 
         try
         {
