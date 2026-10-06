@@ -7,8 +7,12 @@ using Avalonia.Media;
 namespace Corkboard.Core.Converters;
 
 /// <summary>
-///     Avalonia <see cref="Color" /> 的 JSON 读写：写出去是 <c>#AARRGGBB</c>，
+///     Avalonia <see cref="Color" /> 的 JSON 读写：写出去是 <c>#RRGGBBAA</c>（alpha 在后），
 ///     读回来同时接受十六进制字符串和 <c>{A,R,G,B}</c> 对象（旧版本写出的形态）。
+///     <para>
+///         注意 alpha 在**后**：<c>Color.Parse("#FF00AAFF")</c> 那种写法是按「alpha 在前」解析的，
+///         和磁盘上的顺序相反，手写配置或写测试时不要混。
+///     </para>
 /// </summary>
 public class ColorJsonConverter : JsonConverter<Color>
 {
