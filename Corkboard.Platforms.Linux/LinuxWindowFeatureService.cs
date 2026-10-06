@@ -74,6 +74,12 @@ public sealed class LinuxWindowFeatureService : IWindowFeatureService
         return WindowFeatureApplyResult.Partial(applied, unsupported, failed, detail);
     }
 
+    /// <summary>
+    ///     标题栏按钮由桌面环境画在窗口外（有客户端装饰时也是窗口自己的标题栏），
+    ///     页面内容不会被压住，所以这里不需要让位。
+    /// </summary>
+    public double GetSystemCaptionButtonWidth(PlatformWindowHandle window) => 0;
+
     private static bool TrySetTopmost(nint window, bool enabled, out string? failure)
     {
         nint display;

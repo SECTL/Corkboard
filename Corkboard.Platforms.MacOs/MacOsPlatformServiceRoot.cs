@@ -1,7 +1,9 @@
+using System.Runtime.Versioning;
 using Corkboard.Platforms.Abstractions;
 
 namespace Corkboard.Platforms.MacOs;
 
+[SupportedOSPlatform("macos")]
 public sealed class MacOsPlatformServiceRoot : IPlatformServiceRoot
 {
     public PlatformKind Kind => PlatformKind.MacOs;
@@ -23,4 +25,6 @@ public sealed class MacOsPlatformServiceRoot : IPlatformServiceRoot
         SupportsBackgroundResidency: true);
 
     public IWindowFeatureService WindowFeatures { get; } = new MacOsWindowFeatureService();
+
+    public IAutostartService Autostart { get; } = new MacOsAutostartService();
 }
