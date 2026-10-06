@@ -1,0 +1,35 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:core="using:Corkboard.Core.Langs.Common"
+        xmlns:icons="using:Corkboard.Core.Icons"
+        mc:Ignorable="d" d:DesignWidth="28" d:DesignHeight="28"
+        x:Class="Corkboard.Views.ClickThroughLockWindow"
+        Title="Corkboard"
+        WindowDecorations="None"
+        CanResize="False"
+        ShowInTaskbar="False"
+        ShowActivated="False"
+        Topmost="True"
+        Width="28" Height="28"
+        Background="Transparent">
+    <!--
+        锁定态下的「开锁」按钮。主窗口开着点击穿透时整窗收不到鼠标，画在主窗口里的按钮
+        一个都点不动，所以这颗按钮改由本窗口承载（见 ClickThroughLockWindow 的说明）。
+
+        窗口必须透明：按钮模板自己有圆角，不透明背景会在四角露出方块底色。
+        按钮尺寸与主窗口标题栏按钮一致（28×28），切换锁定态时才不会跳位。
+    -->
+    <Button x:Name="UnlockButton"
+            Width="28" Height="28"
+            Padding="0"
+            HorizontalContentAlignment="Center"
+            VerticalContentAlignment="Center"
+            ToolTip.Tip="{x:Static core:Resources.MainView_UnlockWindow}"
+            Click="UnlockButton_OnClick">
+        <TextBlock Text="{x:Static icons:FluentIcons.LockClosedFilled}"
+                   FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                   VerticalAlignment="Center" />
+    </Button>
+</Window>

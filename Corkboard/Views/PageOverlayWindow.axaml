@@ -1,0 +1,23 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="480" d:DesignHeight="560"
+        x:Class="Corkboard.Views.PageOverlayWindow"
+        Title="Corkboard"
+        WindowDecorations="None"
+        CanResize="False"
+        ShowInTaskbar="False"
+        SizeToContent="WidthAndHeight"
+        WindowStartupLocation="CenterScreen">
+    <!--
+        弹层内容的容器。内容自己带 Border.sheet 外观（见 BoardAssignmentForm），
+        这里不要再套一层卡片，否则两张卡片叠在一起。
+
+        窗口刻意不做透明（不设 TransparencyLevelHint、不设透明 Background）：
+        卡片笔刷本身是半透明的，在壳内弹层里它叠在不透明的页面背景上看着是实心卡片，
+        但独立窗口若做成透明，背后没有任何一层可叠，桌面就会透上来。
+        留默认的 Fluent 窗口背景即可，观感与主窗口一致，也不用引新的主题笔刷键。
+    -->
+    <ContentControl x:Name="OverlayHost" />
+</Window>

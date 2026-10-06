@@ -2,55 +2,104 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fa="using:FluentAvalonia.UI.Controls"
              xmlns:vm="using:Corkboard.ViewModels.SettingsPages"
              xmlns:core="using:Corkboard.Core.Langs.Common"
-             xmlns:lang="using:Corkboard.Langs.SettingsView"
              mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="450"
              x:Class="Corkboard.Views.SettingsPages.General.BasicSettingsPage"
              x:DataType="vm:BasicSettingsPageViewModel">
     <ScrollViewer>
-        <StackPanel Margin="12" Spacing="12">
-            <TextBlock Classes="h1" Text="{x:Static core:Resources.Settings_Basic_Title}" />
+        <!-- 设置卡：Header 是设置项名称，Description 是简介，Footer 放控件。见 Core/Styles/StylesBase.axaml。 -->
+        <StackPanel Classes="page-container">
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Basic_Language}">
+                <fa:FASettingsExpander.Footer>
+                    <ComboBox MinWidth="180"
+                              ItemsSource="{Binding LanguageOptions}"
+                              SelectedItem="{Binding SelectedLanguage, Mode=TwoWay}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:LanguageOption">
+                                <TextBlock Text="{Binding DisplayName}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
 
-            <Border Classes="card">
-                <StackPanel Spacing="12">
-                    <Grid ColumnDefinitions="*,Auto">
-                        <TextBlock Grid.Column="0"
+            <!-- 平台不支持的能力整张卡隐藏，而不是留一个点不动的开关。 -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Basic_Autostart}"
+                                   Description="{x:Static core:Resources.Settings_Basic_AutostartDescription}"
+                                   IsVisible="{Binding IsAutostartSupported}">
+                <fa:FASettingsExpander.Footer>
+                    <ToggleSwitch x:Name="AutostartSwitch"
+                                  IsChecked="{Binding Basic.Autostart}"
+                                  IsCheckedChanged="OnAutostartCheckedChanged" />
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Basic_ShowStartupWindow}"
+                                   Description="{x:Static core:Resources.Settings_Basic_ShowStartupWindowDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding Basic.ShowStartupWindow}" />
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Basic_AutoSaveWindowSize}"
+                                   Description="{x:Static core:Resources.Settings_Basic_AutoSaveWindowSizeDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding Basic.AutoSaveWindowSize}" />
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <!-- 平台不支持的能力整张卡隐藏，而不是留一个点不动的控件。 -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Basic_MainWindowOpacity}"
+                                   Description="{x:Static core:Resources.Settings_Basic_MainWindowOpacityDescription}"
+                                   IsVisible="{Binding IsWindowOpacitySupported}">
+                <fa:FASettingsExpander.Footer>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <!--
+                            绑草稿而不是配置：拖滑杆时每帧都在变，直接写配置会连发落盘（见 ViewModel）。
+                            拖完停手 400ms 落到配置上，主窗口立刻跟着变。
+                        -->
+                        <Slider MinWidth="180"
+                                Minimum="{Binding OpacityPercentMinimum}"
+                                Maximum="{Binding OpacityPercentMaximum}"
+                                TickFrequency="1"
+                                IsSnapToTickEnabled="True"
+                                VerticalAlignment="Center"
+                                Value="{Binding OpacityPercent, Mode=TwoWay}" />
+
+                        <TextBlock MinWidth="44"
                                    VerticalAlignment="Center"
-                                   Text="{x:Static core:Resources.Settings_Basic_Language}" />
-                        <ComboBox Grid.Column="1"
-                                  MinWidth="180"
-                                  ItemsSource="{Binding LanguageModes}"
-                                  SelectedItem="{Binding Basic.Language}" />
-                    </Grid>
+                                   TextAlignment="Right"
+                                   Text="{Binding OpacityDisplayText}" />
+                    </StackPanel>
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
 
-                    <Grid ColumnDefinitions="*,Auto">
-                        <TextBlock Grid.Column="0"
-                                   VerticalAlignment="Center"
-                                   Text="{x:Static core:Resources.Settings_Basic_ShowStartupWindow}" />
-                        <ToggleSwitch Grid.Column="1"
-                                      IsChecked="{Binding Basic.ShowStartupWindow}" />
-                    </Grid>
+            <!-- 平台不支持的能力整张卡隐藏，而不是留一个点不动的开关。 -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Basic_PinToDesktop}"
+                                   Description="{x:Static core:Resources.Settings_Basic_PinToDesktopDescription}"
+                                   IsVisible="{Binding IsPinToDesktopSupported}">
+                <fa:FASettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding Basic.PinToDesktop}" />
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
 
-                    <Grid ColumnDefinitions="*,Auto">
-                        <TextBlock Grid.Column="0"
-                                   VerticalAlignment="Center"
-                                   Text="{x:Static core:Resources.Settings_Basic_BackgroundResident}" />
-                        <ToggleSwitch Grid.Column="1"
-                                      IsChecked="{Binding Basic.BackgroundResident}" />
-                    </Grid>
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Basic_HoldToDragWindow}"
+                                   Description="{x:Static core:Resources.Settings_Basic_HoldToDragWindowDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding Basic.HoldToDragWindow}" />
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
 
-                    <Grid ColumnDefinitions="*,Auto">
-                        <TextBlock Grid.Column="0"
-                                   VerticalAlignment="Center"
-                                   Text="{x:Static core:Resources.Settings_Basic_AutoSaveWindowSize}" />
-                        <ToggleSwitch Grid.Column="1"
-                                      IsChecked="{Binding Basic.AutoSaveWindowSize}" />
-                    </Grid>
-                </StackPanel>
-            </Border>
-
-            <TextBlock Classes="caption" Text="{x:Static lang:Resources.SettingsView_RestartRequired}" />
+            <!-- 平台不支持的能力整张卡隐藏，而不是留一个点不动的开关。 -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Basic_ClickThrough}"
+                                   Description="{x:Static core:Resources.Settings_Basic_ClickThroughDescription}"
+                                   IsVisible="{Binding IsClickThroughSupported}">
+                <fa:FASettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding Basic.ClickThrough}" />
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
         </StackPanel>
     </ScrollViewer>
 </UserControl>
