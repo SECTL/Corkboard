@@ -7,14 +7,12 @@ namespace Corkboard.Core.Models.Board;
 /// <summary>
 ///     一段文字的颜色与字号覆盖：从 <see cref="Start" /> 起的 <see cref="Length" /> 个字符。
 ///     <para>
-///         作业内容本身是 Markdown 原文，格式是**叠在原文偏移上的一层标注**，不往文本里塞样式：
-///         原文永远是可读、可编辑、可粘贴的 Markdown，渲染时才把标注套到对应字符上
-///         （见 <c>MarkdownInlineRenderer</c>）。文本一改，区间由
-///         <c>BoardTextFormatEditing.Shift</c> 挪到新位置。
+///         ⚠️ **只用于读旧数据**：现在作业内容直接是富文本文档，样式写在文档的行内样式里
+///         （见 <see cref="BoardNote.Content" />）。旧数据里才有这套「Markdown 原文 + 偏移标注」，
+///         由 <c>LegacyBoardContentConverter</c> 在加载时一次性转成文档，之后不再落盘、不再使用。
 ///     </para>
 ///     <para>
-///         两个可空属性互相独立：只想改字号就别动颜色，反之亦然；两个都为空（或被裁剪成空）的标注
-///         没有意义，归一化时会被丢掉。
+///         两个可空属性互相独立：只想改字号就别动颜色，反之亦然。
 ///     </para>
 /// </summary>
 public partial class BoardTextFormatRange : ObservableObject

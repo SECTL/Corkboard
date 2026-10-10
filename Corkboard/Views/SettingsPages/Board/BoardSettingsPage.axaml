@@ -10,7 +10,12 @@
              x:Class="Corkboard.Views.SettingsPages.Board.BoardSettingsPage"
              x:DataType="vm:BoardSettingsPageViewModel">
     <ScrollViewer>
-        <!-- 设置卡：Header 是设置项名称，Description 是简介，Footer 放控件。见 Core/Styles/StylesBase.axaml。 -->
+        <!--
+            设置卡：Header 是设置项名称，Description 是简介，Footer 放控件。
+            一张卡里塞了好几项时，用 fa:FASettingsExpanderItem 分行——左边是这一行的名称与简介，
+            右边 Footer 放它自己的控件，别把名称、控件、说明全挤在左侧一列里。
+            见 Core/Styles/StylesBase.axaml。
+        -->
         <StackPanel Classes="page-container">
             <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_Name}">
                 <fa:FASettingsExpander.Footer>
@@ -21,7 +26,10 @@
                 </fa:FASettingsExpander.Footer>
             </fa:FASettingsExpander>
 
-            <!-- 排布：主页面顶部不再有切换器，这里是唯一入口。 -->
+            <!--
+                排布（展示设置）：主页面顶部不放切换器，这里是唯一入口。
+                排序方式不在这里：它已经搬到主界面标题栏的排序按钮上（见 MainView）。
+            -->
             <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_Layout}"
                                    Description="{x:Static core:Resources.Settings_Board_LayoutDescription}">
                 <fa:FASettingsExpander.Footer>
@@ -37,17 +45,22 @@
                 </fa:FASettingsExpander.Footer>
             </fa:FASettingsExpander>
 
-            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_SortMode}">
+            <!--
+                区块宽度（展示设置）：只在「区块」排布下起作用，填的是单块的最小宽度——
+                它决定一行排几块，宽度上限按它推出来。默认 300：1100px 宽的窗口大约排 3 块。
+                上下限与 Core 的 BoardBlockStyle 一致，ViewModel 提交时还会再夹一次，
+                手输越界值不会落到配置里。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_BlockMinWidth}"
+                                   Description="{x:Static core:Resources.Settings_Board_BlockMinWidthDescription}">
                 <fa:FASettingsExpander.Footer>
-                    <ComboBox MinWidth="240"
-                              ItemsSource="{Binding SortOptions}"
-                              SelectedItem="{Binding SelectedSortOption, Mode=TwoWay}">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate x:DataType="vm:BoardSortOption">
-                                <TextBlock Text="{Binding DisplayName}" />
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
+                    <NumericUpDown MinWidth="130"
+                                   Minimum="220"
+                                   Maximum="600"
+                                   Increment="10"
+                                   FormatString="0"
+                                   Value="{Binding BlockMinWidthDraft, Mode=TwoWay}"
+                                   LostFocus="OnEditorLostFocus" />
                 </fa:FASettingsExpander.Footer>
             </fa:FASettingsExpander>
 
@@ -67,48 +80,119 @@
             </fa:FASettingsExpander>
 
             <!--
+                自动清理：到点把过了截止日期的作业从板子上清掉（只打「已清理」标记，数据原地不动）。
+                时刻用草稿 + LostFocus 提交：直接双向绑配置的话，控件每动一下就落一次盘。
+                判定与打标记都在 Core 的 BoardCleanupService 里，这里只管设置。
+                规则一条一行（FASettingsExpanderItem）：左名称+简介，右控件；「立即清理」挂在卡头。
+                时刻用 Avalonia 自带的 TimePicker（它没有占位文案属性，也不用占位）。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_Cleanup}"
+                                   Description="{x:Static core:Resources.Settings_Board_CleanupDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <Button Command="{Binding RunCleanupNowCommand}"
+                            Content="{x:Static core:Resources.Settings_Board_CleanupRunNow}" />
+                </fa:FASettingsExpander.Footer>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_CleanupEnabled}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ToggleSwitch IsChecked="{Binding Board.CleanupEnabled, Mode=TwoWay}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_CleanupFrequency}"
+                                           Description="{x:Static core:Resources.Settings_Board_CleanupFrequencyDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ComboBox MinWidth="130"
+                                  ItemsSource="{Binding CleanupFrequencyOptions}"
+                                  SelectedItem="{Binding SelectedCleanupFrequencyOption, Mode=TwoWay}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:BoardCleanupFrequencyOption">
+                                    <TextBlock Text="{Binding DisplayName}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <!-- 「星期几」只在按周清理时整行露出来。 -->
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_CleanupWeekday}"
+                                           IsVisible="{Binding IsWeeklyCleanup}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ComboBox MinWidth="130"
+                                  ItemsSource="{Binding CleanupWeekdayOptions}"
+                                  SelectedItem="{Binding SelectedCleanupWeekdayOption, Mode=TwoWay}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:BoardCleanupWeekdayOption">
+                                    <TextBlock Text="{Binding DisplayName}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_CleanupTime}"
+                                           Description="{x:Static core:Resources.Settings_Board_CleanupTimeDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <TimePicker VerticalAlignment="Center"
+                                    ClockIdentifier="24HourClock"
+                                    UseSeconds="False"
+                                    MinuteIncrement="1"
+                                    SelectedTime="{Binding CleanupTimeDraft, Mode=TwoWay}"
+                                    LostFocus="OnEditorLostFocus" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_CleanupLastResult}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <TextBlock MinWidth="200"
+                                   MaxWidth="320"
+                                   VerticalAlignment="Center"
+                                   TextAlignment="Right"
+                                   TextWrapping="Wrap"
+                                   Text="{Binding CleanupLastResultText}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+            </fa:FASettingsExpander>
+
+            <!--
                 内容的默认样式：新作业没单独定「整篇字号」/颜色时用它们。
                 两个控件都绑草稿而不是配置：NumericUpDown 与取色器都是「一路动一路变」的控件，
                 直接双向绑会让每一次变化都落一遍 settings.json（见 ViewModel 的说明）。
             -->
             <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_ContentStyle}"
                                    Description="{x:Static core:Resources.Settings_Board_ContentStyleDescription}">
-                <StackPanel Spacing="10" Margin="0 4 0 0">
-                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
-                        <TextBlock Grid.Column="0"
-                                   VerticalAlignment="Center"
-                                   Text="{x:Static core:Resources.Settings_Board_DefaultFontSize}" />
-                        <NumericUpDown Grid.Column="1"
-                                       HorizontalAlignment="Left"
-                                       MinWidth="130"
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_DefaultFontSize}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <NumericUpDown MinWidth="130"
                                        Minimum="8"
                                        Maximum="96"
                                        Increment="1"
                                        FormatString="0"
                                        Value="{Binding DefaultFontSizeDraft, Mode=TwoWay}"
                                        LostFocus="OnEditorLostFocus" />
-                    </Grid>
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
 
-                    <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="12">
-                        <TextBlock Grid.Column="0"
-                                   VerticalAlignment="Center"
-                                   Text="{x:Static core:Resources.Settings_Board_DefaultColor}" />
-                        <!-- 「跟随主题」时把取色器整块藏起来，而不是留一个点不动的控件。 -->
-                        <ColorPicker Grid.Column="1"
-                                     VerticalAlignment="Center"
-                                     IsAlphaEnabled="False"
-                                     IsVisible="{Binding !FollowThemeColor}"
-                                     Color="{Binding DefaultColorDraft, Mode=TwoWay}" />
-                        <StackPanel Grid.Column="2"
-                                    Orientation="Horizontal"
-                                    Spacing="8"
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_DefaultColor}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="12"
                                     VerticalAlignment="Center">
-                            <ToggleSwitch IsChecked="{Binding FollowThemeColor, Mode=TwoWay}" />
-                            <TextBlock VerticalAlignment="Center"
-                                       Text="{x:Static core:Resources.Settings_Board_DefaultColorFollowTheme}" />
+                            <!-- 「跟随主题」时把取色器整块藏起来，而不是留一个点不动的控件。 -->
+                            <ColorPicker VerticalAlignment="Center"
+                                         IsAlphaEnabled="False"
+                                         IsVisible="{Binding !FollowThemeColor}"
+                                         Color="{Binding DefaultColorDraft, Mode=TwoWay}" />
+                            <StackPanel Orientation="Horizontal"
+                                        Spacing="8"
+                                        VerticalAlignment="Center">
+                                <ToggleSwitch IsChecked="{Binding FollowThemeColor, Mode=TwoWay}" />
+                                <TextBlock VerticalAlignment="Center"
+                                           Text="{x:Static core:Resources.Settings_Board_DefaultColorFollowTheme}" />
+                            </StackPanel>
                         </StackPanel>
-                    </Grid>
-                </StackPanel>
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
             </fa:FASettingsExpander>
 
             <!--

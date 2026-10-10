@@ -56,12 +56,27 @@ public partial class BoardPageViewModel : ViewModelBase
 
     public bool HasNotes => SubjectGroups.Count > 0;
 
-    /// <summary>当前排布方式，页面据此切换容器面板与样式。</summary>
-    public BoardLayoutMode LayoutMode => Config.BoardSettings.LayoutMode;
+    /// <summary>
+    ///     当前排布方式，页面据此切换容器面板与样式。配置里那份老「通铺」值会折算成区块，
+    ///     所以页面只认两种排布（见 <see cref="BoardLayoutModes.Normalize" />）。
+    /// </summary>
+    public BoardLayoutMode LayoutMode => BoardLayoutModes.Normalize(Config.BoardSettings.LayoutMode);
 
+    /// <summary>单列：一张便签一行，页面会限宽居中。</summary>
     public bool IsSingleColumnLayout => LayoutMode == BoardLayoutMode.SingleColumn;
+
+    /// <summary>区块：等宽区块按可用宽度自适应分栏。</summary>
     public bool IsBlockLayout => LayoutMode == BoardLayoutMode.Block;
-    public bool IsFlowLayout => LayoutMode == BoardLayoutMode.Flow;
+
+    /// <summary>
+    ///     区块排布里单个区块的最小宽度（DIP）：一行能排几块由它决定。
+    ///     用户在「设置 → 作业板 → 区块宽度」里填，这里过一遍夹取再交给面板。
+    /// </summary>
+    public double BlockMinWidth =>
+        BoardBlockStyle.ClampMinItemWidth(Config.BoardSettings.BlockMinWidth);
+
+    /// <summary>区块宽度上限：由最小宽度推出来（默认 300 → 420），没有单独的设置项。</summary>
+    public double BlockMaxWidth => BoardBlockStyle.ResolveMaxItemWidth(BlockMinWidth);
 
     /// <summary>删除前是否要确认，页面在删之前问一次。</summary>
     public bool ConfirmBeforeDelete => Config.BoardSettings.ConfirmBeforeDelete;
@@ -193,11 +208,16 @@ public partial class BoardPageViewModel : ViewModelBase
             OnPropertyChanged(nameof(LayoutMode));
             OnPropertyChanged(nameof(IsSingleColumnLayout));
             OnPropertyChanged(nameof(IsBlockLayout));
-            OnPropertyChanged(nameof(IsFlowLayout));
         }
 
         if (e.PropertyName is null or nameof(BoardSettingsConfig.ConfirmBeforeDelete))
             OnPropertyChanged(nameof(ConfirmBeforeDelete));
+
+        if (e.PropertyName is null or nameof(BoardSettingsConfig.BlockMinWidth))
+        {
+            OnPropertyChanged(nameof(BlockMinWidth));
+            OnPropertyChanged(nameof(BlockMaxWidth));
+        }
 
         if (e.PropertyName is null or nameof(BoardSettingsConfig.DefaultContentFontSize))
             OnPropertyChanged(nameof(ContentDefaultFontSize));
@@ -213,7 +233,13 @@ public partial class BoardPageViewModel : ViewModelBase
             return;
 
         // 回放期间只显示「到那一天为止已经存在」的作业。
-        var visible = _replay.Filter(_boardService.Notes);
+        var filtered = _replay.Filter(_boardService.Notes);
+
+        // 平时把「已清理」的作业滤掉：清理只是让它从板子上消失，数据还在原处（见 BoardNote.CleanedAt）。
+        // 回放看的是历史，那时候它还在板子上，所以照常显示。
+        List<BoardNote> visible = _replay.IsActive
+            ? [.. filtered]
+            : [.. filtered.Where(note => note.IsOnBoard)];
 
         SubjectGroups.Clear();
         foreach (var group in BoardNoteGrouping.Group(
@@ -248,12 +274,22 @@ public partial class BoardPageViewModel : ViewModelBase
             }
         }
 
+        // 截止日期按「今天」算文案。跨零点后不主动刷新，但任何一次数据/设置变动都会重建列表，
+        // 真放着不管一整夜也就是「今天截止」晚一天变成「已过期 1 天」。
+        var today = DateOnly.FromDateTime(DateTime.Now);
+        var dueText = note.DueDate is { } due ? BoardDueDateFormatter.Describe(due, today) : string.Empty;
+        var isOverdue = note.DueDate is { } overdueDue && BoardDueDateFormatter.IsOverdue(overdueDue, today);
+
         return new BoardNoteItem(
             note,
             string.Join(" · ", details),
-            // 内容按 Markdown 渲染，颜色/字号标注与「整篇字号」都在这里算进渲染输入。
-            BoardRichText.FromNote(note, ContentDefaultFontSize, ContentDefaultColor),
-            !_replay.IsActive);
+            // 内容是真源（HTML 片段），默认字号/颜色在控件里逐段补成行内样式，这里只把设置值传下去。
+            note.Content?.Trim() ?? string.Empty,
+            ContentDefaultFontSize,
+            ContentDefaultColor,
+            !_replay.IsActive,
+            dueText,
+            isOverdue);
     }
 
     /// <summary>把原始值文本按字段类型格式化成给人看的样子。</summary>

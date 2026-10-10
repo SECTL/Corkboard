@@ -265,12 +265,15 @@ public class BoardServiceTests
     {
         // 作业的定义（类型/科目）与作业本身是两份存储：作业只认归档目录。
         var store = new InMemoryNoteStore();
-        store.Seed([new BoardNote { Content = "来自归档目录" }]);
+        var note = new BoardNote();
+        note.SetHtmlContent("<p>来自归档目录</p>");
+        store.Seed([note]);
 
         var (service, config, _) = CreateService(store: store);
 
         Assert.Single(service.Notes);
-        Assert.Equal("来自归档目录", service.Notes[0].Content);
+        Assert.Equal("<p>来自归档目录</p>", service.Notes[0].Content);
+        Assert.Equal(BoardContentKind.Html, service.Notes[0].ContentKind);
 
         // 落盘后配置对象上只有定义，不含作业。
         service.Save();
@@ -284,14 +287,17 @@ public class BoardServiceTests
     public void Reload_ReadsBackWhatWasPersisted()
     {
         var (service, config, store) = CreateService();
-        service.Add(new BoardNote { Content = "数学", Values = { ["f1"] = "12-15" } });
+        var draft = new BoardNote { Values = { ["f1"] = "12-15" } };
+        draft.SetHtmlContent("<p>数学</p>");
+        service.Add(draft);
         service.Types.Add(new BoardTypeDef { Name = "作文" });
         service.Save();
 
         var reloaded = new BoardService(config, store, NullLogger<BoardService>.Instance);
 
         Assert.Single(reloaded.Notes);
-        Assert.Equal("数学", reloaded.Notes[0].Content);
+        Assert.Equal("<p>数学</p>", reloaded.Notes[0].Content);
+        Assert.Equal(BoardContentKind.Html, reloaded.Notes[0].ContentKind);
         Assert.Equal("12-15", reloaded.Notes[0].Values["f1"]);
         Assert.Contains(reloaded.Types, type => type.Name == "作文");
     }
@@ -318,7 +324,9 @@ public class BoardServiceTests
         var (service, _, _) = CreateService(store: store);
 
         Assert.Single(service.Notes);
-        Assert.Equal("旧作业", service.Notes[0].Content);
+        // 旧内容是 Markdown 原文，读进来时会一次性转成富文本片段。
+        Assert.Equal("<p>旧作业</p>", service.Notes[0].Content);
+        Assert.Equal(BoardContentKind.Html, service.Notes[0].ContentKind);
         // 搬迁会把读到的旧作业写进归档存储，并删掉旧文件。
         Assert.Equal(1, store.SaveCount);
         Assert.Equal(1, store.LegacyDeleteCount);
@@ -369,12 +377,14 @@ public class BoardServiceTests
         var legacy = new LegacyBoardFile();
         legacy.Notes.Add(new BoardNote { Content = "旧作业" });
         var store = new InMemoryNoteStore { LegacyFile = legacy };
-        store.Seed([new BoardNote { Content = "新作业" }]);
+        var archived = new BoardNote();
+        archived.SetHtmlContent("<p>新作业</p>");
+        store.Seed([archived]);
 
         var (service, _, _) = CreateService(store: store);
 
         Assert.Single(service.Notes);
-        Assert.Equal("新作业", service.Notes[0].Content);
+        Assert.Equal("<p>新作业</p>", service.Notes[0].Content);
         // 已经有归档数据就不再搬迁，更不该覆盖。
         Assert.Equal(0, store.SaveCount);
         Assert.Equal(0, store.LegacyDeleteCount);

@@ -12,6 +12,7 @@ using Corkboard.Core;
 using Corkboard.Core.Abstraction;
 using Corkboard.Core.Attributes;
 using Corkboard.Core.Controls;
+using Corkboard.Core.Enums.Configs;
 using Corkboard.Core.Services;
 using Corkboard.Helpers;
 using Corkboard.Services.Ui;
@@ -32,6 +33,11 @@ namespace Corkboard.Views;
 ///         长按判定后拖动。<b>开关打开时是整窗任意位置</b>——命中按钮、输入框、列表也一样——
 ///         见 <see cref="OnPointerPressedForDrag" />。
 ///     </para>
+///     <para>
+///         窗口缩放也归这里管：主窗口是 <c>WindowDecorations.None</c>，没有原生可缩放边框
+///         （见 <see cref="MainWindow" /> 里的说明），边缘这几像素由壳自己接管，
+///         同样按 <see cref="Window.Position" /> 与宽高直接改（置底到桌面时原生缩放也不生效）。
+///     </para>
 /// </summary>
 public partial class MainView : ContentPage, IFANavigationPageFactory
 {
@@ -41,8 +47,30 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
     /// <summary>长按判定期间允许的指针抖动（DIP）：超过就认为用户在拖内容，不再抢拖动。</summary>
     private const double HoldToDragMoveTolerance = 4;
 
+    /// <summary>贴边多少 DIP 以内算「抓到了边缘」，按下即进入缩放。</summary>
+    private const double ResizeBandThickness = 6;
+
+    /// <summary>缩放时抓的是哪几条边（可以同时抓两条，那就是角）。</summary>
+    [Flags]
+    private enum ResizeSides
+    {
+        None = 0,
+        West = 1,
+        East = 2,
+        North = 4,
+        South = 8
+    }
+
+    private static readonly Cursor SizeHorizontalCursor = new(StandardCursorType.SizeWestEast);
+    private static readonly Cursor SizeVerticalCursor = new(StandardCursorType.SizeNorthSouth);
+    private static readonly Cursor SizeTopLeftCursor = new(StandardCursorType.TopLeftCorner);
+    private static readonly Cursor SizeTopRightCursor = new(StandardCursorType.TopRightCorner);
+    private static readonly Cursor SizeBottomLeftCursor = new(StandardCursorType.BottomLeftCorner);
+    private static readonly Cursor SizeBottomRightCursor = new(StandardCursorType.BottomRightCorner);
+
     private readonly FAFrame? _navigationFrame;
     private readonly Border? _titleBar;
+    private readonly Button? _sortButton;
     private InputElement? _dragHost;
     private DispatcherTimer? _holdToDragTimer;
     private PointerPressedEventArgs? _holdToDragPressedEvent;
@@ -51,6 +79,13 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
     private IPointer? _dragPointer;
     private PixelPoint _dragStartWindowPosition;
     private PixelPoint _dragStartPointerScreen;
+    private bool _isResizingWindow;
+    private IPointer? _resizePointer;
+    private ResizeSides _resizeSides;
+    private PixelPoint _resizeStartPointerScreen;
+    private PixelPoint _resizeStartWindowPosition;
+    private double _resizeStartWidth;
+    private double _resizeStartHeight;
 
     /// <summary>Debug 构建的版本水印是否已经挂上（见 <see cref="OnLoadedForDevelopmentAdorner" />）。</summary>
     private bool _isDevelopmentAdornerAdded;
@@ -72,6 +107,7 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
 
         _navigationFrame = this.FindControl<FAFrame>("NavigationFrame");
         _titleBar = this.FindControl<Border>("TitleBar");
+        _sortButton = this.FindControl<Button>("SortButton");
 
         if (_navigationFrame is not null)
             _navigationFrame.NavigationPageFactory = this;
@@ -129,6 +165,7 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
         base.OnDetachedFromVisualTree(e);
 
         CancelHoldToDrag();
+        EndWindowResize();
         SetDragHost(null);
     }
 
@@ -228,9 +265,14 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
         // 被别的控件抢走捕获等），状态和捕获会留在壳上，表现为「整窗点不动」。
         // 新的按下就是最好的收尾时机：先把它清干净，再按这次按下重新判定。
         EndWindowDrag();
+        EndWindowResize();
 
         var point = e.GetCurrentPoint(this);
         if (!point.Properties.IsLeftButtonPressed && e.Pointer.Type != PointerType.Touch)
+            return;
+
+        // 抓边缘优先于拖窗口：主窗口没有原生可缩放边框，贴边这几像素就是缩放热区。
+        if (TryStartWindowResize(e))
             return;
 
         if (IsInTitleBar(e.Source))
@@ -277,6 +319,19 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
 
     private void OnPointerMovedForDrag(object? sender, PointerEventArgs e)
     {
+        if (_isResizingWindow)
+        {
+            // 同拖动：左键已经在外面抬起来时收不到 Released，见到「没按键的移动」就收尾。
+            if (e.Pointer.Type == PointerType.Mouse && !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+            {
+                EndWindowResize();
+                return;
+            }
+
+            MoveWindowResize(e);
+            return;
+        }
+
         if (_isDraggingWindow)
         {
             // 左键已经抬起来了（窗口外抬起、捕获被抢走时收不到 Released）就当场收尾，
@@ -292,7 +347,10 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
         }
 
         if (_holdToDragTimer is null)
+        {
+            UpdateResizeCursor(e);
             return;
+        }
 
         var position = e.GetPosition(this);
         if (Math.Abs(position.X - _holdToDragOrigin.X) > HoldToDragMoveTolerance
@@ -300,9 +358,17 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
             CancelHoldToDrag();
     }
 
-    private void OnPointerReleasedForDrag(object? sender, PointerReleasedEventArgs e) => EndWindowDrag();
+    private void OnPointerReleasedForDrag(object? sender, PointerReleasedEventArgs e)
+    {
+        EndWindowDrag();
+        EndWindowResize();
+    }
 
-    private void OnPointerCaptureLostForDrag(object? sender, PointerCaptureLostEventArgs e) => EndWindowDrag();
+    private void OnPointerCaptureLostForDrag(object? sender, PointerCaptureLostEventArgs e)
+    {
+        EndWindowDrag();
+        EndWindowResize();
+    }
 
     private void CancelHoldToDrag()
     {
@@ -377,6 +443,148 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
             windowPosition.Y + (int)Math.Round(position.Y * scaling));
     }
 
+    #region 窗口边缘缩放
+
+    /// <summary>
+    ///     按下时先看是不是抓到了边缘，命中就接管指针进入缩放。
+    ///     <para>
+    ///         主窗口是 <c>WindowDecorations.None</c>：保留原生边框（<c>BorderOnly</c>）会连
+    ///         <c>WS_THICKFRAME</c> 一起留下，Windows 于是在客户区外留出那一圈原生边框——
+    ///         实测左/右/下各 11 物理像素——而分层半透明窗口不画那一圈，看上去就是一整条黑边。
+    ///         去掉原生边框的代价是原生缩放热区也没了，所以由壳自己顶上来（见 <see cref="MainWindow" />）。
+    ///     </para>
+    /// </summary>
+    private bool TryStartWindowResize(PointerPressedEventArgs e)
+    {
+        if (TopLevel.GetTopLevel(this) is not Window { WindowState: WindowState.Normal } window)
+            return false;
+
+        var sides = HitTestResizeSides(e.GetPosition(this));
+        if (sides == ResizeSides.None)
+            return false;
+
+        CancelHoldToDrag();
+        _isResizingWindow = true;
+        _resizeSides = sides;
+        _resizePointer = e.Pointer;
+        _resizeStartPointerScreen = GetPointerScreenPoint(e);
+        _resizeStartWindowPosition = window.Position;
+        _resizeStartWidth = window.Bounds.Width;
+        _resizeStartHeight = window.Bounds.Height;
+        e.Pointer.Capture(this);
+        return true;
+    }
+
+    /// <summary>
+    ///     缩放中：按<b>屏幕绝对位移</b>算新尺寸与新位置。
+    ///     这里不能像普通控件那样用「相对窗口的位移」——West/North 缩放会同时移动窗口，
+    ///     相对位移会跟着一起抵消（跟拖动是同一个坑，见 <see cref="GetPointerScreenPoint" />）。
+    /// </summary>
+    private void MoveWindowResize(PointerEventArgs e)
+    {
+        if (TopLevel.GetTopLevel(this) is not Window window || _resizeSides == ResizeSides.None)
+            return;
+
+        var current = GetPointerScreenPoint(e);
+        var scaling = window.RenderScaling is > 0 and var renderScaling ? renderScaling : 1.0;
+        var deltaX = (current.X - _resizeStartPointerScreen.X) / scaling;
+        var deltaY = (current.Y - _resizeStartPointerScreen.Y) / scaling;
+
+        var width = _resizeStartWidth;
+        var height = _resizeStartHeight;
+
+        if (_resizeSides.HasFlag(ResizeSides.West))
+            width = Math.Max(window.MinWidth, _resizeStartWidth - deltaX);
+        else if (_resizeSides.HasFlag(ResizeSides.East))
+            width = Math.Max(window.MinWidth, _resizeStartWidth + deltaX);
+
+        if (_resizeSides.HasFlag(ResizeSides.North))
+            height = Math.Max(window.MinHeight, _resizeStartHeight - deltaY);
+        else if (_resizeSides.HasFlag(ResizeSides.South))
+            height = Math.Max(window.MinHeight, _resizeStartHeight + deltaY);
+
+        // 位置按「没被抓的那条边不动」补偿；只在抓了 West/North 时才需要挪窗口。
+        // 位置是物理像素、尺寸是 DIP，所以补偿要乘缩放（与拖动里的算法一致）。
+        var leftOffset = _resizeSides.HasFlag(ResizeSides.West)
+            ? (int)Math.Round((_resizeStartWidth - width) * scaling)
+            : 0;
+        var topOffset = _resizeSides.HasFlag(ResizeSides.North)
+            ? (int)Math.Round((_resizeStartHeight - height) * scaling)
+            : 0;
+        var target = new PixelPoint(
+            _resizeStartWindowPosition.X + leftOffset,
+            _resizeStartWindowPosition.Y + topOffset);
+
+        // 尺寸要写窗口的 Width/Height（而不是只改 Bounds）：尺寸记忆订阅的是窗口属性变化。
+        if (Math.Abs(window.Width - width) > 0.5)
+            window.Width = width;
+
+        if (Math.Abs(window.Height - height) > 0.5)
+            window.Height = height;
+
+        if (target != window.Position)
+            window.Position = target;
+    }
+
+    /// <summary>
+    ///     结束缩放。<b>必须显式把指针捕获还回去</b>：指针在窗口外抬起时收不到
+    ///     <c>PointerReleased</c>，捕获留在壳上会让整窗控件点不动（与 <see cref="EndWindowDrag" /> 同因）。
+    /// </summary>
+    private void EndWindowResize()
+    {
+        _resizePointer?.Capture(null);
+        _resizePointer = null;
+        _resizeSides = ResizeSides.None;
+        _isResizingWindow = false;
+    }
+
+    /// <summary>
+    ///     边缘热区判定：贴边 <see cref="ResizeBandThickness" /> 以内算命中，角上两条边都算。
+    ///     窗口很小时按最短边的三分之一收窄，免得热区把标题栏整个吃掉。
+    /// </summary>
+    private ResizeSides HitTestResizeSides(Point point)
+    {
+        var width = Bounds.Width;
+        var height = Bounds.Height;
+        if (width <= 0 || height <= 0)
+            return ResizeSides.None;
+
+        var band = Math.Min(ResizeBandThickness, Math.Min(width, height) / 3);
+        var sides = ResizeSides.None;
+
+        if (point.X <= band)
+            sides |= ResizeSides.West;
+        else if (point.X >= width - band)
+            sides |= ResizeSides.East;
+
+        if (point.Y <= band)
+            sides |= ResizeSides.North;
+        else if (point.Y >= height - band)
+            sides |= ResizeSides.South;
+
+        return sides;
+    }
+
+    /// <summary>没有手势在跑时按指针所在边缘换光标，用户才知道这里能拉。</summary>
+    private void UpdateResizeCursor(PointerEventArgs e)
+    {
+        var cursor = HitTestResizeSides(e.GetPosition(this)) switch
+        {
+            ResizeSides.West or ResizeSides.East => SizeHorizontalCursor,
+            ResizeSides.North or ResizeSides.South => SizeVerticalCursor,
+            ResizeSides.West | ResizeSides.North => SizeTopLeftCursor,
+            ResizeSides.North | ResizeSides.East => SizeTopRightCursor,
+            ResizeSides.East | ResizeSides.South => SizeBottomRightCursor,
+            ResizeSides.South | ResizeSides.West => SizeBottomLeftCursor,
+            _ => null
+        };
+
+        if (!ReferenceEquals(Cursor, cursor))
+            Cursor = cursor;
+    }
+
+    #endregion
+
     /// <summary>
     ///     Debug 构建的左下角版本水印：往壳的 <c>AdornerLayer</c> 里塞一个
     ///     <see cref="DevelopmentBuildAdorner" />，它铺满整壳、不吃命中测试，只画一行字。
@@ -407,6 +615,43 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
     private void OpenSettingsButton_OnClick(object? sender, RoutedEventArgs e) => App.ShowSettingsWindow();
 
     /// <summary>
+    ///     「排序」：按钮本身只负责弹菜单，弹出前把当前档勾上。
+    ///     <para>
+    ///         勾选不走 MVVM：菜单项画在弹出层里、不在这个可视树上，所以在<b>弹出这一刻</b>
+    ///         按配置写一遍（<see cref="RefreshSortMenuChecks" />），而不是绑 MenuItem.IsChecked。
+    ///     </para>
+    /// </summary>
+    private void SortButton_OnClick(object? sender, RoutedEventArgs e) => RefreshSortMenuChecks();
+
+    /// <summary>
+    ///     排序菜单里的一项被点了：写进配置，再按配置把勾重新点一遍。
+    ///     <para>
+    ///         写配置之后不用手动刷新板子：作业板页面自己订阅了这条变化，会按新顺序重建列表
+    ///         （见 <c>BoardPageViewModel</c>）。勾选这里自己再写一次，是不想依赖 MenuItem 的
+    ///         Radio 分组逻辑——那套逻辑只在菜单里生效，跟配置不是同一个来源。
+    ///     </para>
+    /// </summary>
+    private void SortMenuItem_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuItem { Tag: BoardSortMode mode })
+            return;
+
+        ViewModel.SetSortModeCommand.Execute(mode);
+        RefreshSortMenuChecks();
+    }
+
+    /// <summary>按配置给菜单里的五项写勾选状态（配置里是越界值时就一个都不勾）。</summary>
+    private void RefreshSortMenuChecks()
+    {
+        if (_sortButton?.Flyout is not MenuFlyout flyout)
+            return;
+
+        var current = ViewModel.SelectedSortOption.Mode;
+        foreach (var item in flyout.Items.OfType<MenuItem>())
+            item.IsChecked = item.Tag is BoardSortMode mode && mode == current;
+    }
+
+    /// <summary>
     ///     「布置作业」：表单由 <see cref="PageOverlayService" /> 挂到壳这一层显示，
     ///     遮罩才能盖住自绘标题栏（页面里画会漏掉标题栏那一条）。
     /// </summary>
@@ -432,7 +677,8 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
 
     #endregion
 
-    private bool IsInTitleBar(object? source)    {
+    private bool IsInTitleBar(object? source)
+    {
         if (_titleBar is null || source is not Visual visual)
             return false;
 
@@ -448,8 +694,9 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
     /// <summary>
     ///     命中标题栏里的交互控件时不要启动窗口拖动，否则按钮收不到点击。
     ///     <para>
-    ///         标题栏现在有「设置 / 布置作业 / 时空回放 / 锁窗口」四类入口（按钮、下拉），
+    ///         标题栏现在有「设置 / 排序 / 布置作业 / 时空回放 / 锁窗口」五类入口（按钮、下拉），
     ///         所以这张排除表是真在用的：漏掉任何一类控件，那个控件就会变成「点不动」。
+    ///         排序菜单的菜单项画在弹出层里、不在标题栏上，不走这里。
     ///     </para>
     /// </summary>
     private bool IsInteractiveSource(object? source)

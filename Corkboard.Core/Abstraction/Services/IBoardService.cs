@@ -34,6 +34,16 @@ public interface IBoardService
 
     bool Remove(Guid id);
 
+    /// <summary>
+    ///     一次把多条标成「已清理」（自动清理走它）。比逐条改字段再 <see cref="Save" /> 好在
+    ///     只落盘一次、界面也只重建一次。返回这次真正改了标记的条数（已经清过的不再算）；
+    ///     一条都对不上时什么都不做，不落盘也不通知 <see cref="Changed" />。
+    ///     <para>
+    ///         作业**不从集合里拿掉**：清理只是让主页面不再显示它，数据仍旧写在原来那个日期文件里。
+    ///     </para>
+    /// </summary>
+    int CleanMany(IEnumerable<Guid> ids, DateTimeOffset cleanedAt);
+
     /// <summary>按 Id 找作业类型；<paramref name="typeId" /> 为空或找不到时返回 <c>null</c>。</summary>
     BoardTypeDef? FindType(Guid? typeId);
 

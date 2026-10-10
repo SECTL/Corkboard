@@ -46,6 +46,13 @@
                             Click="BackButton_OnClick"
                             WindowDecorationProperties.ElementRole="User" />
 
+                    <!-- 软件图标 + 软件名：与主界面标题栏同一套摆法（图标在名字左边）。 -->
+                    <Image Width="18"
+                           Height="18"
+                           VerticalAlignment="Center"
+                           Source="/Assets/Icons/board-icon-1024.png"
+                           RenderOptions.BitmapInterpolationMode="HighQuality" />
+
                     <TextBlock Text="Corkboard"
                                FontSize="12"
                                VerticalAlignment="Center" />

@@ -6,6 +6,7 @@
              xmlns:icons="using:Corkboard.Core.Icons"
              xmlns:core="using:Corkboard.Core.Langs.Common"
              xmlns:ui="using:Corkboard.Services.Ui"
+             xmlns:enums="using:Corkboard.Core.Enums.Configs"
              xmlns:views="using:Corkboard.Views"
              mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="600"
              x:Class="Corkboard.Views.MainView"
@@ -40,14 +41,23 @@
                     <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
                         <Border Width="60" IsVisible="{Binding IsMacOs}" />
 
+                        <!--
+                            软件图标放在软件名左边：和窗口图标、托盘图标同一个母版
+                            （Assets/Icons 里那份 1024 的母图），只做展示，不标 User——按下跟着标题栏拖窗口。
+                        -->
+                        <Image Width="18"
+                               Height="18"
+                               VerticalAlignment="Center"
+                               Source="/Assets/Icons/board-icon-1024.png"
+                               RenderOptions.BitmapInterpolationMode="HighQuality" />
+
                         <TextBlock Text="Corkboard"
                                    FontSize="12"
-                                   VerticalAlignment="Center"
-                                   Margin="8 0 0 0" />
+                                   VerticalAlignment="Center" />
                     </StackPanel>
 
                     <!--
-                        右上角：平时是「设置 + 布置作业 + 时空回放」，进入回放后换成控制条。
+                        右上角：平时是「设置 + 排序 + 布置作业 + 时空回放」，进入回放后换成控制条。
                         回放控件也留在标题栏，用户不用在两个地方找入口。
                         点击穿透开着时整块隐藏：这些按钮一个都点不动，留着只会误导
                         （那种状态下主窗口完全不收鼠标，设置要从托盘菜单打开）。
@@ -70,6 +80,55 @@
                             <TextBlock Text="{x:Static icons:FluentIcons.SettingsFilled}"
                                        FontFamily="{DynamicResource FluentSystemIconsResizeable}"
                                        VerticalAlignment="Center" />
+                        </Button>
+
+                        <Button x:Name="SortButton"
+                                VerticalAlignment="Center"
+                                ToolTip.Tip="{Binding ViewModel.SortTip}"
+                                WindowDecorationProperties.ElementRole="User"
+                                Click="SortButton_OnClick">
+                            <TextBlock Text="{x:Static icons:FluentIcons.ArrowSortFilled}"
+                                       FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                       VerticalAlignment="Center" />
+                            <!--
+                                排序：原来在「设置 → 作业板」的下拉框里，现在放到标题栏这一排。
+                                菜单是单选的，勾的就是当前档；选中即写配置（见 MainViewModel.SetSortMode），
+                                作业板页面订阅了配置变化，会自己按新顺序重建。
+                                按钮只给字形，当前档靠这里的提示与菜单里的勾表示。
+
+                                菜单项不在这个可视树里（画在弹出层），所以既不绑 IsChecked 也不绑 Command：
+                                勾选与点击都在代码隐藏里按配置收口（见 MainView.axaml.cs 的
+                                RefreshSortMenuChecks / SortMenuItem_OnClick），与这一排其它按钮一样走 Click。
+                            -->
+                            <Button.Flyout>
+                                <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                    <MenuItem Header="{x:Static core:Resources.Board_Sort_CreatedDescending}"
+                                              ToggleType="Radio"
+                                              GroupName="BoardSort"
+                                              Tag="{x:Static enums:BoardSortMode.CreatedDescending}"
+                                              Click="SortMenuItem_OnClick" />
+                                    <MenuItem Header="{x:Static core:Resources.Board_Sort_CreatedAscending}"
+                                              ToggleType="Radio"
+                                              GroupName="BoardSort"
+                                              Tag="{x:Static enums:BoardSortMode.CreatedAscending}"
+                                              Click="SortMenuItem_OnClick" />
+                                    <MenuItem Header="{x:Static core:Resources.Board_Sort_UpdatedDescending}"
+                                              ToggleType="Radio"
+                                              GroupName="BoardSort"
+                                              Tag="{x:Static enums:BoardSortMode.UpdatedDescending}"
+                                              Click="SortMenuItem_OnClick" />
+                                    <MenuItem Header="{x:Static core:Resources.Board_Sort_Subject}"
+                                              ToggleType="Radio"
+                                              GroupName="BoardSort"
+                                              Tag="{x:Static enums:BoardSortMode.Subject}"
+                                              Click="SortMenuItem_OnClick" />
+                                    <MenuItem Header="{x:Static core:Resources.Board_Sort_Manual}"
+                                              ToggleType="Radio"
+                                              GroupName="BoardSort"
+                                              Tag="{x:Static enums:BoardSortMode.Manual}"
+                                              Click="SortMenuItem_OnClick" />
+                                </MenuFlyout>
+                            </Button.Flyout>
                         </Button>
 
                         <Button VerticalAlignment="Center"
@@ -171,6 +230,33 @@
                             CacheSize="0" />
             </Grid>
         </Grid>
+
+        <!--
+            主窗口右下角的「布置作业」快捷按钮（开关在设置 → 基础设置）。
+            它浮在页面内容之上、按窗口角定位，不跟着页面滚动；放在弹层遮罩之前，
+            弹层打开时会被遮罩盖住，不会浮在表单上面。
+            关掉点击穿透时整窗都不收鼠标，这颗按钮照样点不动，所以那种状态下一起隐藏
+            （与标题栏那一排同一个理由）。
+            回放期间也不显示：那时看的是历史快照，不接受新建。
+        -->
+        <Panel HorizontalAlignment="Right"
+               VerticalAlignment="Bottom"
+               Margin="0 0 20 20"
+               IsVisible="{Binding !Replay.IsActive}">
+            <Button Width="56" Height="56"
+                    Padding="0"
+                    CornerRadius="16"
+                    Classes="accent"
+                    IsVisible="{Binding ViewModel.Config.Basic.ShowCornerAssignButton}"
+                    ToolTip.Tip="{x:Static core:Resources.Board_AddNote}"
+                    WindowDecorationProperties.ElementRole="User"
+                    Click="AddAssignmentButton_OnClick">
+                <TextBlock Text="{x:Static icons:FluentIcons.AddFilled}"
+                           FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                           FontSize="22"
+                           VerticalAlignment="Center" />
+            </Button>
+        </Panel>
 
         <!--
             页面级弹层宿主。挂在壳的根 Panel 上而不是页面里，遮罩才能盖住上面的自绘标题栏。

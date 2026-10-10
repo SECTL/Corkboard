@@ -19,14 +19,42 @@ public partial class BoardSettingsConfig : ObservableObject
     /// </summary>
     [ObservableProperty] private string _boardName = string.Empty;
 
-    /// <summary>便签排布方式。只在「设置 → 作业板 → 排布」下拉框里改。</summary>
+    /// <summary>
+    ///     便签排布方式（展示设置）。只在「设置 → 作业板 → 排布」下拉框里改；
+    ///     读的时候一律过一遍 <see cref="BoardLayoutModes.Normalize" />，老配置里的「通铺」按区块显示。
+    /// </summary>
     [ObservableProperty] private BoardLayoutMode _layoutMode = BoardLayoutMode.SingleColumn;
 
-    /// <summary>便签排序方式。</summary>
+    /// <summary>
+    ///     区块排布里单个区块的最小宽度（DIP）。只在「设置 → 作业板 → 区块宽度」里改；
+    ///     它决定一行能排几块，读的时候一律过一遍 <see cref="BoardBlockStyle.ClampMinItemWidth" />。
+    /// </summary>
+    [ObservableProperty] private double _blockMinWidth = BoardBlockStyle.DefaultMinItemWidth;
+
+    /// <summary>便签排序方式。改它的入口在主界面标题栏的排序按钮（设置里只有排布这类展示设置）。</summary>
     [ObservableProperty] private BoardSortMode _sortMode = BoardSortMode.CreatedDescending;
 
     /// <summary>删除便签前是否弹确认对话框。</summary>
     [ObservableProperty] private bool _confirmBeforeDelete = true;
+
+    /// <summary>
+    ///     是否按下面的规则自动清理过期作业。关掉之后只剩设置页里的「立即清理」这一个入口。
+    ///     默认开：清理只是把作业从板子上拿掉，数据不删、随时能在时空回放里看到，
+    ///     关着反而会让人以为功能坏了。
+    /// </summary>
+    [ObservableProperty] private bool _cleanupEnabled = true;
+
+    /// <summary>清理频率。枚举按数字落盘，只能在末尾增成员。</summary>
+    [ObservableProperty] private BoardCleanupFrequency _cleanupFrequency = BoardCleanupFrequency.Daily;
+
+    /// <summary>每周清理时定在星期几动手（<see cref="BoardCleanupFrequency.Daily" /> 下忽略）。</summary>
+    [ObservableProperty] private DayOfWeek _cleanupWeekday = DayOfWeek.Monday;
+
+    /// <summary>动手的时刻（整点 + 分钟拆成两个字段存，免得为 <see cref="TimeOnly" /> 再加一个序列化器）。</summary>
+    [ObservableProperty] private int _cleanupHour = BoardCleanupDefaults.DefaultHour;
+
+    /// <summary>动手时刻的分钟部分。</summary>
+    [ObservableProperty] private int _cleanupMinute = BoardCleanupDefaults.DefaultMinute;
 
     /// <summary>
     ///     作业内容的默认字号：新布置的作业没单独定「整篇字号」时用它，
@@ -78,6 +106,16 @@ public partial class BoardSettingsConfig : ObservableObject
             return;
 
         ApplyPaletteColors(normalized);
+    }
+
+    /// <summary>
+    ///     读盘后和老配置迁移用：清理时刻夹进合法区间（老版本 settings.json 里没这个字段，
+    ///     会直接落到默认值；手改过的脏数据则在这里被收拾干净）。
+    /// </summary>
+    public void NormalizeCleanup()
+    {
+        CleanupHour = BoardCleanupDefaults.ClampHour(CleanupHour);
+        CleanupMinute = BoardCleanupDefaults.ClampMinute(CleanupMinute);
     }
 
     /// <summary>实际显示用的名称：用户填了就用用户的，没填就回退到资源里的默认名。</summary>

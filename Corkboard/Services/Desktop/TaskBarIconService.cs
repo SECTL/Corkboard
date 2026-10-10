@@ -1,11 +1,8 @@
-using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Media;
-using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using Microsoft.Extensions.Logging;
 using Corkboard.Core;
-using Corkboard.Core.Icons;
 using Corkboard.Platforms.Abstractions;
 using CR = Corkboard.Core.Langs.Common.Resources;
 
@@ -17,8 +14,8 @@ namespace Corkboard.Services.Desktop;
 /// </summary>
 /// <remarks>
 ///     <para>
-///         图标暂时用图标字体里的字形现画一张位图，接入正式的多尺寸图标后换成
-///         <c>Assets/Icons/board-icon.ico</c> 即可。
+///         图标用随包分发的多尺寸 <c>Assets/Icons/board-icon.ico</c>，与窗口图标、exe 图标同一份：
+///         平台图标装载器会自己挑合适的那一档，不用手画位图、也不会在缩放比变化时糊掉。
 ///     </para>
 ///     <para>
 ///         托盘只是入口之一：平台不具备托盘能力或创建失败时只写日志，不阻断启动、不影响其它入口。
@@ -26,7 +23,8 @@ namespace Corkboard.Services.Desktop;
 /// </remarks>
 public sealed class TaskBarIconService : IDisposable
 {
-    private const int GlyphIconSize = 32;
+    /// <summary>图标资源：Corkboard 程序集里的多尺寸 ICO。</summary>
+    private static readonly Uri IconAsset = new("avares://Corkboard/Assets/Icons/board-icon.ico");
 
     private readonly PlatformCapabilities _capabilities;
     private readonly ILogger<TaskBarIconService> _logger;
@@ -58,7 +56,7 @@ public sealed class TaskBarIconService : IDisposable
         {
             var trayIcon = new TrayIcon
             {
-                Icon = CreateGlyphIcon(),
+                Icon = CreateTrayIcon(),
                 ToolTipText = GlobalConstants.AppName,
                 Menu = CreateMenu(),
                 IsVisible = true
@@ -135,31 +133,12 @@ public sealed class TaskBarIconService : IDisposable
     }
 
     /// <summary>
-    ///     托盘只要位图，所以把字形（<see cref="FluentIcons.BoardFilled" />）画进一张位图再包成
-    ///     <see cref="WindowIcon" />。用主题蓝而不是纯白/纯黑，浅色和深色任务栏上都看得见。
+    ///     读随包分发的多尺寸 ICO 交给平台图标装载器：Windows 直接拿整份 ICO 去建原生图标
+    ///     （托盘/任务栏各取各自需要的尺寸），其它平台由平台层自行解码。
     /// </summary>
-    private static WindowIcon CreateGlyphIcon()
+    private static WindowIcon CreateTrayIcon()
     {
-        var typeface = new Typeface(GlobalConstants.FluentIconsFontFamily);
-        var text = new FormattedText(
-            FluentIcons.BoardFilled,
-            CultureInfo.InvariantCulture,
-            FlowDirection.LeftToRight,
-            typeface,
-            GlyphIconSize * 0.9,
-            new SolidColorBrush(Color.Parse(GlobalConstants.DefaultThemeColor)));
-
-        using var bitmap = new RenderTargetBitmap(new PixelSize(GlyphIconSize, GlyphIconSize), new Vector(96, 96));
-        using (var context = bitmap.CreateDrawingContext())
-        {
-            context.DrawText(text, new Point(
-                (GlyphIconSize - text.Width) / 2,
-                (GlyphIconSize - text.Height) / 2));
-        }
-
-        using var stream = new MemoryStream();
-        bitmap.Save(stream, PngBitmapEncoderOptions.Default);
-        stream.Position = 0;
+        using var stream = AssetLoader.Open(IconAsset);
         return new WindowIcon(stream);
     }
 }

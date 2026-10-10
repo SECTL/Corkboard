@@ -8,6 +8,11 @@
         <CetCompat>false</CetCompat>
         <ApplicationManifest>app.manifest</ApplicationManifest>
         <!--
+            可执行文件图标（资源管理器 / 任务栏兜底）：与窗口、托盘共用 Corkboard 资产里的多尺寸 ICO。
+            窗口自己还有 Window.Icon（MainWindow.axaml），任务栏取窗口图标优先。
+        -->
+        <ApplicationIcon>..\Corkboard\Assets\Icons\board-icon.ico</ApplicationIcon>
+        <!--
             头程序集：版本元数据交给 git（Corkboard.GitInfoGenerator + 根 AssemblyInfo.cs），
             见 Global.props。新增平台头（移动端等）时同样打开这个开关。
         -->

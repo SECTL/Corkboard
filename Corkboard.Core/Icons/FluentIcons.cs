@@ -48,4 +48,10 @@ public static class FluentIcons
 
     /// <summary>科目区块的排序手柄。码位来自上游图标映射表 <c>re_order_dots_vertical_20_filled</c>。</summary>
     public const string ReOrderDotsVerticalFilled = "\uEE46";
+
+    /// <summary>关于页里「会用系统程序打开」的整行链接。码位来自上游图标映射表 <c>open_20_filled</c>。</summary>
+    public const string OpenFilled = "\uEC2D";
+
+    /// <summary>主界面标题栏的排序入口。码位来自上游图标映射表 <c>arrow_sort_20_filled</c>。</summary>
+    public const string ArrowSortFilled = "\uE13E";
 }

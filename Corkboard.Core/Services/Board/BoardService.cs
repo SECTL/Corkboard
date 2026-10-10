@@ -38,13 +38,25 @@ public class BoardService : IBoardService
         {
             // 归档目录还空着、旧版单文件有货：作业摊到新的日期目录下，定义按下面的规则并回。
             _logger.LogInformation("Migrating {Count} notes into dated folders", legacy.Notes.Count);
-            if (legacy.Notes.Count > 0)
-                _noteStore.SaveAll(legacy.Notes);
             MergeLegacyDefinition(legacy, definitionExists);
 
             notes = legacy.Notes;
+
+            // 旧内容是旧格式（Markdown 原文 + 偏移标注）：跟搬迁一起写下去，
+            // 免得先把旧格式写进归档目录、紧接着又改写一遍。
+            ConvertLegacyContent(notes);
+            if (notes.Count > 0)
+                _noteStore.SaveAll(notes);
+
             // 定义（类型/科目）也跟着搬过一次，立刻落盘，避免下次启动重复走搬迁。
             _configService.SaveConfig(_config);
+        }
+        else
+        {
+            // 归档目录里已经有旧格式的作业：就地转一次并落盘，之后内存与磁盘都是新格式。
+            var converted = ConvertLegacyContent(notes);
+            if (converted > 0)
+                _noteStore.SaveAll(notes);
         }
 
         _notes = new ObservableCollection<BoardNote>(notes);
@@ -88,13 +100,20 @@ public class BoardService : IBoardService
 
         var target = _notes[index];
         target.TypeId = note.TypeId;
+        target.ContentKind = note.ContentKind;
         target.Content = note.Content;
-        target.ContentFontSize = note.ContentFontSize;
         target.Subject = note.Subject;
+        target.DueDate = note.DueDate;
+
+        // 「已清理」是板子上的可见性标记，跟着表单里的副本走：编辑一条作业不会把它
+        // 从已清理状态里放出来，那是「还原」该干的事。
+        target.CleanedAt = note.CleanedAt;
         target.Values = new Dictionary<string, string>(note.Values);
 
-        // 格式标注按引用并入会让编辑表单的草稿继续牵着落盘数据，所以整份克隆一份。
-        target.Formats = [.. note.Formats.Select(range => range.Clone())];
+        // 遗留字段是旧数据的只读快照：内容换了格式（编辑表单给的一定是富文本）就该丢掉，
+        // 留着只会让下一个版本的读法继续有歧义。
+        target.ContentFontSize = note.ContentFontSize;
+        target.Formats = note.Formats;
 
         // CreatedAt 决定作业归档在哪个日期文件里、Order 决定区块内顺序，两者都不参与编辑。
         target.UpdatedAt = DateTimeOffset.Now;
@@ -112,6 +131,35 @@ public class BoardService : IBoardService
         _notes.RemoveAt(index);
         Persist();
         return true;
+    }
+
+    /// <summary>
+    ///     一次把多条标成「已清理」：作业**留在集合里**（下次 <see cref="Persist" /> 才会原样写回
+    ///     它原来那个日期文件），只是主页面不再显示它。已经清过的不再重算，因此重复调用是安全的。
+    /// </summary>
+    public int CleanMany(IEnumerable<Guid> ids, DateTimeOffset cleanedAt)
+    {
+        ArgumentNullException.ThrowIfNull(ids);
+
+        var targets = new HashSet<Guid>(ids);
+        if (targets.Count == 0)
+            return 0;
+
+        var cleaned = 0;
+        foreach (var note in _notes)
+        {
+            if (note.CleanedAt is not null || !targets.Contains(note.Id))
+                continue;
+
+            note.CleanedAt = cleanedAt;
+            cleaned++;
+        }
+
+        if (cleaned == 0)
+            return 0;
+
+        Persist();
+        return cleaned;
     }
 
     public BoardTypeDef? FindType(Guid? typeId)
@@ -150,8 +198,13 @@ public class BoardService : IBoardService
     {
         _config = _configService.LoadConfig(new BoardConfig());
 
+        var notes = _noteStore.LoadAll();
+        var converted = ConvertLegacyContent(notes);
+        if (converted > 0)
+            _noteStore.SaveAll(notes);
+
         _notes.Clear();
-        foreach (var note in _noteStore.LoadAll())
+        foreach (var note in notes)
             _notes.Add(note);
 
         Types.Clear();
@@ -186,6 +239,20 @@ public class BoardService : IBoardService
 
         // 旧文件由存储层负责删：它才知道旧文件到底在哪个路径。
         _noteStore.TryDeleteLegacy();
+    }
+
+    /// <summary>
+    ///     旧作业的内容迁移：从「Markdown 原文 + 偏移标注」转成富文本片段（HTML）。只改内存，
+    ///     落盘交给调用方（从旧单文件搬过来的那一批正好跟搬迁一起写，不必写两遍）。
+    ///     磁盘上转过了就不会再转第二次——新数据的内容格式已经是富文本，转换是幂等的。
+    /// </summary>
+    private int ConvertLegacyContent(IReadOnlyCollection<BoardNote> notes)
+    {
+        var converted = LegacyBoardContentConverter.ConvertAll(notes);
+        if (converted > 0)
+            _logger.LogInformation("Converted {Count} legacy notes to rich text", converted);
+
+        return converted;
     }
 
     private void Persist()

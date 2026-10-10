@@ -5,10 +5,12 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Corkboard.Core.Abstraction.Services;
+using Corkboard.Core.Controls;
 using Corkboard.Core.Enums;
 using Corkboard.Core.Enums.Configs;
 using Corkboard.Core.Models.Board;
 using Corkboard.Core.Models.SubConfigs.Board;
+using Corkboard.Core.Services.Board;
 using Corkboard.Core.Services.Config;
 using CR = Corkboard.Core.Langs.Common.Resources;
 
@@ -27,19 +29,30 @@ public partial class BoardSettingsPageViewModel : ViewModelBase
 {
     private readonly IBoardService _boardService;
     private readonly MainConfigHandler _configHandler;
+    private readonly BoardCleanupService _cleanupService;
 
-    public BoardSettingsPageViewModel(MainConfigHandler configHandler, IBoardService boardService)
+    public BoardSettingsPageViewModel(
+        MainConfigHandler configHandler,
+        IBoardService boardService,
+        BoardCleanupService cleanupService)
         : base(configHandler)
     {
         _boardService = boardService;
         _configHandler = configHandler;
+        _cleanupService = cleanupService;
         BoardNameDraft = Board.BoardName;
         SubjectsDraft = string.Join("，", _boardService.Subjects);
         _defaultFontSizeDraft = (decimal)BoardContentStyle.ClampFontSize(Board.DefaultContentFontSize);
+        _blockMinWidthDraft = (decimal)BoardBlockStyle.ClampMinItemWidth(Board.BlockMinWidth);
+        _cleanupTimeDraft = TimeDraft(Board.CleanupHour, Board.CleanupMinute);
 
         // 老版本的 settings.json 里没有色板字段（或者被手改脏了），进页面时先在原地收拾干净，
         // 否则浮窗上会出现透明/重复的色块。
         Board.NormalizePalette();
+
+        // 清理时刻只在提交时夹一次，但越界值一旦落盘就会一直算错（比如 25 点），
+        // 所以进页面也先夹一次。
+        CommitCleanup();
         ReloadPaletteItems();
     }
 
@@ -48,21 +61,14 @@ public partial class BoardSettingsPageViewModel : ViewModelBase
     /// <summary>作业类型。设置页直接增删改，改完调 <see cref="SaveAll" />。</summary>
     public ObservableCollection<BoardTypeDef> Types => _boardService.Types;
 
-    /// <summary>排布方式下拉项。主页面顶部不再放切换器，排布只在这里选。</summary>
+    /// <summary>
+    ///     排布（展示设置）下拉项。主页面顶部不放切换器，排布只在这里选；
+    ///     排序方式已经搬到主界面标题栏的排序按钮上，所以这里没有排序项。
+    /// </summary>
     public IReadOnlyList<BoardLayoutOption> LayoutOptions { get; } =
     [
         new(BoardLayoutMode.SingleColumn, CR.Board_Layout_SingleColumn),
-        new(BoardLayoutMode.Block, CR.Board_Layout_Block),
-        new(BoardLayoutMode.Flow, CR.Board_Layout_Flow)
-    ];
-
-    public IReadOnlyList<BoardSortOption> SortOptions { get; } =
-    [
-        new(BoardSortMode.CreatedDescending, CR.Settings_Board_Sort_CreatedDescending),
-        new(BoardSortMode.CreatedAscending, CR.Settings_Board_Sort_CreatedAscending),
-        new(BoardSortMode.UpdatedDescending, CR.Settings_Board_Sort_UpdatedDescending),
-        new(BoardSortMode.Subject, CR.Settings_Board_Sort_Subject),
-        new(BoardSortMode.Manual, CR.Settings_Board_Sort_Manual)
+        new(BoardLayoutMode.Block, CR.Board_Layout_Block)
     ];
 
     /// <summary>
@@ -79,6 +85,12 @@ public partial class BoardSettingsPageViewModel : ViewModelBase
     ///     （<c>ConfigHandlerBase</c> 没有防抖），所以先存草稿，失焦 / 离开页面时再提交。
     /// </summary>
     [ObservableProperty] private decimal? _defaultFontSizeDraft;
+
+    /// <summary>
+    ///     区块最小宽度的输入草稿（DIP）。**不直接双向绑配置**：理由同字号，
+    ///     先存草稿，失焦 / 离开页面时再提交。
+    /// </summary>
+    [ObservableProperty] private decimal? _blockMinWidthDraft;
 
     /// <summary>取色器停手多久才把颜色写进配置。拖光谱时每帧都在变，写盘要攒一攒。</summary>
     private static readonly TimeSpan ColorCommitDelay = TimeSpan.FromMilliseconds(400);
@@ -195,25 +207,36 @@ public partial class BoardSettingsPageViewModel : ViewModelBase
         FlushColorDraft();
     }
 
-    /// <summary>排布下拉选中项。配置里若是越界值（旧版本或手改过配置），就退回第一项。</summary>
+    /// <summary>
+    ///     提交区块最小宽度。手输越界值时夹回合法区间，并把夹过的值同步回界面，
+    ///     免得显示的和落盘的不是一个数。
+    /// </summary>
+    public void CommitBlockMinWidth()
+    {
+        var width = BlockMinWidthDraft is { } draft
+            ? BoardBlockStyle.ClampMinItemWidth((double)draft)
+            : BoardBlockStyle.ClampMinItemWidth(Board.BlockMinWidth);
+
+        if (Math.Abs(Board.BlockMinWidth - width) > double.Epsilon)
+            Board.BlockMinWidth = width;
+
+        var normalized = (decimal)width;
+        if (BlockMinWidthDraft != normalized)
+            BlockMinWidthDraft = normalized;
+    }
+
+    /// <summary>
+    ///     排布下拉选中项。配置里若是越界值或老版本的「通铺」，先按
+    ///     <see cref="BoardLayoutModes.Normalize" /> 折算成界面上真的提供的两种，再匹配下拉项。
+    /// </summary>
     public BoardLayoutOption SelectedLayoutOption
     {
-        get => LayoutOptions.FirstOrDefault(option => option.Mode == Board.LayoutMode) ?? LayoutOptions[0];
+        get => LayoutOptions.FirstOrDefault(option => option.Mode == BoardLayoutModes.Normalize(Board.LayoutMode))
+               ?? LayoutOptions[0];
         set
         {
             if (value is not null)
                 Board.LayoutMode = value.Mode;
-        }
-    }
-
-    /// <summary>下拉选中项。配置里若是越界值（旧版本或手改过配置），就退回第一项。</summary>
-    public BoardSortOption SelectedSortOption
-    {
-        get => SortOptions.FirstOrDefault(option => option.Mode == Board.SortMode) ?? SortOptions[0];
-        set
-        {
-            if (value is not null)
-                Board.SortMode = value.Mode;
         }
     }
 
@@ -258,6 +281,8 @@ public partial class BoardSettingsPageViewModel : ViewModelBase
         CommitBoardName();
         CommitSubjects();
         CommitContentDefaults();
+        CommitBlockMinWidth();
+        CommitCleanup();
         FlushPaletteCommit();
         _boardService.Save();
     }
@@ -411,6 +436,117 @@ public partial class BoardSettingsPageViewModel : ViewModelBase
         Board.ApplyPaletteColors(PaletteColors.Select(item => item.Color));
         OnPropertyChanged(nameof(CanAddPaletteColor));
         _configHandler.Save();
+
+        // 色板同时是富文本工具栏的颜色入口：库在造工具栏时读一次静态数组，这里跟着写一遍，
+        // 之后新打开的表单就是新色板（已经开着的那个表单不会跟着变，重开一次即最新）。
+        RichTextToolbarPalette.Apply(Board.ResolvePaletteColors());
+    }
+
+    #endregion
+
+    #region 自动清理
+
+    /// <summary>清理周期下拉项。按周清理时下面才会多出一个「星期几」。</summary>
+    public IReadOnlyList<BoardCleanupFrequencyOption> CleanupFrequencyOptions { get; } =
+    [
+        new(BoardCleanupFrequency.Daily, CR.Settings_Board_CleanupFrequency_Daily),
+        new(BoardCleanupFrequency.Weekly, CR.Settings_Board_CleanupFrequency_Weekly)
+    ];
+
+    /// <summary>「星期几」下拉项，序号与 <see cref="DayOfWeek" /> 同序。</summary>
+    public IReadOnlyList<BoardCleanupWeekdayOption> CleanupWeekdayOptions { get; } =
+    [
+        new(DayOfWeek.Monday, CR.Board_Weekday_Monday),
+        new(DayOfWeek.Tuesday, CR.Board_Weekday_Tuesday),
+        new(DayOfWeek.Wednesday, CR.Board_Weekday_Wednesday),
+        new(DayOfWeek.Thursday, CR.Board_Weekday_Thursday),
+        new(DayOfWeek.Friday, CR.Board_Weekday_Friday),
+        new(DayOfWeek.Saturday, CR.Board_Weekday_Saturday),
+        new(DayOfWeek.Sunday, CR.Board_Weekday_Sunday)
+    ];
+
+    /// <summary>按周清理时才显示「星期几」。</summary>
+    public bool IsWeeklyCleanup => Board.CleanupFrequency == BoardCleanupFrequency.Weekly;
+
+    /// <summary>清理时刻的选择器草稿。理由同字号：先存草稿，失焦 / 离开页面时再提交。</summary>
+    [ObservableProperty] private TimeSpan? _cleanupTimeDraft;
+
+    /// <summary>
+    ///     上一次清理干了什么。<b>只反映这一次进程里的清理</b>：历史结果没有落盘，
+    ///     重开应用后这里会回到「还没清理过」。
+    /// </summary>
+    public string CleanupLastResultText
+    {
+        get
+        {
+            if (_cleanupService.LastResult is not { } result)
+                return CR.Settings_Board_CleanupNeverRun;
+
+            var text = result.Cleaned == 0
+                ? CR.Settings_Board_CleanupResultNothing
+                : string.Format(CR.Settings_Board_CleanupResultFormat, result.Cleaned);
+
+            return $"{result.RanAt.LocalDateTime:t} · {text}";
+        }
+    }
+
+    public BoardCleanupFrequencyOption SelectedCleanupFrequencyOption
+    {
+        get => CleanupFrequencyOptions.FirstOrDefault(option => option.Frequency == Board.CleanupFrequency)
+               ?? CleanupFrequencyOptions[0];
+        set
+        {
+            if (value is null || Board.CleanupFrequency == value.Frequency)
+                return;
+
+            Board.CleanupFrequency = value.Frequency;
+            OnPropertyChanged(nameof(IsWeeklyCleanup));
+        }
+    }
+
+    public BoardCleanupWeekdayOption SelectedCleanupWeekdayOption
+    {
+        get => CleanupWeekdayOptions.FirstOrDefault(option => option.Weekday == Board.CleanupWeekday)
+               ?? CleanupWeekdayOptions[0];
+        set
+        {
+            if (value is not null)
+                Board.CleanupWeekday = value.Weekday;
+        }
+    }
+
+    /// <summary>
+    ///     提交清理时刻。手输 / 选出来的越界值在这里夹回合法区间，并把夹过的值同步回界面，
+    ///     免得显示的和落盘的不是一个数。按 24 小时制存成「时 + 分」两个整数。
+    /// </summary>
+    public void CommitCleanup()
+    {
+        var (hour, minute) = ResolveTime(CleanupTimeDraft, Board.CleanupHour, Board.CleanupMinute);
+        Board.CleanupHour = BoardCleanupDefaults.ClampHour(hour);
+        Board.CleanupMinute = BoardCleanupDefaults.ClampMinute(minute);
+
+        CleanupTimeDraft = TimeDraft(Board.CleanupHour, Board.CleanupMinute);
+    }
+
+    /// <summary>时间选择器的草稿 → 时与分；选择器被清空（<c>null</c>）就退回原值，而不是写 0 点。</summary>
+    private static (int Hour, int Minute) ResolveTime(TimeSpan? draft, int fallbackHour, int fallbackMinute)
+        => draft is { } value ? (value.Hours, value.Minutes) : (fallbackHour, fallbackMinute);
+
+    private static TimeSpan TimeDraft(int hour, int minute) => new(hour, minute, 0);
+
+    /// <summary>
+    ///     用户点了「立即清理」：不看时刻，截止日期过了的作业当场清掉。
+    ///     先把界面上的清理时刻提交掉，免得草稿还挂在输入框里没落盘。
+    /// </summary>
+    [RelayCommand]
+    private void RunCleanupNow()
+    {
+        CommitCleanup();
+
+        _cleanupService.Run(DateTimeOffset.Now);
+
+        // 板子上的列表重建由 IBoardService.Changed 驱动；这里只管自己那行结果文字。
+        OnPropertyChanged(nameof(CleanupLastResultText));
     }
 
     #endregion

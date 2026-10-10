@@ -5,6 +5,7 @@
                          xmlns:faWindowing="using:FluentAvalonia.UI.Windowing"
                          mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="700"
                          x:Class="Corkboard.Views.MainWindow"
+                         Icon="/Assets/Icons/board-icon.ico"
                          WindowStartupLocation="CenterScreen"
                          MinWidth="800" MinHeight="600">
     <faWindowing:FAAppWindow.Styles>

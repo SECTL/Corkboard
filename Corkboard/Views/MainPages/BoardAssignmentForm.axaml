@@ -5,53 +5,22 @@
              xmlns:vm="using:Corkboard.ViewModels.MainPages"
              xmlns:core="using:Corkboard.Core.Langs.Common"
              xmlns:controls="using:Corkboard.Core.Controls"
-             xmlns:converters="using:Corkboard.Core.Converters"
+             xmlns:rte="using:AvaloniaRichEditor.Controls"
              mc:Ignorable="d" d:DesignWidth="620" d:DesignHeight="520"
              x:Class="Corkboard.Views.MainPages.BoardAssignmentForm"
              x:DataType="vm:BoardAssignmentFormViewModel">
-    <UserControl.Resources>
-        <!-- 色板里存的是 Color，画色块要显式转成画刷（见 ColorToBrushConverter 的说明）。 -->
-        <converters:ColorToBrushConverter x:Key="ColorToBrush" />
-    </UserControl.Resources>
-
     <UserControl.Styles>
-        <!-- 预览区：比卡片背景浅一档，让人一眼看出「这块只是看效果，不是输入区」。 -->
-        <Style Selector="Border.preview">
+        <!--
+            作业内容框：所见即所得编辑区的外壳。
+            比卡片背景浅一档、带一圈描边，一眼看出这里可以点、点了能写字；
+            编辑控件与工具栏都不画底色，框的圆角、内边距由这层壳决定。
+        -->
+        <Style Selector="Border.content-box">
             <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="4" />
             <Setter Property="Padding" Value="8" />
-        </Style>
-
-        <!--
-            格式浮窗：浮在卡片上层的一小条工具，比卡片本身亮一档、带一圈阴影，一眼看出是浮着的。
-            **底色必须是不透明的刷子**：这里原本用的是 CardBackgroundFillColorDefaultBrush，
-            那个刷子本身带透明度（浅色 #B3FFFFFF、深色 #0DFFFFFF）。卡片用它没问题——下面垫着
-            不透明的页面底；但浮窗是 Popup，宿主层是透明的，深色模式下 5% 的白等于全透，
-            底下的文字会直接透上来。SolidBackgroundFillColorTertiaryBrush 两个主题下都不透明。
-        -->
-        <Style Selector="Border.format-bar">
-            <Setter Property="Background" Value="{DynamicResource SolidBackgroundFillColorTertiaryBrush}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="CornerRadius" Value="6" />
-            <Setter Property="Padding" Value="6" />
-            <Setter Property="BoxShadow" Value="0 4 12 0 #40000000" />
-        </Style>
-
-        <!-- 浮窗上的色块：按钮本体不画颜色（否则指针悬停时会被主题的 hover 底色盖掉），颜色画在里面的小方块上。 -->
-        <Style Selector="Button.swatch">
-            <Setter Property="Padding" Value="2" />
-            <Setter Property="MinWidth" Value="0" />
-            <Setter Property="MinHeight" Value="0" />
-        </Style>
-        <Style Selector="Border.swatch-chip">
-            <Setter Property="Width" Value="16" />
-            <Setter Property="Height" Value="16" />
-            <Setter Property="CornerRadius" Value="3" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
         </Style>
     </UserControl.Styles>
 
@@ -110,10 +79,38 @@
                     </Grid>
 
                     <!--
-                        作业内容：左边写 Markdown 原文，右边实时看效果。
-                        格式（颜色 / 字号 / Markdown 记号）不在卡片上常驻一排控件，而是**选中文字后
-                        在选段上方弹一小条浮窗**（下面的 FormatBar，Office 那种手感）——卡片干净，
-                        普通用户也不用先看懂一排工具栏。
+                        截止日期：不填就是不设，填了就以它为准（判过期时它优先于设置里的「保留天数」）。
+                        用 Avalonia 自带的 CalendarDatePicker 点一下挑日历，省事，也不会再出现
+                        「2 月 31 日」这种要靠夹才能收场的非法输入。
+                        选择器自己没地方把已挑的日期退回空值（点日历只会换一天），
+                        所以「不设截止日期」这个状态得由旁边那个清除按钮给。
+                        ⚠️ 它是 TemplatedControl，不在「按住卡片拖动」的排除表里，必须自己加进去
+                        （见 code-behind 的 IsInteractiveSource），否则按在它身上会被当成拖卡片。
+                    -->
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                        <TextBlock Grid.Column="0"
+                                   Classes="caption"
+                                   VerticalAlignment="Center"
+                                   Text="{x:Static core:Resources.Settings_Board_DueDate}" />
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                            <CalendarDatePicker VerticalAlignment="Center"
+                                                HorizontalAlignment="Left"
+                                                PlaceholderText="{x:Static core:Resources.Settings_Board_DueDateNone}"
+                                                SelectedDate="{Binding DueDateDraft, Mode=TwoWay}"
+                                                ToolTip.Tip="{x:Static core:Resources.Settings_Board_DueDateDescription}" />
+                            <Button VerticalAlignment="Center"
+                                    IsVisible="{Binding HasDueDate}"
+                                    Command="{Binding ClearDueDateCommand}"
+                                    Content="{x:Static core:Resources.Settings_Board_DueDateClear}" />
+                        </StackPanel>
+                    </Grid>
+
+                    <!--
+                        作业内容：**一个框**，而且一直是所见即所得的富文本编辑区——没有 Markdown 原文态，
+                        写到什么样子板子上就是什么样子（加粗、标题、列表都由编辑控件自己画）。
+                        格式工具栏常驻在编辑区正上方（库自带的 RichEditorToolbar，Target 由 code-behind
+                        指到 ContentEditor）：加粗/斜体/字号/颜色这些点一下就对选中的文字生效；
+                        卡片上不放任何常驻控件，那儿只是显示。
                         两个尺寸都写死（而不是跟内容自适应），因为「能手动拉」这件事本身就要求尺寸是用户定的；
                         能拉多大由 code-behind 的 ResolveContentSizeLimit 算，右下角手柄拉的是整个区块。
                         Grid 跟着内容区走（HorizontalAlignment=Left），手柄才会贴在区块右下角而不是卡片右下角。
@@ -124,31 +121,50 @@
                           MinWidth="340"
                           MinHeight="150"
                           HorizontalAlignment="Left">
-                        <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                            <TextBox x:Name="ContentBox"
-                                     Grid.Column="0"
-                                     AcceptsReturn="True"
-                                     TextWrapping="Wrap"
-                                     Text="{Binding DraftContent, Mode=TwoWay}"
-                                     PlaceholderText="{x:Static core:Resources.Board_NoteContentPlaceholder}" />
+                        <Border x:Name="ContentBoxChrome"
+                                Classes="content-box"
+                                ClipToBounds="True">
+                            <Grid RowDefinitions="Auto,*" RowSpacing="6">
+                                <!--
+                                    工具栏常驻在编辑框上方。Target 在 code-behind 里指过去（工具栏不是编辑控件的
+                                    可视祖先，XAML 里绑不上）。文件菜单与页面/缩放控件都关掉：这是便签，不是打印稿；
+                                    它自带的文案只有英文/韩文，中文表也在 code-behind 里注册。
+                                -->
+                                <rte:RichEditorToolbar Grid.Row="0"
+                                                       x:Name="EditorToolbar"
+                                                       ToolbarLevel="Normal"
+                                                       ShowFileActions="False"
+                                                       ShowPageControls="False"
+                                                       Focusable="False" />
 
-                            <Border Grid.Column="1" Classes="preview">
-                                <ScrollViewer VerticalScrollBarVisibility="Auto"
-                                              HorizontalScrollBarVisibility="Disabled">
-                                    <StackPanel Spacing="4">
-                                        <TextBlock Classes="caption" Text="{x:Static core:Resources.Board_Preview}" />
-                                        <controls:MarkdownTextBlock TextWrapping="Wrap"
-                                                                    VerticalAlignment="Top"
-                                                                    IsVisible="{Binding HasPreviewContent}"
-                                                                    Document="{Binding Preview}" />
-                                        <TextBlock Classes="caption"
-                                                   TextWrapping="Wrap"
-                                                   IsVisible="{Binding !HasPreviewContent}"
-                                                   Text="{x:Static core:Resources.Board_PreviewEmpty}" />
-                                    </StackPanel>
-                                </ScrollViewer>
-                            </Border>
-                        </Grid>
+                                <Grid Grid.Row="1">
+                                    <!--
+                                        编辑区。默认字号 / 默认颜色由控件在装载时补成行内样式（见 RichTextBlock），
+                                        回写进 DraftHtml 的是摘掉这层样式之后的干净 HTML，可以原样落盘。
+                                        标题栏与页面边框都关掉：这是便签，不是打印稿。
+                                        ⚠️ AllowTables="False"：作业内容不要表格。库的工具栏是看
+                                        Target.AllowTables 决定那个「插入表格」按钮显不显示的（RichEditorToolbar.cs:1876-1886），
+                                        关掉它同时也挡住 InsertTable / InsertInlineTable 与「粘贴制表符文本自动转表格」，
+                                        **但只是不让新建**——已经存在表格的旧作业照样正常显示（渲染路径不看这个开关）。
+                                        控件自己不滚动也不裁剪（它把整篇一次画出来），所以外面必须套一层滚动条，
+                                        否则内容一长就压到卡片其它地方去了；宽度也得有约束，默认按整张 A4 纸宽排。
+                                    -->
+                                    <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                                                  VerticalScrollBarVisibility="Auto"
+                                                  Cursor="IBeam">
+                                        <controls:RichTextBlock x:Name="ContentEditor"
+                                                                IsReadOnly="False"
+                                                                AllowTables="False"
+                                                                ShowFormattingMenu="False"
+                                                                ShowPageBoundaries="False"
+                                                                ShowPageNumbers="False"
+                                                                Html="{Binding DraftHtml, Mode=TwoWay}"
+                                                                DefaultContentFontSize="{Binding BaseFontSize}"
+                                                                DefaultContentColor="{Binding BaseColor}" />
+                                    </ScrollViewer>
+                                </Grid>
+                            </Grid>
+                        </Border>
 
                         <Border x:Name="ResizeGrip"
                                 Width="18"
@@ -247,95 +263,5 @@
                 </StackPanel>
             </ScrollViewer>
         </Border>
-
-        <!--
-            格式浮窗的锚点层。浮窗按「锚点」定位（Placement=Top → 出现在选段正上方），
-            锚点由 code-behind 挪到松开指针的地方；Canvas 自己没有背景，不参与命中测试，
-            所以卡片该怎么点还怎么点（见 board 的 IsInteractiveSource）。
-        -->
-        <Canvas x:Name="FormatLayer">
-            <Border x:Name="FormatAnchor" Width="1" Height="1" IsHitTestVisible="False" />
-
-            <Popup x:Name="FormatBar" Placement="Top" VerticalOffset="-6">
-                <!--
-                    两行摆：第一行「字号 + 颜色」，第二行「加粗 / 斜体 / 清除格式」。
-                    颜色给一排预设色块，**点一下就套上**——不用先开取色器再选色（那是两次点击）；
-                    想要别的颜色再点最后的「+」开取色器。字号下拉显示的是**选段当前正在生效的字号**。
-                    MaxWidth 只是一道保险：屏幕很窄时让这两行自己折行，别横着跑出屏幕。
-                -->
-                <Border Classes="format-bar" MaxWidth="420">
-                    <StackPanel Spacing="6">
-                        <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="4">
-                            <TextBlock Classes="caption" VerticalAlignment="Center"
-                                       Text="{x:Static core:Resources.Board_FontSize}" />
-                            <!-- 选段字号：选中项就是选段当前的字号（由 code-behind 同步，见 SyncFormatBarValues）。 -->
-                            <ComboBox x:Name="SelectionSizeBox"
-                                      MinWidth="72"
-                                      ItemsSource="{Binding SizeOptions}"
-                                      SelectionChanged="OnSelectionSizeChanged"
-                                      DropDownOpened="OnFormatComboDropDownOpened"
-                                      DropDownClosed="OnFormatComboDropDownClosed"
-                                      ToolTip.Tip="{x:Static core:Resources.Board_FontSize}">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:BoardFontSizeOption">
-                                        <TextBlock Text="{Binding DisplayName}" />
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
-
-                            <TextBlock Classes="caption" VerticalAlignment="Center" Margin="6 0 0 0"
-                                       Text="{x:Static core:Resources.Board_TextColor}" />
-                            <!--
-                                预设色板：色块本身就是按钮的内容，点哪个一次就套哪个。
-                                颜色来自「设置 → 作业板 → 快速颜色」，最多 BoardPalette.MaxColors 个。
-                            -->
-                            <ItemsControl ItemsSource="{Binding PaletteColors}">
-                                <ItemsControl.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="4" />
-                                    </ItemsPanelTemplate>
-                                </ItemsControl.ItemsPanel>
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Button Classes="swatch" Click="OnPaletteColorClicked">
-                                            <Border Classes="swatch-chip"
-                                                    Background="{Binding Converter={StaticResource ColorToBrush}}" />
-                                        </Button>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                            <!-- 想要色板以外的颜色，再点这个开取色器（这一次要「开 + 选」两次点击）。 -->
-                            <Button Classes="swatch"
-                                    Click="OnSelectionColorClicked"
-                                    ToolTip.Tip="{x:Static core:Resources.Board_CustomColor}">
-                                <Button.Flyout>
-                                    <Flyout Placement="Bottom"
-                                            Opened="OnSelectionColorFlyoutOpened"
-                                            Closed="OnSelectionColorFlyoutClosed">
-                                        <ColorPicker IsAlphaEnabled="False"
-                                                     Color="{Binding SelectionColorDraft, Mode=TwoWay}" />
-                                    </Flyout>
-                                </Button.Flyout>
-                                <Border Classes="swatch-chip" Background="Transparent">
-                                    <TextBlock Text="+" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                </Border>
-                            </Button>
-                        </WrapPanel>
-
-                        <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="4">
-                            <!-- Markdown 记号：加粗 / 斜体，同一个按钮再点一次取消。 -->
-                            <Button Content="{x:Static core:Resources.Board_MarkdownBold}"
-                                    FontWeight="Bold"
-                                    Click="OnMarkdownBoldClicked" />
-                            <Button Content="{x:Static core:Resources.Board_MarkdownItalic}"
-                                    FontStyle="Italic"
-                                    Click="OnMarkdownItalicClicked" />
-                            <Button Content="{x:Static core:Resources.Board_ClearFormat}"
-                                    Click="OnClearSelectionFormatClicked" />
-                        </WrapPanel>
-                    </StackPanel>
-                </Border>
-            </Popup>
-        </Canvas>
     </Panel>
 </UserControl>

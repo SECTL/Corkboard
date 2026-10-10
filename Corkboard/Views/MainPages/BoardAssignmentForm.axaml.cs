@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Presenters;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -7,6 +8,7 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using AvaloniaRichEditor.Controls;
 using Corkboard.Core.Abstraction;
 using Corkboard.Core.Controls;
 using Corkboard.Core.Models.Board;
@@ -27,9 +29,14 @@ namespace Corkboard.Views.MainPages;
 ///         滚动条吃掉；算上限时**逐个量出底部按钮等行的实际高度**，所以按钮永远不会被顶出卡片。
 ///     </para>
 ///     <para>
-///         格式（颜色 / 字号 / Markdown 记号）不在卡片上常驻一排控件，而是选中文字之后
-///         在选段上方弹一小条浮窗（<c>FormatBar</c>，Office 那种手感）；浮窗开着的时候，
-///         这次操作作用于**记下来的那段选区**——点浮窗会让原文框失焦，直接读它当前选区会读到空的。
+///         作业内容<b>一个框就够了</b>：表单里直接就是富文本编辑区（所见即所得），没有「原文态 / 效果态」的切换，
+///         写到什么样子板子上就是什么样子；空的时候上面盖一句提示。
+///     </para>
+///     <para>
+///         格式工具栏常驻在编辑区正上方（库自带的富文本工具栏，<c>Target</c> 在构造函数里指向编辑控件）：
+///         加粗、斜体、字号、颜色这些点一下就对<b>当前选中的文字</b>生效。卡片本身不再自绘任何格式控件
+///         （工具栏与编辑区都由库提供），颜色入口的色板用「设置 → 作业板 → 快速颜色」里配的那几个，
+///         由 <c>RichTextToolbarPalette</c> 在打开表单之前写进库的静态色板。
 ///     </para>
 /// </summary>
 public partial class BoardAssignmentForm : UserControl
@@ -50,11 +57,14 @@ public partial class BoardAssignmentForm : UserControl
     private const RoutingStrategies CaptureLostRoutes =
         RoutingStrategies.Direct | RoutingStrategies.Bubble | RoutingStrategies.Tunnel;
 
-    /// <summary>作业内容的 Markdown 原文输入框。焦点与套格式要用的选区都从它这里取。</summary>
-    private readonly TextBox? _contentBox;
+    /// <summary>作业内容的富文本编辑区：加粗、字号、颜色这些格式都套在它当前的选区上。</summary>
+    private readonly RichTextBlock? _editor;
 
-    /// <summary>内容区块（原文 + 预览），右下角手柄拖的是它。</summary>
+    /// <summary>内容区块，右下角手柄拖的是它。</summary>
     private readonly Grid? _contentArea;
+
+    /// <summary>内容区的外壳：画边框与底色，也是「这一下不归卡片拖动」的落点之一。</summary>
+    private readonly Border? _contentChrome;
 
     /// <summary>内容栈（除内容区以外的那些行都在它里面），算内容区还能长多高用。</summary>
     private readonly StackPanel? _sheetBody;
@@ -65,15 +75,8 @@ public partial class BoardAssignmentForm : UserControl
     /// <summary>卡片本体，尺寸上限写在它身上。</summary>
     private readonly Border? _sheet;
 
-    /// <summary>格式浮窗本体与它的定位锚点。</summary>
-    private readonly Popup? _formatBar;
-    private readonly Border? _formatAnchor;
-
-    /// <summary>浮窗上的「字号」下拉：显示选段的当前字号，选一个就套上去。</summary>
-    private readonly ComboBox? _sizeBox;
-
-    /// <summary>锚点所在的层，浮窗坐标按它算。</summary>
-    private readonly Canvas? _formatLayer;
+    /// <summary>编辑区正上方那条格式工具栏（库自带）：目标编辑控件在构造函数里指过去。</summary>
+    private readonly RichEditorToolbar? _toolbar;
 
     /// <summary>XAML 里写的卡片宽度上限，构造期读一次当基准（见构造函数）。</summary>
     private readonly double _sheetMaxWidth;
@@ -83,23 +86,6 @@ public partial class BoardAssignmentForm : UserControl
 
     /// <summary>卡片所在的顶层：它的尺寸一变，卡片上限与位移都要重算。</summary>
     private TopLevel? _topLevel;
-
-    /// <summary>
-    ///     格式浮窗开着时记下的选段（原文框的 SelectionStart/SelectionEnd）。
-    ///     点浮窗上的控件会让原文框失焦，之后再读它的选区可能已经被清掉，所以要在弹出来的那一刻记牢。
-    /// </summary>
-    private bool _hasFormatSelection;
-    private int _formatSelectionStart;
-    private int _formatSelectionEnd;
-
-    /// <summary>浮窗里正在开着子弹层（颜色取色器 / 字号下拉）的个数：那时不能把浮窗收掉。</summary>
-    private int _openChildPopups;
-
-    /// <summary>正在把「选段当前字号」写进下拉：这时的选择变化不是用户操作，别当成套字号。</summary>
-    private bool _suppressSizeApply;
-
-    /// <summary>正在由浮窗改文本（套 Markdown）：这时的文本变化不算「用户自己打字」，别收浮窗。</summary>
-    private bool _isApplyingFormat;
 
     private bool _isResizingContent;
     private Point _resizeStartPointer;
@@ -128,29 +114,29 @@ public partial class BoardAssignmentForm : UserControl
     {
         InitializeComponent();
         DataContext = IAppHost.GetService<BoardAssignmentFormViewModel>();
-        _contentBox = this.FindControl<TextBox>("ContentBox");
+        _editor = this.FindControl<RichTextBlock>("ContentEditor");
         _contentArea = this.FindControl<Grid>("ContentArea");
+        _contentChrome = this.FindControl<Border>("ContentBoxChrome");
         _sheetBody = this.FindControl<StackPanel>("SheetBody");
         _resizeGrip = this.FindControl<Border>("ResizeGrip");
         _sheet = this.FindControl<Border>("Sheet");
-        _formatBar = this.FindControl<Popup>("FormatBar");
-        _formatAnchor = this.FindControl<Border>("FormatAnchor");
-        _formatLayer = this.FindControl<Canvas>("FormatLayer");
-        _sizeBox = this.FindControl<ComboBox>("SelectionSizeBox");
+        _toolbar = this.FindControl<RichEditorToolbar>("EditorToolbar");
+
+        // 工具栏是编辑控件的兄弟而不是它的祖先（工具栏要显示在编辑框上面，但不是它的一部分），
+        // XAML 里绑不过去，只能在代码里把目标指过去。
+        if (_toolbar is not null && _editor is not null)
+            _toolbar.Target = _editor;
+
+        // 库的工具条完全不认主题（反编译出来四十来处写死的浅色，见 RichTextToolbarTheme），
+        // 只能在每次布局时把那些颜色换成本应用的主题画刷：首帧之后控件才挂进窗口、主题资源才查得到，
+        // 库重建工具条时（切语言 / 换 ToolbarLevel）也能跟着补一遍。换过的颜色不再匹配原表，
+        // 所以重复调用是空操作，只有新控件会被换。
+        if (_toolbar is not null)
+            _toolbar.LayoutUpdated += OnToolbarLayoutUpdated;
 
         // XAML 里的宽度上限只读一次当基准：上限要能跟着宿主一起变大变小，
         // 不能在「上一次算出来的上限」上再收一次——窗口先小后大就再也长不回去了。
         _sheetMaxWidth = _sheet?.MaxWidth ?? double.PositiveInfinity;
-
-        // Avalonia 12 的 TextBox 没有 SelectionChanged 事件，选区是 StyledProperty，
-        // 只能从属性变化里盯（见 OnContentBoxPropertyChanged）。
-        if (_contentBox is not null)
-        {
-            _contentBox.PropertyChanged += OnContentBoxPropertyChanged;
-
-            // 在原文框里松开指针＝一次选段结束：这时才弹格式浮窗（见 OnContentBoxPointerReleased）。
-            _contentBox.AddHandler(PointerReleasedEvent, OnContentBoxPointerReleased, RoutingStrategies.Bubble);
-        }
 
         if (_sheet is not null)
         {
@@ -163,19 +149,6 @@ public partial class BoardAssignmentForm : UserControl
 
         if (_sheetBody is not null)
             _sheetBody.PropertyChanged += OnSheetBodyPropertyChanged;
-
-        if (_formatBar is not null)
-        {
-            // 浮窗挂在锚点上，由锚点决定它出现在哪儿（Placement=Top → 压在选段上方）。
-            if (_formatAnchor is not null)
-                _formatBar.PlacementTarget = _formatAnchor;
-
-            // 浮窗内容是独立弹层，不保证继承到表单的 DataContext，显式给一份（按钮上的绑定全靠它）。
-            if (_formatBar.Child is Control barContent)
-                barContent.DataContext = DataContext;
-
-            _formatBar.Closed += (_, _) => _hasFormatSelection = false;
-        }
 
         // ⚠️ 拖动处理器挂在**表单自己**身上，跟指针捕获同一个元素：拖动期间事件只从捕获元素往上走，
         // 挂在卡片里的子元素上就一个都收不到（表现就是「按住拖不动」）。
@@ -190,16 +163,7 @@ public partial class BoardAssignmentForm : UserControl
         {
             _topLevel = TopLevel.GetTopLevel(this);
             if (_topLevel is not null)
-            {
                 _topLevel.PropertyChanged += OnTopLevelPropertyChanged;
-
-                // 在别处按下（卡片上、遮罩上）就把浮窗收掉；子弹层与浮窗自己没有背景，
-                // 靠这两条判断让出去。用 Tunnel + handledEventsToo 才能连输入控件吃掉的按下也看见。
-                _topLevel.AddHandler(PointerPressedEvent, OnTopLevelPointerPressed,
-                    RoutingStrategies.Tunnel, handledEventsToo: true);
-                _topLevel.AddHandler(KeyDownEvent, OnTopLevelKeyDown,
-                    RoutingStrategies.Tunnel, handledEventsToo: true);
-            }
 
             ApplySheetSizeLimits();
 
@@ -211,28 +175,47 @@ public partial class BoardAssignmentForm : UserControl
                     ApplySheetSizeLimits();
                     FitContentAreaToLimit();
                     ClampSheetOffset();
-                    _contentBox?.Focus();
-                    SyncSelection();
+
+                    // 工具条的颜色第一遍在首帧布局之后换（见 OnToolbarLayoutUpdated）：
+                    // LayoutUpdated 只会为后续的重建兜底，这一发保证「打开就生效」。
+                    ApplyToolbarFixes();
+
+                    _editor?.Focus();
                 }, DispatcherPriority.Loaded);
         };
 
-        // 表单即用即弃：离开可视树时收掉可能还留着的拖动捕获与浮窗（见 EndSheetDrag），
+        // 表单即用即弃：离开可视树时收掉可能还留着的拖动捕获（见 EndSheetDrag），
         // 并摘掉挂在宿主上的监听。
         Unloaded += (_, _) =>
         {
             EndSheetDrag();
-            CloseFormatBar();
+
+            if (_toolbar is not null)
+                _toolbar.LayoutUpdated -= OnToolbarLayoutUpdated;
 
             if (_topLevel is not null)
-            {
                 _topLevel.PropertyChanged -= OnTopLevelPropertyChanged;
-                _topLevel.RemoveHandler(PointerPressedEvent, OnTopLevelPointerPressed);
-                _topLevel.RemoveHandler(KeyDownEvent, OnTopLevelKeyDown);
-            }
 
             _topLevel = null;
         };
     }
+
+    /// <summary>
+    ///     库工具条的两处宿主侧补救：把里面写死的浅色换成本应用主题的画刷
+    ///     （<see cref="RichTextToolbarTheme" />），并给它自带的两个颜色浮层补一个真正的取色器
+    ///     （<see cref="RichTextCustomColor" />）。两件都是幂等的，可以安全地接在 <c>LayoutUpdated</c> 上，
+    ///     给库重建工具条（切语言 / 换 ToolbarLevel）兜底。
+    /// </summary>
+    private void ApplyToolbarFixes()
+    {
+        if (_toolbar is null)
+            return;
+
+        RichTextToolbarTheme.Apply(_toolbar);
+        RichTextCustomColor.Attach(_toolbar);
+    }
+
+    private void OnToolbarLayoutUpdated(object? sender, EventArgs e) => ApplyToolbarFixes();
 
     private BoardAssignmentForm(BoardNote note) : this()
     {
@@ -380,260 +363,6 @@ public partial class BoardAssignmentForm : UserControl
         ClampSheetOffset();
     }
 
-    /// <summary>在别处按下就收掉格式浮窗；浮窗里的控件与它拉起的子弹层不算「别处」。</summary>
-    private void OnTopLevelPointerPressed(object? sender, PointerPressedEventArgs e)
-    {
-        if (!IsFormatBarOpen || _openChildPopups > 0 || IsWithinFormatBar(e.Source))
-            return;
-
-        CloseFormatBar();
-    }
-
-    /// <summary>Esc 也能收掉格式浮窗。</summary>
-    private void OnTopLevelKeyDown(object? sender, KeyEventArgs e)
-    {
-        if (e.Key == Key.Escape && IsFormatBarOpen)
-            CloseFormatBar();
-    }
-
-    /// <summary>把输入框当前的选区递给 ViewModel——套格式得知道改的是哪一段。</summary>
-    private void SyncSelection()
-    {
-        if (_contentBox is { } box && DataContext is BoardAssignmentFormViewModel viewModel)
-            viewModel.UpdateSelection(box.SelectionStart, box.SelectionEnd);
-    }
-
-    /// <summary>
-    ///     选区的变化要从属性里盯（Avalonia 12 的 TextBox 没有 SelectionChanged 事件）；
-    ///     文本变了（用户打字）就说明这一次格式操作已经结束，把浮窗收掉。
-    /// </summary>
-    private void OnContentBoxPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
-    {
-        if (e.Property == TextBox.SelectionStartProperty || e.Property == TextBox.SelectionEndProperty)
-        {
-            SyncSelection();
-            return;
-        }
-
-        if (e.Property == TextBox.TextProperty && !_isApplyingFormat)
-            CloseFormatBar();
-    }
-
-    /// <summary>在原文框里松开指针＝一次选段结束：把格式浮窗弹到选段上方。</summary>
-    private void OnContentBoxPointerReleased(object? sender, PointerReleasedEventArgs e)
-    {
-        OpenFormatBar(e);
-    }
-
-    /// <summary>
-    ///     选段字号。下拉里显示的是选段**当前**的字号（见 <see cref="SyncFormatBarValues" />），
-    ///     换成另一档就套到选段上。
-    /// </summary>
-    private void OnSelectionSizeChanged(object? sender, SelectionChangedEventArgs e)
-    {
-        if (_suppressSizeApply || sender is not ComboBox combo)
-            return;
-
-        if (combo.SelectedItem is BoardFontSizeOption option
-            && DataContext is BoardAssignmentFormViewModel viewModel)
-        {
-            PushFormatSelection();
-            viewModel.ApplyFontSizeToSelection(option.Size);
-        }
-    }
-
-    /// <summary>
-    ///     把浮窗上的「字号」显示成选段当前正在生效的字号。
-    ///     <para>
-    ///         不显示的话用户得先猜「现在是多少号」，而且这里原来当菜单用、选完就复位成空，
-    ///     选中文字后下拉永远是空的。
-    ///     </para>
-    /// </summary>
-    private void SyncFormatBarValues()
-    {
-        if (_sizeBox is null || DataContext is not BoardAssignmentFormViewModel viewModel)
-            return;
-
-        var size = viewModel.ResolveSelectionFontSize();
-        var current = viewModel.SizeOptions.FirstOrDefault(
-            option => option.Size is { } candidate && Math.Abs(candidate - size) < 0.01);
-
-        _suppressSizeApply = true;
-        try
-        {
-            _sizeBox.SelectedItem = current;
-        }
-        finally
-        {
-            _suppressSizeApply = false;
-        }
-    }
-
-    #region 格式浮窗
-
-    /// <summary>浮窗是否正开着。</summary>
-    private bool IsFormatBarOpen => _formatBar is { IsOpen: true };
-
-    /// <summary>
-    ///     弹出格式浮窗：把锚点挪到「松开指针的地方」（浮窗按 Placement=Top 压在选段上方），
-    ///     并把这一次要操作的选段记牢——后面点浮窗上的控件时原文框已经失焦，不能再指望它的选区。
-    /// </summary>
-    private void OpenFormatBar(PointerEventArgs e)
-    {
-        if (_contentBox is not { } box || _formatBar is null || _formatAnchor is null || _formatLayer is null)
-            return;
-
-        var start = Math.Min(box.SelectionStart, box.SelectionEnd);
-        var end = Math.Max(box.SelectionStart, box.SelectionEnd);
-
-        // 没选中就不弹：浮窗是「选中文字之后」才出现的东西，光标停着不该冒出来。
-        if (end <= start)
-        {
-            CloseFormatBar();
-            return;
-        }
-
-        _hasFormatSelection = true;
-        _formatSelectionStart = start;
-        _formatSelectionEnd = end;
-        (DataContext as BoardAssignmentFormViewModel)?.UpdateSelection(start, end);
-
-        var point = e.GetPosition(_formatLayer);
-        Canvas.SetLeft(_formatAnchor, point.X);
-        Canvas.SetTop(_formatAnchor, point.Y);
-
-        // 锚点刚挪过位：先让布局跟上来，否则浮窗会按锚点的旧位置定位（看起来就是「弹到卡片角上」）。
-        _formatAnchor.UpdateLayout();
-
-        // 浮窗上的「字号」跟着新选段走：不管浮窗是不是已经开着，这次都按新选段刷新。
-        SyncFormatBarValues();
-
-        // 已经开着就只换位置与选段，不重开：重开会把正在操作的下拉收起来。
-        if (_formatBar.IsOpen)
-            return;
-
-        _formatBar.IsOpen = true;
-    }
-
-    private void CloseFormatBar()
-    {
-        _hasFormatSelection = false;
-
-        if (_formatBar is { IsOpen: true })
-            _formatBar.IsOpen = false;
-    }
-
-    /// <summary>
-    ///     把记下的选段塞回 ViewModel。**每次套格式之前都要先调它**：
-    ///     点浮窗会让原文框失焦，直接读它当前的选区会拿到空选区（那就变成「改光标所在的那一段」了，
-    ///     用户看到的现象是「选了一小段却改了整行」）。
-    /// </summary>
-    private void PushFormatSelection()
-    {
-        if (!_hasFormatSelection)
-            return;
-
-        (DataContext as BoardAssignmentFormViewModel)?.UpdateSelection(_formatSelectionStart, _formatSelectionEnd);
-    }
-
-    /// <summary>「+」按钮：先把选段塞回去，之后取色器每改一次色都套在这段上。</summary>
-    private void OnSelectionColorClicked(object? sender, RoutedEventArgs e) => PushFormatSelection();
-
-    /// <summary>
-    ///     点预设色块：一次点击就把这个颜色套到选段上（不用先开取色器、再选色，那是两次点击）。
-    ///     颜色取自色块行的 DataContext（色板是可配置的，色块由 ItemsControl 生成，
-    ///     拿 DataContext 比顺着 Border.Background 去猜更稳）。
-    /// </summary>
-    private void OnPaletteColorClicked(object? sender, RoutedEventArgs e)
-    {
-        if (sender is not Button { DataContext: Color color })
-            return;
-
-        PushFormatSelection();
-
-        // 走草稿属性：套色与「自定义颜色」共用同一条路，取色器下次打开也停在这个色上。
-        if (DataContext is BoardAssignmentFormViewModel viewModel)
-            viewModel.SelectionColorDraft = color;
-    }
-
-    private void OnMarkdownBoldClicked(object? sender, RoutedEventArgs e) => ApplyMarkdown(BoardMarkdownFormat.Bold);
-
-    private void OnMarkdownItalicClicked(object? sender, RoutedEventArgs e) => ApplyMarkdown(BoardMarkdownFormat.Italic);
-
-    /// <summary>清掉选段的颜色与字号标注（Markdown 记号是原文，得自己删）。</summary>
-    private void OnClearSelectionFormatClicked(object? sender, RoutedEventArgs e)
-    {
-        PushFormatSelection();
-        (DataContext as BoardAssignmentFormViewModel)?.ClearSelectionFormat();
-        SyncFormatBarValues();
-    }
-
-    /// <summary>
-    ///     套一个 Markdown 记号，并把原文框的选区摆到记号之外那一段（用户能接着点下一个格式）。
-    /// </summary>
-    private void ApplyMarkdown(BoardMarkdownFormat format)
-    {
-        if (DataContext is not BoardAssignmentFormViewModel viewModel)
-            return;
-
-        PushFormatSelection();
-
-        _isApplyingFormat = true;
-        try
-        {
-            if (viewModel.ApplyMarkdown(format) is not { } span)
-                return;
-
-            _hasFormatSelection = true;
-            _formatSelectionStart = span.Start;
-            _formatSelectionEnd = span.Start + span.Length;
-
-            if (_contentBox is { } box)
-            {
-                // 焦点还给原文框：套完记号接着打字仍然落在正确的位置上。
-                box.Focus();
-                box.SelectionStart = span.Start;
-                box.SelectionEnd = span.Start + span.Length;
-            }
-
-            // 记号是插在原文里的，选段挪了：字号显示也跟着新选段刷新。
-            SyncFormatBarValues();
-        }
-        finally
-        {
-            _isApplyingFormat = false;
-        }
-    }
-
-    /// <summary>浮窗里的下拉拉开/收起：这时按别处不能把浮窗（连同下拉）收掉。</summary>
-    private void OnFormatComboDropDownOpened(object? sender, EventArgs e) => _openChildPopups++;
-
-    private void OnFormatComboDropDownClosed(object? sender, EventArgs e) => _openChildPopups = Math.Max(0, _openChildPopups - 1);
-
-    private void OnSelectionColorFlyoutOpened(object? sender, EventArgs e) => _openChildPopups++;
-
-    private void OnSelectionColorFlyoutClosed(object? sender, EventArgs e) => _openChildPopups = Math.Max(0, _openChildPopups - 1);
-
-    /// <summary>
-    ///     按下是不是落在格式浮窗里。浮窗可能被宿主放进<b>独立弹层窗口</b>，也可能是同窗口的浮层，
-    ///     所以按「是不是浮窗内容那棵树的后代」判断，而不是按坐标猜。
-    /// </summary>
-    private bool IsWithinFormatBar(object? source)
-    {
-        var content = _formatBar?.Child as Visual;
-
-        for (Visual? current = source as Visual; current is not null; current = current.GetVisualParent())
-        {
-            if (ReferenceEquals(current, content))
-                return true;
-        }
-
-        return false;
-    }
-
-    #endregion
-
-    /// <summary>右下角手柄按下：记下起点与当前尺寸，并把指针接管过来，拖出卡片外也跟得住。</summary>
     private void OnResizeGripPressed(object? sender, PointerPressedEventArgs e)
     {
         if (_contentArea is null)
@@ -753,8 +482,8 @@ public partial class BoardAssignmentForm : UserControl
         if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed && e.Pointer.Type != PointerType.Touch)
             return;
 
-        // 命中输入控件、缩放手柄或格式浮窗时这一下归它们：不然选不中字、下拉打不开、手柄也拖不动。
-        if (IsInteractiveSource(e.Source) || IsWithinFormatBar(e.Source))
+        // 命中输入控件、工具栏或缩放手柄时这一下归它们：不然选不中字、按钮点不动、手柄也拖不动。
+        if (IsInteractiveSource(e.Source))
             return;
 
         _isDraggingSheet = true;
@@ -839,7 +568,9 @@ public partial class BoardAssignmentForm : UserControl
                 return false;
 
             if (ReferenceEquals(current, _resizeGrip)
-                || current is Button or ToggleButton or TextBox or ComboBox or NumericUpDown or RangeBase)
+                || ReferenceEquals(current, _contentChrome)
+                || current is Button or ToggleButton or TextBox or ComboBox or NumericUpDown
+                    or CalendarDatePicker or RangeBase)
                 return true;
         }
 

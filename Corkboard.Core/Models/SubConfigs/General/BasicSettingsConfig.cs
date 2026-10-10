@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using Corkboard.Core.Enums.Configs;
+using Corkboard.Core.Helpers;
 
 namespace Corkboard.Core.Models.SubConfigs.General;
 
@@ -53,6 +54,12 @@ public partial class BasicSettingsConfig : ObservableObject
     /// </summary>
     [ObservableProperty] private bool _clickThrough;
 
+    /// <summary>
+    ///     右下角布置作业按钮：在主窗口右下角浮一颗圆角按钮，点一下就能开布置作业表单。
+    ///     默认关。用户可见文案见 <c>Settings_Basic_CornerAssignButton</c>。
+    /// </summary>
+    [ObservableProperty] private bool _showCornerAssignButton;
+
     // 与用户开关分开存放：关掉「记住窗口尺寸」时要保留上一次的尺寸。
     [ObservableProperty] private double _mainWindowWidth = 1200;
     [ObservableProperty] private double _mainWindowHeight = 800;
@@ -60,6 +67,46 @@ public partial class BasicSettingsConfig : ObservableObject
     [ObservableProperty] private double _settingsWindowWidth = 1000;
     [ObservableProperty] private double _settingsWindowHeight = 720;
     [ObservableProperty] private bool _settingsWindowMaximized;
+
+    /// <summary>
+    ///     最大化时的实际大小（0 = 还没记过）。它跟上面的普通宽高是两套键：最大化由系统定尺寸，
+    ///     和用户自己拖出来的普通尺寸没有可比性，共有一套键的话，还原之后普通尺寸就被顶掉了。
+    ///     <para>
+    ///         记录点在 <c>MainWindow</c>：窗口此刻真的最大化着才写（最小化时 Bounds 已经挪到屏幕外）。
+    ///         平时不读它——最大化与否由系统的可用区决定，套用旧值反而会让窗口跑到屏幕外面去。
+    ///     </para>
+    /// </summary>
+    [ObservableProperty] private double _mainWindowMaximizedWidth;
+
+    /// <inheritdoc cref="_mainWindowMaximizedWidth" />
+    [ObservableProperty] private double _mainWindowMaximizedHeight;
+
+    /// <inheritdoc cref="_mainWindowMaximizedWidth" />
+    [ObservableProperty] private double _settingsWindowMaximizedWidth;
+
+    /// <inheritdoc cref="_mainWindowMaximizedWidth" />
+    [ObservableProperty] private double _settingsWindowMaximizedHeight;
+
+    // 主窗口的位置记忆。与尺寸同理，跟开关分开存放：关掉「记住窗口尺寸」时保留上一次的值。
+    // 位置换算与夹取在 Corkboard.Core.Helpers.WindowPositionMemory 里（纯计算，有单测）。
+
+    /// <summary>
+    ///     上次主窗口左上角相对主屏工作区左上角的偏移（设备像素），
+    ///     <see cref="WindowPositionMemory.Unset" /> 表示还没记过。
+    /// </summary>
+    [ObservableProperty] private int _mainWindowPositionX = WindowPositionMemory.Unset;
+
+    /// <inheritdoc cref="_mainWindowPositionX" />
+    [ObservableProperty] private int _mainWindowPositionY = WindowPositionMemory.Unset;
+
+    /// <summary>
+    ///     记下位置那一刻的主屏工作区大小（0 = 还没记过）。
+    ///     屏幕尺寸变化时用它算缩放比例，把偏移等比缩到新工作区上（见 <c>WindowPositionMemory.Resolve</c>）。
+    /// </summary>
+    [ObservableProperty] private int _mainWindowScreenWidth;
+
+    /// <inheritdoc cref="_mainWindowScreenWidth" />
+    [ObservableProperty] private int _mainWindowScreenHeight;
 
     // 隐藏配置项：首次运行引导与协议确认状态。
     [ObservableProperty] private bool _guideCompleted;

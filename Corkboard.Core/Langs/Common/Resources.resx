@@ -85,9 +85,6 @@
   <data name="Board_MoveSheet" xml:space="preserve">
     <value>拖动移动卡片</value>
   </data>
-  <data name="Board_NoteContentPlaceholder" xml:space="preserve">
-    <value>作业内容：写清楚要做什么</value>
-  </data>
   <data name="Board_FontSize" xml:space="preserve">
     <value>字号</value>
   </data>
@@ -101,22 +98,13 @@
   <data name="Board_ClearFormat" xml:space="preserve">
     <value>清除格式</value>
   </data>
-  <!-- 格式浮窗上的 Markdown 按钮：点一下给选段套记号，再点一下取消。 -->
-  <data name="Board_MarkdownBold" xml:space="preserve">
-    <value>加粗</value>
-  </data>
-  <data name="Board_MarkdownItalic" xml:space="preserve">
-    <value>斜体</value>
-  </data>
-  <!-- 色板最后那个「+」：打开取色器挑色板以外的颜色。 -->
+  <!-- 库自带颜色浮层里那颗「自定义颜色」按钮（由 RichTextCustomColor 补上）：点开是它自己的取色器浮层。 -->
   <data name="Board_CustomColor" xml:space="preserve">
     <value>自定义颜色</value>
   </data>
-  <data name="Board_Preview" xml:space="preserve">
-    <value>预览</value>
-  </data>
-  <data name="Board_PreviewEmpty" xml:space="preserve">
-    <value>预览会显示 Markdown、颜色与字号的效果</value>
+  <!-- 自定义颜色浮层里那颗确认按钮：把挑中的颜色应用到编辑器当前选区。 -->
+  <data name="Board_ApplyColor" xml:space="preserve">
+    <value>应用</value>
   </data>
   <data name="Board_Uncategorized" xml:space="preserve">
     <value>未分类</value>
@@ -221,10 +209,7 @@
     <value>单列</value>
   </data>
   <data name="Board_Layout_Block" xml:space="preserve">
-    <value>小区块</value>
-  </data>
-  <data name="Board_Layout_Flow" xml:space="preserve">
-    <value>通铺</value>
+    <value>区块</value>
   </data>
   <data name="Board_DeleteConfirmTitle" xml:space="preserve">
     <value>删除作业</value>
@@ -270,10 +255,10 @@
     <value>关闭后启动时只常驻托盘，点击托盘图标才显示窗口</value>
   </data>
   <data name="Settings_Basic_AutoSaveWindowSize" xml:space="preserve">
-    <value>记住窗口尺寸</value>
+    <value>记住窗口大小与位置</value>
   </data>
   <data name="Settings_Basic_AutoSaveWindowSizeDescription" xml:space="preserve">
-    <value>退出时保存主窗口与设置窗口的尺寸和最大化状态</value>
+    <value>退出时保存主窗口与设置窗口的尺寸、最大化状态，以及主窗口在屏幕上的位置；屏幕尺寸变过就等比缩到对应位置</value>
   </data>
   <data name="Settings_Basic_PinToDesktop" xml:space="preserve">
     <value>置底到桌面</value>
@@ -299,6 +284,12 @@
   <data name="Settings_Basic_ClickThroughDescription" xml:space="preserve">
     <value>主窗口不再响应鼠标与触摸，需要改设置时从托盘菜单打开</value>
   </data>
+  <data name="Settings_Basic_CornerAssignButton" xml:space="preserve">
+    <value>右下角布置作业按钮</value>
+  </data>
+  <data name="Settings_Basic_CornerAssignButtonDescription" xml:space="preserve">
+    <value>在主窗口右下角浮一颗按钮，点一下就能布置作业</value>
+  </data>
   <data name="Settings_Group_Board" xml:space="preserve">
     <value>作业板</value>
   </data>
@@ -315,24 +306,30 @@
     <value>排布</value>
   </data>
   <data name="Settings_Board_LayoutDescription" xml:space="preserve">
-    <value>便签在主页面上怎么摆</value>
+    <value>便签在主页面上怎么摆：单列限宽居中，区块按窗口宽度自适应分栏</value>
   </data>
-  <data name="Settings_Board_SortMode" xml:space="preserve">
-    <value>排序方式</value>
+  <data name="Settings_Board_BlockMinWidth" xml:space="preserve">
+    <value>区块宽度</value>
   </data>
-  <data name="Settings_Board_Sort_CreatedDescending" xml:space="preserve">
+  <data name="Settings_Board_BlockMinWidthDescription" xml:space="preserve">
+    <value>区块排布下单块的最小宽度：调大就少排几列、每块更宽，默认 300</value>
+  </data>
+  <data name="Board_Sort_Tip" xml:space="preserve">
+    <value>排序方式：{0}</value>
+  </data>
+  <data name="Board_Sort_CreatedDescending" xml:space="preserve">
     <value>创建时间 新的在前</value>
   </data>
-  <data name="Settings_Board_Sort_CreatedAscending" xml:space="preserve">
+  <data name="Board_Sort_CreatedAscending" xml:space="preserve">
     <value>创建时间 旧的在前</value>
   </data>
-  <data name="Settings_Board_Sort_UpdatedDescending" xml:space="preserve">
+  <data name="Board_Sort_UpdatedDescending" xml:space="preserve">
     <value>最近修改的在前</value>
   </data>
-  <data name="Settings_Board_Sort_Subject" xml:space="preserve">
+  <data name="Board_Sort_Subject" xml:space="preserve">
     <value>按科目</value>
   </data>
-  <data name="Settings_Board_Sort_Manual" xml:space="preserve">
+  <data name="Board_Sort_Manual" xml:space="preserve">
     <value>手动 拖动区块排的</value>
   </data>
   <data name="Settings_Board_ConfirmBeforeDelete" xml:space="preserve">
@@ -394,7 +391,7 @@
     <value>快速颜色</value>
   </data>
   <data name="Settings_Board_PaletteDescription" xml:space="preserve">
-    <value>选中文字后弹出的工具条上那几个颜色；最多 5 个，工具条上另外还有一个能自选任意颜色的入口</value>
+    <value>编辑框上方工具条里那排快速颜色；最多 5 个，工具条上还能手输色值</value>
   </data>
   <data name="Settings_Board_PaletteAdd" xml:space="preserve">
     <value>添加颜色</value>
@@ -407,6 +404,98 @@
   </data>
   <data name="Settings_Board_PaletteMoveDown" xml:space="preserve">
     <value>后移一位</value>
+  </data>
+  <!-- 自动清理：按截止日期把过了期的作业从板子上清掉。 -->
+  <data name="Settings_Board_Cleanup" xml:space="preserve">
+    <value>自动清理</value>
+  </data>
+  <data name="Settings_Board_CleanupDescription" xml:space="preserve">
+    <value>过了截止日期的作业会从板子上清掉，数据本身不会被删</value>
+  </data>
+  <data name="Settings_Board_CleanupEnabled" xml:space="preserve">
+    <value>启用自动清理</value>
+  </data>
+  <data name="Settings_Board_CleanupFrequency" xml:space="preserve">
+    <value>清理周期</value>
+  </data>
+  <data name="Settings_Board_CleanupFrequencyDescription" xml:space="preserve">
+    <value>到点才动手；应用当时没开着，会在下次启动后补上</value>
+  </data>
+  <data name="Settings_Board_CleanupFrequency_Daily" xml:space="preserve">
+    <value>每天</value>
+  </data>
+  <data name="Settings_Board_CleanupFrequency_Weekly" xml:space="preserve">
+    <value>每周</value>
+  </data>
+  <data name="Settings_Board_CleanupWeekday" xml:space="preserve">
+    <value>星期几</value>
+  </data>
+  <data name="Settings_Board_CleanupTime" xml:space="preserve">
+    <value>清理时刻</value>
+  </data>
+  <data name="Settings_Board_CleanupTimeDescription" xml:space="preserve">
+    <value>到了这个点，过了截止日期的作业就从板子上清掉；没填截止日期的作业不会被清</value>
+  </data>
+  <data name="Settings_Board_CleanupRunNow" xml:space="preserve">
+    <value>立即清理</value>
+  </data>
+  <data name="Settings_Board_CleanupLastResult" xml:space="preserve">
+    <value>上次清理</value>
+  </data>
+  <data name="Settings_Board_CleanupNeverRun" xml:space="preserve">
+    <value>启动后还没到过清理时刻</value>
+  </data>
+  <data name="Settings_Board_CleanupResultFormat" xml:space="preserve">
+    <value>清掉 {0} 条</value>
+  </data>
+  <data name="Settings_Board_CleanupResultNothing" xml:space="preserve">
+    <value>没有需要清理的作业</value>
+  </data>
+  <data name="Board_Weekday_Monday" xml:space="preserve">
+    <value>星期一</value>
+  </data>
+  <data name="Board_Weekday_Tuesday" xml:space="preserve">
+    <value>星期二</value>
+  </data>
+  <data name="Board_Weekday_Wednesday" xml:space="preserve">
+    <value>星期三</value>
+  </data>
+  <data name="Board_Weekday_Thursday" xml:space="preserve">
+    <value>星期四</value>
+  </data>
+  <data name="Board_Weekday_Friday" xml:space="preserve">
+    <value>星期五</value>
+  </data>
+  <data name="Board_Weekday_Saturday" xml:space="preserve">
+    <value>星期六</value>
+  </data>
+  <data name="Board_Weekday_Sunday" xml:space="preserve">
+    <value>星期日</value>
+  </data>
+  <!-- 截止日期：布置作业时可填，清理判定以它为准。 -->
+  <data name="Settings_Board_DueDate" xml:space="preserve">
+    <value>截止日期</value>
+  </data>
+  <data name="Settings_Board_DueDateDescription" xml:space="preserve">
+    <value>留空就按创建时间算过期；填上之后以它为准</value>
+  </data>
+  <data name="Settings_Board_DueDateClear" xml:space="preserve">
+    <value>清除</value>
+  </data>
+  <data name="Settings_Board_DueDateNone" xml:space="preserve">
+    <value>未设置</value>
+  </data>
+  <data name="Board_DueDateToday" xml:space="preserve">
+    <value>今天截止</value>
+  </data>
+  <data name="Board_DueDateTomorrow" xml:space="preserve">
+    <value>明天截止</value>
+  </data>
+  <data name="Board_DueDateFormat" xml:space="preserve">
+    <value>{0} 截止</value>
+  </data>
+  <data name="Board_DueDateOverdueFormat" xml:space="preserve">
+    <value>已过期 {0} 天</value>
   </data>
   <data name="Settings_Group_Personalized" xml:space="preserve">
     <value>个性化</value>
@@ -491,5 +580,56 @@
   </data>
   <data name="Settings_About_License" xml:space="preserve">
     <value>本项目以 GNU GPLv3 协议发布</value>
+  </data>
+  <data name="Settings_About_Description" xml:space="preserve">
+    <value>一块随处可用的作业板</value>
+  </data>
+  <data name="Settings_About_LicenseTitle" xml:space="preserve">
+    <value>应用协议</value>
+  </data>
+  <data name="Settings_About_UsefulLinks" xml:space="preserve">
+    <value>常用链接</value>
+  </data>
+  <data name="Settings_About_Repository" xml:space="preserve">
+    <value>GitHub 仓库</value>
+  </data>
+  <data name="Settings_About_Author" xml:space="preserve">
+    <value>黎泽懿_Aionflux</value>
+  </data>
+  <data name="Settings_About_AuthorDescription" xml:space="preserve">
+    <value>Corkboard 主开发者</value>
+  </data>
+  <data name="Settings_About_Bilibili" xml:space="preserve">
+    <value>哔哩哔哩</value>
+  </data>
+  <data name="Settings_About_BilibiliDescription" xml:space="preserve">
+    <value>访问 黎泽懿_Aionflux 的哔哩哔哩账号</value>
+  </data>
+  <data name="Settings_About_Donate" xml:space="preserve">
+    <value>捐赠支持</value>
+  </data>
+  <data name="Settings_About_DonateDescription" xml:space="preserve">
+    <value>访问 黎泽懿_Aionflux 的爱发电账号，支持项目发展，感谢您的捐赠</value>
+  </data>
+  <data name="Settings_About_Organization" xml:space="preserve">
+    <value>SECTL 思拓创联</value>
+  </data>
+  <data name="Settings_About_OrganizationDescription" xml:space="preserve">
+    <value>Corkboard 所属组织</value>
+  </data>
+  <data name="Settings_About_OrganizationHome" xml:space="preserve">
+    <value>组织主页</value>
+  </data>
+  <data name="Settings_About_VersionInfo" xml:space="preserve">
+    <value>版本信息</value>
+  </data>
+  <data name="Settings_About_Commit" xml:space="preserve">
+    <value>提交</value>
+  </data>
+  <data name="Settings_About_Platform" xml:space="preserve">
+    <value>平台</value>
+  </data>
+  <data name="Settings_About_Runtime" xml:space="preserve">
+    <value>运行时</value>
   </data>
 </root>

@@ -147,11 +147,29 @@ public sealed class BoardNoteStore : IBoardNoteStore
         }
     }
 
+    /// <summary>
+    ///     找出作业根目录下所有 <c>notes.json</c>。
+    ///     <para>
+    ///         <b>旧版回收目录 <c>_trash</c> 整个子树仍然排除。</b>现在的清理只给作业打「已清理」
+    ///         标记、不再往里写东西，但用户机器上可能还留着以前归档的批次；排除它既是不让那些作业
+    ///         被当成活作业读回界面，也是不让 <see cref="SaveAll" /> 的「删掉这一轮没写过的文件」
+    ///         把它清掉。
+    ///     </para>
+    /// </summary>
     private static IEnumerable<string> EnumerateNoteFiles(string root)
     {
-        return !Directory.Exists(root)
-            ? []
-            : Directory.EnumerateFiles(root, NotesFileName, SearchOption.AllDirectories);
+        if (!Directory.Exists(root))
+            return [];
+
+        var rootFull = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar);
+
+        // 旧版回收目录名。清理不再往里写，但历史上可能已经存在，仍然要整棵子树排除。
+        const string legacyArchiveDirectoryName = "_trash";
+        var archivePrefix = Path.Combine(rootFull, legacyArchiveDirectoryName) + Path.DirectorySeparatorChar;
+
+        return Directory
+            .EnumerateFiles(root, NotesFileName, SearchOption.AllDirectories)
+            .Where(file => !Path.GetFullPath(file).StartsWith(archivePrefix, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>删完文件后把空掉的「日 / 月 / 年」目录逐级回收，避免留一堆空壳。</summary>

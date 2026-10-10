@@ -391,7 +391,7 @@ public class ConfigSerializationTests
         Assert.Equal("数学 **练习册**", note.Content);
         Assert.Equal(22, note.ContentFontSize);
 
-        var range = Assert.Single(note.Formats);
+        var range = Assert.Single(note.Formats!);
         Assert.Equal(3, range.Start);
         Assert.Equal(5, range.Length);
         Assert.Equal(8, range.End);
@@ -402,13 +402,38 @@ public class ConfigSerializationTests
     [Fact]
     public void BoardNote_OldDataWithoutFormatRangesStillLoads()
     {
-        // 旧数据里没有 formats / content_font_size：读出来是空表与空值，不需要写迁移代码。
+        // 旧数据里没有 formats / content_font_size：读出来是空值，不需要写迁移代码。
         const string legacy = """{ "notes": [ { "content": "旧作业" } ] }""";
 
         var restored = JsonSerializer.Deserialize<BoardDayFile>(legacy, ConfigServiceBase.JsonOptions)!;
 
-        Assert.Empty(restored.Notes[0].Formats);
+        Assert.Null(restored.Notes[0].Formats);
         Assert.Null(restored.Notes[0].ContentFontSize);
+        Assert.Equal(BoardContentKind.Markdown, restored.Notes[0].ContentKind);
+    }
+
+    [Fact]
+    public void BoardNote_RichTextContentRoundTripsWithoutLegacyFields()
+    {
+        var day = new BoardDayFile();
+        var note = new BoardNote();
+        note.SetHtmlContent("<p>数学 <span style=\"font-size:15pt\">练习册</span></p>");
+        day.Notes.Add(note);
+
+        var json = JsonSerializer.Serialize(day, ConfigServiceBase.JsonOptions);
+
+        // 枚举按数字落盘（本仓库的约定），1 = Html；缺这一项读出来就是 0 = Markdown，即旧数据。
+        Assert.Contains("\"content_kind\": 1", json);
+        // 新内容不再写遗留字段，存在与否本身就是「这条是新数据」的判据。
+        Assert.DoesNotContain("\"formats\"", json);
+        Assert.DoesNotContain("\"content_font_size\"", json);
+
+        var restored = JsonSerializer.Deserialize<BoardDayFile>(json, ConfigServiceBase.JsonOptions)!;
+        var loaded = Assert.Single(restored.Notes);
+        Assert.Equal(BoardContentKind.Html, loaded.ContentKind);
+        Assert.Equal("<p>数学 <span style=\"font-size:15pt\">练习册</span></p>", loaded.Content);
+        Assert.Null(loaded.Formats);
+        Assert.Null(loaded.ContentFontSize);
     }
 
     [Fact]

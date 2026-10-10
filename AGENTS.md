@@ -9,7 +9,7 @@
 - 约定冲突时，`docs/project_rules.md` 是最终依据。
 -->
 
-**Last Update:** 2026-10（主界面去掉侧边导航栏，只承载默认主页面；设置界面保留导航栏、顶部「收纳」与返回按钮（返回箭头改由 Core 样式模板画），设置项改为平铺、不再分组；设置页改设置卡；应用字体换成随包分发的 MiSans；作业板：作业类型 + 字段值输入（数字用 NumericUpDown 自带步进键，不再自绘数字小键盘）、**取消作业名与完成勾选**、**同科目合并成一个区块**、作业内容多行可拖宽拖高（布置作业卡片有最小宽度／最大宽度／最大高度，上限按**看得见的宿主**算：壳内弹层取窗口内容区、只占其 70%，置底形态退回屏幕工作区，超了卡片内部滚动）、**弹层卡片整张都是拖动面**（按住卡片上输入控件以外的地方都能整张拖走，不再有抓手图标；位移夹在宿主里，卡片尺寸一变就重夹，置底形态下改拖独立窗口）、自绘页面级弹层、纯文字便签、三种排布（**排布切换在主页面顶部已取消，改到「设置 → 作业板」下拉框里选**；成排布局里每个区块各自定高，不跟着同行最高的那块变长）、排序与删除确认、名称/科目/类型可配；**作业内容支持 Markdown 渲染**（Markdig，见 Core 的 `MarkdownInlineRenderer` / `MarkdownTextBlock`），并且可以给选中的字/段单独改颜色与字号、给整条作业定「整篇字号」，默认字号与默认颜色在「设置 → 作业板 → 内容默认样式」里配；**格式不在卡片上常驻工具栏**：选中文字后在选段上方弹一小条格式浮窗（第一行 字号·预设色板，第二行 加粗·斜体·清除格式），Markdown 记号由 `BoardMarkdownEditing` 直接写进原文（同一个按钮再点一次取消）；**作业数据移出 `data/config/`**，按创建日期归档到 `data/board/<年>/<月>/<日>/notes.json`；**时空回放**放在主界面标题栏右上角，连点两次才进入、超时自动退回，没作业时不显示入口；Debug 构建在壳的左下角加版本水印，照上游 SecRandom-C 的 `DevelopmentBuildAdorner`；外观设置补齐主题模式（跟随系统 / 浅色 / 深色）与主题色（跟随系统 / 自定义）；**基础设置新增主窗口不透明度（滑杆，落到原生窗口）与点击穿透**，主界面标题栏右上角「布置作业」左侧加设置按钮（打开设置窗口））
+**Last Update:** 2026-10（主界面去掉侧边导航栏，只承载默认主页面；设置界面保留导航栏、顶部「收纳」与返回按钮（返回箭头改由 Core 样式模板画），设置项改为平铺、不再分组；设置页改设置卡；应用字体换成随包分发的 MiSans；作业板：作业类型 + 字段值输入（数字用 NumericUpDown 自带步进键，不再自绘数字小键盘）、**取消作业名与完成勾选**、**同科目合并成一个区块**、作业内容多行可拖宽拖高（布置作业卡片有最小宽度／最大宽度／最大高度，上限按**看得见的宿主**算：壳内弹层取窗口内容区、只占其 70%，置底形态退回屏幕工作区，超了卡片内部滚动）、**弹层卡片整张都是拖动面**（按住卡片上输入控件以外的地方都能整张拖走，不再有抓手图标；位移夹在宿主里，卡片尺寸一变就重夹，置底形态下改拖独立窗口）、自绘页面级弹层、纯文字便签、三种排布（**排布切换在主页面顶部已取消，改到「设置 → 作业板」下拉框里选**；成排布局里每个区块各自定高，不跟着同行最高的那块变长）、排序与删除确认、名称/科目/类型可配；**作业内容是所见即所得富文本**（第三方 `AvaloniaRichEditor`，由 Core 的 `RichTextBlock` 承载，落盘成 HTML 片段；旧的 Markdown 渲染管线与相关单测已整体删除，旧作业由 `LegacyBoardContentConverter` 一次性迁移），可以给选中的字/段单独改颜色与字号，默认字号与默认颜色在「设置 → 作业板 → 内容默认样式」里配；**格式工具栏常驻在编辑区正上方**（库自带的 `RichEditorToolbar`，`Target` 在 code-behind 里指向编辑控件，文案由 Core 的 `RichTextLocalization` 跟着界面语言切），加粗/斜体/下划线/删除线、文字颜色、高亮、列表、缩进、行距、对齐、字号/字体/段落样式与插入表格图片都在上面，点一下直接对当前选区生效；**作业内容只有一个框**：就是一个始终可编辑的富文本编辑器，没有「原文态/效果态」切换；**作业数据移出 `data/config/`**，按创建日期归档到 `data/board/<年>/<月>/<日>/notes.json`；**时空回放**放在主界面标题栏右上角，连点两次才进入、超时自动退回，没作业时不显示入口；Debug 构建在壳的左下角加版本水印，照上游 SecRandom-C 的 `DevelopmentBuildAdorner`；外观设置补齐主题模式（跟随系统 / 浅色 / 深色）与主题色（跟随系统 / 自定义）；**基础设置新增主窗口不透明度（滑杆，落到原生窗口）与点击穿透**，主界面标题栏右上角「布置作业」左侧加设置按钮（打开设置窗口）；**基础设置新增「右下角布置作业按钮」**，打开后主窗口右下角浮一颗圆角加号（`MainView` 里叠在内容之上的一颗按钮，弹层遮罩盖得住它，回放/点击穿透时随其它入口一起隐藏，点一下开出布置作业表单）；**设置页「关于」页复刻上游 SecRandom-C**，改应用信息／作者／版本信息三张卡，外部链接经新服务 `IExternalLauncher`（`Corkboard/Services/Desktop/`）交给系统默认程序打开）；**作业板新增「自动清理过期作业」**（设置 → 作业板：开关（默认开启）+ 每天/每周某天某时刻，默认 4:00，用 `TimePicker`），到点只给**过了截止日期**的作业打上 `CleanedAt` 标记、从主页面拿掉（数据原地不动、不搬目录、不删文件，回放里照旧看得到），**判定只看截止日期**（没填截止日期的作业永远不会被自动清掉，到期当天也不算、第二天才算）；卡头的「立即清理」不看时刻、点一下当场把过了截止日期的清掉；**作业新增可选「截止日期」**（`BoardNote.DueDate`，布置作业表单里用 Avalonia 自带的 `CalendarDatePicker`），卡片上按「今天 / 明天 / yyyy-MM-dd / 过期 N 天」显示，过期标红）
 
 ## 这是什么
 
@@ -88,6 +88,9 @@ public partial class BoardSettingsConfig : ObservableObject
 `<StackPanel Classes="page-container">`（Core 样式负责限宽居中与卡片间距），
 每个设置项一张 `fa:FASettingsExpander`：`Header` 放名称、`Description` 放简介、`Footer` 放控件；
 内容多的（列表、表单）放内容区，内容区可折叠。
+一张卡里有多项时，里面按行放 `fa:FASettingsExpanderItem`（`Content` 名称、`Description` 简介、
+`Footer` 控件）——名称与简介在左、控件在右，**不要把名称、控件、说明全堆在卡片左列**里，
+范例见 `Corkboard/Views/SettingsPages/About/AboutSettingsPage.axaml`。
 
 ```xml
 <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Basic_Language}">
@@ -129,7 +132,8 @@ public partial class BoardSettingsConfig : ObservableObject
 - **弹层卡片整张都能拖走**（`BoardAssignmentForm`）：**整张卡片就是拖动面**——按住卡片上任何
   非输入控件的地方（标题、行距、留白、预览区）都能拖，**照例不要放「抓手」图标**：那是「只有这里能拖」
   的暗示，反而让人以为别处拖不动，光标与 `Resources.Board_MoveSheet` 提示留在标题行上就够了。
-  输入控件（`Button` / `ToggleButton` / `TextBox` / `ComboBox` / `NumericUpDown` / `RangeBase`）
+  输入控件（`Button` / `ToggleButton` / `TextBox` / `ComboBox` / `NumericUpDown` /
+  `CalendarDatePicker` / `RangeBase`）
   与右下角缩放手柄命中时让出，排除表见 `IsInteractiveSource`（加控件时要一起看）。
   ⚠️ **拖动处理器必须跟指针捕获挂在同一个元素上**（都挂在表单上）：拖动期间指针事件只从捕获元素
   往上走，处理器挂在卡片里的子元素上就一个都收不到，表现就是「按住拖不动」。
@@ -147,32 +151,56 @@ public partial class BoardSettingsConfig : ObservableObject
   （卡片长大 → 窗口跟着长大 → 上限又抬高，两边互相追着长），那条路退回屏幕工作区。
   超过上限的内容由卡片自己的滚动条吃掉。策略与夹取算式是纯逻辑、有单测
   （`SheetSizeLimits` / `SheetDragLimits`），**不要在 code-behind 里另写一套**。
-  内容区（原文 + 预览）能拉多大 = 卡片上限扣掉<b>其它每一行的高度之和</b> + 行距 + 卡片内边距，
+  内容区（那个富文本编辑器）能拉多大 = 卡片上限扣掉<b>其它每一行的高度之和</b> + 行距 + 卡片内边距，
   那些行（**含底部「取消 / 保存」那一行**）是**逐个量 `Bounds.Height`** 的，
   **不要**用「内容栈整高减内容区」倒推：卡片顶到上限、内部开始滚动时内容栈的高度会被裁到视口那么高，
   倒推出来的「其它行高度」偏小，于是内容区能一路拉大、把底部按钮顶出卡片（踩过这个坑）。
-- **格式浮窗只在选中文字之后出现**（`BoardAssignmentForm` 的 `FormatBar` + `BoardMarkdownEditing`）：
-  卡片上**不再常驻**字号/颜色工具栏，也**没有** Markdown 语法提示行；在原文框里松开指针时若选区非空，
-  就把一小条 `Popup` 弹到**选段上方**——锚点是 code-behind 挪到指针落点的 1×1 `Border`，`Placement=Top`。
-  浮窗上的东西刻意少，**两行**摆：第一行「字号 + 颜色（预设色板）」，第二行「加粗 / 斜体 / 清除格式」；
-  标题 / 列表 / 行内代码 / 整篇字号这些按钮都拿掉了（普通用户用不上，还占地方）。
-  - ⚠️ **选区必须在弹出那一刻记下来**：点浮窗会让原文框失焦，之后再读 `SelectionStart/End` 可能已经是空的
-    （表现就是「只选了一个字却改了整行」——空选区会退化成「光标所在的那一段」）。
-    所以每次套格式之前先 `PushFormatSelection()` 把记下的选段塞回 ViewModel。
-  - 浮窗的开合自己管：**不要**用 `Popup.IsLightDismissEnabled`——字号下拉与取色器是浮窗自己拉起的子弹层，
-    会被当成「点了别处」把浮窗（连同下拉）一起收掉。做法是在**顶层**挂 Tunnel + `handledEventsToo` 的
-    `PointerPressed` 来收，并按「按下是否落在浮窗内容那棵树里」（`IsWithinFormatBar`，按 `Popup.Child`
-    判定，兼容独立弹层窗口与同窗浮层两种托管）+「有没有子弹层开着」让出；Esc 也能收。
-  - **颜色用预设色板**：色块本身就是按钮，点一下直接套上——原来是「先点开取色器、再选色」两次点击，
-    用户第一下点完以为没生效。色板以外的颜色才走最后那个「+」开取色器。
-  - 字号下拉显示**选段当前正在生效的字号**（`BoardTextFormatEditing.ResolveEffectiveStyle` →
-    `BoardAssignmentFormViewModel.ResolveSelectionFontSize`），**不要**像原来那样当菜单用、选完复位成空：
-    那会让用户先得猜「现在是多少号」。同步显示时用 `_suppressSizeApply` 挡住，
-    免得写进去的那次选择变化被当成用户操作又套一遍。
-  - Markdown 记号（加粗/斜体，**夹住选段**）由 `Corkboard.Core/Services/Board/BoardMarkdownEditing.Toggle` 算，
-    **同一个按钮再点一次就取消**；它返回新选区，界面据此把 `TextBox` 的选区摆回去，
-    用户能接着点下一个格式。纯逻辑、有单测。
-  - 「清除格式」只清**颜色/字号标注**（`BoardTextFormatEditing`），Markdown 记号在原文里，按同一个按钮取消。
+- **格式工具栏常驻在编辑区正上方**（`BoardAssignmentForm` 的 `EditorToolbar`）：
+  内容区第一行就是库自带的 `rte:RichEditorToolbar`（`ToolbarLevel="Normal"`、`ShowFileActions="False"`、
+  `ShowPageControls="False"`、`Focusable="False"`），它的 `Target` **在 code-behind 构造函数里**
+  指向编辑控件——`Target` 为空时工具栏 `IsVisible=False`、一个按钮都不渲染，而且**不报任何错**，
+  漏了这一句的表现只是「工具栏不见了」。
+  按钮打的是库的公开命令（`ToggleBold` / `SetForeground` / `SetFontSize`…），
+  **全部作用于编辑器当前选区**，所以宿主不需要（也拿不到）任何选区读写接口。
+  - **不要再造第二套格式栏**：库的工具栏已经覆盖加粗/斜体/下划线/删除线、文字颜色、高亮、
+    列表、缩进、行距、对齐、字号、字体、段落样式与插入表格/图片/分隔线。
+    要加自己的动作就塞 `LeadingItems` / `TrailingItems`（`AvaloniaList<Control>`），别在 XAML 里另拼一排。
+  - 实测容量（600×260、挂树后）：`Minimal` = 6 按钮 + 字号框；`Normal` = 20 按钮 + 4 下拉
+    （Font / Font Size / Paragraph Style / Alignment）；`Maximum` = 23 按钮 + 7 下拉
+    （多 Export / Import / Print 与 View zoom / Paper size / Page orientation）。
+    `Auto` 在任何宽度下都**等于 `Normal`**（不会降级成 `Minimal`），直接用 `Normal` 最省心。
+  - ⚠️ **库的工具栏没有任何「清除格式」按钮**（`ClearFormatting` 只在本地化表里，没有公开命令）：
+    要让选段回到默认样式只能自己加一个按钮调 `SetFontSize(默认字号)` +
+    `SetForeground(默认颜色，留空则主题文字色)`。`BoardAssignmentForm` 现在**没有**这个入口。
+  - **工具栏文案走 Core 的 `RichTextLocalization.Apply(bool chinese)`**（`App.InitializeLanguages`
+    里跟着界面语言调一次）：库只内置 en/ko 两张表，而 `RichEditorLocalization.Language` 默认就是 `"zh"`
+    （空表 → 全部回退英文），**不显式设置就永远是英文**；`Register(language, dict)` 是**合并语义**，
+    只覆盖给出的键、其余继续回退英文，我们的中文表把库内置的 119 个 key 全覆盖了。
+    切语言时库会把工具栏子控件整棵重建，**不用**宿主自己刷新。
+  - **颜色入口的色板就是「设置 → 作业板 → 快速颜色」里配的那几个**：库把色板放在
+    `RichEditorToolbar.Palette` 这个**静态**数组上（文字颜色与高亮两个弹出层共用），
+    而且是在**造工具栏的时候**才读一次——已经建出来的工具栏不会跟着变。所以由 Core 的
+    `RichTextToolbarPalette.Apply(IEnumerable<Color>)` 去写这个静态数组，只在两处调：
+    `App.Initialize`（早于任何窗口，必须赶在第一个工具栏建出来之前）与设置页
+    `BoardSettingsPageViewModel.PersistPalette()`（色板唯一的落盘漏斗：新增/删除/前移后移/
+    取色器防抖提交都走它）里落盘之后。改完色板重开一次表单即生效，不需要刷已经开着的那个。
+    库对 `null` 与**空数组**是直接抛异常的，`RichTextToolbarPalette` 因此在输入为空时原样保留库自带色板。
+    浮层末尾库自带一个手输 `#RRGGBB` 的输入框（走 `Color.TryParse`，与色板无关），色板里解析不了的串
+    不会抛异常、只会画成黑色。
+  - **想自己挑色要靠我们自己加的那颗「自定义颜色」按钮**（`BoardAssignmentForm`）：库那两个颜色浮层只有
+    「固定色板 + 手输色值」，手输不等于取色器，用户要的是能拖光谱自己挑。库的浮层改不了，于是走工具栏
+    给宿主留的 `TrailingItems`（`AvaloniaList<Control>`，库还会清掉这些控件的 `Focusable`，所以点它不会
+    把编辑器选区弄丢）加一颗色轮按钮，浮层里放 Avalonia 的 `ColorView`（光谱 + 分量，始终展开）——
+    **别用 `ColorPicker`**：它自带下拉浮层，套进我们的 `Flyout` 会变成两层浮层。
+    浮层底部两个按钮把挑中的颜色经库的公开命令 `SetForeground` / `SetHighlight` 应用到当前选区，
+    点完 `flyout.Hide()`（`BoardAssignmentForm.axaml.cs` 的 `ApplyCustomColor`）。固定色板照旧保留，
+    库自带那个手输框也还在，这只是一种补充。
+    ⚠️ 这颗按钮与浮层都要标 `Classes="rte-keep-theme"`：`RichTextToolbarTheme` 是「颜色值精确匹配」换库里
+    写死的浅色，我们自己控件的正常前景色（暗色主题下的纯白）正好命中那张表，不排除就会在暗色下被换成
+    深底，字看不见（见 `RichTextToolbarTheme.KeepThemeClass` / `IsKeptSubtree`）。
+  - 编辑器上 `ShowFormattingMenu="False"`（有常驻工具栏就不开右键菜单）、
+    `ShowPageBoundaries="False"` / `ShowPageNumbers="False"`（便签不画 A4 纸）；外面必须套 `ScrollViewer`
+    并给宽度约束——库控件没有内部滚动条且 `ClipToBounds=False`，不给宽度会按整张纸宽排、内容过高画到边界外。
 - **transient 的 ViewModel 订阅单例，必须在页面离开可视树时断开**：ViewModel 由键控 DI 以 transient
   创建，而配置 handler 与领域服务是单例，直接 `+=` 会让每开一次页面就往单例上多挂一个处理器
   （配置被重复保存、页面回收不掉）。做法是 VM 上留 `Detach()`，页面 `Unloaded` 里调用。
@@ -264,15 +292,83 @@ public partial class BoardSettingsConfig : ObservableObject
   一天一个文件、同一天的多条作业合并其中；类型与科目这类**定义**才写单份 `data/board/board.json`。
   作业从内存整份重写时，没有落笔的旧日期文件会被删掉、空目录逐级回收。
   旧版挤在 `data/config/board.json` 里的数据由 `BoardService` 在归档为空时一次性搬迁（见 `LegacyBoardFile`）。
+- **过期作业是「打标记清理」不是「删文件、搬目录」**：到点由 `BoardCleanupService` 给命中的作业写上
+  `BoardNote.CleanedAt`（`DateTimeOffset?`，`[JsonIgnore(WhenWritingNull)]`），**数据原地不动**——
+  作业仍在 `IBoardService.Notes` 里、也仍写在它自己那个 `data/board/<年>/<月>/<日>/notes.json` 里，
+  只是主页面不再显示（`BoardPageViewModel.RebuildNotes` 按 `BoardNote.IsOnBoard` 过滤）。
+  之所以不真删：`BoardReplayTimeline` 把内存里的作业摊成时间轴，真删会连回放历史一起砍掉；
+  用户要的就是「只把主页面上的清掉，文件本身还在」，回放期间照旧显示已清理的作业。
+  ⚠️ **已清理的作业必须继续留在 `IBoardService.Notes` 里**：`SaveAll` 会删掉这一轮没落笔的日期文件，
+  把它们从集合里摘掉就等于删文件。
+  ⚠️ **`data/board/_trash/` 是旧版遗留目录**（`BoardNoteStore.EnumerateNoteFiles` 里按字面量 `_trash`
+  排除）：它按 `Directory.EnumerateFiles(root, "notes.json", AllDirectories)` 扫，遗留回收目录里的
+  `notes.json` 会被当成活作业读回界面，紧接着被 `SaveAll` 的「删掉这轮没写过的文件」连同目录一起删掉；
+  旧版本已经归档的数据不能被这次改动动到。
+- **批量清理走 `IBoardService.CleanMany(ids, cleanedAt)`**：只给 `CleanedAt is null` 的作业打标记、
+  只落盘一次、集合变更只通知一次；**不要**循环调 `Update`（那会一条落盘一次、界面重建一次）。
+- **清理规则只有一条：过了截止日期**（`BoardExpiryPolicy.IsExpired`，纯函数、`today` 从参数进来）。
+  没填截止日期的作业不管建了多久都不会被清掉（曾经的「保留天数」已按用户要求删掉）；
+  到期**当天**不算过期、第二天才算，判据与作业条上那行「过期 N 天」同源
+  （`BoardDueDateFormatter.IsOverdue`），两边不能各写一套。
+  `DueDate` 是 `BoardNote` 上的 `DateOnly?` 结构化字段（`[JsonIgnore(WhenWritingNull)]`，没填的不落盘），
+  **不是** `BoardFieldKind.Date` 自定义字段——清理器要统一读取，不能靠字段名去猜。
+  ⚠️ `BoardService.Update` 是逐字段复制的，**给 `BoardNote` 加字段必须同时加进 `Update`**；
+  它按 `Id` 定位、`CreatedAt` 与 `Order` 不参与编辑（编辑今天这条作业不该动到以前的）。
+- **只有一个触发时刻**：`BoardCleanupSchedule.ShouldRun` 比「最近一个清理时刻」与进程内的
+  `BoardCleanupService.LastRun`（每天/每周某天某时刻），漏掉的时刻下次启动自然补清、空跑无害，
+  因此不需要状态文件。曾经的「过期当天清理时刻」已按用户要求删掉：到了清理时刻那一轮，
+  凡过了截止日期的都清，不再有第二个时间点。
+  应用层由 `BoardCleanupHostedService`（`BackgroundService`，注册见
+  `App.axaml.cs` 的 `AddHostedService`）每分钟看一眼是否到点——不睡到下一个时刻，是因为用户随时会改时刻
+  或关开关；动手前先 `Dispatcher.UIThread.InvokeAsync` 回 UI 线程，打标记会重建界面上的列表。
+  批量清理走 `IBoardService.CleanMany`（见上一条），**不要**循环调 `Update`（那会一条落盘一次、界面重建一次）。
+  这个功能**默认开启**（`CleanupEnabled = true`，用户明确要的默认值）。
+  ⚠️ **手动「立即清理」不看时刻、也不看开关**（`RunCleanupNow` 直接调 `BoardCleanupService.Run`）：
+  点一下就该见效，把当天/以前过了截止日期的作业当场清掉——曾经的问题正是「到点判定」把它挡住了。
+  ⚠️ 改这里必须同时改 `Corkboard.Core.Tests/BoardCleanupTests.cs`：判定只看截止日期（没期限的永不清、
+  到期当天不清、第二天清）、手动清不看时刻、已清理的作业留在原文件、不重复计数、
+  旧 `_trash` 目录对存储层不可见，这些都有用例。
+  设置页里那个时刻用 Avalonia 自带的 `TimePicker`（`SelectedTime` 是 `TimeSpan?`；FluentAvalonia 里
+  **没有**时间类控件），走草稿 + `LostFocus`/离页提交，不要直接双向绑到配置。
+  界面上截止日期用 Avalonia 自带的 `CalendarDatePicker`（`SelectedDate` 在 Avalonia 12 里是
+  `DateTime?`、不是 `DateTimeOffset?`）配一个「清除」按钮——选择器自己没地方把已挑的日期退回空值，
+  「不设截止日期」这个状态只能由外面这个按钮给。
+  ⚠️ 它是 `TemplatedControl`（既不是 `Button` 也不是 `TextBox`），**必须加进
+  `BoardAssignmentForm.axaml.cs` 的 `IsInteractiveSource` 排除表**，否则按在它身上会被当成「拖卡片」。
+  卡片上由 `BoardDueDateFormatter.Describe` 说成「今天 / 明天 / yyyy-MM-dd / 过期 N 天」。
 - 配置文件一律经配置服务（原子写入 + 统一 JSON 选项），**不要自己 `File.WriteAllText` 写配置**。
-- **作业内容是「Markdown 原文 + 一层格式标注」**：`BoardNote.Content` 是唯一的文本真源，
-  局部颜色/字号记在 `BoardNote.Formats`（`BoardTextFormatRange`：`start` / `length` / `color` / `font_size`，
-  按原文偏移定位），整篇字号记在 `BoardNote.ContentFontSize`。**不要把样式塞进文本**——
-  原文必须始终是可读、可编辑、可粘贴的 Markdown；渲染时才把标注套到对应字符上
-  （Core 的 `MarkdownInlineRenderer` 解析 Markdig、`MarkdownTextBlock` 显示，两边共用同一个控件，
-  预览与板子上看到的一定一致）。文本一改，标注由 `BoardTextFormatEditing.Shift` 按公共前后缀挪位，
-  **不允许**在别处另写一套偏移换算；格式规则的默认值（默认字号 / 默认颜色）才是**设置**，
-  落在 `settings.json` 的 `board_settings.default_content_*`，标注本身跟着作业存在 `notes.json` 里。
+- **作业内容是所见即所得富文本（HTML 片段）**：`BoardNote.Content` 存的就是第三方富文本控件
+  （`AvaloniaRichEditor`）`ToHtml()` 的输出，颜色/字号是片段里的行内 `<span style="…">`；
+  `BoardNote.ContentKind`（`Markdown = 0` / `Html = 1`，枚举按数字落盘）标记这一段是哪种格式——
+  **旧数据的 JSON 里没有这一项，读出来就是 0 = Markdown**，所以不需要额外的版本字段。
+  写内容**一律走 `BoardNote.SetHtmlContent(html)`**（同时写 `Content` 与 `ContentKind`，
+  并清空遗留字段），不要只改 `Content`。界面侧由 Core 的可复用控件 `RichTextBlock` 承载
+  （卡片上只读、表单里可编辑），**不要在页面里直接用第三方 `RichEditor`**。
+  默认字号 / 默认颜色是**设置**（`settings.json` 的 `board_settings.default_content_*`）：
+  `RichTextBlock` 在装载时把它们逐文本节点补成行内 `<span>`（`BoardHtmlStyling.Apply`），
+  回写时再按 style 声明逐条摘掉（`BoardHtmlStyling.Strip`）——**不要把默认样式烘进落盘的 HTML**，
+  否则换主题、改设置都不会生效，而且主题文字色还得靠这层注入兜住。
+  ⚠️ 这个控件**丢弃块级样式**（`<p style>` / `<div style>` / `<body style>`）与 `<code>`、`blockquote`，
+  并会把颜色归一成 6 位大写 hex、把 px 折成 pt（×0.75）；它**没有任何选区读写接口**，
+  默认文字色与字号也**不能**从外部属性灌进去（只认行内样式），尺寸上不给宽度约束会按整张 A4 纸宽排、
+  内容过高会画到自己边界外——所以卡片里必须 `IsHitTestVisible="False"`，表单里必须外面套一层 `ScrollViewer`。
+  ⚠️ **图片（`<img>`）要自己贴边**：库按 HTML 里写死的 `width`/`height` 画 `ImageBlock`（绘制处 `RichEditor.cs:11377`
+  完全没有按可用宽度夹紧，只有表格单元格里的图会缩），插进卡片后超出内容宽度就被 `ClipToBounds` 从右边裁掉。
+  `RichTextBlock` 因此在只读模式下重写 `MeasureOverride`、在量之前调 `FitImagesToWidth(可用宽度 - 20)`
+  （`ImageContentInset = 20`，库内容区左右各留 10 DIP），直接改文档里 `ImageBlock` 的 `Width`/`Height` 等比缩小；
+  编辑态**故意不动**——那时库要按插入宽度管，而且改完会被 `PublishContent` 回写，把缩小后的尺寸烘进落盘 HTML、原图再也放不大。
+  ⚠️ 库渲染时把**没有显式 `Foreground` 的 run 写死成黑色**（`RichEditor.cs:3906`），输入法**预编辑串**的颜色也
+  取自光标处那个 run（`BuildTextLayout` / `PreeditSourceProps`，取不到同样退回黑色）；空段落里一个 run 都没有，
+  所以 `BoardHtmlStyling.Apply` 给空块垫一个带默认色的**零宽「颜色种子」**（`SeedChar`，普通文本是 `\u200B`）
+  ——它**绝不允许落盘**，回写前必须 `BoardHtmlStyling.StripSeeds`（编辑器的 `ToHtml()` 会把它写成 `&#8203;`，
+  所以摘的时候要解实体再比）。新敲进来的字没有颜色可继承，由 `RichTextBlock` 在打字路径上补色
+  （`SetForeground`，触发点是 `TextChanged` / `IsModifiedChanged` / `OnTextInput` 与一条 150ms 心跳——
+  库的 `TextChanged` 要等下一次重绘才发，真机上还会整段不发，光靠它自会黑字 + 回写停摆）；
+  取主题色**必须显式带上 `ThemeVariant`** 去 `TryFindResource`，否则拿到的是亮色字典里的近黑 `#E4000000`。
+- **`BoardNote.Formats` / `ContentFontSize` 只是读旧数据的遗留通道**（`BoardTextFormatRange` 因此退化成旧数据 DTO）：
+  旧作业由 `BoardService` 在装载时经 `LegacyBoardContentConverter` 一次性转成 HTML 并立刻落盘，
+  只在 `ContentKind == Markdown` 时动作（天然幂等）；转完这两项为空，序列化时整项省略。
+  **新代码不要再往里写东西**；等确认没有旧数据了，可以连同 `BoardTextFormatRange` 与 `Markdig` 依赖一起删掉。
 - 数据根只能通过 `Corkboard.Shared/Utils.cs` 访问，新增持久化目录走 `Utils.GetFilePath/GetDirectoryPath`。
 - 枚举按数字落盘，因此只能在末尾增删枚举成员。
 
@@ -344,6 +440,12 @@ dotnet run --project Corkboard.Desktop\Corkboard.Desktop.csproj
 - **主窗口拖动用手动位移**（捕获指针 + `Window.Position`，见 `MainView`），不要用 `Window.BeginMoveDrag`：
   窗口置底到桌面后是桌面宿主的子窗口，原生标题拖动对它不生效。标题栏按下即拖；其余位置在
   `BasicSettingsConfig.HoldToDragWindow` 打开时长按判定后拖动（**整窗任意位置**，靠移动阈值让出）。
+- **主窗口的边缘缩放也由壳自己接管**（`MainView` 的 `TryStartWindowResize` / `MoveWindowResize`）：
+  主窗口是 `WindowDecorations.None`——**不能**改成 `BorderOnly`，它会保留 `WS_THICKFRAME`，Windows 于是在
+  客户区外留出一圈原生边框（实测左/右/下各 11 物理像素、上 1），而分层半透明窗口不画那一圈，
+  看上去就是一整条黑边（用户反馈「窗口左下右都有黑边」）。去掉原生边框就没有原生缩放热区了，
+  所以贴边 6 DIP 以内由壳接管按下与移动，光标跟着边缘换；位置补偿与拖动一样按**屏幕绝对位移**算
+  （West/North 缩放会同时挪窗口，相对位移会自我抵消），尺寸受窗口 `MinWidth` / `MinHeight` 约束。
 - **作业板区块的拖动排序是「按住即拖」，不是长按**（`BoardPage`）：科目标题行整条是拖动面，
   按下就 `Capture(this)`，挪动超过阈值开始换位置、松手落盘。捕获挂**页面**上而不是手柄上——区块一换位置
   ItemsControl 可能把容器连同手柄一起重建，挂在那上面会收不到 `PointerReleased`，捕获留在页面上就是

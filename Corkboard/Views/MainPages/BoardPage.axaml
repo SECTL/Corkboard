@@ -54,13 +54,26 @@
                                         <TextBlock Classes="caption" IsVisible="{Binding HasDetail}"
                                                    TextWrapping="Wrap" Text="{Binding Detail}" />
                                         <!--
-                                            作业内容按 Markdown 渲染，颜色/字号标注也在这里生效。
-                                            列表里用不能选中的 TextBlock 而不是 SelectableTextBlock：
+                                            截止日期：没设过就整行不显示。过期那一条换成系统的警示色
+                                            （类名跟着 IsOverdue 开关），这是卡片上唯一会自己变色的文字。
+                                        -->
+                                        <TextBlock Classes="note-due"
+                                                   Classes.overdue="{Binding IsOverdue}"
+                                                   IsVisible="{Binding HasDueText}"
+                                                   TextWrapping="Wrap"
+                                                   Text="{Binding DueText}" />
+                                        <!--
+                                            作业内容是富文本（HTML 片段），默认字号/颜色由控件补成行内样式。
+                                            列表里用不能选中、也不接收指针的控件而不是 SelectableTextBlock：
                                             后者会吃掉指针手势，跟壳的整窗长按拖动、区块拖动排序打架。
                                         -->
-                                        <controls:MarkdownTextBlock IsVisible="{Binding HasContent}"
-                                                                    TextWrapping="Wrap"
-                                                                    Document="{Binding Document}" />
+                                        <controls:RichTextBlock IsVisible="{Binding HasContent}"
+                                                                IsHitTestVisible="False"
+                                                                ShowPageBoundaries="False"
+                                                                ShowPageNumbers="False"
+                                                                Html="{Binding Html}"
+                                                                DefaultContentFontSize="{Binding ContentFontSize}"
+                                                                DefaultContentColor="{Binding ContentColor}" />
                                     </StackPanel>
                                     <!-- 回放期间列表项自带 CanModify=false，两个按钮随之隐藏。 -->
                                     <Button Grid.Column="1" VerticalAlignment="Top"
@@ -108,21 +121,15 @@
         <Style Selector="ItemsControl.layout-block Border.note">
             <Setter Property="BorderThickness" Value="1" />
         </Style>
-        <Style Selector="ItemsControl.layout-flow Border.note">
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="MinWidth" Value="140" />
-            <Setter Property="MaxWidth" Value="320" />
-        </Style>
         <!--
-            成排布局（区块 / 流动）里 **每个区块各自定高**。
-            WrapPanel 会把同一行的项拉到行高，于是某个科目作业多了、或者内容字号大了，
+            区块排布里 **每个区块各自定高**。
+            自适应面板会把同一行的项摆成等宽，于是某个科目作业多了、或者内容字号大了，
             同行的其它科目也跟着被拉长——看着像「垒成一样高的一排」。VerticalAlignment=Top
             让每个区块只占自己内容的高度，行内其余位置留空；行高本身仍是这一行最高那块决定的，
             这是换行排布的固有代价，不想要就选「单列」排布。
         -->
         <Style Selector="ItemsControl.layout-single ContentPresenter,
-                         ItemsControl.layout-block ContentPresenter,
-                         ItemsControl.layout-flow ContentPresenter">
+                         ItemsControl.layout-block ContentPresenter">
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
             <Setter Property="VerticalContentAlignment" Value="Top" />
             <Setter Property="VerticalAlignment" Value="Top" />
@@ -147,6 +154,19 @@
             <Setter Property="Opacity" Value="0.9" />
             <Setter Property="BoxShadow" Value="0 6 16 0 #33000000" />
         </Style>
+
+        <!--
+            作业条上的截止日期。字号自己写死，不叠 caption 类：两个类都设 Foreground 时谁赢
+            取决于样式来源的顺序，不如让这一行自己说清楚。过期换成系统警示色——「该交了」必须
+            一眼看见；万一主题里没有这个画刷，Foreground 退回继承色，文字照样看得见。
+        -->
+        <Style Selector="TextBlock.note-due">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        </Style>
+        <Style Selector="TextBlock.note-due.overdue">
+            <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+        </Style>
     </UserControl.Styles>
     <Grid RowDefinitions="Auto,*">
         <!--
@@ -161,8 +181,20 @@
                    IsVisible="{Binding IsReplaying}"
                    Text="{Binding ReplayBanner}" />
 
-        <ScrollViewer Grid.Row="1">
-            <StackPanel Margin="12 0 12 12" Spacing="8">
+        <!--
+            横向**不滚动**：区块排布靠自适应面板按可用宽度分栏，页面上永远不应该出现横向滚动条；
+            显式写死也免得平台默认值变了之后，面板拿到的是无限宽度、整排挤成一行。
+        -->
+        <ScrollViewer Grid.Row="1"
+                      HorizontalScrollBarVisibility="Disabled">
+            <!--
+                单列的限宽要按这一层的实际宽度算，所以宽度挂钩挂在这一层上
+                （见 BoardPage.OnBoardContentSizeChanged）。
+            -->
+            <StackPanel x:Name="BoardContent"
+                        Margin="12 0 12 12"
+                        Spacing="8"
+                        SizeChanged="OnBoardContentSizeChanged">
                 <StackPanel Spacing="4" IsVisible="{Binding !HasNotes}">
                     <TextBlock Classes="h2" Text="{x:Static core:Resources.Board_EmptyTitle}" />
                     <TextBlock Classes="caption" Text="{Binding EmptyHint}" />
@@ -174,25 +206,36 @@
                 <TextBlock Classes="caption"
                            IsVisible="{Binding IsReplaying}"
                            Text="{x:Static core:Resources.Board_ReplayReadOnlyHint}" />
-                <ItemsControl Classes="layout-single" IsVisible="{Binding IsSingleColumnLayout}"
+                <!--
+                    单列：一张便签占一行、便签之间用分隔线，整列限宽居中（宽度由代码给，
+                    见 BoardPage.SingleColumnMaxWidth）。不限宽的话，宽窗口下每一条都会
+                    从左边一路拉到最右边，读起来费劲、屏幕上还放不下几条。
+                -->
+                <ItemsControl x:Name="SingleColumnList"
+                              Classes="layout-single"
+                              HorizontalAlignment="Center"
+                              IsVisible="{Binding IsSingleColumnLayout}"
                               ItemsSource="{Binding SubjectGroups}" ItemTemplate="{StaticResource BoardSubjectTemplate}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate><StackPanel Spacing="8" /></ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                 </ItemsControl>
-                <ItemsControl Classes="layout-block" IsVisible="{Binding IsBlockLayout}"
+                <!--
+                    区块：等宽区块，一块块放进当前最矮的那一列（矮块下面不留空，后面的块补上来）。
+                    区块宽度不是定值，由 controls:AdaptiveWrapPanel 按当前可用宽度现算——窗口变宽就多
+                    排一列、每列跟着变窄，窗口窄了自己收成一列，所以同一套面板在大小窗口里都合身。
+                    最小宽度是用户在「设置 → 作业板 → 区块宽度」里填的那个值（默认 300），
+                    宽度上限按它推出来。
+                -->
+                <ItemsControl Classes="layout-block"
+                              IsVisible="{Binding IsBlockLayout}"
                               ItemsSource="{Binding SubjectGroups}" ItemTemplate="{StaticResource BoardSubjectTemplate}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
-                            <WrapPanel Orientation="Horizontal" ItemWidth="240" ItemSpacing="8" LineSpacing="8" />
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                </ItemsControl>
-                <ItemsControl Classes="layout-flow" IsVisible="{Binding IsFlowLayout}"
-                              ItemsSource="{Binding SubjectGroups}" ItemTemplate="{StaticResource BoardSubjectTemplate}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <WrapPanel Orientation="Horizontal" ItemSpacing="8" LineSpacing="8" />
+                            <controls:AdaptiveWrapPanel MinItemWidth="{Binding BlockMinWidth}"
+                                                        MaxItemWidth="{Binding BlockMaxWidth}"
+                                                        Spacing="8"
+                                                        LineSpacing="8" />
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                 </ItemsControl>

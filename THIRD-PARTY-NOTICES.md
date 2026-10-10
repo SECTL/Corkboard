@@ -13,7 +13,9 @@ Corkboard 以 GNU GPLv3 发布（见 [LICENSE](../LICENSE)），再发布的衍�
 | FluentAvaloniaUI | 3.0.2 | MIT | Fluent 风格控件与窗口外壳 |
 | CommunityToolkit.Mvvm | 8.4.2 | MIT | `ObservableObject` / `[ObservableProperty]` / `[RelayCommand]` |
 | DynamicData | 9.4.33 | MIT | 集合批量操作扩展 |
-| Markdig | 1.1.2 | BSD-2-Clause | 作业内容的 Markdown 解析（渲染成 Avalonia 富文本由 Core 自己做） |
+| AvaloniaRichEditor | 1.2.1 | MIT | 作业内容的所见即所得富文本编辑器（由 `Corkboard.Core/Controls/RichTextBlock` 承载） |
+| HtmlAgilityPack | 1.12.4 | MIT | HTML 片段解析与默认样式注入（`BoardHtmlStyling`、旧作业迁移） |
+| Markdig | 1.1.2 | BSD-2-Clause | 只在旧作业内容迁移时解析 Markdown（`LegacyBoardContentConverter`，迁移路径删掉后可移除） |
 | Microsoft.Extensions.Hosting / DependencyInjection / Http / Logging | 10.0.x | MIT | 宿主、DI、HTTP 客户端、日志 |
 | ClassIsland.Shared.IPC / dotnetCampus.Ipc | 2.1.0.1 / 2.0.0-alpha410 | MIT | ClassIsland 进程间通知 |
 | xunit.v3 / xunit.runner.visualstudio / Microsoft.NET.Test.Sdk | 3.2.2 / 3.1.5 / 18.8.1 | Apache-2.0 / MIT | 测试 |

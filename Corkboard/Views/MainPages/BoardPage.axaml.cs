@@ -9,6 +9,7 @@ using Avalonia.VisualTree;
 using FluentAvalonia.UI.Controls;
 using Corkboard.Core.Abstraction;
 using Corkboard.Core.Attributes;
+using Corkboard.Core.Controls;
 using Corkboard.Core.Icons;
 using Corkboard.Services.Ui;
 using Corkboard.ViewModels.MainPages;
@@ -30,6 +31,12 @@ public partial class BoardPage : UserControl
     /// <summary>拖动阈值（DIP）：按下后挪动超过它才算「要换位置」，免得点一下标题就改排序。</summary>
     private const double ReorderTolerance = 4;
 
+    /// <summary>
+    ///     单列排布的宽度上限（DIP）：约 40 个中文字一行，再宽就得左右转头读了。
+    ///     超出的宽度由 <c>HorizontalAlignment="Center"</c> 留在两边，列本身不动。
+    /// </summary>
+    private const double SingleColumnMaxWidth = 720;
+
     /// <summary>落位动画时长：短到不拖手、长到看得出「谁给谁让了位」。</summary>
     private static readonly TimeSpan SlideDuration = TimeSpan.FromMilliseconds(160);
 
@@ -37,6 +44,9 @@ public partial class BoardPage : UserControl
     private static readonly TimeSpan SlideFrameInterval = TimeSpan.FromMilliseconds(16);
 
     private readonly PageOverlayService _overlay;
+
+    /// <summary>单列排布的那份列表：宽度是代码按可用宽度算出来的（见 <see cref="SingleColumnMaxWidth" />）。</summary>
+    private readonly ItemsControl? _singleColumnList;
 
     /// <summary>正在滑回原位的区块（见 <see cref="SlideFrame" />）。</summary>
     private readonly List<SlideEntry> _slides = [];
@@ -63,6 +73,7 @@ public partial class BoardPage : UserControl
         InitializeComponent();
         DataContext = IAppHost.GetService<BoardPageViewModel>();
         _overlay = IAppHost.GetService<PageOverlayService>();
+        _singleColumnList = this.FindControl<ItemsControl>("SingleColumnList");
 
         // 页面是 transient 的，离开可视树时必须断开对单例服务和配置的订阅；
         // 拖动中留下的指针捕获、落位动画的计时器也要在这里收掉（见 EndReorder / StopSlides）。
@@ -117,6 +128,28 @@ public partial class BoardPage : UserControl
 
         viewModel.DeleteNoteCommand.Execute(item);
     }
+
+    #region 排布
+
+    /// <summary>
+    ///     内容区宽度变了：重算单列的限宽。
+    ///     <para>
+    ///         这里给的是<b>显式宽度</b>而不是 MaxWidth：只限上限时 ItemsControl 会缩到内容宽度，
+    ///         内容窄的科目整列就往中间挤、内容宽的又铺满，宽度来回跳；写死成
+    ///         「可用宽度与上限取小」之后，它的宽度只跟窗口走。
+    ///     </para>
+    ///     <para>
+    ///         赋宽度这件事本身会再触发一次 <c>SizeChanged</c>（宽度变了），但第二次算出来的值
+    ///     与当前宽度相同，不会再变，所以不会来回抖。
+    ///     </para>
+    /// </summary>
+    private void OnBoardContentSizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        if (_singleColumnList is not null)
+            _singleColumnList.Width = Math.Min(e.NewSize.Width, SingleColumnMaxWidth);
+    }
+
+    #endregion
 
     #region 科目区块拖动排序
 
@@ -353,7 +386,7 @@ public partial class BoardPage : UserControl
     ///     </para>
     ///     <para>
     ///         先看指针压在哪个区块里；落在区块之间的空隙时退化成「离谁的中心近算谁」，
-    ///     这样竖排（单列）与横排（通铺）两种面板都用同一套判断。
+    ///     这样竖排（单列）与横排（区块）两种面板都用同一套判断。
     ///     </para>
     /// </summary>
     private int ResolveTargetIndex(PointerEventArgs e, int currentIndex)
@@ -414,7 +447,7 @@ public partial class BoardPage : UserControl
     }
 
     /// <summary>
-    ///     当前排布用的那块面板：三个排布各自的 ItemsControl 只有一个可见，
+    ///     当前排布用的那块面板：两种排布各自的 ItemsControl 只有一个可见，
     ///     <c>ItemsPanelRoot</c> 就是装区块容器的面板。每次拖动现解析一次，面板本身不会被重建。
     /// </summary>
     private Panel? FindItemsPanel()
@@ -425,8 +458,7 @@ public partial class BoardPage : UserControl
                 continue;
 
             if (items.Classes.Contains("layout-single")
-                || items.Classes.Contains("layout-block")
-                || items.Classes.Contains("layout-flow"))
+                || items.Classes.Contains("layout-block"))
             {
                 return items.ItemsPanelRoot;
             }

@@ -15,6 +15,7 @@ using Microsoft.Extensions.Logging;
 using Corkboard.Core;
 using Corkboard.Core.Abstraction;
 using Corkboard.Core.Attributes;
+using Corkboard.Core.Controls;
 using Corkboard.Core.Enums;
 using Corkboard.Core.Enums.Configs;
 using Corkboard.Core.Extensions.Registry;
@@ -71,6 +72,10 @@ public partial class App : Application
     {
         _startupSettings = LoadStartupSettings();
         InitializeLanguages(ResolveCulture(_startupSettings.Basic.Language));
+
+        // 「快速颜色」不是我们自己画的色块，而是库自带工具栏的静态色板；库在**造工具栏的时候**
+        // 才把它读进弹出层，所以必须赶在第一个工具栏建出来之前写进去（这里早于任何窗口）。
+        RichTextToolbarPalette.Apply(_startupSettings.BoardSettings.ResolvePaletteColors());
 
         AvaloniaXamlLoader.Load(this);
 
@@ -151,11 +156,17 @@ public partial class App : Application
         // 托盘图标：主窗口没有系统标题栏，托盘是显示主窗口与退出的常驻入口。
         services.AddSingleton<TaskBarIconService>();
 
+        // 用系统默认程序打开网址：关于页的链接用它，视图不直接碰原生启动 API。
+        services.AddSingleton<IExternalLauncher, SystemExternalLauncher>();
+
         // 页面级弹层宿主：页面把表单塞进来，壳在窗口内容最上层画出来（遮罩才能盖住标题栏）。
         services.AddSingleton<PageOverlayService>();
 
         // 时空回放：入口在主界面标题栏，作业列表在主页面，两边靠这个单例共享状态。
         services.AddSingleton<BoardReplayService>();
+
+        // 作业自动清理：到点把过期作业收进回收目录（规则与判定都在 Core 的 BoardCleanupService）。
+        services.AddHostedService<BoardCleanupHostedService>();
 
         // ViewModel 与页面。AddMainPage/AddSettingsPage 同时写导航注册表和键控 DI，两者必须成对。
         services.AddTransient<MainViewModel>();
@@ -292,7 +303,7 @@ public partial class App : Application
         });
     }
 
-    /// <summary>切换语言：同时改线程文化与各资源程序集的 Culture。</summary>
+    /// <summary>切换语言：同时改线程文化、各资源程序集的 Culture 与库自带富文本界面的文案。</summary>
     public static void InitializeLanguages(CultureInfo cultureInfo)
     {
         CultureInfo.CurrentCulture = cultureInfo;
@@ -301,6 +312,7 @@ public partial class App : Application
         CultureInfo.DefaultThreadCurrentUICulture = cultureInfo;
         CR.Culture = cultureInfo;
         Langs.SettingsView.Resources.Culture = cultureInfo;
+        RichTextLocalization.Apply(!string.Equals(cultureInfo.TwoLetterISOLanguageName, "en", StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>

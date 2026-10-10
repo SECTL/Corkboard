@@ -5,25 +5,109 @@
              xmlns:fa="using:FluentAvalonia.UI.Controls"
              xmlns:vm="using:Corkboard.ViewModels.SettingsPages"
              xmlns:core="using:Corkboard.Core.Langs.Common"
+             xmlns:icons="using:Corkboard.Core.Icons"
              mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="450"
              x:Class="Corkboard.Views.SettingsPages.About.AboutSettingsPage"
              x:DataType="vm:AboutSettingsPageViewModel">
     <ScrollViewer>
         <StackPanel Classes="page-container">
+            <!-- 应用信息：名字、简介、版本、协议、常用链接。 -->
             <fa:FASettingsExpander Header="{Binding AppName}"
-                                   Description="{x:Static core:Resources.Settings_About_License}">
+                                   Description="{x:Static core:Resources.Settings_About_Description}"
+                                   IsExpanded="True">
+                <fa:FASettingsExpander.IconSource>
+                    <fa:FAImageIconSource Source="/Assets/Icons/board-icon-1024.png" />
+                </fa:FASettingsExpander.IconSource>
+                <fa:FASettingsExpander.Footer>
+                    <TextBlock VerticalAlignment="Center"
+                               FontSize="12"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Text="{Binding Version}" />
+                </fa:FASettingsExpander.Footer>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_About_LicenseTitle}"
+                                           Description="{x:Static core:Resources.Settings_About_License}">
+                    <TextBlock Text="{Binding Copyright}" />
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_About_UsefulLinks}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <WrapPanel>
+                            <WrapPanel.Styles>
+                                <!-- 两个链接挨着放，收紧默认内边距免得挤成两行。 -->
+                                <Style Selector="HyperlinkButton">
+                                    <Setter Property="Padding" Value="4" />
+                                    <Setter Property="Margin" Value="2" />
+                                </Style>
+                            </WrapPanel.Styles>
+                            <HyperlinkButton Command="{Binding OpenUriCommand}"
+                                             CommandParameter="https://github.com/SECTL/Corkboard">
+                                <TextBlock Text="{x:Static core:Resources.Settings_About_Repository}" />
+                            </HyperlinkButton>
+                            <HyperlinkButton Command="{Binding OpenUriCommand}"
+                                             CommandParameter="https://sectl.cn">
+                                <TextBlock Text="{x:Static core:Resources.Settings_About_OrganizationHome}" />
+                            </HyperlinkButton>
+                        </WrapPanel>
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+            </fa:FASettingsExpander>
+
+            <!-- 作者：整行点一下就用系统浏览器打开。 -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_About_Author}"
+                                   Description="{x:Static core:Resources.Settings_About_AuthorDescription}"
+                                   IsExpanded="True">
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_About_Bilibili}"
+                                           Description="{x:Static core:Resources.Settings_About_BilibiliDescription}"
+                                           IsClickEnabled="True"
+                                           CommandParameter="https://space.bilibili.com/520571577"
+                                           Click="SettingsItem_OnClick">
+                    <fa:FASettingsExpanderItem.ActionIconSource>
+                        <fa:FAFontIconSource Glyph="{x:Static icons:FluentIcons.OpenFilled}"
+                                             FontFamily="{DynamicResource FluentSystemIconsResizeable}" />
+                    </fa:FASettingsExpanderItem.ActionIconSource>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_About_Donate}"
+                                           Description="{x:Static core:Resources.Settings_About_DonateDescription}"
+                                           IsClickEnabled="True"
+                                           CommandParameter="https://afdian.com/a/lzy0983"
+                                           Click="SettingsItem_OnClick">
+                    <fa:FASettingsExpanderItem.ActionIconSource>
+                        <fa:FAFontIconSource Glyph="{x:Static icons:FluentIcons.OpenFilled}"
+                                             FontFamily="{DynamicResource FluentSystemIconsResizeable}" />
+                    </fa:FASettingsExpanderItem.ActionIconSource>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_About_Organization}"
+                                           Description="{x:Static core:Resources.Settings_About_OrganizationDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <HyperlinkButton Command="{Binding OpenUriCommand}"
+                                         CommandParameter="https://sectl.cn">
+                            <TextBlock Text="{x:Static core:Resources.Settings_About_OrganizationHome}" />
+                        </HyperlinkButton>
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+            </fa:FASettingsExpander>
+
+            <!-- 版本信息：报问题时把这几行抄下来就够定位了。 -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_About_VersionInfo}"
+                                   IsExpanded="True">
                 <Grid Margin="0 4 0 0"
                       ColumnDefinitions="Auto,*"
-                      RowDefinitions="Auto,Auto,Auto"
+                      RowDefinitions="Auto,Auto,Auto,Auto"
                       ColumnSpacing="12" RowSpacing="4">
                     <TextBlock Grid.Row="0" Grid.Column="0" Text="{x:Static core:Resources.Settings_About_Version}" />
-                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Version}" />
+                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Version}" TextWrapping="Wrap" />
 
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Commit" />
-                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Commit}" />
+                    <TextBlock Grid.Row="1" Grid.Column="0" Text="{x:Static core:Resources.Settings_About_Commit}" />
+                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Commit}" TextWrapping="Wrap" />
 
-                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Runtime" />
-                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Platform}" />
+                    <TextBlock Grid.Row="2" Grid.Column="0" Text="{x:Static core:Resources.Settings_About_Platform}" />
+                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Platform}" TextWrapping="Wrap" />
+
+                    <TextBlock Grid.Row="3" Grid.Column="0" Text="{x:Static core:Resources.Settings_About_Runtime}" />
+                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Runtime}" TextWrapping="Wrap" />
                 </Grid>
             </fa:FASettingsExpander>
         </StackPanel>

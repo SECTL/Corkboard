@@ -18,7 +18,11 @@
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
         <PackageReference Include="DynamicData" Version="9.4.33" />
         <PackageReference Include="FluentAvaloniaUI" Version="3.0.2" />
-        <!-- 作业内容的 Markdown 解析；渲染成 Avalonia Inline 的活由 Core 自己干（见 MarkdownInlineRenderer）。 -->
+        <!-- 富文本：作业内容的文档模型、显示控件与本地 HTML/JSON 序列化（见 Controls/RichTextBlock.cs）。 -->
+        <PackageReference Include="AvaloniaRichEditor" Version="1.2.1" />
+        <!-- 旧数据迁移与默认样式注入时按文本节点改 HTML（见 BoardHtmlStyling、LegacyBoardContentConverter）。 -->
+        <PackageReference Include="HtmlAgilityPack" Version="1.12.4" />
+        <!-- 旧数据的 Markdown 原文只在迁移时解析一次；迁移路径删掉后这个包也可以删。 -->
         <PackageReference Include="Markdig" Version="1.1.2" />
         <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.10" />
     </ItemGroup>

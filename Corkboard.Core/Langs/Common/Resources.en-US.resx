@@ -64,9 +64,6 @@
   <data name="Board_DeleteNote" xml:space="preserve">
     <value>Delete assignment</value>
   </data>
-  <data name="Board_NoteContentPlaceholder" xml:space="preserve">
-    <value>What needs to be done</value>
-  </data>
   <data name="Board_Uncategorized" xml:space="preserve">
     <value>No subject</value>
   </data>
@@ -168,9 +165,6 @@
   <data name="Board_Layout_Block" xml:space="preserve">
     <value>Blocks</value>
   </data>
-  <data name="Board_Layout_Flow" xml:space="preserve">
-    <value>Wall</value>
-  </data>
   <data name="Board_DeleteConfirmTitle" xml:space="preserve">
     <value>Delete assignment</value>
   </data>
@@ -210,22 +204,13 @@
   <data name="Board_ClearFormat" xml:space="preserve">
     <value>Clear formatting</value>
   </data>
-  <!-- 格式浮窗上的 Markdown 按钮：点一下给选段套记号，再点一下取消。 -->
-  <data name="Board_MarkdownBold" xml:space="preserve">
-    <value>Bold</value>
-  </data>
-  <data name="Board_MarkdownItalic" xml:space="preserve">
-    <value>Italic</value>
-  </data>
-  <!-- 色板最后那个「+」：打开取色器挑色板以外的颜色。 -->
+  <!-- 库自带颜色浮层里那颗「自定义颜色」按钮（由 RichTextCustomColor 补上）：点开是它自己的取色器浮层。 -->
   <data name="Board_CustomColor" xml:space="preserve">
     <value>Custom color</value>
   </data>
-  <data name="Board_Preview" xml:space="preserve">
-    <value>Preview</value>
-  </data>
-  <data name="Board_PreviewEmpty" xml:space="preserve">
-    <value>The preview shows Markdown, color and font size</value>
+  <!-- 自定义颜色浮层里那颗确认按钮：把挑中的颜色应用到编辑器当前选区。 -->
+  <data name="Board_ApplyColor" xml:space="preserve">
+    <value>Apply</value>
   </data>
   <data name="Settings_Title" xml:space="preserve">
     <value>Settings</value>
@@ -265,10 +250,10 @@
     <value>When off, startup only creates the tray icon; click it to show the window</value>
   </data>
   <data name="Settings_Basic_AutoSaveWindowSize" xml:space="preserve">
-    <value>Remember window size</value>
+    <value>Remember window size and position</value>
   </data>
   <data name="Settings_Basic_AutoSaveWindowSizeDescription" xml:space="preserve">
-    <value>Saves the size and maximized state of the main and settings windows on exit</value>
+    <value>Saves the size and maximized state of the main and settings windows, plus the main window's position on screen, then scales the position proportionally if the screen size changed</value>
   </data>
   <data name="Settings_Basic_PinToDesktop" xml:space="preserve">
     <value>Pin to desktop</value>
@@ -294,6 +279,12 @@
   <data name="Settings_Basic_ClickThroughDescription" xml:space="preserve">
     <value>The main window stops responding to mouse and touch; open settings from the tray menu to change it</value>
   </data>
+  <data name="Settings_Basic_CornerAssignButton" xml:space="preserve">
+    <value>Corner assign button</value>
+  </data>
+  <data name="Settings_Basic_CornerAssignButtonDescription" xml:space="preserve">
+    <value>Float a button in the bottom-right corner of the main window; click it to assign homework</value>
+  </data>
   <data name="Settings_Group_Board" xml:space="preserve">
     <value>Board</value>
   </data>
@@ -310,24 +301,30 @@
     <value>Layout</value>
   </data>
   <data name="Settings_Board_LayoutDescription" xml:space="preserve">
-    <value>How notes are arranged on the main page</value>
+    <value>How notes are arranged: list is width-limited and centered, blocks reflow to fit the window</value>
   </data>
-  <data name="Settings_Board_SortMode" xml:space="preserve">
-    <value>Sort by</value>
+  <data name="Settings_Board_BlockMinWidth" xml:space="preserve">
+    <value>Block width</value>
   </data>
-  <data name="Settings_Board_Sort_CreatedDescending" xml:space="preserve">
+  <data name="Settings_Board_BlockMinWidthDescription" xml:space="preserve">
+    <value>Minimum width of one block: larger values mean fewer, wider columns (default 300)</value>
+  </data>
+  <data name="Board_Sort_Tip" xml:space="preserve">
+    <value>Sort by: {0}</value>
+  </data>
+  <data name="Board_Sort_CreatedDescending" xml:space="preserve">
     <value>Created, newest first</value>
   </data>
-  <data name="Settings_Board_Sort_CreatedAscending" xml:space="preserve">
+  <data name="Board_Sort_CreatedAscending" xml:space="preserve">
     <value>Created, oldest first</value>
   </data>
-  <data name="Settings_Board_Sort_UpdatedDescending" xml:space="preserve">
+  <data name="Board_Sort_UpdatedDescending" xml:space="preserve">
     <value>Recently edited first</value>
   </data>
-  <data name="Settings_Board_Sort_Subject" xml:space="preserve">
+  <data name="Board_Sort_Subject" xml:space="preserve">
     <value>By subject</value>
   </data>
-  <data name="Settings_Board_Sort_Manual" xml:space="preserve">
+  <data name="Board_Sort_Manual" xml:space="preserve">
     <value>Manual drag order</value>
   </data>
   <data name="Settings_Board_ConfirmBeforeDelete" xml:space="preserve">
@@ -389,7 +386,7 @@
     <value>Quick colors</value>
   </data>
   <data name="Settings_Board_PaletteDescription" xml:space="preserve">
-    <value>The colors on the toolbar that pops up when you select text; up to 5, and the toolbar also keeps an entry for picking any color</value>
+    <value>The quick colors on the toolbar above the editor; up to 5, and you can also type a color value there</value>
   </data>
   <data name="Settings_Board_PaletteAdd" xml:space="preserve">
     <value>Add color</value>
@@ -402,6 +399,98 @@
   </data>
   <data name="Settings_Board_PaletteMoveDown" xml:space="preserve">
     <value>Move down</value>
+  </data>
+  <!-- Automatic cleanup: take assignments past their due date off the board. -->
+  <data name="Settings_Board_Cleanup" xml:space="preserve">
+    <value>Automatic cleanup</value>
+  </data>
+  <data name="Settings_Board_CleanupDescription" xml:space="preserve">
+    <value>Assignments past their due date are taken off the board; the data itself is not deleted</value>
+  </data>
+  <data name="Settings_Board_CleanupEnabled" xml:space="preserve">
+    <value>Enable automatic cleanup</value>
+  </data>
+  <data name="Settings_Board_CleanupFrequency" xml:space="preserve">
+    <value>Run</value>
+  </data>
+  <data name="Settings_Board_CleanupFrequencyDescription" xml:space="preserve">
+    <value>Cleanup only runs at the time below; a missed run happens the next time the app starts</value>
+  </data>
+  <data name="Settings_Board_CleanupFrequency_Daily" xml:space="preserve">
+    <value>Every day</value>
+  </data>
+  <data name="Settings_Board_CleanupFrequency_Weekly" xml:space="preserve">
+    <value>Every week</value>
+  </data>
+  <data name="Settings_Board_CleanupWeekday" xml:space="preserve">
+    <value>On</value>
+  </data>
+  <data name="Settings_Board_CleanupTime" xml:space="preserve">
+    <value>At</value>
+  </data>
+  <data name="Settings_Board_CleanupTimeDescription" xml:space="preserve">
+    <value>From this time on, assignments past their due date are taken off the board; assignments without a due date are never taken</value>
+  </data>
+  <data name="Settings_Board_CleanupRunNow" xml:space="preserve">
+    <value>Clean up now</value>
+  </data>
+  <data name="Settings_Board_CleanupLastResult" xml:space="preserve">
+    <value>Last cleanup</value>
+  </data>
+  <data name="Settings_Board_CleanupNeverRun" xml:space="preserve">
+    <value>Cleanup time has not come around yet this session</value>
+  </data>
+  <data name="Settings_Board_CleanupResultFormat" xml:space="preserve">
+    <value>Cleared {0}</value>
+  </data>
+  <data name="Settings_Board_CleanupResultNothing" xml:space="preserve">
+    <value>Nothing needed cleaning up</value>
+  </data>
+  <data name="Board_Weekday_Monday" xml:space="preserve">
+    <value>Monday</value>
+  </data>
+  <data name="Board_Weekday_Tuesday" xml:space="preserve">
+    <value>Tuesday</value>
+  </data>
+  <data name="Board_Weekday_Wednesday" xml:space="preserve">
+    <value>Wednesday</value>
+  </data>
+  <data name="Board_Weekday_Thursday" xml:space="preserve">
+    <value>Thursday</value>
+  </data>
+  <data name="Board_Weekday_Friday" xml:space="preserve">
+    <value>Friday</value>
+  </data>
+  <data name="Board_Weekday_Saturday" xml:space="preserve">
+    <value>Saturday</value>
+  </data>
+  <data name="Board_Weekday_Sunday" xml:space="preserve">
+    <value>Sunday</value>
+  </data>
+  <!-- Due date: filled in when assigning, and what cleanup goes by. -->
+  <data name="Settings_Board_DueDate" xml:space="preserve">
+    <value>Due date</value>
+  </data>
+  <data name="Settings_Board_DueDateDescription" xml:space="preserve">
+    <value>Leave empty to go by creation date; once filled in it takes over</value>
+  </data>
+  <data name="Settings_Board_DueDateClear" xml:space="preserve">
+    <value>Clear</value>
+  </data>
+  <data name="Settings_Board_DueDateNone" xml:space="preserve">
+    <value>Not set</value>
+  </data>
+  <data name="Board_DueDateToday" xml:space="preserve">
+    <value>Due today</value>
+  </data>
+  <data name="Board_DueDateTomorrow" xml:space="preserve">
+    <value>Due tomorrow</value>
+  </data>
+  <data name="Board_DueDateFormat" xml:space="preserve">
+    <value>Due {0}</value>
+  </data>
+  <data name="Board_DueDateOverdueFormat" xml:space="preserve">
+    <value>Overdue by {0} days</value>
   </data>
   <data name="Settings_Group_Personalized" xml:space="preserve">
     <value>Personalization</value>
@@ -486,5 +575,56 @@
   </data>
   <data name="Settings_About_License" xml:space="preserve">
     <value>Released under the GNU GPLv3 license</value>
+  </data>
+  <data name="Settings_About_Description" xml:space="preserve">
+    <value>A homework board you can put anywhere</value>
+  </data>
+  <data name="Settings_About_LicenseTitle" xml:space="preserve">
+    <value>License</value>
+  </data>
+  <data name="Settings_About_UsefulLinks" xml:space="preserve">
+    <value>Useful Links</value>
+  </data>
+  <data name="Settings_About_Repository" xml:space="preserve">
+    <value>GitHub Repository</value>
+  </data>
+  <data name="Settings_About_Author" xml:space="preserve">
+    <value>黎泽懿_Aionflux</value>
+  </data>
+  <data name="Settings_About_AuthorDescription" xml:space="preserve">
+    <value>Lead developer of Corkboard</value>
+  </data>
+  <data name="Settings_About_Bilibili" xml:space="preserve">
+    <value>BiliBili</value>
+  </data>
+  <data name="Settings_About_BilibiliDescription" xml:space="preserve">
+    <value>Visit 黎泽懿_Aionflux's BiliBili account</value>
+  </data>
+  <data name="Settings_About_Donate" xml:space="preserve">
+    <value>Donate</value>
+  </data>
+  <data name="Settings_About_DonateDescription" xml:space="preserve">
+    <value>Visit 黎泽懿_Aionflux's Afdian page to support the project's development; thank you for your donation!</value>
+  </data>
+  <data name="Settings_About_Organization" xml:space="preserve">
+    <value>SECTL</value>
+  </data>
+  <data name="Settings_About_OrganizationDescription" xml:space="preserve">
+    <value>The organization behind Corkboard</value>
+  </data>
+  <data name="Settings_About_OrganizationHome" xml:space="preserve">
+    <value>Organization Home</value>
+  </data>
+  <data name="Settings_About_VersionInfo" xml:space="preserve">
+    <value>Version Information</value>
+  </data>
+  <data name="Settings_About_Commit" xml:space="preserve">
+    <value>Commit</value>
+  </data>
+  <data name="Settings_About_Platform" xml:space="preserve">
+    <value>Platform</value>
+  </data>
+  <data name="Settings_About_Runtime" xml:space="preserve">
+    <value>Runtime</value>
   </data>
 </root>
