@@ -143,6 +143,8 @@ public partial class App : Application
         // User-Agent 里的产品版本取构建版本，避免出现第二处硬编码版本号。
         SectlAuthEndpoints.ProductVersion = GlobalConstants.Version;
         services.AddHttpClient();
+        services.AddHttpClient<Corkboard.Core.Services.Hitokoto.HitokotoClient>(client =>
+            client.Timeout = TimeSpan.FromSeconds(10));
         services.AddSingleton<SectlTokenStore>();
         services.AddSingleton<IDeviceIdProvider, SectlDeviceIdProvider>();
         services.AddSingleton<IAuthRedirectBrokerFactory, LoopbackAuthRedirectBrokerFactory>();
@@ -178,6 +180,8 @@ public partial class App : Application
 
         // ViewModel 与页面。AddMainPage/AddSettingsPage 同时写导航注册表和键控 DI，两者必须成对。
         services.AddTransient<MainViewModel>();
+        services.AddTransient<HitokotoViewModel>();
+        services.AddTransient<HitokotoSettingsPageViewModel>();
         services.AddTransient<SettingsViewModel>();
         services.AddTransient<BoardPageViewModel>();
         services.AddTransient<BoardAssignmentFormViewModel>();
@@ -196,6 +200,7 @@ public partial class App : Application
         // 单页分组只会在侧边栏多一个 chevron，所以这里不建分组（要归组再加 AddGroup + groupId）。
         services.AddSettingsPage<BasicSettingsPage>(CR.Settings_Basic_Title);
         services.AddSettingsPage<BoardSettingsPage>(CR.Settings_Board_Title);
+        services.AddSettingsPage<Corkboard.Views.SettingsPages.Hitokoto.HitokotoSettingsPage>(CR.Settings_Hitokoto_Title);
         services.AddSettingsPage<AppearanceSettingsPage>(CR.Settings_Appearance_Title);
         services.AddSettingsPage<AccountSettingsPage>(CR.Settings_Account_Title);
         services.AddSettingsPage<CloudSyncSettingsPage>(CR.Settings_Cloud_Title);

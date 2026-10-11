@@ -760,4 +760,97 @@
   <data name="Settings_Cloud_UsageAvailable" xml:space="preserve">
     <value>{0} left</value>
   </data>
+  <data name="Settings_Hitokoto_Title" xml:space="preserve">
+    <value>Hitokoto</value>
+  </data>
+  <data name="Settings_Hitokoto_Enabled" xml:space="preserve">
+    <value>Show Hitokoto</value>
+  </data>
+  <data name="Settings_Hitokoto_EnabledDescription" xml:space="preserve">
+    <value>Fetch and show a quote from the internet when enabled</value>
+  </data>
+  <data name="Settings_Hitokoto_RefreshMinutes" xml:space="preserve">
+    <value>Refresh interval (minutes)</value>
+  </data>
+  <data name="Settings_Hitokoto_RefreshMinutesDescription" xml:space="preserve">
+    <value>Automatically fetch another quote at this interval</value>
+  </data>
+  <data name="Settings_Hitokoto_Attribution" xml:space="preserve">
+    <value>Source and author</value>
+  </data>
+  <data name="Settings_Hitokoto_ShowSource" xml:space="preserve">
+    <value>Show source</value>
+  </data>
+  <data name="Settings_Hitokoto_ShowSourceDescription" xml:space="preserve">
+    <value>Show where the quote comes from below it</value>
+  </data>
+  <data name="Settings_Hitokoto_ShowAuthor" xml:space="preserve">
+    <value>Show author</value>
+  </data>
+  <data name="Settings_Hitokoto_ShowAuthorDescription" xml:space="preserve">
+    <value>Show the quote's author below it</value>
+  </data>
+  <data name="Settings_Hitokoto_Categories" xml:space="preserve">
+    <value>Categories</value>
+  </data>
+  <data name="Settings_Hitokoto_CategoriesDescription" xml:space="preserve">
+    <value>Show selected categories, or all when none are selected</value>
+  </data>
+  <data name="Settings_Hitokoto_Category_Animation" xml:space="preserve">
+    <value>Animation</value>
+  </data>
+  <data name="Settings_Hitokoto_Category_Comics" xml:space="preserve">
+    <value>Comics</value>
+  </data>
+  <data name="Settings_Hitokoto_Category_Games" xml:space="preserve">
+    <value>Games</value>
+  </data>
+  <data name="Settings_Hitokoto_Category_Literature" xml:space="preserve">
+    <value>Literature</value>
+  </data>
+  <data name="Settings_Hitokoto_Category_Original" xml:space="preserve">
+    <value>Original quotes</value>
+  </data>
+  <data name="Settings_Hitokoto_Category_Internet" xml:space="preserve">
+    <value>Internet</value>
+  </data>
+  <data name="Settings_Hitokoto_Category_Other" xml:space="preserve">
+    <value>Other</value>
+  </data>
+  <data name="Settings_Hitokoto_Category_FilmAndTV" xml:space="preserve">
+    <value>Film and TV</value>
+  </data>
+  <data name="Settings_Hitokoto_Category_Poetry" xml:space="preserve">
+    <value>Poetry</value>
+  </data>
+  <data name="Settings_Hitokoto_Category_NeteaseMusic" xml:space="preserve">
+    <value>NetEase Cloud Music</value>
+  </data>
+  <data name="Settings_Hitokoto_Category_Philosophy" xml:space="preserve">
+    <value>Philosophy</value>
+  </data>
+  <data name="Settings_Hitokoto_Category_Humor" xml:space="preserve">
+    <value>Wit and humor</value>
+  </data>
+  <data name="Settings_Hitokoto_BlockedWords" xml:space="preserve">
+    <value>Blocked words</value>
+  </data>
+  <data name="Settings_Hitokoto_BlockedWordsDescription" xml:space="preserve">
+    <value>Enter one word per line to hide quotes containing those words</value>
+  </data>
+  <data name="Settings_Hitokoto_SaveBlockedWords" xml:space="preserve">
+    <value>Save blocked words</value>
+  </data>
+  <data name="Hitokoto_Loading" xml:space="preserve">
+    <value>Loading quote</value>
+  </data>
+  <data name="Hitokoto_Unavailable" xml:space="preserve">
+    <value>Unable to fetch a quote right now</value>
+  </data>
+  <data name="Hitokoto_Filtered" xml:space="preserve">
+    <value>No quote passed the blocked-word filter</value>
+  </data>
+  <data name="Hitokoto_Refresh" xml:space="preserve">
+    <value>Another quote</value>
+  </data>
 </root>

@@ -215,7 +215,7 @@
                 页面实例走键控 DI。主页面切换走 MainView.SelectNavigationItemById；
                 设置界面是独立窗口（打开入口在托盘菜单）。
             -->
-            <Grid Grid.Row="1" RowDefinitions="Auto, *">
+            <Grid Grid.Row="1" RowDefinitions="Auto, *, Auto">
                 <!--
                     页面标题紧贴自绘标题栏（也就是「Corkboard」那一行的正下方）：
                     原来留 16 的上边距，标题离软件名太远，看着像另一块内容。
@@ -231,6 +231,25 @@
                             x:Name="NavigationFrame"
                             IsNavigationStackEnabled="False"
                             CacheSize="0" />
+
+                <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto" Margin="18 8 18 12"
+                      IsVisible="{Binding ViewModel.Hitokoto.IsVisible}">
+                    <StackPanel Spacing="4" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding ViewModel.Hitokoto.Text}" TextWrapping="Wrap"
+                                   MaxHeight="100" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{Binding ViewModel.Hitokoto.Attribution}" FontSize="12"
+                                   IsVisible="{Binding ViewModel.Hitokoto.HasAttribution}"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   TextWrapping="Wrap" MaxHeight="40" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                    <Button Grid.Column="1" Margin="12 0 0 0" VerticalAlignment="Center"
+                            Content="{x:Static core:Resources.Hitokoto_Refresh}"
+                            Command="{Binding ViewModel.Hitokoto.RefreshCommand}"
+                            IsVisible="{Binding !ViewModel.Config.Basic.ClickThrough}" />
+                    <!-- 给右下角浮标留位，避免盖住一言和换句按钮。 -->
+                    <Border Grid.Column="2" Width="76"
+                            IsVisible="{Binding ViewModel.ShowCornerAssignButton}" />
+                </Grid>
             </Grid>
         </Grid>
 

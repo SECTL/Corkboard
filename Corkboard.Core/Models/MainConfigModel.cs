@@ -22,6 +22,7 @@ public partial class MainConfigModel : ConfigBase
     [ObservableProperty] private AppearanceSettingsConfig _appearance = new();
     [ObservableProperty] private BoardSettingsConfig _boardSettings = new();
     [ObservableProperty] private CloudSyncSettingsConfig _cloud = new();
+    [ObservableProperty] private Corkboard.Core.Models.SubConfigs.Hitokoto.HitokotoSettingsConfig _hitokoto = new();
 
     [JsonIgnore] public override string ConfigFilePath => Utils.GetFilePath("config", "settings.json");
 

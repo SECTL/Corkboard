@@ -57,6 +57,15 @@ Corkboard/
 
 依赖方向单向：`Shared` ← `Core` ← `Corkboard` ← `Desktop`；`Platforms.Abstractions` 不依赖 Core。
 
+## 一言（Hitokoto）
+
+- 主界面底部展示一言，独立于作业数据；「设置 → 一言」控制开关、刷新间隔（1–1440 分钟）、句子类别、屏蔽词与来源/作者显示
+- 默认关闭，开启后才联网；使用 `https://v1.hitokoto.cn/` 的 JSON 接口，类别以重复 `c` 参数传递（a–l，空表示全部）
+- `HitokotoSettingsConfig` 挂在 `MainConfigModel.Hitokoto`，随设置自动保存与云备份；屏蔽词每行一个，正文、来源、作者均按不区分大小写的包含匹配过滤
+- `HitokotoClient` 位于 Core，最多获取三条候选，重取间隔至少 600ms；失败不阻断作业板，不无限重试
+- `HitokotoViewModel` 随主壳 Loaded/Unloaded 接入/断开订阅与计时器，关闭或修改筛选条件时取消旧请求；配置 Reloaded 后重新接线，避免云恢复后继续使用旧配置
+- 屏蔽词用草稿 + 显式保存/离页提交，不逐字写盘；显示来源/作者只改展示、不重新请求；点击穿透期间隐藏「换一句」按钮
+
 ## 设置怎么写（照这个流程走）
 
 一个设置项从配置到界面一共五步，顺序固定：

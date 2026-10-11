@@ -22,8 +22,11 @@ namespace Corkboard.ViewModels;
 /// </summary>
 public partial class MainViewModel : ViewModelBase
 {
-    public MainViewModel(MainConfigHandler configHandler) : base(configHandler)
+    public HitokotoViewModel Hitokoto { get; }
+
+    public MainViewModel(MainConfigHandler configHandler, HitokotoViewModel hitokoto) : base(configHandler)
     {
+        Hitokoto = hitokoto;
         Config.BoardSettings.PropertyChanged += OnBoardSettingsChanged;
         Config.Basic.PropertyChanged += OnBasicSettingsChanged;
     }

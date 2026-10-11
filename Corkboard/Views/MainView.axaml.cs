@@ -116,6 +116,7 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
         Loaded += OnLoadedForInitialNavigation;
         Loaded += OnLoadedForDragHost;
         Loaded += OnLoadedForDevelopmentAdorner;
+        Loaded += (_, _) => ViewModel.Hitokoto.Attach();
 
         // 弹层一打开就把可能还在进行的长按/拖动收掉，免得拖状态留着把弹层里的点击吃掉。
         Overlay.PropertyChanged += OnOverlayChanged;
@@ -124,6 +125,7 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
         {
             CancelHoldToDrag();
             Overlay.PropertyChanged -= OnOverlayChanged;
+            ViewModel.Hitokoto.Detach();
             ViewModel.Detach();
 
             if (ReferenceEquals(Current, this))

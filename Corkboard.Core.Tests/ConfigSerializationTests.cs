@@ -41,6 +41,37 @@ public class ConfigSerializationTests
     }
 
     [Fact]
+    public void MainConfig_RoundTripsHitokotoSettings()
+    {
+        var config = new MainConfigModel();
+        config.Hitokoto.Enabled = true;
+        config.Hitokoto.RefreshMinutes = 10;
+        config.Hitokoto.Categories = "di";
+        config.Hitokoto.BlockedWords = "spoiler\n广告";
+        config.Hitokoto.ShowSource = false;
+        config.Hitokoto.ShowAuthor = false;
+
+        var json = JsonSerializer.Serialize(config, ConfigServiceBase.JsonOptions);
+        Assert.Contains("\"refresh_minutes\": 10", json);
+        var restored = JsonSerializer.Deserialize<MainConfigModel>(json, ConfigServiceBase.JsonOptions)!;
+        Assert.True(restored.Hitokoto.Enabled);
+        Assert.Equal(10, restored.Hitokoto.RefreshMinutes);
+        Assert.Equal("di", restored.Hitokoto.Categories);
+        Assert.Equal(config.Hitokoto.BlockedWords, restored.Hitokoto.BlockedWords);
+        Assert.False(restored.Hitokoto.ShowSource);
+        Assert.False(restored.Hitokoto.ShowAuthor);
+    }
+
+    [Fact]
+    public void MainConfig_LegacyConfigDoesNotEnableHitokotoNetworkRequests()
+    {
+        var restored = JsonSerializer.Deserialize<MainConfigModel>("{}", ConfigServiceBase.JsonOptions)!;
+        Assert.False(restored.Hitokoto.Enabled);
+        Assert.Equal(5, restored.Hitokoto.RefreshMinutes);
+        Assert.Empty(restored.Hitokoto.Categories);
+    }
+
+    [Fact]
     public void MainConfig_PersistsDesktopBottomPreferenceAsSnakeCase()
     {
         var config = new MainConfigModel();

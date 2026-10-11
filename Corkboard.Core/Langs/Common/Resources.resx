@@ -765,4 +765,97 @@
   <data name="Settings_Cloud_UsageAvailable" xml:space="preserve">
     <value>剩余 {0}</value>
   </data>
+  <data name="Settings_Hitokoto_Title" xml:space="preserve">
+    <value>一言</value>
+  </data>
+  <data name="Settings_Hitokoto_Enabled" xml:space="preserve">
+    <value>显示一言</value>
+  </data>
+  <data name="Settings_Hitokoto_EnabledDescription" xml:space="preserve">
+    <value>开启后联网获取并展示一句话</value>
+  </data>
+  <data name="Settings_Hitokoto_RefreshMinutes" xml:space="preserve">
+    <value>刷新间隔（分钟）</value>
+  </data>
+  <data name="Settings_Hitokoto_RefreshMinutesDescription" xml:space="preserve">
+    <value>每隔指定分钟数自动换一句</value>
+  </data>
+  <data name="Settings_Hitokoto_Attribution" xml:space="preserve">
+    <value>来源与作者</value>
+  </data>
+  <data name="Settings_Hitokoto_ShowSource" xml:space="preserve">
+    <value>显示来源</value>
+  </data>
+  <data name="Settings_Hitokoto_ShowSourceDescription" xml:space="preserve">
+    <value>在一言下方显示这句话的出处</value>
+  </data>
+  <data name="Settings_Hitokoto_ShowAuthor" xml:space="preserve">
+    <value>显示作者</value>
+  </data>
+  <data name="Settings_Hitokoto_ShowAuthorDescription" xml:space="preserve">
+    <value>在一言下方显示这句话的作者</value>
+  </data>
+  <data name="Settings_Hitokoto_Categories" xml:space="preserve">
+    <value>类别</value>
+  </data>
+  <data name="Settings_Hitokoto_CategoriesDescription" xml:space="preserve">
+    <value>只显示勾选的类别，不选就显示全部</value>
+  </data>
+  <data name="Settings_Hitokoto_Category_Animation" xml:space="preserve">
+    <value>动画</value>
+  </data>
+  <data name="Settings_Hitokoto_Category_Comics" xml:space="preserve">
+    <value>漫画</value>
+  </data>
+  <data name="Settings_Hitokoto_Category_Games" xml:space="preserve">
+    <value>游戏</value>
+  </data>
+  <data name="Settings_Hitokoto_Category_Literature" xml:space="preserve">
+    <value>文学</value>
+  </data>
+  <data name="Settings_Hitokoto_Category_Original" xml:space="preserve">
+    <value>原创</value>
+  </data>
+  <data name="Settings_Hitokoto_Category_Internet" xml:space="preserve">
+    <value>网络</value>
+  </data>
+  <data name="Settings_Hitokoto_Category_Other" xml:space="preserve">
+    <value>其他</value>
+  </data>
+  <data name="Settings_Hitokoto_Category_FilmAndTV" xml:space="preserve">
+    <value>影视</value>
+  </data>
+  <data name="Settings_Hitokoto_Category_Poetry" xml:space="preserve">
+    <value>诗词</value>
+  </data>
+  <data name="Settings_Hitokoto_Category_NeteaseMusic" xml:space="preserve">
+    <value>网易云</value>
+  </data>
+  <data name="Settings_Hitokoto_Category_Philosophy" xml:space="preserve">
+    <value>哲学</value>
+  </data>
+  <data name="Settings_Hitokoto_Category_Humor" xml:space="preserve">
+    <value>抖机灵</value>
+  </data>
+  <data name="Settings_Hitokoto_BlockedWords" xml:space="preserve">
+    <value>屏蔽词</value>
+  </data>
+  <data name="Settings_Hitokoto_BlockedWordsDescription" xml:space="preserve">
+    <value>每行填一个词，含这些词的一言不显示</value>
+  </data>
+  <data name="Settings_Hitokoto_SaveBlockedWords" xml:space="preserve">
+    <value>保存屏蔽词</value>
+  </data>
+  <data name="Hitokoto_Loading" xml:space="preserve">
+    <value>一言加载中</value>
+  </data>
+  <data name="Hitokoto_Unavailable" xml:space="preserve">
+    <value>暂时无法获取一言</value>
+  </data>
+  <data name="Hitokoto_Filtered" xml:space="preserve">
+    <value>没有符合屏蔽规则的一言</value>
+  </data>
+  <data name="Hitokoto_Refresh" xml:space="preserve">
+    <value>换一句</value>
+  </data>
 </root>

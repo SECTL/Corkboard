@@ -62,6 +62,17 @@ public class ConfigAutoSaveTests
     }
 
     [Fact]
+    public void HitokotoSettingsChange_SavesOnce()
+    {
+        var service = new RecordingConfigService();
+        var handler = new TestHandler(service);
+
+        handler.Data.Hitokoto.BlockedWords = "广告";
+
+        Assert.Equal(1, service.SaveCount);
+    }
+
+    [Fact]
     public void ReplacedSubConfig_IsObservedToo()
     {
         var service = new RecordingConfigService();

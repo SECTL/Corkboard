@@ -1,0 +1,91 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fa="using:FluentAvalonia.UI.Controls"
+             xmlns:vm="using:Corkboard.ViewModels.SettingsPages"
+             xmlns:core="using:Corkboard.Core.Langs.Common"
+             mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="450"
+             x:Class="Corkboard.Views.SettingsPages.Hitokoto.HitokotoSettingsPage"
+             x:DataType="vm:HitokotoSettingsPageViewModel">
+    <ScrollViewer>
+        <StackPanel Classes="page-container">
+            <TextBlock Margin="0 4 0 0"
+                       FontWeight="Normal"
+                       Text="{x:Static core:Resources.Settings_Hitokoto_Title}"
+                       Theme="{StaticResource TitleTextBlockStyle}" />
+
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Hitokoto_Enabled}"
+                                   Description="{x:Static core:Resources.Settings_Hitokoto_EnabledDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding Hitokoto.Enabled, Mode=TwoWay}" />
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Hitokoto_RefreshMinutes}"
+                                   Description="{x:Static core:Resources.Settings_Hitokoto_RefreshMinutesDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <NumericUpDown MinWidth="130"
+                                   Minimum="1"
+                                   Maximum="1440"
+                                   Increment="1"
+                                   FormatString="0"
+                                   Value="{Binding RefreshMinutesDraft, Mode=TwoWay}"
+                                   LostFocus="OnRefreshMinutesLostFocus" />
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Hitokoto_Attribution}"
+                                   IsExpanded="True">
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Hitokoto_ShowSource}"
+                                           Description="{x:Static core:Resources.Settings_Hitokoto_ShowSourceDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ToggleSwitch IsChecked="{Binding Hitokoto.ShowSource, Mode=TwoWay}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Hitokoto_ShowAuthor}"
+                                           Description="{x:Static core:Resources.Settings_Hitokoto_ShowAuthorDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ToggleSwitch IsChecked="{Binding Hitokoto.ShowAuthor, Mode=TwoWay}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+            </fa:FASettingsExpander>
+
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Hitokoto_Categories}"
+                                   Description="{x:Static core:Resources.Settings_Hitokoto_CategoriesDescription}"
+                                   IsExpanded="True">
+                <ItemsControl Margin="0 4 0 0" ItemsSource="{Binding CategoryOptions}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:HitokotoCategoryOption">
+                            <CheckBox MinWidth="140"
+                                      Margin="0 0 12 8"
+                                      Content="{Binding DisplayName}"
+                                      IsChecked="{Binding IsSelected, Mode=TwoWay}" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </fa:FASettingsExpander>
+
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Hitokoto_BlockedWords}"
+                                   Description="{x:Static core:Resources.Settings_Hitokoto_BlockedWordsDescription}"
+                                   IsExpanded="True">
+                <fa:FASettingsExpander.Footer>
+                    <Button Command="{Binding SaveBlockedWordsCommand}"
+                            Content="{x:Static core:Resources.Settings_Hitokoto_SaveBlockedWords}" />
+                </fa:FASettingsExpander.Footer>
+                <TextBox MinHeight="140"
+                         MaxHeight="280"
+                         Margin="0 4 0 0"
+                         AcceptsReturn="True"
+                         TextWrapping="Wrap"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                         Text="{Binding BlockedWordsDraft, Mode=TwoWay}" />
+            </fa:FASettingsExpander>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
