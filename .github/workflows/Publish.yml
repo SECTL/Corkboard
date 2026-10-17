@@ -1,4 +1,4 @@
-# Corkboard 发布流水线（照上游 SecRandom-C 的 .github/workflows/build_publish.yml 搬运/改写）。
+﻿# Corkboard 发布流水线（照上游 SecRandom-C 的 .github/workflows/build_publish.yml 搬运/改写）。
 #
 # 流程：手动派发一个发布标签
 #   → validate_release：metadata.yaml 频道门禁（几秒失败，而不是等整套构建跑完才炸）
@@ -220,10 +220,14 @@ jobs:
               if ($LASTEXITCODE -ne 0) {
                 # 证书 / 密码配置问题不应该挡住发布：宁可发未签名产物，也不要卡住整个流程。
                 Write-Warning "signtool 签名 $path 失败（exit code $LASTEXITCODE），这个文件保持未签名。"
+                # GitHub Actions 的 pwsh 包装会在脚本结束时按 $LASTEXITCODE 决定步骤成败，
+                # 这里把上一次 signtool 的失败码清掉，否则「已经降级为未签名」也会把步骤判红。
+                $global:LASTEXITCODE = 0
               }
             }
             catch {
               Write-Warning "代码签名失败：$($_.Exception.Message)。产物将保持未签名。"
+              $global:LASTEXITCODE = 0
             }
           }
           $releaseRoot = 'artifacts/release'
@@ -334,10 +338,14 @@ jobs:
               if ($LASTEXITCODE -ne 0) {
                 # 证书 / 密码配置问题不应该挡住发布：宁可发未签名产物，也不要卡住整个流程。
                 Write-Warning "signtool 签名 $path 失败（exit code $LASTEXITCODE），这个文件保持未签名。"
+                # GitHub Actions 的 pwsh 包装会在脚本结束时按 $LASTEXITCODE 决定步骤成败，
+                # 这里把上一次 signtool 的失败码清掉，否则「已经降级为未签名」也会把步骤判红。
+                $global:LASTEXITCODE = 0
               }
             }
             catch {
               Write-Warning "代码签名失败：$($_.Exception.Message)。产物将保持未签名。"
+              $global:LASTEXITCODE = 0
             }
           }
           $hasSigning = -not [string]::IsNullOrWhiteSpace($env:WINDOWS_CODESIGN_PFX_BASE64) -and -not [string]::IsNullOrWhiteSpace($env:WINDOWS_CODESIGN_PFX_PASSWORD)
