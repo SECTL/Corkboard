@@ -25,6 +25,8 @@
         <!-- 旧数据的 Markdown 原文只在迁移时解析一次；迁移路径删掉后这个包也可以删。 -->
         <PackageReference Include="Markdig" Version="1.1.2" />
         <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.10" />
+        <!-- 自动更新清单的 Ed25519 验签（见 Updates/UpdateManifestVerifier.cs）；曲线实现不自己写。 -->
+        <PackageReference Include="BouncyCastle.Cryptography" Version="2.7.0" />
     </ItemGroup>
 
     <ItemGroup>

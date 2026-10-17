@@ -26,6 +26,14 @@
         <!-- ClassIsland 通知走官方 IPC 包。 -->
         <PackageReference Include="ClassIsland.Shared.IPC" Version="2.1.0.1" />
         <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.10" />
+        <!-- 自动更新：解析更新源发布的 metadata.yaml（通道 → tag 的映射，见 Updates/UpdateCenterService.cs）。 -->
+        <PackageReference Include="YamlDotNet" Version="18.1.0" />
+        <!--
+            导出 PDF：页面位图要编码成 JPEG 再嵌进 PDF（见 Services/Ui/Export）。
+            版本跟 Avalonia.Skia 传递进来的 SkiaSharp 对齐，避免原生库版本不一致；
+            显式引用是因为我们直接写代码调用它（传递引用不能直接引用类型）。
+        -->
+        <PackageReference Include="SkiaSharp" Version="3.119.3-preview.1.1" />
     </ItemGroup>
 
     <ItemGroup>

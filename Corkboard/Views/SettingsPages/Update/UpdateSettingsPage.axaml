@@ -1,0 +1,140 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fa="using:FluentAvalonia.UI.Controls"
+             xmlns:vm="using:Corkboard.ViewModels.SettingsPages"
+             xmlns:core="using:Corkboard.Core.Langs.Common"
+             xmlns:icons="using:Corkboard.Core.Icons"
+             xmlns:updates="using:Corkboard.Shared.Updates"
+             mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="450"
+             x:Class="Corkboard.Views.SettingsPages.Update.UpdateSettingsPage"
+             x:DataType="vm:UpdateSettingsPageViewModel">
+    <ScrollViewer>
+        <StackPanel Classes="page-container">
+            <!-- 设置壳不画标题：标题画在 page-container 里，才会和设置卡同宽同左边缘、跟着卡片滚动。 -->
+            <TextBlock Margin="0 4 0 0"
+                       FontWeight="Normal"
+                       Text="{x:Static core:Resources.Settings_Update_Title}"
+                       Theme="{StaticResource TitleTextBlockStyle}" />
+
+            <!--
+                状态区：图标 + 更新客户端自己给的当前状态（尚未检查 / 正在检查 / 发现新版本 / 下载中……）。
+                状态文案来自服务层，界面不另拼一份，免得两边说法不一致。
+            -->
+            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" Margin="0 8 0 12">
+                <TextBlock Grid.RowSpan="2"
+                           Margin="0 0 12 0"
+                           VerticalAlignment="Center"
+                           FontSize="40"
+                           Opacity="0.9"
+                           Text="{x:Static icons:FluentIcons.ArrowSyncFilled}"
+                           FontFamily="{DynamicResource FluentSystemIconsResizeable}" />
+                <TextBlock Grid.Column="1"
+                           Text="{Binding UpdateCenter.Status}"
+                           FontSize="22"
+                           FontWeight="Medium"
+                           TextWrapping="Wrap" />
+                <StackPanel Grid.Row="1" Grid.Column="1"
+                            Margin="0 4 0 0"
+                            Orientation="Horizontal"
+                            Spacing="6">
+                    <TextBlock Opacity="0.7"
+                               ToolTip.Tip="{x:Static core:Resources.Update_S_Strategy_LastCheckTime_D}"
+                               Text="{x:Static core:Resources.Update_S_Strategy_LastCheckTime}" />
+                    <TextBlock Text="{Binding LastCheckTimeText}" />
+                </StackPanel>
+            </Grid>
+
+            <!--
+                检查更新：主按钮的动作由更新客户端当前状态决定（能下载安装就直接下，否则先检查），
+                文案也由服务给（检查更新 / 下载并安装 / ……），所以这里只绑 Command 与可用性。
+                发现新版本、且这一版有多个完整安装包可选时，底下多出一个产物下拉框。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Update_S_Check}"
+                                   Description="{x:Static core:Resources.Update_S_Check_D}">
+                <fa:FASettingsExpander.IconSource>
+                    <fa:FAFontIconSource Glyph="{x:Static icons:FluentIcons.ArrowSyncFilled}"
+                                         FontFamily="{DynamicResource FluentSystemIconsResizeable}" />
+                </fa:FASettingsExpander.IconSource>
+                <fa:FASettingsExpander.Footer>
+                    <StackPanel Spacing="8" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="8"
+                                    HorizontalAlignment="Right">
+                            <Button Classes="accent"
+                                    Content="{Binding UpdateCenter.PrimaryActionText}"
+                                    Command="{Binding CheckOrInstallCommand}"
+                                    IsEnabled="{Binding UpdateCenter.CanCheck}" />
+                            <!-- 更新已经下载好、只等安装时才露出来。 -->
+                            <Button Content="{x:Static core:Resources.Update_C_InstallUpdate}"
+                                    Command="{Binding InstallCommand}"
+                                    IsVisible="{Binding UpdateCenter.CanApplyUpdate}" />
+                        </StackPanel>
+                        <ComboBox MinWidth="240"
+                                  ItemsSource="{Binding UpdateCenter.AvailableArtifacts}"
+                                  SelectedItem="{Binding UpdateCenter.SelectedArtifact, Mode=TwoWay}"
+                                  IsVisible="{Binding UpdateCenter.HasAvailableArtifacts}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="updates:UpdateArtifact">
+                                    <TextBlock Text="{Binding AssetName}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </StackPanel>
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <TextBlock Classes="section-title" Text="{x:Static core:Resources.Update_S_Strategy}" />
+
+            <!-- 自动更新模式：0 关闭 / 1 只通知 / 2 通知并下载 / 3 通知并安装（数字直接落进配置）。 -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Update_S_Strategy_AutoUpdateMode}"
+                                   Description="{x:Static core:Resources.Update_S_Strategy_AutoUpdateMode_D}">
+                <fa:FASettingsExpander.IconSource>
+                    <fa:FAFontIconSource Glyph="{x:Static icons:FluentIcons.ArrowSyncFilled}"
+                                         FontFamily="{DynamicResource FluentSystemIconsResizeable}" />
+                </fa:FASettingsExpander.IconSource>
+                <fa:FASettingsExpander.Footer>
+                    <ComboBox MinWidth="220"
+                              SelectedIndex="{Binding Settings.AutoUpdateMode, Mode=TwoWay}">
+                        <ComboBoxItem Content="{x:Static core:Resources.Update_O_AutoUpdateMode_Off}" />
+                        <ComboBoxItem Content="{x:Static core:Resources.Update_O_AutoUpdateMode_Notify}" />
+                        <ComboBoxItem Content="{x:Static core:Resources.Update_O_AutoUpdateMode_Download}" />
+                        <ComboBoxItem Content="{x:Static core:Resources.Update_O_AutoUpdateMode_Install}" />
+                    </ComboBox>
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <!--
+                更新通道：只决定「去哪个通道要清单」。强制检查是同一个通道里的例外动作
+                （当前版本比通道最新版还高时也能回退），所以放在这张卡里。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Update_S_Strategy_Channel}"
+                                   Description="{x:Static core:Resources.Update_S_Strategy_Channel_D}"
+                                   IsExpanded="True">
+                <fa:FASettingsExpander.IconSource>
+                    <fa:FAFontIconSource Glyph="{x:Static icons:FluentIcons.CloudFilled}"
+                                         FontFamily="{DynamicResource FluentSystemIconsResizeable}" />
+                </fa:FASettingsExpander.IconSource>
+                <fa:FASettingsExpander.Footer>
+                    <ComboBox MinWidth="220"
+                              SelectedIndex="{Binding SelectedChannelIndex, Mode=TwoWay}">
+                        <ComboBoxItem Content="{x:Static core:Resources.Update_O_UpdateChannel_Stable}" />
+                        <ComboBoxItem Content="{x:Static core:Resources.Update_O_UpdateChannel_Beta}" />
+                        <ComboBoxItem Content="{x:Static core:Resources.Update_O_UpdateChannel_Alpha}" />
+                    </ComboBox>
+                </fa:FASettingsExpander.Footer>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Update_C_ForceCheckUpdates}"
+                                           Description="{x:Static core:Resources.Update_C_ForceCheckUpdates_D}"
+                                           IsClickEnabled="True"
+                                           Click="ForceCheck_OnClick">
+                    <fa:FASettingsExpanderItem.ActionIconSource>
+                        <fa:FAFontIconSource Glyph="{x:Static icons:FluentIcons.ArrowSyncFilled}"
+                                             FontFamily="{DynamicResource FluentSystemIconsResizeable}" />
+                    </fa:FASettingsExpanderItem.ActionIconSource>
+                </fa:FASettingsExpanderItem>
+            </fa:FASettingsExpander>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
