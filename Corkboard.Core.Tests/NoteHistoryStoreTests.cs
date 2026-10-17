@@ -180,7 +180,10 @@ public class NoteHistoryStoreTests : IDisposable
 
         var old = MakeNote("很旧的作业");
         var oldDay = DateTime.Today.AddDays(-(BoardHistoryPolicy.MinRetentionDays + 5));
-        var oldAt = new DateTimeOffset(oldDay.AddHours(8), TimeSpan.FromHours(8));
+        var oldLocal = oldDay.AddHours(8);
+        // 用本地时区当天的真实偏移：写死 +08:00 在 UTC 的 CI runner 上会抛
+        //「The UTC Offset of the local dateTime parameter does not match the offset argument」。
+        var oldAt = new DateTimeOffset(oldLocal, TimeZoneInfo.Local.GetUtcOffset(oldLocal));
         store.Append(new NoteHistoryEntry(oldAt, old.Id, NoteHistoryAction.Create, store.SaveSnapshot(old)));
 
         var fresh = MakeNote("今天的作业");
