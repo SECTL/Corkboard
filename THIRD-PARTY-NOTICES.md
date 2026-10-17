@@ -16,6 +16,10 @@ Corkboard 以 GNU GPLv3 发布（见 [LICENSE](../LICENSE)），再发布的衍�
 | AvaloniaRichEditor | 1.2.1 | MIT | 作业内容的所见即所得富文本编辑器（由 `Corkboard.Core/Controls/RichTextBlock` 承载） |
 | HtmlAgilityPack | 1.12.4 | MIT | HTML 片段解析与默认样式注入（`BoardHtmlStyling`、旧作业迁移） |
 | Markdig | 1.1.2 | BSD-2-Clause | 只在旧作业内容迁移时解析 Markdown（`LegacyBoardContentConverter`，迁移路径删掉后可移除） |
+| BouncyCastle.Cryptography | 2.7.0 | MIT | Ed25519 更新清单验签（`Corkboard.Core/Updates/UpdateManifestVerifier`；与上游 SecRandom 同一套实现） |
+| YamlDotNet | 18.1.0 | MIT | 解析仓库根的 `metadata.yaml`（更新渠道 → 发布 tag，`UpdateCenterService`） |
+| SkiaSharp | 3.119.3-preview.1.1 | MIT | 导出 PDF：把渲染好的页面位图编码成 JPEG 再嵌进 PDF（`Corkboard/Services/Ui/Export`；版本与 Avalonia.Skia 传递依赖一致） |
+| SecRandom.SimpleGitInfoGenerator | 1.0.1.3 | 随上游 SecRandom 项目提供 | 构建期从 git 生成版本元数据（仅头程序集，`PrivateAssets=All`，不进输出目录） |
 | Microsoft.Extensions.Hosting / DependencyInjection / Http / Logging | 10.0.x | MIT | 宿主、DI、HTTP 客户端、日志 |
 | ClassIsland.Shared.IPC / dotnetCampus.Ipc | 2.1.0.1 / 2.0.0-alpha410 | MIT | ClassIsland 进程间通知 |
 | xunit.v3 / xunit.runner.visualstudio / Microsoft.NET.Test.Sdk | 3.2.2 / 3.1.5 / 18.8.1 | Apache-2.0 / MIT | 测试 |

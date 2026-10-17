@@ -1,0 +1,158 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Corkboard.ViewModels.Export"
+             xmlns:core="using:Corkboard.Core.Langs.Common"
+             xmlns:controls="using:Corkboard.Core.Controls"
+             mc:Ignorable="d" d:DesignWidth="640" d:DesignHeight="520"
+             x:Class="Corkboard.Views.Export.ExportDialog"
+             x:DataType="vm:ExportDialogViewModel">
+    <UserControl.Styles>
+        <!--
+            格式卡：每张卡是一颗按钮，但视觉全画在内层 Border 上——
+            Fluent 的 Button 模板会在悬停/按下时自己刷内容层底色，只设 Button.Background 会被盖掉
+            （用户反馈：点 PDF 之后蓝色「淡下去」，其实还是选中态）。把模板换成裸 ContentPresenter，
+            选中/悬停都交给 .format-card-body 自己画，就不会跟主题抢。
+        -->
+        <Style Selector="Button.format-card">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+        <Style Selector="Border.format-card-body">
+            <Setter Property="Padding" Value="14" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+        </Style>
+        <Style Selector="Border.format-card-body:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorTertiaryBrush}" />
+        </Style>
+        <Style Selector="Border.format-card-body.selected">
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+            <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+        </Style>
+        <Style Selector="Border.format-card-body.selected:pointerover">
+            <Setter Property="Background" Value="{DynamicResource AccentFillColorSecondaryBrush}" />
+        </Style>
+        <Style Selector="Border.format-card-body.selected TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextOnAccentFillColorPrimaryBrush}" />
+        </Style>
+        <Style Selector="Border.format-card-body.selected TextBlock.caption">
+            <Setter Property="Foreground" Value="{DynamicResource TextOnAccentFillColorSecondaryBrush}" />
+        </Style>
+        <Style Selector="TextBlock.format-title">
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <!-- 勾选列表里科目那一行比作业行重一档，滚动时能当分节标题看。 -->
+        <Style Selector="CheckBox.subject-check">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,8,0,2" />
+        </Style>
+        <Style Selector="CheckBox.note-check">
+            <Setter Property="Margin" Value="26,1,0,1" />
+        </Style>
+    </UserControl.Styles>
+
+    <Panel>
+        <!-- 弹层卡片：和布置作业表单同一套 Border.sheet 样式；宽度由 code-behind 按宿主窗口算（下限 720）。 -->
+        <Border Classes="sheet"
+                x:Name="Sheet"
+                MinWidth="720"
+                MaxWidth="900"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                controls:WindowDragGesture.Suppress="True">
+            <DockPanel>
+                <!-- 标题栏整条可拖动：弹层卡片本身不能拖（会误触），这里用 RenderTransform 自己挪。 -->
+                <Grid x:Name="DialogTitleBar"
+                      DockPanel.Dock="Top"
+                      Margin="0,0,0,12"
+                      Cursor="SizeAll"
+                      Background="Transparent">
+                    <TextBlock Classes="h2" Text="{x:Static core:Resources.Export_DialogTitle}" />
+                </Grid>
+
+                <!-- 内容区自己滚：窗口矮时「只导出一部分」的勾选列表不会把卡片撑出屏幕。 -->
+                <ScrollViewer x:Name="DialogScroll"
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled"
+                              Padding="0,0,4,0">
+                    <StackPanel Spacing="12">
+                        <TextBlock Classes="caption" Text="{x:Static core:Resources.Export_FormatLabel}" />
+
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                    <Button Grid.Column="0"
+                            Classes="format-card"
+                            Command="{Binding SelectImageCommand}">
+                        <!-- 模板换成裸 ContentPresenter：不要 Fluent Button 的悬停/按下底色，卡片自己画。 -->
+                        <Button.Template>
+                            <ControlTemplate>
+                                <ContentPresenter Content="{TemplateBinding Content}"
+                                                  HorizontalContentAlignment="Stretch" />
+                            </ControlTemplate>
+                        </Button.Template>
+                        <Border Classes="format-card-body" Classes.selected="{Binding IsImageSelected}">
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="format-title"
+                                           Text="{x:Static core:Resources.Export_FormatImage}" />
+                                <TextBlock Classes="caption" TextWrapping="Wrap"
+                                           Text="{x:Static core:Resources.Export_FormatImageDescription}" />
+                            </StackPanel>
+                        </Border>
+                    </Button>
+
+                    <Button Grid.Column="1"
+                            Classes="format-card"
+                            Command="{Binding SelectPdfCommand}">
+                        <Button.Template>
+                            <ControlTemplate>
+                                <ContentPresenter Content="{TemplateBinding Content}"
+                                                  HorizontalContentAlignment="Stretch" />
+                            </ControlTemplate>
+                        </Button.Template>
+                        <Border Classes="format-card-body" Classes.selected="{Binding IsPdfSelected}">
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="format-title"
+                                           Text="{x:Static core:Resources.Export_FormatPdf}" />
+                                <TextBlock Classes="caption" TextWrapping="Wrap"
+                                           Text="{x:Static core:Resources.Export_FormatPdfDescription}" />
+                            </StackPanel>
+                        </Border>
+                    </Button>
+                </Grid>
+
+                <CheckBox IsChecked="{Binding RememberChoice, Mode=TwoWay}"
+                          Content="{x:Static core:Resources.Export_RememberChoice}" />
+
+                <Grid ColumnDefinitions="*,Auto">
+                    <!--
+                        图片还能直接进剪贴板：不落盘、贴到聊天窗口里就完事。
+                        只在图片格式下出现——PDF 没有剪贴板这条路。
+                    -->
+                    <Button Grid.Column="0"
+                            HorizontalAlignment="Left"
+                            IsVisible="{Binding IsImageSelected}"
+                            Command="{Binding CopyImageCommand}"
+                            Content="{x:Static core:Resources.Export_CopyImage}" />
+
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                        <Button Command="{Binding CancelCommand}"
+                                Content="{x:Static core:Resources.Export_Cancel}" />
+                        <Button Classes="accent"
+                                Command="{Binding ConfirmCommand}"
+                                Content="{x:Static core:Resources.Export_Next}" />
+                    </StackPanel>
+                </Grid>
+                    </StackPanel>
+                </ScrollViewer>
+            </DockPanel>
+        </Border>
+    </Panel>
+</UserControl>

@@ -1,0 +1,103 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fa="using:FluentAvalonia.UI.Controls"
+             xmlns:vm="using:Corkboard.ViewModels.SettingsPages.Export"
+             xmlns:core="using:Corkboard.Core.Langs.Common"
+             mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="600"
+             x:Class="Corkboard.Views.SettingsPages.Export.ExportSettingsPage"
+             x:DataType="vm:ExportSettingsPageViewModel">
+    <ScrollViewer>
+        <!--
+            设置卡：Header 是设置项名称，Description 是简介，Footer 放控件；
+            一张卡里有多项时用 fa:FASettingsExpanderItem 分行（名称与简介在左、控件在右）。
+        -->
+        <StackPanel Classes="page-container">
+            <!-- 页标题画在 page-container 里：它才和设置卡同宽、同左边缘，并随卡片一起滚动。 -->
+            <TextBlock Margin="0 4 0 0"
+                       FontWeight="Normal"
+                       Text="{x:Static core:Resources.Settings_Export_Title}"
+                       Theme="{StaticResource TitleTextBlockStyle}" />
+
+            <!-- 导出行为：点导出时问不问格式、默认用哪种。 -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Export_Behavior}"
+                                   Description="{x:Static core:Resources.Settings_Export_BehaviorDescription}">
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Export_AskForFormat}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ToggleSwitch IsChecked="{Binding Settings.AskForFormat, Mode=TwoWay}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Export_DefaultFormat}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ComboBox MinWidth="160"
+                                  ItemsSource="{Binding FormatOptions}"
+                                  SelectedItem="{Binding SelectedFormatOption, Mode=TwoWay}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+            </fa:FASettingsExpander>
+
+            <!-- PDF 版式：纸张、方向、边距、列数、排序、分页与页眉页脚。 -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Export_PdfLayout}"
+                                   Description="{x:Static core:Resources.Settings_Export_PdfLayoutDescription}">
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Export_PageSize}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ComboBox MinWidth="160"
+                                  ItemsSource="{Binding PageSizeOptions}"
+                                  SelectedItem="{Binding SelectedPageSizeOption, Mode=TwoWay}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Export_Orientation}"
+                                           Description="{x:Static core:Resources.Settings_Export_OrientationDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ComboBox MinWidth="160"
+                                  ItemsSource="{Binding OrientationOptions}"
+                                  SelectedItem="{Binding SelectedOrientationOption, Mode=TwoWay}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Export_Margin}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ComboBox MinWidth="160"
+                                  ItemsSource="{Binding MarginOptions}"
+                                  SelectedItem="{Binding SelectedMarginOption, Mode=TwoWay}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Export_Columns}"
+                                           Description="{x:Static core:Resources.Settings_Export_ColumnsDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ComboBox MinWidth="100"
+                                  ItemsSource="{Binding ColumnOptions}"
+                                  SelectedItem="{Binding SelectedColumns, Mode=TwoWay}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Export_Sort}"
+                                           Description="{x:Static core:Resources.Settings_Export_SortDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ComboBox MinWidth="200"
+                                  ItemsSource="{Binding SortOptions}"
+                                  SelectedItem="{Binding SelectedSortOption, Mode=TwoWay}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Export_SubjectPageBreak}"
+                                           Description="{x:Static core:Resources.Settings_Export_SubjectPageBreakDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ToggleSwitch IsChecked="{Binding Settings.PdfSubjectPageBreak, Mode=TwoWay}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Export_HeaderFooter}"
+                                           Description="{x:Static core:Resources.Settings_Export_HeaderFooterDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ToggleSwitch IsChecked="{Binding Settings.PdfHeaderFooter, Mode=TwoWay}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+            </fa:FASettingsExpander>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
