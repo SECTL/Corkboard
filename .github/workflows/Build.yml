@@ -12,7 +12,12 @@ jobs:
     runs-on: windows-latest
 
     steps:
+      # 版本号是构建期由 git 提供的（SecRandom.SimpleGitInfoGenerator 跑 git describe --tags）。
+      # 浅克隆取不到 tag，取不到时 git 的报错文本会被当成标签写进 ProductVersion，
+      # 所以这里必须全量拉取，和 Publish.yml 的 checkout 保持一致。
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-dotnet@v6
         with:

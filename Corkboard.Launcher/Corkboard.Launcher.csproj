@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!--
+        便携包根目录的极简版本选择器：只负责在 app-* 里挑一个有效载荷再把它拉起来，
+        不引用仓库里任何工程，所以可以独立 publish（发布流水线里就是这样用的）。
+        控制台形态在 Windows 上换成 WinExe，双击启动时不会弹一个黑框。
+    -->
+    <OutputType>Exe</OutputType>
+    <OutputType Condition="'$(RuntimeIdentifier)' == 'win-x86' Or '$(RuntimeIdentifier)' == 'win-x64' Or '$(RuntimeIdentifier)' == 'win-arm64'">WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <!-- 启动器可执行名：CorkboardLauncher(.exe)，与上游 SecRandomLauncher 的约定一致。 -->
+    <AssemblyName>CorkboardLauncher</AssemblyName>
+    <ApplicationIcon>..\Corkboard\Assets\Icons\Corkboard.ico</ApplicationIcon>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+</Project>

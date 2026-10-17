@@ -1,0 +1,35 @@
+# 发布频道元数据（更新客户端与发布流水线共用）。
+#
+# 发布门禁：scripts/validate-release-metadata.ps1 会从发布标签推出通道
+# （带 -alpha 是 alpha、带 -beta 是 beta、其余是 release），并要求该通道的 tag
+# 与发布标签完全一致；不一致时 validate_release / publish 两个 job 都会直接失败，
+# 因为更新客户端会先按通道把 tag 解析出来、再校验更新清单里的 tag/channel，
+# 频道写旧了就会发出去一个谁都拿不到的更新。
+#
+# ⚠️ 发新 tag 之前，先把对应 channel.tag 改成新 tag 并提交进那个 tag —— 发布 job
+# 是按 tag 取代码的，改在 tag 之后没用。
+schema_version: 2
+product: Corkboard
+repository: SECTL/Corkboard
+manifest:
+  file_name: Corkboard-update-manifest.json
+  signature_file_name: Corkboard-update-manifest.sig
+  public_key_id: corkboard-release-2026-01
+runtime:
+  lite: net10.0-desktop
+sources:
+  sectl:
+    display_name: 思拓创联
+    release_only: true
+  github_mirror:
+    display_name: GitHub 镜像
+    prefix: https://ghproxy.sectl.cn/
+  github:
+    display_name: GitHub
+channels:
+  release:
+    tag: v0.1.0
+  beta:
+    tag: v0.1.0-beta.1
+  alpha:
+    tag: v1.0.0-alpha.1

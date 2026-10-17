@@ -48,6 +48,10 @@ public static class GlobalConstants
     public static string CommitHash => Metadata.CommitHash[..Math.Min(7, Metadata.CommitHash.Length)];
     public static string FullCommitHash => Metadata.CommitHash;
 
+    /// <summary>头程序集的 <see cref="AssemblyVersionAttribute" />（更新清单与诊断信息用）。</summary>
+    public static string AssemblyVersion => VersionAssembly
+        .GetCustomAttribute<AssemblyVersionAttribute>()?.Version ?? "0.0.0.0";
+
     public static string CodeName => @"Placeholder";
     public static string Version => Tag.StartsWith("v", StringComparison.OrdinalIgnoreCase) ? Tag : $@"v{Tag}";
     public static string DisplayVersion => $@"{Version} (Codename {CodeName})";
@@ -101,7 +105,8 @@ public static class GlobalConstants
             return new VersionMetadata("0.0.0.0", "Unknown", "Unknown");
 
         var separator = informationalVersion.IndexOf('+');
-        var generatedGitInfo = assembly.GetType("Corkboard.GitInfo");
+        // 与上游同一个生成器：类型名固定是 SecRandom.GitInfo（包名决定的命名空间）。
+        var generatedGitInfo = assembly.GetType("SecRandom.GitInfo");
         var branch = generatedGitInfo?.GetField("Branch", BindingFlags.Public | BindingFlags.Static)?.GetValue(null) as string
                      ?? generatedGitInfo?.GetProperty("Branch", BindingFlags.Public | BindingFlags.Static)?.GetValue(null) as string
                      ?? "Unknown";

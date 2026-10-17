@@ -1,80 +1,134 @@
-# Windows 发布流程：手动派发一个发布标签 → 构建自包含的 Windows 便携包 → 上传产物 → 建一个草稿 Release。
+# Corkboard 发布流水线（照上游 SecRandom-C 的 .github/workflows/build_publish.yml 搬运/改写）。
 #
-# 照上游 SecRandom-C 的 .github/workflows/build_publish.yml 抄了「派发标签 → 构建 → 打包 → 草稿 Release」
-# 这条主干，只保留 Windows 桌面端，但**保留它的架构矩阵**：Windows × x64 / x86 / arm64
-# （x64 是绝大多数电脑，x86 给 32 位系统，arm64 给 Windows on ARM，比如骁龙本）。
-# 刻意**没有**抄过来的部分（Corkboard 暂时用不到）：
-#   · Linux / macOS 的矩阵行（两个平台工程都在，接的时候各加一行 os + 一个 RID 即可）；
-#   · iOS / Android 的矩阵行与各自的签名步骤；
-#   · 单独的 Launcher 工程（Corkboard 没有启动器，直接发 Corkboard.Desktop.exe）；
-#   · Inno Setup 安装包（Setup.iss）；
-#   · metadata.yaml / validate-release-metadata.ps1（那是更新频道的元数据，Corkboard 还没有更新客户端）；
-#   · 更新清单（SecRandom-update-manifest.json）与 Ed25519 签名（没人验证签名，签了也没意义）；
-#   · Windows 代码签名（要 WINDOWS_CODESIGN_* 机密，仓库里还没有）。
+# 流程：手动派发一个发布标签
+#   → validate_release：metadata.yaml 频道门禁（几秒失败，而不是等整套构建跑完才炸）
+#   → build_desktop：每个架构 full(自包含) + light(依赖框架) 两套 publish，再打启动器 + 便携 ZIP
+#                    + Inno Setup 安装包，可选 Windows 代码签名
+#   → publish：再次门禁、合并产物、生成并 Ed25519 签名更新清单、脚本生成发布说明、建草稿 Release。
+#
+# 当前只发 Windows（win-x64 / win-x86 / win-arm64），但结构按多平台留了扩展位：
+#   · matrix 的 os 目前只有 windows，注释里写了怎么补 linux / macos；
+#   · Linux deb / macOS pkg / 移动端 APK/IPA 的打包、上传、清单解析位置都留了注释；
+#   · 更新清单的 artifact id 规则 <os>-<arch>-<kind>-<runtimeKind> 与上游一致，加平台不用改结构。
+# 刻意没有搬过来的部分：UIAccess 分支（Corkboard 没有 UIAccess 清单）、Plugin SDK / Android / iOS 的构建 job。
+#
 # 触发方式只有 workflow_dispatch：**发布标签必须已经存在**（checkout 会按这个 ref 取代码，
-# 构建期的 GitInfo.props 也靠它把 tag 写进版本号），所以先打 tag 再派发，不要在推分支时自动发布。
+# 版本号机制也靠它把 tag 写进版本元数据），所以先打 tag 再派发，不要在推分支时自动发布。
 name: Publish
 
 on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: 发布标签（例如 v0.2.0）
+        description: "发布标签（例如 v0.1.0）"
         required: true
         type: string
 
+permissions:
+  contents: read
+
 jobs:
-  build_windows:
-    name: Build Windows (${{ matrix.arch }})
+  # 发布门禁：更新客户端先按通道从 metadata.yaml 解析发布 tag，再校验更新清单里的 tag/channel，
+  # 不一致时整份更新会被拒收——频道写旧了等于发了一个谁都拿不到的更新。
+  # 所以构建之前先对一次；build_desktop 用「success 或 skipped」判断，普通构建里没有这个 job 也能跑。
+  validate_release:
+    name: Validate_Release_Metadata
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.release_tag != '' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Validate release tag
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ github.event.inputs.release_tag }}
+        run: |
+          # 放在 checkout 之前：标签形态不对就直接停，别等到 checkout 一个不存在的 ref 才报错。
+          if ($env:RELEASE_TAG -notmatch '^v\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$') {
+            throw "发布标签要写成 vX.Y.Z 或 vX.Y.Z-后缀，现在是 '$env:RELEASE_TAG'"
+          }
+          Write-Host "发布标签：$env:RELEASE_TAG"
+
+      - name: Checkout release tag
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.release_tag }}
+
+      - name: Validate metadata channel
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ github.event.inputs.release_tag }}
+        run: ./scripts/validate-release-metadata.ps1
+
+  build_desktop:
+    name: Build_${{ matrix.os }}_${{ matrix.arch }}
+    needs: validate_release
+    if: ${{ always() && !cancelled() && (needs.validate_release.result == 'success' || needs.validate_release.result == 'skipped') }}
     # 与 SecRandom-C 一致用 windows-2022 而不是 windows-latest：发布要的是可复现的镜像，不是最新的。
-    runs-on: windows-2022
+    # 以后加 Linux / macOS 时这里换成上游那套三元表达式（ubuntu-24.04 / macos-15）。
+    runs-on: ${{ matrix.os == 'windows' && 'windows-2022' || (matrix.os == 'linux' && 'ubuntu-24.04' || 'macos-15') }}
     strategy:
       # 三个架构各自独立：x86 挂了不该把 x64 的产物也一起丢掉。
       fail-fast: false
       matrix:
-        arch: [ x64, x86, arm64 ]
+        # 目前只发 Windows。接 Linux / macOS 时把 os 扩成 [windows, linux, macos]，
+        # 并用 exclude 去掉 linux-x86 / macos-x86（见上游），各自的打包步骤按下面的注释补。
+        os: [windows]
+        arch: [x64, x86, arm64]
 
     env:
       # 环境变量必须是 RELEASE_TAG 而不是 VERSION：MSBuild 会把环境变量当成同名属性读进去，
       # 一旦叫 VERSION，`dotnet restore` 拿到的就是 Version=v0.2.0（带 v，不是合法版本号）→
       # 「"v0.2.0" 不是有效的版本字符串」直接失败。带 v 的标签只留在脚本变量里，
       # 传给 MSBuild 的版本一律去掉前缀（-p:Version=0.2.0）。
-      RELEASE_TAG: ${{ inputs.release_tag }}
-      RID: win-${{ matrix.arch }}
-      PLATFORM: Windows
+      RELEASE_TAG: ${{ github.event.inputs.release_tag }}
+      RID: ${{ matrix.os == 'windows' && format('win-{0}', matrix.arch) || (matrix.os == 'linux' && format('linux-{0}', matrix.arch) || format('osx-{0}', matrix.arch)) }}
+      PLATFORM: ${{ matrix.os == 'windows' && 'Windows' || (matrix.os == 'linux' && 'Linux' || 'MacOs') }}
 
     steps:
       - name: Validate release tag
         shell: pwsh
-        # 放在 checkout 之前：标签形态不对就直接停，别等到 checkout 一个不存在的 ref 才报错。
+        # 与 validate_release 里同一道检查：每个构建 job 自己先卡一次，避免 checkout 后才失败。
         run: |
           if ($env:RELEASE_TAG -notmatch '^v\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$') {
             throw "发布标签要写成 vX.Y.Z 或 vX.Y.Z-后缀，现在是 '$env:RELEASE_TAG'"
           }
           Write-Host "发布标签：$env:RELEASE_TAG"
 
-      - uses: actions/checkout@v7
+      - name: Checkout
+        uses: actions/checkout@v6
         with:
-          # 版本号来自 git（GitInfo.props 跑 git describe），浅克隆可能连 tag 都取不到，必须全量。
+          # 版本号来自 git（SecRandom.SimpleGitInfoGenerator 构建期跑 git describe），
+          # 浅克隆可能连 tag 都取不到，必须全量。
           fetch-depth: 0
-          ref: ${{ inputs.release_tag }}
+          ref: ${{ github.event.inputs.release_tag }}
 
-      - uses: actions/setup-dotnet@v6
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
 
       - name: Restore
         shell: pwsh
-        run: dotnet restore Corkboard.Desktop\Corkboard.Desktop.csproj -r $env:RID -p:CorkboardPlatform=$env:PLATFORM
+        run: |
+          dotnet restore Corkboard.Desktop/Corkboard.Desktop.csproj -r $env:RID -p:CorkboardPlatform=$env:PLATFORM
+          if ($LASTEXITCODE -ne 0) { throw "Desktop restore failed with exit code $LASTEXITCODE." }
+          dotnet restore Corkboard.Launcher/Corkboard.Launcher.csproj -r $env:RID
+          if ($LASTEXITCODE -ne 0) { throw "Launcher restore failed with exit code $LASTEXITCODE." }
 
-      - name: Publish
+      - name: Publish Desktop
         shell: pwsh
         run: |
-          # 与上游同一套参数：不裁剪、带 apphost、不带调试符号。自包含发布，用户机器上不需要 .NET 运行时。
-          # -p:Version 是给头程序集之外的类库用的（头程序集走 GitInfo 从 tag 拿版本）。
-          $version = $env:RELEASE_TAG.TrimStart('v', 'V')
-          $arguments = @(
-            'publish', 'Corkboard.Desktop\Corkboard.Desktop.csproj',
+          # 与上游同一套参数：不裁剪、带 apphost、不带调试符号。
+          # ⚠️ 桌面 head 的版本号由 git tag 提供（EnableGitInfoGenerator），**不要**给它传 -p:Version：
+          #    传了反而会盖掉 tag 解析出来的程序集版本。-p:Version 只给不引用 GitInfo 的 Launcher 用（下一步）。
+          $releaseRoot = 'artifacts/release'
+          $fullDir = "$releaseRoot/publish/full/$env:RID"
+          $lightDir = "$releaseRoot/publish/light/$env:RID"
+          New-Item -ItemType Directory -Path $fullDir, $lightDir -Force | Out-Null
+          $publishArguments = @(
+            'publish', 'Corkboard.Desktop/Corkboard.Desktop.csproj',
             '-c', 'Release',
             '-r', $env:RID,
             "-p:CorkboardPlatform=$env:PLATFORM",
@@ -84,120 +138,387 @@ jobs:
             '-p:DebugSymbols=false',
             '-p:BuildInParallel=false',
             '-p:UseSharedCompilation=false',
-            "-p:Version=$version",
-            '--no-restore',
-            '--self-contained',
-            '-o', "artifacts\release\publish\$env:RID"
+            '--no-restore'
           )
-          & dotnet @arguments
-          if ($LASTEXITCODE -ne 0) { throw "dotnet publish 失败（exit $LASTEXITCODE）" }
+          # 自包含开关一律用 MSBuild 属性 -p:SelfContained=…（不要 `--self-contained false` 这个 CLI 开关）：
+          # .NET 10 实测在 PublishSingleFile=true 时 CLI 开关不生效（下方 Launcher 的 light 会打成 73.8 MB 自包含包），
+          # 统一用属性形式，语义与上游一致又不依赖 CLI 解析。
+          & dotnet @publishArguments -p:SelfContained=true -o $fullDir
+          if ($LASTEXITCODE -ne 0) {
+            throw "Full desktop publish failed with exit code $LASTEXITCODE."
+          }
+          & dotnet @publishArguments -p:SelfContained=false -o $lightDir
+          if ($LASTEXITCODE -ne 0) {
+            throw "Light desktop publish failed with exit code $LASTEXITCODE."
+          }
 
-      - name: Pack portable zip
+      - name: Strip debug symbols
         shell: pwsh
         run: |
-          $publishRoot = "artifacts\release\publish\$env:RID"
-          if (-not (Test-Path (Join-Path $publishRoot 'Corkboard.Desktop.exe'))) {
-            throw "发布目录里没有 Corkboard.Desktop.exe：$publishRoot"
-          }
-
-          # 清掉调试符号：-p:DebugType=None 只管我们自己那几个工程，SkiaSharp / HarfBuzz 这类包照样把
-          # .pdb 拷进发布目录（实测 libSkiaSharp.pdb 80 MB + libHarfBuzzSharp.pdb 20 MB，清掉后便携包
+          # -p:DebugType=None 只管我们自己那几个工程，SkiaSharp / HarfBuzz 这类包照样把 .pdb 拷进
+          # 发布目录（实测 libSkiaSharp.pdb 80 MB + libHarfBuzzSharp.pdb 20 MB，清掉后便携包
           # 从 126.6 MB 掉到 101.4 MB；剩下的大头是内嵌 MiSans 字体的 Corkboard.dll）。
-          $pdbs = @(Get-ChildItem $publishRoot -Recurse -File -Filter *.pdb)
-          if ($pdbs.Count -gt 0) {
-            $pdbSize = ($pdbs | Measure-Object -Property Length -Sum).Sum / 1MB
-            $pdbs | Remove-Item -Force
-            Write-Host ("已清掉 {0} 个调试符号文件（{1:N1} MB）" -f $pdbs.Count, $pdbSize)
+          # 在发布后立刻清，便携 ZIP 与安装包树都受益。
+          $totalCount = 0
+          $totalBytes = 0L
+          foreach ($dir in @("artifacts/release/publish/full/$env:RID", "artifacts/release/publish/light/$env:RID")) {
+            $pdbs = @(Get-ChildItem $dir -Recurse -File -Filter *.pdb)
+            if ($pdbs.Count -gt 0) {
+              $totalCount += $pdbs.Count
+              $totalBytes += ($pdbs | Measure-Object -Property Length -Sum).Sum
+              $pdbs | Remove-Item -Force
+            }
+          }
+          if ($totalCount -gt 0) {
+            Write-Host ("已清掉 {0} 个调试符号文件（{1:N1} MB）" -f $totalCount, ($totalBytes / 1MB))
+          } else {
+            Write-Host '发布目录里没有 .pdb。'
           }
 
-          # 包内容标记：解压后一眼能看出这是哪个平台、哪种发布形态，照上游的 SecRandom.package.json。
-          @{
-            schemaVersion = 1
-            product       = 'Corkboard'
-            rid           = $env:RID
-            packageKind   = 'portable-zip'
-            runtimeKind   = 'self-contained'
-          } | ConvertTo-Json -Compress | Set-Content -Encoding utf8NoBOM (Join-Path $publishRoot 'Corkboard.package.json')
+      # 便携 ZIP：根目录一个单文件启动器 CorkboardLauncher(+.exe)，旁边一个 app-<tag>-0/ 有效载荷目录。
+      # 签名必须在打包之前：压缩包里的文件就是带签名的那些；顺序反了等于发的是未签名产物。
+      - name: Pack Portable Zips (Windows)
+        if: ${{ matrix.os == 'windows' }}
+        shell: pwsh
+        env:
+          WINDOWS_CODESIGN_PFX_BASE64: ${{ secrets.WINDOWS_CODESIGN_PFX_BASE64 }}
+          WINDOWS_CODESIGN_PFX_PASSWORD: ${{ secrets.WINDOWS_CODESIGN_PFX_PASSWORD }}
+          WINDOWS_CODESIGN_TIMESTAMP_URL: ${{ secrets.WINDOWS_CODESIGN_TIMESTAMP_URL }}
+        run: |
+          function Write-Marker([string]$path, [string]$runtimeKind) {
+            @{ schemaVersion = 1; product = 'Corkboard'; rid = $env:RID; packageKind = 'portable-zip'; runtimeKind = $runtimeKind } |
+              ConvertTo-Json -Compress | Set-Content -LiteralPath (Join-Path $path 'Corkboard.package.json') -Encoding utf8NoBOM
+          }
+          function Publish-Launcher([string]$path, [bool]$selfContained) {
+            # Launcher 是独立工程、不引用仓库里任何东西，所以只有它需要 -p:Version（去掉 v 的 tag）。
+            # single-file + IncludeNativeLibrariesForSelfExtract：根目录只留一个可执行文件。
+            $assemblyVersion = $env:RELEASE_TAG.TrimStart('v', 'V')
+            $arguments = @('publish', 'Corkboard.Launcher/Corkboard.Launcher.csproj', '-c', 'Release', '-r', $env:RID, '-p:UseAppHost=true', '-p:PublishSingleFile=true', '-p:IncludeNativeLibrariesForSelfExtract=true', '-p:DebugType=None', '-p:DebugSymbols=false', "-p:Version=$assemblyVersion", '--no-restore', '-o', $path)
+            # ⚠️ 自包含开关必须用 MSBuild 属性：.NET 10 实测 `--self-contained false` 在 PublishSingleFile=true
+            #    时会被忽略，light 启动器会打成 73.8 MB 的自包含包（实测 -p:SelfContained=false 才是 501 KB）。
+            if ($selfContained) { $arguments += '-p:SelfContained=true' } else { $arguments += '-p:SelfContained=false' }
+            & dotnet @arguments
+            if ($LASTEXITCODE -ne 0) { throw "Launcher publish failed with exit code $LASTEXITCODE." }
+          }
+          function Sign-File([string]$path, [string]$signTool, [string]$certificatePath) {
+            $arguments = @('sign', '/fd', 'SHA256', '/f', $certificatePath, '/p', $env:WINDOWS_CODESIGN_PFX_PASSWORD)
+            if (-not [string]::IsNullOrWhiteSpace($env:WINDOWS_CODESIGN_TIMESTAMP_URL)) {
+              $arguments += @('/tr', $env:WINDOWS_CODESIGN_TIMESTAMP_URL, '/td', 'SHA256')
+            }
+            $arguments += $path
+            & $signTool @arguments
+            if ($LASTEXITCODE -ne 0) { throw "signtool failed for $path with exit code $LASTEXITCODE." }
+          }
+          $releaseRoot = 'artifacts/release'
+          $zipRoot = "$releaseRoot/portable/$env:RID"
+          $fullRoot = "$zipRoot/full"
+          $lightRoot = "$zipRoot/light"
+          Remove-Item $zipRoot -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Path $fullRoot, $lightRoot, "$releaseRoot/dist" -Force | Out-Null
+          # 目录名 app-<tag>-0：启动器按 app-v* 解析版本，v 必须留在目录名里（上游同约定）。
+          $fullApp = Join-Path $fullRoot "app-$env:RELEASE_TAG-0"
+          $lightApp = Join-Path $lightRoot "app-$env:RELEASE_TAG-0"
+          Copy-Item "$releaseRoot/publish/full/$env:RID" $fullApp -Recurse
+          Copy-Item "$releaseRoot/publish/light/$env:RID" $lightApp -Recurse
+          Write-Marker $fullApp 'self-contained'
+          Write-Marker $lightApp 'framework-dependent'
+          Publish-Launcher $fullRoot $true
+          Publish-Launcher $lightRoot $false
+          $launcherName = if ($env:RID.StartsWith('win-')) { 'CorkboardLauncher.exe' } else { 'CorkboardLauncher' }
+          foreach ($root in @($fullRoot, $lightRoot)) {
+            if (!(Test-Path -LiteralPath (Join-Path $root $launcherName))) {
+              throw "Launcher was not published into $root."
+            }
+          }
+          # 签名对象：两个启动器 + 两个 app 目录里的应用本体。secrets 缺失时只 warning、跳过（照上游）。
+          if (-not [string]::IsNullOrWhiteSpace($env:WINDOWS_CODESIGN_PFX_BASE64) -and -not [string]::IsNullOrWhiteSpace($env:WINDOWS_CODESIGN_PFX_PASSWORD)) {
+            $certificatePath = Join-Path $env:RUNNER_TEMP 'corkboard-portable.pfx'
+            try {
+              [IO.File]::WriteAllBytes($certificatePath, [Convert]::FromBase64String(($env:WINDOWS_CODESIGN_PFX_BASE64 -replace '[^A-Za-z0-9+/=]', '')))
+              $signTool = Get-ChildItem 'C:\Program Files (x86)\Windows Kits\10\bin\*\x64\signtool.exe' | Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName
+              if ([string]::IsNullOrWhiteSpace($signTool)) { throw 'signtool.exe was not found on the Windows runner.' }
+              foreach ($file in @(
+                (Join-Path $fullRoot $launcherName),
+                (Join-Path $lightRoot $launcherName),
+                (Join-Path $fullApp 'Corkboard.Desktop.exe'),
+                (Join-Path $lightApp 'Corkboard.Desktop.exe')
+              )) {
+                Sign-File $file $signTool $certificatePath
+              }
+            }
+            finally {
+              Remove-Item $certificatePath -Force -ErrorAction SilentlyContinue
+            }
+          }
+          else {
+            Write-Warning 'Windows code-signing secrets are unavailable; portable executables will be unsigned.'
+          }
+          $fullZip = "$releaseRoot/dist/Corkboard-$env:RELEASE_TAG-$env:RID-portable-full.zip"
+          $lightZip = "$releaseRoot/dist/Corkboard-$env:RELEASE_TAG-$env:RID-portable-light.zip"
+          # 只压目录里的内容，压缩包解开就是「启动器 + app-*」，不套一层同名文件夹。
+          Compress-Archive -Path "$fullRoot/*" -DestinationPath $fullZip -Force
+          Compress-Archive -Path "$lightRoot/*" -DestinationPath $lightZip -Force
+          foreach ($zip in @($fullZip, $lightZip)) {
+            if (-not (Test-Path -LiteralPath $zip) -or (Get-Item -LiteralPath $zip).Length -le 0) { throw "压缩包没打出来：$zip" }
+            Write-Host ("已打包 {0}（{1:N1} MB）" -f (Split-Path $zip -Leaf), ((Get-Item -LiteralPath $zip).Length / 1MB))
+          }
 
-          $dist = 'artifacts\release\dist'
-          New-Item -ItemType Directory -Force -Path $dist | Out-Null
-          $zip = Join-Path $dist "Corkboard-$env:RELEASE_TAG-$env:RID-portable.zip"
-          # 只压目录里的内容，压缩包解开就是能直接跑的那一份（不套一层同名文件夹）。
-          Compress-Archive -Path (Join-Path $publishRoot '*') -DestinationPath $zip -Force
+      # Inno 自带的 Languages 里没有中文/日文，工作流先下载进 Inno 的 Languages 目录（照上游做法）。
+      - name: Install Inno Setup Languages
+        if: ${{ matrix.os == 'windows' }}
+        shell: pwsh
+        run: |
+          $langDir = "C:\Program Files (x86)\Inno Setup 6\Languages"
+          if (!(Test-Path $langDir)) {
+            New-Item -ItemType Directory -Path $langDir -Force
+          }
 
-          if (-not (Test-Path $zip) -or (Get-Item $zip).Length -le 0) { throw "压缩包没打出来：$zip" }
-          Write-Host ("已打包 {0}（{1:N1} MB）" -f (Split-Path $zip -Leaf), ((Get-Item $zip).Length / 1MB))
+          $languages = @{
+            'ChineseSimplified.isl' = 'https://raw.githubusercontent.com/kira-96/Inno-Setup-Chinese-Simplified-Translation/main/ChineseSimplified.isl'
+            'Japanese.isl' = 'https://raw.githubusercontent.com/jrsoftware/issrc/main/Files/Languages/Japanese.isl'
+          }
+          foreach ($language in $languages.GetEnumerator()) {
+            $path = Join-Path $langDir $language.Key
+            Invoke-WebRequest -Uri $language.Value -OutFile $path
+            Write-Host "Downloaded Inno Setup language: $($language.Key)"
+          }
 
-      - uses: actions/upload-artifact@v7
+      # 安装包树 = 自包含发布树 + packageKind=windows-exe 标记；应用本体在 ISCC 之前先签名，
+      # 打出来的 setup exe 再签一次（setup 本身也需要 Authenticode，否则 SmartScreen 会拦）。
+      - name: Build Windows Setup
+        if: ${{ matrix.os == 'windows' }}
+        shell: pwsh
+        env:
+          ARCH: ${{ matrix.arch }}
+          WINDOWS_CODESIGN_PFX_BASE64: ${{ secrets.WINDOWS_CODESIGN_PFX_BASE64 }}
+          WINDOWS_CODESIGN_PFX_PASSWORD: ${{ secrets.WINDOWS_CODESIGN_PFX_PASSWORD }}
+          WINDOWS_CODESIGN_TIMESTAMP_URL: ${{ secrets.WINDOWS_CODESIGN_TIMESTAMP_URL }}
+        run: |
+          function Sign-File([string]$path, [string]$signTool, [string]$certificatePath) {
+            $arguments = @('sign', '/fd', 'SHA256', '/f', $certificatePath, '/p', $env:WINDOWS_CODESIGN_PFX_PASSWORD)
+            if (-not [string]::IsNullOrWhiteSpace($env:WINDOWS_CODESIGN_TIMESTAMP_URL)) {
+              $arguments += @('/tr', $env:WINDOWS_CODESIGN_TIMESTAMP_URL, '/td', 'SHA256')
+            }
+            $arguments += $path
+            & $signTool @arguments
+            if ($LASTEXITCODE -ne 0) { throw "signtool failed for $path with exit code $LASTEXITCODE." }
+          }
+          $hasSigning = -not [string]::IsNullOrWhiteSpace($env:WINDOWS_CODESIGN_PFX_BASE64) -and -not [string]::IsNullOrWhiteSpace($env:WINDOWS_CODESIGN_PFX_PASSWORD)
+          $outDir = "artifacts/release/installer/$env:RID"
+          Remove-Item $outDir -Recurse -Force -ErrorAction SilentlyContinue
+          # Corkboard 没有 UIAccess 清单，所以不像上游那样为了 UIAccess 重新 publish 一遍，
+          # 直接复用上面已经清过 .pdb 的自包含发布树。
+          Copy-Item "artifacts/release/publish/full/$env:RID" $outDir -Recurse
+          if (!(Test-Path -LiteralPath (Join-Path $outDir 'Corkboard.Desktop.exe'))) {
+            throw "安装包树里没有 Corkboard.Desktop.exe：$outDir"
+          }
+          @{ schemaVersion = 1; product = 'Corkboard'; rid = $env:RID; packageKind = 'windows-exe'; runtimeKind = 'self-contained' } |
+            ConvertTo-Json -Compress | Set-Content -LiteralPath (Join-Path $outDir 'Corkboard.package.json') -Encoding utf8NoBOM
+
+          $certificatePath = Join-Path $env:RUNNER_TEMP 'corkboard-setup.pfx'
+          try {
+            if ($hasSigning) {
+              [IO.File]::WriteAllBytes($certificatePath, [Convert]::FromBase64String(($env:WINDOWS_CODESIGN_PFX_BASE64 -replace '[^A-Za-z0-9+/=]', '')))
+              $signTool = Get-ChildItem 'C:\Program Files (x86)\Windows Kits\10\bin\*\x64\signtool.exe' | Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName
+              if ([string]::IsNullOrWhiteSpace($signTool)) { throw 'signtool.exe was not found on the Windows runner.' }
+              Sign-File (Join-Path $outDir 'Corkboard.Desktop.exe') $signTool $certificatePath
+            }
+            else {
+              Write-Warning 'Windows code-signing secrets are unavailable; building the installer without code signing.'
+            }
+
+            $setupOutput = 'artifacts/release/setup'
+            New-Item -ItemType Directory -Path $setupOutput -Force | Out-Null
+            $isccArguments = @(
+              "/DMyAppVersion=$env:RELEASE_TAG"
+              "/DMyAppOutDir=$outDir"
+              "/FCorkboard-$env:RELEASE_TAG-$env:RID-setup"
+              "/O$setupOutput"
+            )
+            switch ($env:ARCH) {
+              'x86' { $isccArguments += '/DBuildArchX86' }
+              'x64' { $isccArguments += '/DBuildArchX64' }
+              'arm64' { $isccArguments += '/DBuildArchArm64' }
+              default { throw "Unsupported Windows architecture: $env:ARCH" }
+            }
+            & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" Setup.iss @isccArguments
+            if ($LASTEXITCODE -ne 0) { throw "ISCC failed with exit code $LASTEXITCODE." }
+
+            $setupPath = Join-Path $setupOutput "Corkboard-$env:RELEASE_TAG-$env:RID-setup.exe"
+            if (!(Test-Path -LiteralPath $setupPath)) { throw "安装包没打出来：$setupPath" }
+            if ($hasSigning) {
+              Sign-File $setupPath $signTool $certificatePath
+            }
+          }
+          finally {
+            Remove-Item $certificatePath -Force -ErrorAction SilentlyContinue
+          }
+
+      # 以后接 Linux / macOS 时在这一带补各自的打包步骤，然后按下面的注释加 upload-artifact：
+      #   · linux：Build Linux deb  → upload name: <rid>_deb  path: artifacts/release/dist/*.deb
+      #   · macos：Build macOS pkg  → upload name: <rid>_pkg  path: artifacts/release/dist/*.pkg
+      - name: Upload Portable Artifact
+        uses: actions/upload-artifact@v7
         with:
-          name: ${{ matrix.arch }}_portable
+          name: ${{ matrix.os == 'windows' && format('win-{0}', matrix.arch) || (matrix.os == 'linux' && format('linux-{0}', matrix.arch) || format('osx-{0}', matrix.arch)) }}_portable
           path: artifacts/release/dist/*.zip
           if-no-files-found: error
 
+      - name: Upload Setup Artifact
+        if: ${{ matrix.os == 'windows' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.os == 'windows' && format('win-{0}', matrix.arch) || (matrix.os == 'linux' && format('linux-{0}', matrix.arch) || format('osx-{0}', matrix.arch)) }}_setup
+          path: artifacts/release/setup/*.exe
+          if-no-files-found: error
+
   publish:
-    name: Publish Release
-    needs: build_windows
+    name: Publish_Release
     runs-on: windows-2022
+    # 只有 build_desktop 成功、且确实是手动派发的发布才出版本；草稿 Release 要写权限。
+    needs: [build_desktop]
+    if: ${{ always() && success('build_desktop') && github.event_name == 'workflow_dispatch' && github.event.inputs.release_tag != '' && github.event_name != 'pull_request' }}
     permissions:
-      # 建 Release 要写权限；工作流默认只有读权限（不写这条会 403）。
       contents: write
     concurrency:
       # 发布串行执行：两个标签同时发不会互相盖 Release。
       group: publish-public
 
     env:
-      RELEASE_TAG: ${{ inputs.release_tag }}
+      RELEASE_TAG: ${{ github.event.inputs.release_tag }}
 
     steps:
-      - uses: actions/checkout@v7
+      - name: Checkout
+        uses: actions/checkout@v6
         with:
+          # 发布说明脚本要读 CHANGELOG/**/<tag>/CHANGELOG.md，公钥文件也要按 tag 里的版本来比对。
           fetch-depth: 0
+          ref: ${{ github.event.inputs.release_tag }}
 
-      - uses: actions/download-artifact@v8
+      - name: Validate release metadata
+        id: release_metadata
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ github.event.inputs.release_tag }}
+        run: ./scripts/validate-release-metadata.ps1
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v8
         with:
-          path: artifacts/release/downloaded
+          path: ./artifacts/release/downloaded
 
-      - name: Collect artifacts and write release note
+      - name: Combine Artifacts
         shell: pwsh
         run: |
-          $output = 'artifacts\release\output'
-          New-Item -ItemType Directory -Force -Path $output | Out-Null
-          Get-ChildItem 'artifacts\release\downloaded' -Recurse -File -Filter *.zip |
-            ForEach-Object { Copy-Item $_.FullName -Destination $output -Force }
-
-          $files = Get-ChildItem $output -File | Sort-Object Name
-          if ($files.Count -eq 0) { throw '没有可发布的文件：构建 job 一个 zip 都没上传' }
-
-          # 发布说明：Corkboard 还没有 CHANGELOG 目录，先由产物自己生成（大小 + SHA256 便于核对下载）。
-          $note = [System.Collections.Generic.List[string]]::new()
-          $note.Add("## Corkboard $env:RELEASE_TAG")
-          $note.Add('')
-          $note.Add('Windows 便携版：解压后直接运行 `Corkboard.Desktop.exe`，自带 .NET 运行时，无需另行安装。')
-          $note.Add('')
-          $note.Add('| 架构 | 适用设备 |')
-          $note.Add('| --- | --- |')
-          $note.Add('| win-x64 | 绝大多数 64 位 Windows |')
-          $note.Add('| win-x86 | 32 位 Windows（64 位系统上也能跑） |')
-          $note.Add('| win-arm64 | Windows on ARM（骁龙本等） |')
-          $note.Add('')
-          $note.Add('| 文件 | 大小 | SHA256 |')
-          $note.Add('| --- | --- | --- |')
-          foreach ($file in $files) {
-            $hash = (Get-FileHash $file.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-            $note.Add(("| {0} | {1:N1} MB | ``{2}`` |" -f $file.Name, ($file.Length / 1MB), $hash))
+          $releaseOutput = './artifacts/release/output'
+          New-Item -ItemType Directory -Path $releaseOutput -Force | Out-Null
+          # 以后接 Linux / macOS / 移动端时把 *.deb,*.pkg,*.apk,*.ipa 一起加进来。
+          Get-ChildItem ./artifacts/release/downloaded -Recurse -File -Include *.zip,*.exe | ForEach-Object {
+            Copy-Item $_.FullName $releaseOutput -Force
           }
-          $note | Set-Content -Encoding utf8NoBOM release-note.md
-          Get-Content release-note.md
+          Write-Host "Combined files:"
+          Get-ChildItem $releaseOutput -File | Select-Object Name, Length
 
-      - uses: ncipollo/release-action@v1
+      # 更新清单：product/channel/tag/version/publishedAt + 每个产物的 sha512/byteLength。
+      # 签名前必须先用私钥推导出公钥、和应用里编着的那份比对，杜绝「用错密钥签了一份没人能验的清单」。
+      # 清单写成 utf8NoBOM 且不加换行，然后用 openssl pkeyutl -sign -rawin 出 .sig（照上游）。
+      - name: Generate signed update manifest
+        shell: pwsh
+        env:
+          UPDATE_MANIFEST_PRIVATE_KEY_PEM_BASE64: ${{ secrets.UPDATE_MANIFEST_PRIVATE_KEY_PEM_BASE64 }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:UPDATE_MANIFEST_PRIVATE_KEY_PEM_BASE64)) {
+            throw 'Release publication requires the UPDATE_MANIFEST_PRIVATE_KEY_PEM_BASE64 secret.'
+          }
+          $privateKeyPath = Join-Path $env:RUNNER_TEMP 'corkboard-update-ed25519.pem'
+          $publicDerPath = Join-Path $env:RUNNER_TEMP 'corkboard-update-ed25519-public.der'
+          try {
+            [IO.File]::WriteAllBytes($privateKeyPath, [Convert]::FromBase64String(($env:UPDATE_MANIFEST_PRIVATE_KEY_PEM_BASE64 -replace '[^A-Za-z0-9+/=]', '')))
+            & openssl pkey -in $privateKeyPath -pubout -outform DER -out $publicDerPath
+            if ($LASTEXITCODE -ne 0) { throw "OpenSSL Ed25519 public-key export failed with exit code $LASTEXITCODE." }
+            $publicDer = [IO.File]::ReadAllBytes($publicDerPath)
+            if ($publicDer.Length -lt 32) { throw 'The update-signing public key is invalid.' }
+            # SubjectPublicKeyInfo DER 末尾 32 字节就是 raw 公钥，与应用里 release-public-key.txt 的格式一致。
+            $derivedPublicKey = [Convert]::ToBase64String($publicDer[($publicDer.Length - 32)..($publicDer.Length - 1)])
+            $embeddedPublicKey = (Get-Content -LiteralPath 'Corkboard/Assets/Updates/release-public-key.txt' -Raw).Trim()
+            if ($derivedPublicKey -cne $embeddedPublicKey) {
+              throw 'UPDATE_MANIFEST_PRIVATE_KEY_PEM_BASE64 does not match Corkboard/Assets/Updates/release-public-key.txt.'
+            }
+            $releaseTag = $env:RELEASE_TAG
+            $channel = '${{ steps.release_metadata.outputs.channel }}'
+            $releaseOutput = './artifacts/release/output'
+            $artifacts = Get-ChildItem $releaseOutput -File | ForEach-Object {
+              $name = $_.Name
+              # 产物名规则：Corkboard-<tag>-<rid>-portable-full.zip / -portable-light.zip / -setup.exe。
+              # 不认识的名字直接报错（照上游），免得清单里悄悄漏掉一个资产。
+              $kind, $runtimeKind, $os, $arch = if ($name -match '^Corkboard-v.+-(?<rid>(?<os>win|linux|osx)-(?<arch>x64|x86|arm64))-portable-(?<runtime>full|light)\.zip$') {
+                $platform = switch ($Matches.os) { 'win' { 'windows' } 'linux' { 'linux' } 'osx' { 'macos' } }
+                @('portable-zip', $(if ($Matches.runtime -eq 'full') { 'self-contained' } else { 'framework-dependent' }), $platform, $Matches.arch)
+              } elseif ($name -match '^Corkboard-v.+-(?<rid>win-(?<arch>x64|x86|arm64))-setup\.exe$') {
+                @('windows-exe', 'self-contained', 'windows', $Matches.arch)
+              }
+              # 以后接 Linux / macOS / 移动端时在这里加分支，清单 id 规则不变：
+              #   elseif ($name -match '^Corkboard-v.+-(?<rid>linux-(?<arch>x64|arm64))\.deb$') { @('linux-deb', 'self-contained', 'linux', $Matches.arch) }
+              #   elseif ($name -match '^Corkboard-v.+-(?<rid>osx-(?<arch>x64|arm64))\.pkg$') { @('macos-pkg', 'self-contained', 'macos', $Matches.arch) }
+              #   elseif ($name -match '^Corkboard-v.+-(?<rid>osx-(?<arch>x64|arm64))\.app\.zip$') { @('macos-app', 'self-contained', 'macos', $Matches.arch) }
+              #   elseif ($name -match '^Corkboard-v.+-Android-(?<arch>arm64|x64)\.apk$') { @('android-apk', 'self-contained', 'android', $Matches.arch) }
+              #   elseif ($name -match '^Corkboard-v.+-iOS-(?<arch>arm64)-unsigned\.ipa$') { @('ios-ipa', 'self-contained', 'ios', $Matches.arch) }
+              else {
+                throw "Unrecognized release artifact name: $name"
+              }
+              [ordered]@{
+                id = "$os-$arch-$kind-$runtimeKind"
+                os = $os
+                arch = $arch
+                kind = $kind
+                runtimeKind = $runtimeKind
+                assetName = $name
+                byteLength = $_.Length
+                sha512 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA512).Hash
+              }
+            }
+            $manifest = [ordered]@{
+              schemaVersion = 1
+              product = 'Corkboard'
+              channel = $channel
+              tag = $releaseTag
+              version = $releaseTag.TrimStart('v')
+              publishedAt = [DateTimeOffset]::UtcNow.ToString('O')
+              artifacts = @($artifacts)
+            }
+            $manifestPath = "$releaseOutput/Corkboard-update-manifest.json"
+            $signaturePath = "$releaseOutput/Corkboard-update-manifest.sig"
+            $manifest | ConvertTo-Json -Depth 5 -Compress | Set-Content -LiteralPath $manifestPath -Encoding utf8NoBOM -NoNewline
+            & openssl pkeyutl -sign -rawin -inkey $privateKeyPath -in $manifestPath -out $signaturePath
+            if ($LASTEXITCODE -ne 0) { throw "OpenSSL Ed25519 signing failed with exit code $LASTEXITCODE." }
+          }
+          finally {
+            Remove-Item $privateKeyPath -Force -ErrorAction SilentlyContinue
+            Remove-Item $publicDerPath -Force -ErrorAction SilentlyContinue
+          }
+
+      # 发布说明：CHANGELOG/**/<tag>/CHANGELOG.md + GitHub 下载表 + SHA256 折叠表。
+      # 仓库变量 SECTL_MIRROR_BASE（可选）设置后下载表多一列镜像；未设置时脚本自动少一列。
+      - name: Generate Release Note
+        shell: pwsh
+        env:
+          tagName: ${{ github.event.inputs.release_tag }}
+          repoName: ${{ github.repository }}
+          SECTL_MIRROR_BASE: ${{ vars.SECTL_MIRROR_BASE }}
+        run: ./scripts/gen-release-note.ps1
+
+      - name: Upload to release
+        uses: ncipollo/release-action@v1
         with:
-          name: Corkboard ${{ inputs.release_tag }}
-          tag: ${{ inputs.release_tag }}
-          artifacts: "./artifacts/release/output/*.zip"
-          bodyFile: ./release-note.md
+          name: Corkboard ${{ github.event.inputs.release_tag }}
+          # 便携包 + 安装包 + 已签名的更新清单（.json 与 .sig 必须一起挂上去）。
+          # 以后接 Linux / macOS / 移动端时把 *.deb,*.pkg,*.apk,*.ipa 加进 artifacts。
+          artifacts: "./artifacts/release/output/*.zip,./artifacts/release/output/*.exe,./artifacts/release/output/Corkboard-update-manifest.json,./artifacts/release/output/Corkboard-update-manifest.sig"
           # 草稿：产物先传上去，人工看一眼再点发布。带 - 的标签自动标成预发布。
           draft: true
-          prerelease: ${{ contains(inputs.release_tag, '-') }}
+          prerelease: ${{ contains(github.event.inputs.release_tag, '-') }}
           # 同一个标签再派发一次时更新已有草稿，而不是报错。
           allowUpdates: true
+          bodyFile: ./release-note.md
           token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.event.inputs.release_tag }}
