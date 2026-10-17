@@ -96,6 +96,8 @@ public static class Resources
     public static string Settings_Basic_MainWindowOpacityDescription => ResourceManager.GetString(nameof(Settings_Basic_MainWindowOpacityDescription), Culture)!;
     public static string Settings_Basic_ClickThrough => ResourceManager.GetString(nameof(Settings_Basic_ClickThrough), Culture)!;
     public static string Settings_Basic_ClickThroughDescription => ResourceManager.GetString(nameof(Settings_Basic_ClickThroughDescription), Culture)!;
+    public static string Settings_Basic_WindowCorners => ResourceManager.GetString(nameof(Settings_Basic_WindowCorners), Culture)!;
+    public static string Settings_Basic_WindowCornersDescription => ResourceManager.GetString(nameof(Settings_Basic_WindowCornersDescription), Culture)!;
     public static string Settings_Basic_CornerAssignButton => ResourceManager.GetString(nameof(Settings_Basic_CornerAssignButton), Culture)!;
     public static string Settings_Basic_CornerAssignButtonDescription => ResourceManager.GetString(nameof(Settings_Basic_CornerAssignButtonDescription), Culture)!;
     public static string Settings_Group_Board => ResourceManager.GetString(nameof(Settings_Group_Board), Culture)!;

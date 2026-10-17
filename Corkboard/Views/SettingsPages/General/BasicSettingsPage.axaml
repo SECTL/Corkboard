@@ -97,6 +97,15 @@
                 </fa:FASettingsExpander.Footer>
             </fa:FASettingsExpander>
 
+            <!-- 平台不支持的能力整张卡隐藏，而不是留一个点不动的开关。 -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Basic_WindowCorners}"
+                                   Description="{x:Static core:Resources.Settings_Basic_WindowCornersDescription}"
+                                   IsVisible="{Binding IsWindowCornersSupported}">
+                <fa:FASettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding Basic.MainWindowRoundedCorners}" />
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
             <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Basic_HoldToDragWindow}"
                                    Description="{x:Static core:Resources.Settings_Basic_HoldToDragWindowDescription}">
                 <fa:FASettingsExpander.Footer>

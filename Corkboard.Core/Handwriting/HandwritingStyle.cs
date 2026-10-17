@@ -18,7 +18,7 @@ public static class HandwritingStyle
     public const double MaxPenWidth = 24;
 
     /// <summary>没设过时的笔宽。</summary>
-    public const double DefaultPenWidth = 10;
+    public const double DefaultPenWidth = 6;
 
     /// <summary>橡皮最小。</summary>
     public const double MinEraserWidth = 8;

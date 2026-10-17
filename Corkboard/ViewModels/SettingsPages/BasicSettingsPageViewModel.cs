@@ -61,6 +61,13 @@ public partial class BasicSettingsPageViewModel(
     public bool IsWindowOpacitySupported =>
         (windowFeatures.SupportedFeatures & WindowFeatures.WindowOpacity) != 0;
 
+    /// <summary>
+    ///     当前平台是否能让主窗口四角变圆。主窗口没有原生边框，系统不会替它画圆角，
+    ///     只能由平台裁窗口区域实现（见 <c>WindowsWindowFeatureService</c>）；没实现的平台整张卡隐藏。
+    /// </summary>
+    public bool IsWindowCornersSupported =>
+        (windowFeatures.SupportedFeatures & WindowFeatures.RoundedCorners) != 0;
+
     #region 不透明度滑杆
 
     /// <summary>

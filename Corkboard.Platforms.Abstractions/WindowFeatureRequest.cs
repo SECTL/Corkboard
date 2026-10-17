@@ -26,7 +26,17 @@ public enum WindowFeatures
     ///     <see cref="WindowFeatureRequest.Opacity" />，<see cref="WindowFeatureRequest.Enabled" />
     ///     为 false 时按 1.0（完全不透明）处理。
     /// </summary>
-    WindowOpacity = 1 << 7
+    WindowOpacity = 1 << 7,
+
+    /// <summary>
+    ///     窗口四角圆角（半径由平台定，与系统窗口默认圆角同一量级）。
+    ///     <para>
+    ///         主窗口是 <c>WindowDecorations.None</c>，系统不会替它画圆角；置底到桌面后它还是桌面子窗口，
+    ///         DWM 也不再给这一块单独合成圆角。所以置底形态下平台要靠裁窗口区域（Windows 是
+    ///         <c>CreateRoundRectRgn</c> + <c>SetWindowRgn</c>）来实现，窗口尺寸变化后要重裁。
+    ///     </para>
+    /// </summary>
+    RoundedCorners = 1 << 8
 }
 
 /// <summary>

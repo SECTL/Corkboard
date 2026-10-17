@@ -11,6 +11,7 @@ using Corkboard.Core.Helpers;
 using Corkboard.Core.Models.SubConfigs.General;
 using Corkboard.Core.Services.Config;
 using Corkboard.Platforms.Abstractions;
+using Corkboard.Services.Desktop;
 using Corkboard.Services.Ui;
 
 namespace Corkboard.Views;
@@ -101,6 +102,9 @@ public partial class MainWindow : FAAppWindow
         _isMainScope = scope != AppConsts.SettingsWindowScope;
         InitializeComponent();
 
+        // 窗口图标（标题栏 / 任务栏 / 切换器）统一用 PNG 母图，不走 ICO。
+        Icon = AppIcon.LoadBitmap();
+
         TitleBar.Height = 48;
         TitleBar.ExtendsContentIntoTitleBar = true;
 
@@ -175,6 +179,7 @@ public partial class MainWindow : FAAppWindow
         ApplyPinToDesktop();
         ApplyClickThrough();
         ApplyWindowOpacity();
+        ApplyWindowCorners();
 
         // 窗口第一次出现的位置就是「上次的位置」的基准：用户从头到尾没挪过窗口时，也要能把这次记下来。
         CaptureNormalPosition();
@@ -199,6 +204,9 @@ public partial class MainWindow : FAAppWindow
 
         if (e.PropertyName is null or nameof(BasicSettingsConfig.MainWindowOpacity))
             ApplyWindowOpacity();
+
+        if (e.PropertyName is null or nameof(BasicSettingsConfig.MainWindowRoundedCorners))
+            ApplyWindowCorners();
     }
 
     /// <summary>壳内弹层开关时重算不透明度：弹层自己也压在同一层窗口 alpha 下，一样会变透明。</summary>
@@ -292,6 +300,9 @@ public partial class MainWindow : FAAppWindow
 
             // 缩放会让「最右上角」跟着挪（右端按内容区宽度算），徽标要重摆。
             SyncLockBadge();
+
+            // 圆角区域是贴在窗口上的像素矩形：尺寸一变就得重裁，否则四角会被拉成弧线。
+            ApplyWindowCorners();
 
             return;
         }
@@ -613,6 +624,9 @@ public partial class MainWindow : FAAppWindow
             return;
 
         ApplyWindowFeature(WindowFeatures.DesktopBottom, handler.Data.Basic.PinToDesktop);
+
+        // 置底/取消置底会换掉窗口的父窗口与样式：圆角区域贴的还是上一次的形态与尺寸，重贴一次。
+        ApplyWindowCorners();
     }
 
     /// <summary>
@@ -789,7 +803,13 @@ public partial class MainWindow : FAAppWindow
             QueueSizeSave(handler.Data.Basic);
     }
 
-    private void OnWindowScalingChanged(object? sender, EventArgs e) => SyncLockBadge();
+    private void OnWindowScalingChanged(object? sender, EventArgs e)
+    {
+        SyncLockBadge();
+
+        // 圆角半径按 DPI 折算成物理像素，换到另一块不同缩放的屏幕上要按新 DPI 重裁。
+        ApplyWindowCorners();
+    }
 
     #endregion
 
@@ -812,6 +832,29 @@ public partial class MainWindow : FAAppWindow
         var opacity = hasModalSurface ? 1.0 : handler.Data.Basic.MainWindowOpacity;
 
         ApplyWindowFeature(WindowFeatures.WindowOpacity, enabled: true, opacity: opacity);
+    }
+
+    /// <summary>
+    ///     主窗口圆角：把配置里的开关转给平台。主窗口没有原生边框，系统不会替它画圆角，
+    ///     置底到桌面后还是桌面子窗口、DWM 也不给这一块单独合成圆角，所以平台侧是靠裁窗口区域实现的
+    ///     （见 <c>WindowsWindowFeatureService.TrySetRoundedCorners</c>）。
+    ///     <para>
+    ///         ⚠️ 区域会一直贴在窗口上，<b>尺寸 / 缩放一变就要重裁</b>：不重裁的话圆角半径还按旧尺寸算，
+    ///         窗口拉大后四角就变成几条弧线。尺寸变化由 <see cref="OnWindowPropertyChanged" /> 重放，
+    ///         DPI 变化由 <see cref="OnWindowScalingChanged" /> 重放。
+    ///     </para>
+    /// </summary>
+    private void ApplyWindowCorners()
+    {
+        if (!_isMainScope || IAppHost.TryGetService<MainConfigHandler>() is not { } handler)
+            return;
+
+        // 平台没实现这项能力时直接跳过：否则每次开窗口都要打一条「不支持」的日志。
+        if (IAppHost.TryGetService<IWindowFeatureService>() is not { } windowFeatures
+            || (windowFeatures.SupportedFeatures & WindowFeatures.RoundedCorners) == 0)
+            return;
+
+        ApplyWindowFeature(WindowFeatures.RoundedCorners, handler.Data.Basic.MainWindowRoundedCorners);
     }
 
     /// <summary>

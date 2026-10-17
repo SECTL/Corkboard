@@ -249,6 +249,12 @@
   <data name="Settings_Basic_ClickThroughDescription" xml:space="preserve">
     <value>The mouse goes right through it, change it from the tray</value>
   </data>
+  <data name="Settings_Basic_WindowCorners" xml:space="preserve">
+    <value>Rounded corners</value>
+  </data>
+  <data name="Settings_Basic_WindowCornersDescription" xml:space="preserve">
+    <value>Round the corners of the main window, also when pinned to the desktop</value>
+  </data>
   <data name="Settings_Basic_CornerAssignButton" xml:space="preserve">
     <value>Corner assign button</value>
   </data>

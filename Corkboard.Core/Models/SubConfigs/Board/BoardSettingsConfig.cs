@@ -241,9 +241,10 @@ public partial class BoardSettingsConfig : ObservableObject
     /// </summary>
     public void NormalizeBoardExtras()
     {
-        // 手写笔宽的旧默认值是 4（细得像针），新默认值是 10。老配置读进来如果还是 4，
-        // 说明没手动调过，这里跟着抬到新默认值；显式选过 4 的也会被抬上来，旧默认太细了。
-        if (Math.Abs(HandwritingPenWidth - 4) < 1e-9)
+        // 手写笔宽的历史默认值换过两次：4（细得像针）→ 10（太粗）→ 现在的 6。
+        // 老配置读进来如果还停在某个历史默认值上，说明用户从没手动调过，这里跟着换成新默认值；
+        // 用户真想要那个值，重新拖一次滑杆就好——比让所有人一打开就是旧默认值强。
+        if (Math.Abs(HandwritingPenWidth - 4) < 1e-9 || Math.Abs(HandwritingPenWidth - 10) < 1e-9)
             HandwritingPenWidth = Handwriting.HandwritingStyle.DefaultPenWidth;
 
         SubjectFontSize = BoardTextStyle.ClampSubjectFontSize(SubjectFontSize);

@@ -223,13 +223,48 @@ public class BoardService : IBoardService
         Persist();
     }
 
-    public void ClearAll()
-    {
-        if (_notes.Count == 0)
-            return;
+    /// <summary>
+    ///     把板子上现在还看得见的作业**全部收起来**：逐条打上「已清理」标记后落盘一次。
+    ///     作业不从集合里拿掉、文件也不删——它只是从当前页面消失，数据和回放历史都还在，
+    ///     之后可以在时空回放里按那一刻的快照还原回来。
+    ///     <para>
+    ///         科目与二级分类这些**定义**保留（用户清的是板子上的内容，不是自己的科目表）。
+    ///     </para>
+    /// </summary>
+    public void ClearAll() => CleanMany(_notes.Where(note => note.CleanedAt is null).Select(note => note.Id),
+        DateTimeOffset.Now);
 
-        _notes.Clear();
+    /// <summary>
+    ///     一次把多条已经收起来的作业**放回板子**（清掉「已清理」标记），只落盘一次、只通知一次。
+    ///     返回这次真正放回来的条数；一条都没命中的不落盘。
+    ///     <para>
+    ///         时空回放的「还原到此刻」走这里：回放只看得到那一刻仍然存在的作业，
+    ///     已经单独删掉的作业不在集合里，还原不回来。
+    ///     </para>
+    /// </summary>
+    public int RestoreMany(IEnumerable<Guid> ids)
+    {
+        ArgumentNullException.ThrowIfNull(ids);
+
+        var targets = new HashSet<Guid>(ids);
+        if (targets.Count == 0)
+            return 0;
+
+        var restored = 0;
+        foreach (var note in _notes)
+        {
+            if (note.CleanedAt is null || !targets.Contains(note.Id))
+                continue;
+
+            note.CleanedAt = null;
+            restored++;
+        }
+
+        if (restored == 0)
+            return 0;
+
         Persist();
+        return restored;
     }
 
     public void SetSubjectOrder(IEnumerable<string> subjects)

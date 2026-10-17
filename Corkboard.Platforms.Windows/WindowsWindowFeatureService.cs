@@ -30,6 +30,12 @@ public sealed class WindowsWindowFeatureService : IWindowFeatureService
     /// <summary>每个标题栏按钮的标准宽度（Windows 11 为 46 设备无关像素）。</summary>
     private const int CaptionButtonFallbackWidth = 3 * 46;
 
+    /// <summary>
+    ///     窗口圆角半径（设备无关像素），与 Windows 11 系统窗口的圆角同一量级。
+    ///     用户只要求「能开圆角」，大小不做成配置项。
+    /// </summary>
+    private const double CornerRadiusDip = 12;
+
     /// <summary><c>DWMWA_CAPTION_BUTTON_BOUNDS</c>：系统按钮矩形，相对窗口左上角的物理像素。</summary>
     private const int DwmwaCaptionButtonBounds = 5;
     private const WindowFeatures StyleFeatures = WindowFeatures.ToolWindow |
@@ -55,6 +61,7 @@ public sealed class WindowsWindowFeatureService : IWindowFeatureService
                                                 WindowFeatures.ClickThrough |
                                                 WindowFeatures.WindowOpacity |
                                                 WindowFeatures.DesktopBottom |
+                                                WindowFeatures.RoundedCorners |
                                                 (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 19041)
                                                     ? WindowFeatures.ExcludeFromCapture
                                                     : WindowFeatures.None);
@@ -122,6 +129,17 @@ public sealed class WindowsWindowFeatureService : IWindowFeatureService
             else
             {
                 failed |= WindowFeatures.DesktopBottom;
+                detail ??= failure;
+            }
+        }
+
+        if ((requested & WindowFeatures.RoundedCorners) != 0)
+        {
+            if (TrySetRoundedCorners(window.Value, (desired & WindowFeatures.RoundedCorners) != 0, out var failure))
+                applied |= WindowFeatures.RoundedCorners;
+            else
+            {
+                failed |= WindowFeatures.RoundedCorners;
                 detail ??= failure;
             }
         }
@@ -196,6 +214,93 @@ public sealed class WindowsWindowFeatureService : IWindowFeatureService
         }
 
         return CaptionButtonFallbackWidth;
+    }
+
+    /// <summary>
+    ///     圆角靠裁窗口区域（<see cref="SetWindowRgn" />）实现，而不是 DWM 的
+    ///     <c>DWMWA_WINDOW_CORNERPREFERENCE</c>：
+    ///     主窗口是 <c>WindowDecorations.None</c>，没有原生边框，DWM 那个偏好对无边框窗口不生效；
+    ///     置底到桌面后它还是桌面子窗口，DWM 更完全不给这一块单独合成圆角。
+    ///     区域裁剪两种形态都有效，代价是边缘没有抗锯齿——半径小、实际看不出锯齿。
+    ///     <para>
+    ///         ⚠️ 区域是<b>物理像素</b>、且会一直贴在窗口上：窗口尺寸或 DPI 一变就得重裁一次
+    ///         （调用方在 <c>MainWindow</c> 的尺寸/缩放变化里重放这条能力），否则圆角会被拉成弧线。
+    ///     </para>
+    /// </summary>
+    private static bool TrySetRoundedCorners(nint window, bool enabled, out string? failure)
+    {
+        try
+        {
+            if (!enabled)
+                return TryClearWindowRegion(window, out failure);
+
+            if (!GetWindowRect(window, out var bounds))
+            {
+                failure = $"GetWindowRect failed with Win32 error {Marshal.GetLastWin32Error()}.";
+                return false;
+            }
+
+            var width = bounds.Right - bounds.Left;
+            var height = bounds.Bottom - bounds.Top;
+            if (width <= 0 || height <= 0)
+            {
+                failure = "The window has no size yet, the rounded corner region is skipped.";
+                return false;
+            }
+
+            // DIP → 物理像素：缩放 150% 时半径要跟着放大，否则圆角看着会比设计的更小。
+            var dpi = GetDpiForWindow(window);
+            var scale = dpi > 0 ? dpi / 96.0 : 1.0;
+            var diameter = Math.Max(1, (int)Math.Round(CornerRadiusDip * scale * 2));
+
+            Marshal.SetLastPInvokeError(0);
+            var region = CreateRoundRectRgn(0, 0, width + 1, height + 1, diameter, diameter);
+            if (region == nint.Zero)
+            {
+                failure = $"CreateRoundRectRgn failed with Win32 error {Marshal.GetLastWin32Error()}.";
+                return false;
+            }
+
+            Marshal.SetLastPInvokeError(0);
+            if (SetWindowRgn(window, region, true) != 0)
+            {
+                // 成功后这块区域归系统所有（SetWindowRgn 不复制它，一直留到窗口销毁），不能再 DeleteObject。
+                failure = null;
+                return true;
+            }
+
+            var error = Marshal.GetLastWin32Error();
+            DeleteObject(region);
+            failure = $"SetWindowRgn failed with Win32 error {error}.";
+            return false;
+        }
+        catch (Exception exception)
+        {
+            failure = exception.Message;
+            return false;
+        }
+    }
+
+    /// <summary>摘掉窗口区域，恢复成原来的方角矩形。</summary>
+    private static bool TryClearWindowRegion(nint window, out string? failure)
+    {
+        try
+        {
+            Marshal.SetLastPInvokeError(0);
+            if (SetWindowRgn(window, nint.Zero, true) != 0)
+            {
+                failure = null;
+                return true;
+            }
+
+            failure = $"SetWindowRgn failed with Win32 error {Marshal.GetLastWin32Error()}.";
+            return false;
+        }
+        catch (Exception exception)
+        {
+            failure = exception.Message;
+            return false;
+        }
     }
 
     private void UpdateTrackedFeatures(nint window, WindowFeatures current, WindowFeatures applied, bool enabled)
@@ -435,4 +540,23 @@ public sealed class WindowsWindowFeatureService : IWindowFeatureService
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool SetWindowDisplayAffinity(nint hWnd, uint affinity);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetWindowRect(nint hWnd, out NativeRect rect);
+
+    /// <summary>
+    ///     <c>SetWindowRgn</c>：给窗口贴一块裁剪区域。返回值 0 表示失败；
+    ///     成功时区域归系统所有，窗口销毁前不要自己释放。
+    /// </summary>
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern int SetWindowRgn(nint hWnd, nint hRgn, [MarshalAs(UnmanagedType.Bool)] bool redraw);
+
+    [DllImport("gdi32.dll", SetLastError = true)]
+    private static extern nint CreateRoundRectRgn(int left, int top, int right, int bottom, int widthEllipse,
+        int heightEllipse);
+
+    [DllImport("gdi32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool DeleteObject(nint handle);
 }

@@ -500,19 +500,23 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
     }
 
     /// <summary>
-    ///     指针的屏幕物理坐标：窗口左上角 + 指针相对窗口的偏移（按缩放折算）。
+    ///     指针的屏幕物理坐标。<c>Window.PointToScreen</c> 走的是原生 <c>ClientToScreen</c>，
+    ///     置底成桌面宿主的子窗口后照样对（子窗口的客户区原点不是屏幕原点，
+    ///     自己拿 <c>Window.Position + 偏移</c> 相加会差一个父窗口客户区原点的位移）。
     ///     用「绝对坐标」而不是相对位移，是因为窗口会跟着指针走，相对位移会自我抵消。
     /// </summary>
     private PixelPoint GetPointerScreenPoint(PointerEventArgs e)
     {
         var topLevel = TopLevel.GetTopLevel(this);
-        var windowPosition = (topLevel as Window)?.Position ?? default;
+        if (topLevel is Window window)
+            return window.PointToScreen(e.GetPosition(window));
+
         var scaling = topLevel?.RenderScaling ?? 1.0;
         var position = e.GetPosition(this);
 
         return new PixelPoint(
-            windowPosition.X + (int)Math.Round(position.X * scaling),
-            windowPosition.Y + (int)Math.Round(position.Y * scaling));
+            (int)Math.Round(position.X * scaling),
+            (int)Math.Round(position.Y * scaling));
     }
 
     #region 窗口边缘缩放
@@ -525,6 +529,14 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
     ///         实测左/右/下各 11 物理像素——而分层半透明窗口不画那一圈，看上去就是一整条黑边。
     ///         去掉原生边框的代价是原生缩放热区也没了，所以由壳自己顶上来（见 <see cref="MainWindow" />）。
     ///     </para>
+    ///     <para>
+    ///         ⚠️ 判定必须用<b>相对窗口</b>的坐标与尺寸（<c>e.GetPosition(window)</c> +
+    ///         <c>window.Bounds.Size</c>），不能相对 <see cref="MainView" />：作业板置底到桌面后
+    ///         MainView 不一定贴着窗口四条边，用 MainView 的 Bounds 判定会让顶部 / 左边永远差一点点，
+    ///         点上去变成拖窗口或干脆没反应（用户反馈「置底后顶部和左边拉不动」）。
+    ///         这里曾经与窗口级兜底 <see cref="OnWindowEdgeGuard" /> 用了两套坐标系，表现为
+    ///         兜底能命中、走到这里又判不中而直接返回。
+    ///     </para>
     /// </summary>
     private bool TryStartWindowResize(PointerPressedEventArgs e)
     {
@@ -534,7 +546,7 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
         if (TopLevel.GetTopLevel(this) is not Window { WindowState: WindowState.Normal } window)
             return false;
 
-        var sides = HitTestResizeSides(e.GetPosition(this), Bounds.Size);
+        var sides = HitTestResizeSides(e.GetPosition(window), window.Bounds.Size);
         if (sides == ResizeSides.None)
             return false;
 
@@ -616,12 +628,8 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
     /// <summary>
     ///     边缘热区判定：贴边 <see cref="ResizeBandThickness" /> 以内算命中，角上两条边都算。
     ///     窗口很小时按最短边的三分之一收窄，免得热区把标题栏整个吃掉。
+    ///     传进来的坐标与尺寸必须是<b>相对窗口</b>的（见 <see cref="TryStartWindowResize" />）。
     /// </summary>
-    private ResizeSides HitTestResizeSides(Point point)
-    {
-        return HitTestResizeSides(point, Bounds.Size);
-    }
-
     private static ResizeSides HitTestResizeSides(Point point, Size size)
     {
         var width = size.Width;
@@ -648,7 +656,12 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
     /// <summary>没有手势在跑时按指针所在边缘换光标，用户才知道这里能拉。</summary>
     private void UpdateResizeCursor(PointerEventArgs e)
     {
-        var cursor = HitTestResizeSides(e.GetPosition(this)) switch
+        // 与 Scaling / 判定同源，统一用窗口坐标（置底后 MainView 不贴窗口四边，见 TryStartWindowResize）。
+        var sides = TopLevel.GetTopLevel(this) is Window window
+            ? HitTestResizeSides(e.GetPosition(window), window.Bounds.Size)
+            : ResizeSides.None;
+
+        var cursor = sides switch
         {
             ResizeSides.West or ResizeSides.East => SizeHorizontalCursor,
             ResizeSides.North or ResizeSides.South => SizeVerticalCursor,

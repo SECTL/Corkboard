@@ -55,6 +55,18 @@ public partial class BasicSettingsConfig : ObservableObject
     [ObservableProperty] private bool _clickThrough;
 
     /// <summary>
+    ///     窗口圆角：开着时主窗口四角按固定半径收圆，默认关（用户要的是「能开」）。
+    ///     <para>
+    ///         主窗口是 <c>WindowDecorations.None</c>，系统不会替它画圆角；置底到桌面后它还是桌面子窗口，
+    ///         DWM 也不再给这块单独合成圆角。所以落地在平台侧：
+    ///         普通窗口走 <c>DWMWA_WINDOW_CORNERPREFERENCE</c>，置底成子窗口走
+    ///         <c>CreateRoundRectRgn</c> + <c>SetWindowRgn</c>（见 <c>WindowsWindowFeatureService</c>）。
+    ///     </para>
+    ///     用户可见文案见 <c>Settings_Basic_WindowCorners</c>。
+    /// </summary>
+    [ObservableProperty] private bool _mainWindowRoundedCorners;
+
+    /// <summary>
     ///     右下角布置作业按钮：在主窗口右下角浮一颗圆角按钮，点一下就能开布置作业表单。
     ///     默认关。用户可见文案见 <c>Settings_Basic_CornerAssignButton</c>。
     /// </summary>

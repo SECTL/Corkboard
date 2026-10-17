@@ -1,4 +1,5 @@
 using Avalonia.Media;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Corkboard.Core.Notes;
 
@@ -19,9 +20,11 @@ namespace Corkboard.ViewModels.MainPages.Board;
 ///     </para>
 ///     <para>
 ///         <see cref="CanModify" /> 在构建时就定下来（回放期间为 <c>false</c>）；
-///         编辑 / 删除两颗按钮**平时不显示**，点一下这条作业才浮出来、再点一下收回去
-///         （<see cref="IsActionsVisible" /> 是这一次的开关，<see cref="ShowActions" /> 才是模板绑的
-///         最终可见性）。按钮画在内容上面的一层里，**不占布局位置**——不能因为放两个按钮
+///         编辑 / 删除两颗按钮**平时不显示**，点一下这条作业才浮出来、再点一下收回去，
+///         点开之后最多停 <see cref="ActionsVisibleDuration" />（30 秒）就自己收回——
+///         一直挂在卡片上很难受（用户要求）。
+///         <see cref="IsActionsVisible" /> 是这一次的开关，<see cref="ShowActions" /> 才是模板绑的
+///         最终可见性。按钮画在内容上面的一层里，**不占布局位置**——不能因为放两个按钮
 ///         把作业内容挤窄（用户明确要求）。
 ///     </para>
 ///     <para>
@@ -112,7 +115,51 @@ public sealed partial class BoardNoteCardItem : ObservableObject
     /// <summary>模板绑的最终可见性：允许改 且（停着指针 或 被点开）。</summary>
     public bool ShowActions => CanModify && (IsActionsVisible || IsPointerOver);
 
-    partial void OnIsActionsVisibleChanged(bool value) => OnPropertyChanged(nameof(ShowActions));
+    /// <summary>
+    ///     点开之后最多停这么久就自己收回去。用户反馈：点一下浮出来的按钮一直挂着很难受，
+    ///     所以点开态是有时限的；悬停出来的那一种不受影响（指针一离开就没了）。
+    /// </summary>
+    private static readonly TimeSpan ActionsVisibleDuration = TimeSpan.FromSeconds(30);
+
+    /// <summary>点开态的倒计时；没点开时为 <c>null</c>。</summary>
+    private DispatcherTimer? _actionsVisibleTimer;
+
+    partial void OnIsActionsVisibleChanged(bool value)
+    {
+        if (value)
+            StartActionsVisibleTimer();
+        else
+            StopActionsVisibleTimer();
+
+        OnPropertyChanged(nameof(ShowActions));
+    }
+
+    private void StartActionsVisibleTimer()
+    {
+        StopActionsVisibleTimer();
+
+        _actionsVisibleTimer = new DispatcherTimer { Interval = ActionsVisibleDuration };
+        _actionsVisibleTimer.Tick += OnActionsVisibleTimerTick;
+        _actionsVisibleTimer.Start();
+    }
+
+    private void StopActionsVisibleTimer()
+    {
+        if (_actionsVisibleTimer is null)
+            return;
+
+        _actionsVisibleTimer.Stop();
+        _actionsVisibleTimer.Tick -= OnActionsVisibleTimerTick;
+        _actionsVisibleTimer = null;
+    }
+
+    private void OnActionsVisibleTimerTick(object? sender, EventArgs e)
+    {
+        StopActionsVisibleTimer();
+
+        // 只收「点开」这一种；指针还停着的时候按钮该继续露着（ShowActions 仍为真）。
+        IsActionsVisible = false;
+    }
 
     partial void OnIsPointerOverChanged(bool value) => OnPropertyChanged(nameof(ShowActions));
 

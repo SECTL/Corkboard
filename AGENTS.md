@@ -9,7 +9,7 @@
 - 约定冲突时，`docs/project_rules.md` 是最终依据。
 -->
 
-**Last Update:** 2026-10-17（**修订**：布置作业表单取消整卡拖动、主窗口四边（含顶部与四角）都能缩放、手写支持鼠标与触控、快捷标签改 `Note.Tags` 胶囊显示、导出图片按自然高度渲染；**作业板新增八项功能**：手写、二级分类、快捷标签、界面字号、收纳浮钮、清空整板+自动备份、导出图片、回放精确到秒；设置侧边栏把「作业板」收成一个可展开分组（六个子页），基础设置不再放任何作业板专属项；**作业板域代码按四类归目录**：`Corkboard.Core/Notes`（便签通用）、`RichText`（富文本通用）、`Board`（板子框架）、`Homework`（作业专属），App 层视图/VM/服务同步分目录；`BoardNote`→`Note`、`BoardCleanup*`→`HomeworkCleanup*`、`BoardAssignmentForm`→`HomeworkAssignmentForm`、Legacy 三件套→`LegacyNote*`；PageInfo、JSON 键、资源键、数据路径与云端文件名全部未变；主界面去掉侧边导航栏，只承载默认主页面；设置界面保留导航栏、顶部「收纳」与返回按钮（返回箭头改由 Core 样式模板画），设置项改为平铺、不再分组；设置页改设置卡；应用字体换成随包分发的 MiSans；作业板：**取消作业名与完成勾选**、**同科目合并成一个区块**、作业内容多行可拖宽拖高（布置作业卡片有最小宽度／最大宽度／最大高度，上限按**看得见的宿主**算：壳内弹层取窗口内容区、只占其 70%，置底形态退回屏幕工作区，超了卡片内部滚动）、**弹层卡片整张都是拖动面**（按住卡片上输入控件以外的地方都能整张拖走，不再有抓手图标；位移夹在宿主里，卡片尺寸一变就重夹，置底形态下改拖独立窗口）、自绘页面级弹层、纯文字便签、三种排布（**排布切换在主页面顶部已取消，改到「设置 → 作业板」下拉框里选**；成排布局里每个区块各自定高，不跟着同行最高的那块变长）、排序与删除确认、名称/科目可配（**作业类型与字段模板已删除**：便签上只有内容、科目、截止日期三样，旧数据里的 `types`/`type_id`/`values` 静默忽略）；**作业内容是所见即所得富文本**（第三方 `AvaloniaRichEditor`，由 Core 的 `RichTextBlock` 承载，落盘成 HTML 片段；旧的 Markdown 渲染管线与相关单测已整体删除，旧作业由 `LegacyNoteContentConverter` 一次性迁移），可以给选中的字/段单独改颜色与字号，默认字号与默认颜色在「设置 → 作业板 → 内容默认样式」里配；**格式工具栏常驻在编辑区正上方**（库自带的 `RichEditorToolbar`，`Target` 在 code-behind 里指向编辑控件，文案由 Core 的 `RichTextLocalization` 跟着界面语言切），加粗/斜体/下划线/删除线、文字颜色、高亮、列表、缩进、行距、对齐、字号/字体/段落样式与插入表格图片都在上面，点一下直接对当前选区生效；**作业内容只有一个框**：就是一个始终可编辑的富文本编辑器，没有「原文态/效果态」切换；**作业数据移出 `data/config/`**，按创建日期归档到 `data/board/<年>/<月>/<日>/notes.json`；**时空回放**放在主界面标题栏右上角，连点两次才进入、超时自动退回，没作业时不显示入口；Debug 构建在壳的左下角加版本水印，照上游 SecRandom-C 的 `DevelopmentBuildAdorner`；外观设置补齐主题模式（跟随系统 / 浅色 / 深色）与主题色（跟随系统 / 自定义）；**基础设置新增主窗口不透明度（滑杆，落到原生窗口）与点击穿透**，主界面标题栏右上角「布置作业」左侧加设置按钮（打开设置窗口）；**基础设置新增「右下角布置作业按钮」**，打开后主窗口右下角浮一颗圆角加号（`MainView` 里叠在内容之上的一颗按钮，弹层遮罩盖得住它，回放/点击穿透时随其它入口一起隐藏，点一下开出布置作业表单）；**设置页「关于」页复刻上游 SecRandom-C**，改应用信息／作者／版本信息三张卡，外部链接经新服务 `IExternalLauncher`（`Corkboard/Services/Desktop/`）交给系统默认程序打开）；**作业板新增「自动清理过期作业」**（设置 → 作业板：开关（默认开启）+ 每天/每周某天某时刻，默认 4:00，用 `TimePicker`），到点只给**过了截止日期**的作业打上 `CleanedAt` 标记、从主页面拿掉（数据原地不动、不搬目录、不删文件，回放里照旧看得到），**判定只看截止日期**（没填截止日期的作业永远不会被自动清掉，到了截止日期当天就算过期）；卡头的「立即清理」不看时刻、点一下当场把到了截止日期的清掉；**作业新增可选「截止日期」**（`Note.DueDate`，布置作业表单里用 Avalonia 自带的 `CalendarDatePicker`），卡片上按「今天 / 明天 / yyyy-MM-dd / 过期 N 天」显示，过期标红）；**设置新增「账号」页**（登录 SECTL 组织账号：OAuth 2.0 PKCE 跳系统浏览器 + loopback 回调，头像缺失时显示昵称首字（`Corkboard.Core.Helpers.AvatarInitialResolver`），凭据失效提示「重新登录」，退出先弹确认框再清本机凭据，页面订阅 `ISectlAuthService.StateChanged` 并在 `Unloaded` 里 `Detach`）；**设置新增「云同步」页**（把作业板与设置各备份成**一个文件**传到思拓创联云存储：`corkboard-board.zip.b64`（压缩包的 base64 文本，内带 `manifest.json`）与 `corkboard-settings.json`；刻意**只做备份 + 恢复、不做双向合并**——作业板改动（布置 / 修改 / 删除作业）后 5s 防抖自动上传、设置改动后 45s，两次改动挨在一起时按更早的那个截止时间算；**本机自上次同步以来没有改动时才自动拉取**，本机有改动就只提示「云端有更新的备份」由用户点恢复；默认关闭、登录后才能开；窗口大小位置与开机自启这类本机专属项按前缀排除（`CloudSyncExclusions`），设置改动是否算「本机有改动」看内容摘要（`LastSettingsHash`）而不是文件时间，否则拖一下窗口就会永远不敢自动拉；页面上显示云端空间剩余与本平台占用，界面文案里的组织名统一用「思拓创联」；云上传的 multipart 字段名要带引号（.NET 的 `ContentDispositionHeaderValue` 默认把 `name`/`filename` 写成不带引号的形式、还会多带 `filename*=utf-8''`，服务端会回 `400 invalid_request / No file data received`）；**云存储会把上传的字节按 UTF-8 解码一遍**（非法字节变 U+FFFD：实测 256 字节的二进制传上去服务端存成 512 字节、下载回来 sha256 不一致），所以作业板压缩包先 base64 成纯 ASCII 再传（`CloudBackupPayload`，云端名 `corkboard-board.zip.b64`），恢复时解回字节再解压；纯文本的设置文件不受影响；云端同名旧件一次全删、恢复时按 `updated_at` 取最新的一份（曾因留下同名旧件而取到旧数据）；设置窗口最小尺寸抬到 1000x720（`MainWindow.SettingsWindowMinWidth/MinHeight`，屏幕工作区比这还小时按屏幕收，否则设置卡会被挤成一条）；**作业板备份已改成分片上传**（`CloudBackupPackage`：压缩包按 3 MiB 切片、每片单独传，最后传一份 `corkboard-board-<备份标识>-manifest.json`，清单里记着每片的序号/长度/SHA-256 与整包长度/摘要；恢复只认「清单 + 清单里声明的全部分片」这一种完整形态，缺片就提示重新备份，拼完还要再对一次整包 SHA-256；每次上传成功后按清单名删掉上一代分片与早年的整包文件，中途断掉的上传只留下没人认领的分片；上传前拿用量接口的剩余空间做保底 `EnsureQuotaForUpload`，不够就直接回「云端空间不够了」；**这条链路上真正卡请求体大小的是 Appwrite `functions/executions` 的 `body` 参数上限 10 MiB，写死在 app 代码里（`/usr/src/code/src/Appwrite/Platform/Modules/Functions/Http/Executions/Create.php:85` 的 `new Text(10485760, 0)`），环境变量改不动；api-proxy 的 `MAX_BODY_BYTES` 已从 5 MiB 对齐到 10 MiB**（服务器 `/opt/api-proxy/server.js:13`，超了回干净的 413 `payload_too_large`，客户端自己按 6 MiB 预算、3 MiB 一片留余量）；**云同步页多了「清空云端」**（在「备份与恢复」卡片里，`FAContentDialog` 确认后走 `ICloudSyncService.ClearCloudAsync`／`CloudSyncService.ClearCloudAsync`：只删自己这一套文件名（`CloudBackupFiles.IsManagedFile`／`AllManagedFiles`——平台上别人的文件不碰，中断留下的孤儿分片一起清），删完清簿记（`LastSyncedAt`／`LastSettingsHash` 归零、远端快照作废）并重查用量，所以界面回到「还没同步过」、占用归零、按钮自己变灰；删之前先掐掉排着的自动上传，否则几秒后那份备份又自己传回去了；个别文件删不掉会记警告并报错让用户再点一次，不假装全清干净了）；**云端被别的设备改动或清空，本机自己会发现**（云同步页每 60 秒后台查一遍用量与文件清单：后台查询不进「同步中」态、失败只记日志不写错误提示，否则每分钟闪一次禁用态和一条红字；发现云端版本比上次同步新、且本机自上次同步没有改动时按 `CloudSyncPolicy.ShouldAutoPull` 自动拉取，**同一个云端版本只试一次**（`_autoPulledRemote`）——原先的 `_autoPullChecked` 是「一次进程只自动拉一次」，那样轮询永远不会拉；发现本机记着同步成功过、云端却一份备份都不剩（`CloudSyncPolicy.WasClearedRemotely`）就把本机簿记一起清掉，并在页面上提示「云端的备份已经没了，点「立即备份」重新传一份」）；**「上次同步」时间由服务现读配置**（`ICloudSyncService.LastSyncedAt`）：从云端恢复设置会把配置对象整个换掉（`ConfigHandlerBase.Reload`），页面 ViewModel 手里那份旧引用停在恢复前的时间上，会出现「云端备份已经没了」和「上次同步 12:15」同时挂着）；**两边都改过时按并集融合**（`Corkboard.Core/Homework/HomeworkNoteMerge.cs`：同 `Note.Id` 取 `UpdatedAt` 更新的那份整条替换；**Id 不同、但「科目 + 截止日期 + 内容 + 创建那天」都一样**的也当成同一条、只留更新的那份——作业本来就没有名字，两边各建过一次同一份作业时不能留成两张一模一样的卡片，条数记在 `RemovedDuplicates` 里；同一侧自己带重复 Id（历史数据里一个 Id 落在两个日期文件里）也只留更新的一份；合完**就地写回**本机日期文件（`NoteStore.SaveAll` + `CopyBoardFiles(staging, BoardDirectory, overwrite: false)`），**不能整体换目录**——那样会把不在并集管辖范围里的 `board.json`（科目表与手动排序）一起抹掉，`Reload` 随即退回默认科目；最后把并集传回云端收敛，日志带「云端补进来／更新／合并重复」条数）；**「只同步最近多久的作业」**（`cloud.sync_days`，`0` = 全部，下拉预设 全部／30／7／1 天，配置里若是别的天数就按大小插进列表、免得界面显示的和服务实际用的不一致；`CloudSyncPolicy.UploadCutoff`）：上传时 `PrepareBoardUploadDirectory` 只把窗口内（按 `CreatedAt`）的作业写进临时目录再打包，窗口外的老作业只留本机、不传也不删；恢复时 `RestoreBoardWithinWindow` 先把窗口外的本机作业和云端那份并集再写回，**不能整体替换**，否则窗口外的历史会被抹掉））
+**Last Update:** 2026-10-17（**修订**：基础设置新增「窗口圆角」开关（Windows 用 `SetWindowRgn` 裁区域、置底也生效）、主窗口四边缩放的命中判定统一改成窗口坐标（修「置底到桌面后四周拉不动」）、作业卡片点出来的编辑/删除按钮最多停 30 秒自动收回、布置作业表单取消整卡拖动、主窗口四边（含顶部与四角）都能缩放、手写支持鼠标与触控、快捷标签改 `Note.Tags` 胶囊显示、导出图片按自然高度渲染；**作业板新增八项功能**：手写、二级分类、快捷标签、界面字号、收纳浮钮、清空整板+自动备份、导出图片、回放精确到秒；设置侧边栏把「作业板」收成一个可展开分组（六个子页），基础设置不再放任何作业板专属项；**作业板域代码按四类归目录**：`Corkboard.Core/Notes`（便签通用）、`RichText`（富文本通用）、`Board`（板子框架）、`Homework`（作业专属），App 层视图/VM/服务同步分目录；`BoardNote`→`Note`、`BoardCleanup*`→`HomeworkCleanup*`、`BoardAssignmentForm`→`HomeworkAssignmentForm`、Legacy 三件套→`LegacyNote*`；PageInfo、JSON 键、资源键、数据路径与云端文件名全部未变；主界面去掉侧边导航栏，只承载默认主页面；设置界面保留导航栏、顶部「收纳」与返回按钮（返回箭头改由 Core 样式模板画），设置项改为平铺、不再分组；设置页改设置卡；应用字体换成随包分发的 MiSans；作业板：**取消作业名与完成勾选**、**同科目合并成一个区块**、作业内容多行可拖宽拖高（布置作业卡片有最小宽度／最大宽度／最大高度，上限按**看得见的宿主**算：壳内弹层取窗口内容区、只占其 70%，置底形态退回屏幕工作区，超了卡片内部滚动）、**弹层卡片整张都是拖动面**（按住卡片上输入控件以外的地方都能整张拖走，不再有抓手图标；位移夹在宿主里，卡片尺寸一变就重夹，置底形态下改拖独立窗口）、自绘页面级弹层、纯文字便签、三种排布（**排布切换在主页面顶部已取消，改到「设置 → 作业板」下拉框里选**；成排布局里每个区块各自定高，不跟着同行最高的那块变长）、排序与删除确认、名称/科目可配（**作业类型与字段模板已删除**：便签上只有内容、科目、截止日期三样，旧数据里的 `types`/`type_id`/`values` 静默忽略）；**作业内容是所见即所得富文本**（第三方 `AvaloniaRichEditor`，由 Core 的 `RichTextBlock` 承载，落盘成 HTML 片段；旧的 Markdown 渲染管线与相关单测已整体删除，旧作业由 `LegacyNoteContentConverter` 一次性迁移），可以给选中的字/段单独改颜色与字号，默认字号与默认颜色在「设置 → 作业板 → 内容默认样式」里配；**格式工具栏常驻在编辑区正上方**（库自带的 `RichEditorToolbar`，`Target` 在 code-behind 里指向编辑控件，文案由 Core 的 `RichTextLocalization` 跟着界面语言切），加粗/斜体/下划线/删除线、文字颜色、高亮、列表、缩进、行距、对齐、字号/字体/段落样式与插入表格图片都在上面，点一下直接对当前选区生效；**作业内容只有一个框**：就是一个始终可编辑的富文本编辑器，没有「原文态/效果态」切换；**作业数据移出 `data/config/`**，按创建日期归档到 `data/board/<年>/<月>/<日>/notes.json`；**时空回放**放在主界面标题栏右上角，连点两次才进入、超时自动退回，没作业时不显示入口；Debug 构建在壳的左下角加版本水印，照上游 SecRandom-C 的 `DevelopmentBuildAdorner`；外观设置补齐主题模式（跟随系统 / 浅色 / 深色）与主题色（跟随系统 / 自定义）；**基础设置新增主窗口不透明度（滑杆，落到原生窗口）与点击穿透**，主界面标题栏右上角「布置作业」左侧加设置按钮（打开设置窗口）；**基础设置新增「右下角布置作业按钮」**，打开后主窗口右下角浮一颗圆角加号（`MainView` 里叠在内容之上的一颗按钮，弹层遮罩盖得住它，回放/点击穿透时随其它入口一起隐藏，点一下开出布置作业表单）；**设置页「关于」页复刻上游 SecRandom-C**，改应用信息／作者／版本信息三张卡，外部链接经新服务 `IExternalLauncher`（`Corkboard/Services/Desktop/`）交给系统默认程序打开）；**作业板新增「自动清理过期作业」**（设置 → 作业板：开关（默认开启）+ 每天/每周某天某时刻，默认 4:00，用 `TimePicker`），到点只给**过了截止日期**的作业打上 `CleanedAt` 标记、从主页面拿掉（数据原地不动、不搬目录、不删文件，回放里照旧看得到），**判定只看截止日期**（没填截止日期的作业永远不会被自动清掉，到了截止日期当天就算过期）；卡头的「立即清理」不看时刻、点一下当场把到了截止日期的清掉；**作业新增可选「截止日期」**（`Note.DueDate`，布置作业表单里用 Avalonia 自带的 `CalendarDatePicker`），卡片上按「今天 / 明天 / yyyy-MM-dd / 过期 N 天」显示，过期标红）；**设置新增「账号」页**（登录 SECTL 组织账号：OAuth 2.0 PKCE 跳系统浏览器 + loopback 回调，头像缺失时显示昵称首字（`Corkboard.Core.Helpers.AvatarInitialResolver`），凭据失效提示「重新登录」，退出先弹确认框再清本机凭据，页面订阅 `ISectlAuthService.StateChanged` 并在 `Unloaded` 里 `Detach`）；**设置新增「云同步」页**（把作业板与设置各备份成**一个文件**传到思拓创联云存储：`corkboard-board.zip.b64`（压缩包的 base64 文本，内带 `manifest.json`）与 `corkboard-settings.json`；刻意**只做备份 + 恢复、不做双向合并**——作业板改动（布置 / 修改 / 删除作业）后 5s 防抖自动上传、设置改动后 45s，两次改动挨在一起时按更早的那个截止时间算；**本机自上次同步以来没有改动时才自动拉取**，本机有改动就只提示「云端有更新的备份」由用户点恢复；默认关闭、登录后才能开；窗口大小位置与开机自启这类本机专属项按前缀排除（`CloudSyncExclusions`），设置改动是否算「本机有改动」看内容摘要（`LastSettingsHash`）而不是文件时间，否则拖一下窗口就会永远不敢自动拉；页面上显示云端空间剩余与本平台占用，界面文案里的组织名统一用「思拓创联」；云上传的 multipart 字段名要带引号（.NET 的 `ContentDispositionHeaderValue` 默认把 `name`/`filename` 写成不带引号的形式、还会多带 `filename*=utf-8''`，服务端会回 `400 invalid_request / No file data received`）；**云存储会把上传的字节按 UTF-8 解码一遍**（非法字节变 U+FFFD：实测 256 字节的二进制传上去服务端存成 512 字节、下载回来 sha256 不一致），所以作业板压缩包先 base64 成纯 ASCII 再传（`CloudBackupPayload`，云端名 `corkboard-board.zip.b64`），恢复时解回字节再解压；纯文本的设置文件不受影响；云端同名旧件一次全删、恢复时按 `updated_at` 取最新的一份（曾因留下同名旧件而取到旧数据）；设置窗口最小尺寸抬到 1000x720（`MainWindow.SettingsWindowMinWidth/MinHeight`，屏幕工作区比这还小时按屏幕收，否则设置卡会被挤成一条）；**作业板备份已改成分片上传**（`CloudBackupPackage`：压缩包按 3 MiB 切片、每片单独传，最后传一份 `corkboard-board-<备份标识>-manifest.json`，清单里记着每片的序号/长度/SHA-256 与整包长度/摘要；恢复只认「清单 + 清单里声明的全部分片」这一种完整形态，缺片就提示重新备份，拼完还要再对一次整包 SHA-256；每次上传成功后按清单名删掉上一代分片与早年的整包文件，中途断掉的上传只留下没人认领的分片；上传前拿用量接口的剩余空间做保底 `EnsureQuotaForUpload`，不够就直接回「云端空间不够了」；**这条链路上真正卡请求体大小的是 Appwrite `functions/executions` 的 `body` 参数上限 10 MiB，写死在 app 代码里（`/usr/src/code/src/Appwrite/Platform/Modules/Functions/Http/Executions/Create.php:85` 的 `new Text(10485760, 0)`），环境变量改不动；api-proxy 的 `MAX_BODY_BYTES` 已从 5 MiB 对齐到 10 MiB**（服务器 `/opt/api-proxy/server.js:13`，超了回干净的 413 `payload_too_large`，客户端自己按 6 MiB 预算、3 MiB 一片留余量）；**云同步页多了「清空云端」**（在「备份与恢复」卡片里，`FAContentDialog` 确认后走 `ICloudSyncService.ClearCloudAsync`／`CloudSyncService.ClearCloudAsync`：只删自己这一套文件名（`CloudBackupFiles.IsManagedFile`／`AllManagedFiles`——平台上别人的文件不碰，中断留下的孤儿分片一起清），删完清簿记（`LastSyncedAt`／`LastSettingsHash` 归零、远端快照作废）并重查用量，所以界面回到「还没同步过」、占用归零、按钮自己变灰；删之前先掐掉排着的自动上传，否则几秒后那份备份又自己传回去了；个别文件删不掉会记警告并报错让用户再点一次，不假装全清干净了）；**云端被别的设备改动或清空，本机自己会发现**（云同步页每 60 秒后台查一遍用量与文件清单：后台查询不进「同步中」态、失败只记日志不写错误提示，否则每分钟闪一次禁用态和一条红字；发现云端版本比上次同步新、且本机自上次同步没有改动时按 `CloudSyncPolicy.ShouldAutoPull` 自动拉取，**同一个云端版本只试一次**（`_autoPulledRemote`）——原先的 `_autoPullChecked` 是「一次进程只自动拉一次」，那样轮询永远不会拉；发现本机记着同步成功过、云端却一份备份都不剩（`CloudSyncPolicy.WasClearedRemotely`）就把本机簿记一起清掉，并在页面上提示「云端的备份已经没了，点「立即备份」重新传一份」）；**「上次同步」时间由服务现读配置**（`ICloudSyncService.LastSyncedAt`）：从云端恢复设置会把配置对象整个换掉（`ConfigHandlerBase.Reload`），页面 ViewModel 手里那份旧引用停在恢复前的时间上，会出现「云端备份已经没了」和「上次同步 12:15」同时挂着）；**两边都改过时按并集融合**（`Corkboard.Core/Homework/HomeworkNoteMerge.cs`：同 `Note.Id` 取 `UpdatedAt` 更新的那份整条替换；**Id 不同、但「科目 + 截止日期 + 内容 + 创建那天」都一样**的也当成同一条、只留更新的那份——作业本来就没有名字，两边各建过一次同一份作业时不能留成两张一模一样的卡片，条数记在 `RemovedDuplicates` 里；同一侧自己带重复 Id（历史数据里一个 Id 落在两个日期文件里）也只留更新的一份；合完**就地写回**本机日期文件（`NoteStore.SaveAll` + `CopyBoardFiles(staging, BoardDirectory, overwrite: false)`），**不能整体换目录**——那样会把不在并集管辖范围里的 `board.json`（科目表与手动排序）一起抹掉，`Reload` 随即退回默认科目；最后把并集传回云端收敛，日志带「云端补进来／更新／合并重复」条数）；**「只同步最近多久的作业」**（`cloud.sync_days`，`0` = 全部，下拉预设 全部／30／7／1 天，配置里若是别的天数就按大小插进列表、免得界面显示的和服务实际用的不一致；`CloudSyncPolicy.UploadCutoff`）：上传时 `PrepareBoardUploadDirectory` 只把窗口内（按 `CreatedAt`）的作业写进临时目录再打包，窗口外的老作业只留本机、不传也不删；恢复时 `RestoreBoardWithinWindow` 先把窗口外的本机作业和云端那份并集再写回，**不能整体替换**，否则窗口外的历史会被抹掉））
 
 ## 这是什么
 
@@ -275,12 +275,23 @@ public partial class BoardSettingsConfig : ObservableObject
   并进 `MainView.IsInteractiveSource` 的排除表（`Button` / `ToggleButton` / `TextBox` / `ComboBox` / `Slider`），
   漏一个那个控件就点不动。主窗口是 `WindowDecorations.None`，没有系统按钮，所以右侧可以放东西
   （设置窗口相反，见下）。
-- **主窗口不透明度与点击穿透都是窗口能力**（「设置 → 基础设置」里的两张卡）：
-  `BasicSettingsConfig.MainWindowOpacity`（0–1 的标量）与 `ClickThrough`（开关）由 `MainWindow`
-  在 `Opened` 与应用中把请求转给 `IWindowFeatureService`（不透明度走
-  `WindowFeatures.WindowOpacity` + `WindowFeatureRequest.Opacity` 这个标量参数）。
+- **主窗口不透明度、点击穿透与圆角都是窗口能力**（「设置 → 基础设置」里的三张卡）：
+  `BasicSettingsConfig.MainWindowOpacity`（0–1 的标量）、`ClickThrough` 与
+  `MainWindowRoundedCorners`（开关）由 `MainWindow` 在 `Opened` 与应用中把请求转给
+  `IWindowFeatureService`（不透明度走 `WindowFeatures.WindowOpacity` +
+  `WindowFeatureRequest.Opacity` 这个标量参数；圆角走 `WindowFeatures.RoundedCorners`，
+  设置页靠 `BasicSettingsPageViewModel.IsWindowCornersSupported` 决定显隐）。
   - 平台不支持的能力**整张卡隐藏**（`SupportedFeatures` 里没有对应位）：Linux 两样都没有，
-    macOS 与 Windows 两样都有。
+    macOS 与 Windows 两样都有；圆角只有 Windows 报支持（macOS 窗口自带圆角，Linux 不报）。
+  - ⚠️ **圆角是裁窗口区域，不是 DWM 合成**：无边框窗口换成 `BorderOnly` 会带出黑边，
+    置底后更是桌面的子窗口、DWM 不参与合成，所以只有 `CreateRoundRectRgn` + `SetWindowRgn`
+    一条路（`WindowsWindowFeatureService.TrySetRoundedCorners`，半径 12 DIP 按 `GetDpiForWindow`
+    换算，`enabled == false` 走 `SetWindowRgn(hwnd, 0, true)`）。
+    `SetWindowRgn` 成功后那块区域**归系统所有**，不要再 `DeleteObject`，只有调用失败才回收。
+    ⚠️ 尺寸、DPI、置底挂载每变一次都要重贴区域，否则圆角按旧尺寸裁、右下角会切到内容或露直角：
+    `MainWindow.ApplyWindowCorners()` 在 `OnOpened`、`OnBasicSettingsChanged`、
+    `ApplyPinToDesktop` 末尾、`OnWindowPropertyChanged` 的 `BoundsProperty` 分支、
+    `OnWindowScalingChanged` 里都要调。
   - Windows 上两样共用 `WS_EX_LAYERED`：**只设样式不调 `SetLayeredWindowAttributes`，
     窗口会整体不显示**，所以 `TrySetExtendedStyles` 与 `TrySetWindowOpacity` 都要按同一份
     alpha 补一次分层属性；不透明度下限在平台侧兜底（设置页滑杆下限更高，20%）。
@@ -414,7 +425,7 @@ public partial class BoardSettingsConfig : ObservableObject
   卡片上由 `HomeworkDueDateFormatter.Describe` 说成「今天 / 明天 / yyyy-MM-dd / 过期 N 天」。
 - 配置文件一律经配置服务（原子写入 + 统一 JSON 选项），**不要自己 `File.WriteAllText` 写配置**。
 - **读盘后统一收拾子配置**：`MainConfigModel.NormalizeLoaded()` 由 `FileConfigService.LoadConfig` 在反序列化后调用，
-  里面夹字号/宽度/收纳位置、并把**手写笔宽旧的默认值 4 迁移成 10**（`BoardSettingsConfig.NormalizeBoardExtras`）。
+  里面夹字号/宽度/收纳位置、并把**手写笔宽旧的默认值 4 与 10 迁移成 6**（`BoardSettingsConfig.NormalizeBoardExtras`）。
   ⚠️ 这类迁移**必须挂在这里**，不要塞进设置页——作业板在设置页打开前就会按脏值渲染、手写表单也会继续用旧默认笔宽
   （曾经 `NormalizeBoardExtras`/`NormalizeCleanup` 没有任何调用点，等于死代码）。
 - **作业内容是所见即所得富文本（HTML 片段）**：`Note.Content` 存的就是第三方富文本控件
@@ -479,7 +490,8 @@ public partial class BoardSettingsConfig : ObservableObject
   `Ctrl + 滚轮` 以指针为锚点缩放（0.5–4 倍），
   `Render` 里 `context.PushTransform(Matrix.CreateScale * Matrix.CreateTranslation)`、输入走 `ToDocument` 反变换，
   `ClampViewOffset` 把视口夹在参考区域附近；视口只是控件状态，**不落盘**（打开时 1:1）。
-  **默认笔宽是 10**（`HandwritingStyle.DefaultPenWidth`，旧默认 4 由 `NormalizeBoardExtras` 迁移）。
+  **默认笔宽是 6**（`HandwritingStyle.DefaultPenWidth`；历史默认值 4 与 10 由 `NormalizeBoardExtras` 一律迁到 6，
+  用户手动选过这两个值的也会被换成 6——那是「没调过」的旧默认值）。
   ⚠️ **编辑手写作业必须落在「手写」页签**：`HomeworkAssignmentFormViewModel.LoadForEdit` 不只看
   `ContentKind == Handwriting`，也接受「笔迹非空且正文为空」的历史数据（kind 被旧版本洗成 Html 的），
   载入末尾再 `NotifyModeProperties()` 一次；`Confirm` 里文本态但正文为空、笔迹还在时按手写保存。
@@ -540,6 +552,9 @@ public partial class BoardSettingsConfig : ObservableObject
   `BoardNoteCardItem` 因此从 `record` 改成了 `sealed partial class : ObservableObject`（要能通知显隐）；
   点编辑 / 删除时先把按钮收回（`IsActionsVisible = false`）。回放与点击穿透时 `CanModify=false`，
   按钮永远不冒出来。
+  ⚠️ **点出来的按钮最多停 30 秒**（`ActionsVisibleDuration`，`DispatcherTimer` 到点把
+  `IsActionsVisible` 收回）：用户嫌「一直显示很难受」。悬停态不走这个计时器，
+  鼠标离开就收；计时器在 `OnIsActionsVisibleChanged` 里起停，别让它自己跑着不停。
 - **科目区块是一张按主题配色的卡片**（`BoardPage.axaml` 的 `Border.note`）：底色 / 描边走页面资源里的
   `ResourceDictionary.ThemeDictionaries`（`BoardNoteCardBackground` / `BoardNoteCardBorder`，浅色白卡、
   深色比页面亮一档的深灰卡），**不要**退回 `Transparent` 底 + Fluent 半透明卡刷——浅色页面是浅灰 Mica、
@@ -581,10 +596,14 @@ public partial class BoardSettingsConfig : ObservableObject
   按创建时刻累计，下拉显示 `yyyy-MM-dd HH:mm:ss`。
 - **主窗口缩放**：四边四角都能拉（`MainView` 的 `ResizeBandThickness = 8`）；顶部与左上角压在 `FAAppWindow`
   自己的标题栏带上，命中缩放热区后**必须 `e.Handled = true`**，否则库的标题栏处理器会把这一下当成拖窗口接走。
-  ⚠️ **作业板置底到桌面时顶部/左边拉不动**：窗口成了桌面子窗口后 `MainView` 不一定贴着窗口四条边，
-  用 `MainView.Bounds` 判定会差一点。所以 `SetDragHost` 里还给窗口挂了一道隧道兜底
-  `OnWindowEdgeGuard`（`handledEventsToo: true`，按 `HitTestResizeSides(e.GetPosition(window), window.Bounds.Size)` 判定），
-  命中就先开始缩放；`TryStartWindowResize` 里要挡掉 `_isResizingWindow`，`OnPointerPressedForDrag` 开头要挡掉 `e.Handled`。
+  ⚠️ **缩放命中判定一律用窗口坐标**：`HitTestResizeSides(e.GetPosition(window), window.Bounds.Size)`。
+  用 `MainView` 自己的坐标 + `Bounds.Size` 会在置底到桌面时差一截（窗口成了桌面子窗口后 `MainView`
+  不贴窗口四条边），表现正是「置底后顶部/左边拉不动」——已经踩过一次。所以窗口级兜底
+  `OnWindowEdgeGuard`（`SetDragHost` 里 `handledEventsToo: true` 挂的隧道兜底）、`TryStartWindowResize`、
+  `UpdateResizeCursor` 三处**必须同一套坐标**：只改兜底那一处，就变成「兜底能命中、进来后 `TryStartWindowResize`
+  又判不中」而直接返回 false。屏幕绝对位移走 `window.PointToScreen(e.GetPosition(window))`，
+  不要拿 `Window.Position` 加偏移乘 `RenderScaling` 自己拼（子窗口坐标不等于屏幕坐标）。
+  `TryStartWindowResize` 里要挡掉 `_isResizingWindow`，`OnPointerPressedForDrag` 开头要挡掉 `e.Handled`。
 
 ## 字体
 
@@ -663,6 +682,8 @@ dotnet run --project Corkboard.Desktop\Corkboard.Desktop.csproj
   看上去就是一整条黑边（用户反馈「窗口左下右都有黑边」）。去掉原生边框就没有原生缩放热区了，
   所以贴边 8 DIP 以内由壳接管按下与移动，光标跟着边缘换；位置补偿与拖动一样按**屏幕绝对位移**算
   （West/North 缩放会同时挪窗口，相对位移会自我抵消），尺寸受窗口 `MinWidth` / `MinHeight` 约束。
+  命中判定只看**窗口**坐标（`e.GetPosition(window)` + `window.Bounds.Size`），别再用 `MainView` 的
+  `Bounds.Size` 量一遍——原因见上一条「缩放命中判定一律用窗口坐标」。
 - **作业板区块的拖动排序是「按住即拖」，不是长按**（`BoardPage`）：科目标题行整条是拖动面，
   按下就 `Capture(this)`，挪动超过阈值开始换位置、松手落盘。捕获挂**页面**上而不是手柄上——区块一换位置
   ItemsControl 可能把容器连同手柄一起重建，挂在那上面会收不到 `PointerReleased`，捕获留在页面上就是
@@ -675,6 +696,11 @@ dotnet run --project Corkboard.Desktop\Corkboard.Desktop.csproj
   拿不到宿主时退化为 Z 序最底。
 - **托盘图标是常驻入口**（`Corkboard/Services/Desktop/TaskBarIconService.cs`）：显示主窗口 / 打开设置 /
   重启 / 退出。菜单文案复用 Core 的 `Menu_*` 键；平台能力看 `PlatformCapabilities.SupportsTrayIcon`。
+- **窗口图标与托盘图标一律用 PNG**（`Corkboard/Services/Desktop/AppIcon.cs`，母图
+  `Corkboard/Assets/Icons/Corkboard.png`）：`MainWindow` 构造里 `Icon = AppIcon.LoadBitmap()`、托盘用
+  `AppIcon.LoadWindowIcon()`——**不要再挂 ICO**。⚠️ `FAAppWindow.Icon` 的声明类型是 `IImage`（它把基类
+  `Window.Icon` 藏起来了），所以窗口那边给 `Bitmap`，只有托盘（`TrayIcon.Icon` 是 `WindowIcon`）才包一层。
+  exe 文件图标（`Corkboard.Desktop.csproj` 的 `ApplicationIcon`）仍是 ICO——PE 资源只认 ICO，别跟着改。
 - **开关右侧不显示 On/Off 文案**：`StylesBase.axaml` 已全局清空 `ToggleSwitch` 的
   `OnContent`/`OffContent`，页面里不要再逐个开关写这两个属性。
 - 版本元数据由 git 提供：`GitInfo.props` 在构建期跑 git，生成器把 tag/分支/提交号写进

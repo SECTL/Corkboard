@@ -14,8 +14,8 @@ namespace Corkboard.Services.Desktop;
 /// </summary>
 /// <remarks>
 ///     <para>
-///         图标用随包分发的多尺寸 <c>Assets/Icons/Corkboard.ico</c>，与窗口图标、exe 图标同一份：
-///         平台图标装载器会自己挑合适的那一档，不用手画位图、也不会在缩放比变化时糊掉。
+///         图标与窗口图标是同一份 PNG 母图（<see cref="AppIcon" />），平台按托盘需要的尺寸自己缩放；
+///         不再用 ICO——那份多尺寸容器只在 exe 文件图标里还需要。
 ///     </para>
 ///     <para>
 ///         托盘只是入口之一：平台不具备托盘能力或创建失败时只写日志，不阻断启动、不影响其它入口。
@@ -23,9 +23,6 @@ namespace Corkboard.Services.Desktop;
 /// </remarks>
 public sealed class TaskBarIconService : IDisposable
 {
-    /// <summary>图标资源：Corkboard 程序集里的多尺寸 ICO。</summary>
-    private static readonly Uri IconAsset = new("avares://Corkboard/Assets/Icons/Corkboard.ico");
-
     private readonly PlatformCapabilities _capabilities;
     private readonly ILogger<TaskBarIconService> _logger;
     private TrayIcon? _trayIcon;
@@ -133,12 +130,8 @@ public sealed class TaskBarIconService : IDisposable
     }
 
     /// <summary>
-    ///     读随包分发的多尺寸 ICO 交给平台图标装载器：Windows 直接拿整份 ICO 去建原生图标
-    ///     （托盘/任务栏各取各自需要的尺寸），其它平台由平台层自行解码。
+    ///     托盘图标与窗口图标共用一份 PNG 母图（<see cref="AppIcon" />），
+    ///     平台按托盘需要的尺寸自己缩放。
     /// </summary>
-    private static WindowIcon CreateTrayIcon()
-    {
-        using var stream = AssetLoader.Open(IconAsset);
-        return new WindowIcon(stream);
-    }
+    private static WindowIcon CreateTrayIcon() => AppIcon.LoadWindowIcon();
 }

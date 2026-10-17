@@ -254,6 +254,12 @@
   <data name="Settings_Basic_ClickThroughDescription" xml:space="preserve">
     <value>鼠标点不到窗口，改设置要从托盘菜单进</value>
   </data>
+  <data name="Settings_Basic_WindowCorners" xml:space="preserve">
+    <value>窗口圆角</value>
+  </data>
+  <data name="Settings_Basic_WindowCornersDescription" xml:space="preserve">
+    <value>把主窗口四角收圆，置底到桌面时也生效</value>
+  </data>
   <data name="Settings_Basic_CornerAssignButton" xml:space="preserve">
     <value>右下角布置作业按钮</value>
   </data>
