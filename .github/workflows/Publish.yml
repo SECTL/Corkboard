@@ -201,12 +201,21 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw "Launcher publish failed with exit code $LASTEXITCODE." }
           }
           function Sign-File([string]$path, [string]$signTool, [string]$certificatePath) {
-            $arguments = @('sign', '/fd', 'SHA256', '/f', $certificatePath, '/p', $env:WINDOWS_CODESIGN_PFX_PASSWORD)
-            if (-not [string]::IsNullOrWhiteSpace($env:WINDOWS_CODESIGN_TIMESTAMP_URL)) {
-              $arguments += @('/tr', $env:WINDOWS_CODESIGN_TIMESTAMP_URL, '/td', 'SHA256')
+            $baseArguments = @('sign', '/fd', 'SHA256', '/f', $certificatePath, '/p', $env:WINDOWS_CODESIGN_PFX_PASSWORD)
+            # 时间戳服务器是外部服务，配错 / 不可用时不该把整个发布卡死：
+            # 先带 /tr 试一次，失败就 warn 一句再不带时间戳重新签。
+            $timestampUrl = if ([string]::IsNullOrWhiteSpace($env:WINDOWS_CODESIGN_TIMESTAMP_URL)) {
+              ''
             }
-            $arguments += $path
-            & $signTool @arguments
+            else {
+              $env:WINDOWS_CODESIGN_TIMESTAMP_URL.Trim()
+            }
+            if ($timestampUrl -and [Uri]::IsWellFormedUriString($timestampUrl, [UriKind]::Absolute)) {
+              & $signTool @baseArguments '/tr' $timestampUrl '/td' 'SHA256' $path
+              if ($LASTEXITCODE -eq 0) { return }
+              Write-Warning "带时间戳签名失败（$timestampUrl），改为不带时间戳重新签名：$path"
+            }
+            & $signTool @baseArguments $path
             if ($LASTEXITCODE -ne 0) { throw "signtool failed for $path with exit code $LASTEXITCODE." }
           }
           $releaseRoot = 'artifacts/release'
@@ -295,12 +304,21 @@ jobs:
           WINDOWS_CODESIGN_TIMESTAMP_URL: ${{ secrets.WINDOWS_CODESIGN_TIMESTAMP_URL }}
         run: |
           function Sign-File([string]$path, [string]$signTool, [string]$certificatePath) {
-            $arguments = @('sign', '/fd', 'SHA256', '/f', $certificatePath, '/p', $env:WINDOWS_CODESIGN_PFX_PASSWORD)
-            if (-not [string]::IsNullOrWhiteSpace($env:WINDOWS_CODESIGN_TIMESTAMP_URL)) {
-              $arguments += @('/tr', $env:WINDOWS_CODESIGN_TIMESTAMP_URL, '/td', 'SHA256')
+            $baseArguments = @('sign', '/fd', 'SHA256', '/f', $certificatePath, '/p', $env:WINDOWS_CODESIGN_PFX_PASSWORD)
+            # 时间戳服务器是外部服务，配错 / 不可用时不该把整个发布卡死：
+            # 先带 /tr 试一次，失败就 warn 一句再不带时间戳重新签。
+            $timestampUrl = if ([string]::IsNullOrWhiteSpace($env:WINDOWS_CODESIGN_TIMESTAMP_URL)) {
+              ''
             }
-            $arguments += $path
-            & $signTool @arguments
+            else {
+              $env:WINDOWS_CODESIGN_TIMESTAMP_URL.Trim()
+            }
+            if ($timestampUrl -and [Uri]::IsWellFormedUriString($timestampUrl, [UriKind]::Absolute)) {
+              & $signTool @baseArguments '/tr' $timestampUrl '/td' 'SHA256' $path
+              if ($LASTEXITCODE -eq 0) { return }
+              Write-Warning "带时间戳签名失败（$timestampUrl），改为不带时间戳重新签名：$path"
+            }
+            & $signTool @baseArguments $path
             if ($LASTEXITCODE -ne 0) { throw "signtool failed for $path with exit code $LASTEXITCODE." }
           }
           $hasSigning = -not [string]::IsNullOrWhiteSpace($env:WINDOWS_CODESIGN_PFX_BASE64) -and -not [string]::IsNullOrWhiteSpace($env:WINDOWS_CODESIGN_PFX_PASSWORD)
