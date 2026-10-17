@@ -365,6 +365,8 @@ public partial class BoardPageViewModel : ViewModelBase
             isOverdue,
             handwriting,
             isHandwriting ? BoardHandwritingAspect.Resolve(handwriting) : BoardHandwritingAspect.DefaultAspect,
-            isHandwriting);
+            isHandwriting,
+            // 标签整理好再交给模板：旧数据可能带空白项，也不希望模板自己去重。
+            (IReadOnlyList<string>?)Note.NormalizeTags(note.Tags) ?? []);
     }
 }

@@ -25,8 +25,12 @@ namespace Corkboard.ViewModels.MainPages.Board;
 ///         <see cref="IsOverdue" /> 只在过期时为真，模板拿它换一个警示色。
 ///     </para>
 ///     <para>
+///         <see cref="Tags" /> 是这条作业勾中的快捷标签，模板把它们画成一排胶囊；
+///         标签是结构化数据（<c>Note.Tags</c>），不是正文里的文字。
+///     </para>
+///     <para>
 ///         <paramref name="MetaFontSize" /> 是截止日期那一行用的字号（设置里的「作业条小字字号」）：
-///         它原来写死 12，后排看不见。
+///         它原来写死 12，后排看不见。标签胶囊也继承这个字号。
 ///     </para>
 /// </summary>
 public sealed record BoardNoteCardItem(
@@ -40,7 +44,8 @@ public sealed record BoardNoteCardItem(
     bool IsOverdue,
     string? Handwriting,
     double HandwritingAspect,
-    bool IsHandwriting)
+    bool IsHandwriting,
+    IReadOnlyList<string> Tags)
 {
     /// <summary>这段内容是不是富文本（模板据此显示 <c>RichTextBlock</c>）。</summary>
     public bool HasContent => Html.Length > 0;
@@ -52,4 +57,7 @@ public sealed record BoardNoteCardItem(
     public bool HasHandwriting => IsHandwriting && !string.IsNullOrEmpty(Handwriting);
 
     public bool HasDueText => DueText.Length > 0;
+
+    /// <summary>有没有快捷标签；没有就整行不画，别在卡片顶上留一排空白。</summary>
+    public bool HasTags => Tags.Count > 0;
 }

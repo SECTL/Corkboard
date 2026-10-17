@@ -53,6 +53,28 @@
                                                  HorizontalAlignment="Stretch"
                                                  Data="{Binding Handwriting}"
                                                  Aspect="{Binding HandwritingAspect}" />
+                    <!--
+                        快捷标签：布置作业时勾中的几颗，画成一行胶囊，**跟在这条作业自己的内容下面**
+                        （选中的状态只存在于表单里，到卡片上就是这条作业的标记）。
+                        字号继承下面设置的「作业条小字字号」。
+                    -->
+                    <ItemsControl IsVisible="{Binding HasTags}"
+                                  ItemsSource="{Binding Tags}"
+                                  Margin="0 6 0 0"
+                                  FontSize="{Binding MetaFontSize}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="x:String">
+                                <Border Classes="note-tag">
+                                    <TextBlock Text="{Binding}" />
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </StackPanel>
                 <!-- 回放期间与点击穿透锁住窗口时列表项自带 CanModify=false，两个按钮随之隐藏。 -->
                 <Button Grid.Column="1" VerticalAlignment="Top"
@@ -128,11 +150,13 @@
                         二级分类小节。分类顺序由 Core 的 NoteGrouping.GroupWithSections 定：
                         没分类的作业在最前（不带小标题），然后是按定义顺序、有作业的分类，
                         已删除分类的历史残留按名称排在最后；没有任何作业的分类不出现在这里。
+                        小节之间的间距刻意收紧（4 而不是 8）：两层标题 + 卡片本身就占地方，
+                        再拉开会让一屏放不下几个分类。
                     -->
                     <ItemsControl ItemsSource="{Binding Sections}"
                                   ItemTemplate="{StaticResource BoardSubsectionTemplate}">
                         <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate><StackPanel Spacing="8" /></ItemsPanelTemplate>
+                            <ItemsPanelTemplate><StackPanel Spacing="4" /></ItemsPanelTemplate>
                         </ItemsControl.ItemsPanel>
                     </ItemsControl>
                 </StackPanel>
@@ -213,14 +237,32 @@
             二级分类的小标题：只做一条柔和的行，不再套一层卡片边框，免得两层框叠在一起。
             字号来自设置（模板上按项绑），颜色用次要前景色——比一级科目名弱一档，
             需要更醒目就在设置里把「分类标题字号」调大。
+            Margin 上 0 下 2：小节之间只隔 4（见模板里的 ItemsPanel），标题自己不再往上顶。
         -->
         <Style Selector="TextBlock.board-subsection-title">
             <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
-            <Setter Property="Margin" Value="2 2 2 0" />
+            <Setter Property="Margin" Value="2 0 2 2" />
         </Style>
         <!-- 有标题的分类，作业往右缩一点，一眼看出是从属关系；没标题的那批不缩，直接贴科目名。 -->
         <Style Selector="ItemsControl.board-notes.titled">
             <Setter Property="Margin" Value="10 0 0 0" />
+        </Style>
+
+        <!--
+            作业条上的快捷标签：一颗颗胶囊，走主题的浅色底 + 细描边，字号继承外层
+            （模板上按「作业条小字字号」给），不另写死。
+        -->
+        <Style Selector="Border.note-tag">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="9" />
+            <Setter Property="Padding" Value="7 1" />
+            <Setter Property="Margin" Value="0 0 4 3" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Border.note-tag TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
         </Style>
 
         <!--

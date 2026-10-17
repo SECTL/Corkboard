@@ -51,12 +51,6 @@ public partial class HomeworkAssignmentForm : UserControl
     /// <summary>卡片到可用区域边缘留的余量（DIP）。宽度按它留，高度靠上面的比例留。</summary>
     private const double SheetMargin = 32;
 
-    /// <summary>
-    ///     指针捕获丢失事件的订阅策略：三个都写上。它是 Direct 事件（只有捕获元素那一跳），
-    ///     但按气泡派发的实现也见过，写全两种都收得到；源就是捕获元素，路由只有一跳，不会重复触发。
-    /// </summary>
-    private const RoutingStrategies CaptureLostRoutes =
-        RoutingStrategies.Direct | RoutingStrategies.Bubble | RoutingStrategies.Tunnel;
 
     /// <summary>作业内容的富文本编辑区：加粗、字号、颜色这些格式都套在它当前的选区上。</summary>
     private readonly RichTextBlock? _editor;
@@ -91,34 +85,13 @@ public partial class HomeworkAssignmentForm : UserControl
     /// <summary>XAML 里写的卡片宽度上限，构造期读一次当基准（见构造函数）。</summary>
     private readonly double _sheetMaxWidth;
 
-    /// <summary>卡片拖动时叠在它身上的位移（布局保持居中不动，见 <see cref="OnSheetPressed" />）。</summary>
-    private readonly TranslateTransform _sheetOffset = new();
-
-    /// <summary>卡片所在的顶层：它的尺寸一变，卡片上限与位移都要重算。</summary>
+    /// <summary>卡片所在的顶层：它的尺寸一变，卡片上限就要重算。</summary>
     private TopLevel? _topLevel;
 
     private bool _isResizingContent;
     private Point _resizeStartPointer;
     private double _resizeStartWidth;
     private double _resizeStartHeight;
-
-    private bool _isDraggingSheet;
-
-    /// <summary>拖动卡片的指针，收尾时靠它显式交还捕获。</summary>
-    private IPointer? _dragPointer;
-
-    /// <summary>独立窗口承载时被拖的那个窗口；壳内弹层这条路为 <c>null</c>。</summary>
-    private Window? _dragWindow;
-
-    private Point _dragStartPointer;
-    private Vector _dragStartOffset;
-
-    /// <summary>卡片不含位移时的位置（窗口坐标系）与可拖范围，按下时量一次。</summary>
-    private Point _dragBasePosition;
-    private Size _dragArea;
-
-    private PixelPoint _dragStartWindowPosition;
-    private PixelPoint _dragStartPointerScreen;
 
     public HomeworkAssignmentForm()
     {
@@ -160,25 +133,8 @@ public partial class HomeworkAssignmentForm : UserControl
         // 不能在「上一次算出来的上限」上再收一次——窗口先小后大就再也长不回去了。
         _sheetMaxWidth = _sheet?.MaxWidth ?? double.PositiveInfinity;
 
-        if (_sheet is not null)
-        {
-            // 卡片拖动只叠位移、不动布局：位移挂在卡片自己身上。
-            _sheet.RenderTransform = _sheetOffset;
-
-            // 卡片尺寸一变（拉手柄、上限跟着窗口变）就重夹位移，别让它长到视野外抓不回来。
-            _sheet.PropertyChanged += OnSheetPropertyChanged;
-        }
-
         if (_sheetBody is not null)
             _sheetBody.PropertyChanged += OnSheetBodyPropertyChanged;
-
-        // ⚠️ 拖动处理器挂在**表单自己**身上，跟指针捕获同一个元素：拖动期间事件只从捕获元素往上走，
-        // 挂在卡片里的子元素上就一个都收不到（表现就是「按住拖不动」）。
-        // 气泡路由 + 不接管已处理的事件，于是输入控件自己的手势（选字、拉开下拉、拖手柄）自然让出。
-        AddHandler(PointerPressedEvent, OnSheetPressed, RoutingStrategies.Bubble);
-        AddHandler(PointerMovedEvent, OnSheetMoved, RoutingStrategies.Bubble);
-        AddHandler(PointerReleasedEvent, OnSheetReleased, RoutingStrategies.Bubble);
-        AddHandler(PointerCaptureLostEvent, OnSheetCaptureLost, CaptureLostRoutes);
 
         // 弹层是后加进可视树的：焦点要等挂上之后再给，卡片的尺寸上限也要等能拿到宿主才算。
         AttachedToVisualTree += (_, _) =>
@@ -196,7 +152,6 @@ public partial class HomeworkAssignmentForm : UserControl
                     // 这时再对齐一次，缩放手柄的上下限才不会一拖就跳。
                     ApplySheetSizeLimits();
                     FitContentAreaToLimit();
-                    ClampSheetOffset();
 
                     // 工具条的颜色第一遍在首帧布局之后换（见 OnToolbarLayoutUpdated）：
                     // LayoutUpdated 只会为后续的重建兜底，这一发保证「打开就生效」。
@@ -208,12 +163,9 @@ public partial class HomeworkAssignmentForm : UserControl
                 }, DispatcherPriority.Loaded);
         };
 
-        // 表单即用即弃：离开可视树时收掉可能还留着的拖动捕获（见 EndSheetDrag），
-        // 并摘掉挂在宿主、画布与 ViewModel 上的监听。
+        // 表单即用即弃：离开可视树时摘掉挂在宿主、画布与 ViewModel 上的监听。
         Unloaded += (_, _) =>
         {
-            EndSheetDrag();
-
             if (_toolbar is not null)
                 _toolbar.LayoutUpdated -= OnToolbarLayoutUpdated;
 
@@ -262,7 +214,16 @@ public partial class HomeworkAssignmentForm : UserControl
             return;
 
         if (_viewModel is not null)
+        {
             _viewModel.HasInk = _canvas.HasInk;
+
+            // ⚠️ 画布在内部是用 SetCurrentValue 写 Data 的，TwoWay 绑定不会把新值回传给源。
+            // 不在这里显式同步，表单保存时 HandwritingData 还是打开表单时的旧值（通常是 null），
+            // 表现就是「手写的内容关掉再打开就没了」。
+            var data = _canvas.Data;
+            if (!string.Equals(_viewModel.HandwritingData, data, StringComparison.Ordinal))
+                _viewModel.HandwritingData = data;
+        }
 
         if (_undoButton is not null)
             _undoButton.IsEnabled = _canvas.CanUndo;
@@ -423,42 +384,6 @@ public partial class HomeworkAssignmentForm : UserControl
     }
 
     /// <summary>
-    ///     把卡片位移重新夹回宿主里。
-    ///     <para>
-    ///         拖动时夹一次不够：卡片变大（拉手柄）、宿主变小（用户缩窗口）都会让原来的位移越界，
-    ///         卡片有一半跑到视野外就再也抓不回来（它没有系统标题栏，也没有别的归位入口）。
-    ///         所以卡片尺寸一变、宿主尺寸一变都重夹一次。
-    ///     </para>
-    ///     <para>置底形态下卡片就是那个独立窗口，位移恒为 0，这里自然什么都不做。</para>
-    /// </summary>
-    private void ClampSheetOffset()
-    {
-        if (_sheet is null || TopLevel.GetTopLevel(this) is not { } topLevel)
-            return;
-
-        // 独立窗口那条路上卡片就是窗口本身，位移一直是 0，没有可夹的东西。
-        if (topLevel is PageOverlayWindow)
-            return;
-
-        var host = topLevel.ClientSize;
-        if (host.Width <= 0 || host.Height <= 0)
-            return;
-
-        var basePosition = ResolveSheetBasePosition();
-        var size = _sheet.Bounds.Size;
-
-        _sheetOffset.X = SheetDragLimits.ClampOffset(_sheetOffset.X, basePosition.X, size.Width, host.Width);
-        _sheetOffset.Y = SheetDragLimits.ClampOffset(_sheetOffset.Y, basePosition.Y, size.Height, host.Height);
-    }
-
-    /// <summary>卡片尺寸一变就重夹位移：拉大之后它必须还在视野里。</summary>
-    private void OnSheetPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
-    {
-        if (e.Property == Visual.BoundsProperty)
-            ClampSheetOffset();
-    }
-
-    /// <summary>
     ///     内容栈的高度变了（多出字段行、某一行被撑高…）就把内容区再收进限额里。
     ///     <para>拖手柄的过程中不动它，否则会和用户的手对着干（见 <see cref="OnResizeGripMoved" />）。</para>
     /// </summary>
@@ -476,7 +401,6 @@ public partial class HomeworkAssignmentForm : UserControl
 
         ApplySheetSizeLimits();
         FitContentAreaToLimit();
-        ClampSheetOffset();
     }
 
     private void OnResizeGripPressed(object? sender, PointerPressedEventArgs e)
@@ -560,204 +484,6 @@ public partial class HomeworkAssignmentForm : UserControl
         return (maxWidth, maxHeight);
     }
 
-    #region 卡片拖动
-
-    /// <summary>
-    ///     卡片按下：接管指针，之后按位移拖动整张卡片。
-    ///     <para>
-    ///         <b>整张卡片都是拖动面</b>——按住卡片上任何非输入控件的地方（标题、行距、留白、
-    ///         预览区）都能拖走，所以在哪拖都行、也不需要一个「抓手」图标来指路。
-    ///         输入控件与右下角手柄命中时让出（见 <see cref="IsInteractiveSource" />）。
-    ///     </para>
-    ///     <para>
-    ///         两种承载形态拖的不是同一个东西：
-    ///         <list type="bullet">
-    ///             <item>
-    ///                 <b>壳内弹层</b>（默认，见 <c>PageOverlayService</c>）：挪卡片自己——给卡片叠一层位移，
-    ///                 布局保持居中不动，所以「能挪多远」得自己夹（<see cref="SheetDragLimits" />）。
-    ///             </item>
-    ///             <item>
-    ///                 <b>独立窗口</b>（<see cref="PageOverlayWindow" />，「置底到桌面」时用）：
-    ///                 那个窗口是 <c>SizeToContent</c> 的、大小正好等于卡片，挪卡片等于把卡片推出窗口被裁掉。
-    ///                 所以这时拖的是窗口本身，跟主窗口标题栏同一个做法（按 <c>Window.Position</c> 手动位移）。
-    ///             </item>
-    ///         </list>
-    ///     </para>
-    /// </summary>
-    private void OnSheetPressed(object? sender, PointerPressedEventArgs e)
-    {
-        // 上一次拖动如果没收到 PointerReleased / PointerCaptureLost（指针在窗口外抬起、
-        // 捕获被别处抢走等），捕获会留在表单上，表现就是「卡片再也拖不动」。
-        // 新的按下是最好的收尾时机：先清干净，再按这次按下重新判定。
-        EndSheetDrag();
-
-        if (_sheet is null || TopLevel.GetTopLevel(this) is not { } topLevel)
-            return;
-
-        // 触摸没有「左键」概念，与页面里其它手势判定保持一致。
-        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed && e.Pointer.Type != PointerType.Touch)
-            return;
-
-        // 命中输入控件、工具栏或缩放手柄时这一下归它们：不然选不中字、按钮点不动、手柄也拖不动。
-        if (IsInteractiveSource(e.Source))
-            return;
-
-        _isDraggingSheet = true;
-        _dragPointer = e.Pointer;
-        _dragStartPointer = e.GetPosition(this);
-        _dragStartOffset = new Vector(_sheetOffset.X, _sheetOffset.Y);
-
-        if (topLevel is PageOverlayWindow window)
-        {
-            _dragWindow = window;
-            _dragStartWindowPosition = window.Position;
-            _dragStartPointerScreen = GetPointerScreenPoint(e);
-        }
-        else
-        {
-            _dragBasePosition = ResolveSheetBasePosition();
-            _dragArea = topLevel.ClientSize;
-        }
-
-        // 捕获挂在表单上，不挂卡片里的子元素：表单的子树不会因为拖动被重建，命中面也一直有效，
-        // 而拖动处理器就挂在同一个元素上（见构造函数），事件才收得到。
-        // **收尾必须显式 Capture(null)**——指针在窗口外抬起收不到 PointerReleased，
-        // 捕获留在表单上会让卡片里的输入框点不动（壳的整窗拖动踩过同一个坑）。
-        e.Pointer.Capture(this);
-        e.Handled = true;
-    }
-
-    /// <summary>拖动中：壳内挪卡片（夹在宿主里），独立窗口挪窗口。</summary>
-    private void OnSheetMoved(object? sender, PointerEventArgs e)
-    {
-        if (!_isDraggingSheet)
-            return;
-
-        // 左键已经抬起来（指针在窗口外抬起、捕获被别处抢走时收不到 PointerReleased）就当场收尾。
-        if (e.Pointer.Type == PointerType.Mouse && !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
-        {
-            EndSheetDrag();
-            return;
-        }
-
-        if (_dragWindow is { } window)
-        {
-            MoveWindowDrag(window, e);
-            return;
-        }
-
-        if (_sheet is null)
-            return;
-
-        var delta = e.GetPosition(this) - _dragStartPointer;
-        var size = _sheet.Bounds.Size;
-
-        _sheetOffset.X = SheetDragLimits.ClampOffset(
-            _dragStartOffset.X + delta.X, _dragBasePosition.X, size.Width, _dragArea.Width);
-        _sheetOffset.Y = SheetDragLimits.ClampOffset(
-            _dragStartOffset.Y + delta.Y, _dragBasePosition.Y, size.Height, _dragArea.Height);
-    }
-
-    /// <summary>松手：收尾并把捕获显式还回去。</summary>
-    private void OnSheetReleased(object? sender, PointerReleasedEventArgs e)
-    {
-        EndSheetDrag();
-        e.Pointer.Capture(null);
-    }
-
-    /// <summary>捕获被别处抢走时收不到 <c>PointerReleased</c>，自己把状态收掉。</summary>
-    private void OnSheetCaptureLost(object? sender, PointerCaptureLostEventArgs e) => EndSheetDrag();
-
-    /// <summary>
-    ///     命中卡片里的输入控件（或右下角缩放手柄）时，这一下不归卡片拖动。
-    ///     <para>
-    ///         漏掉任何一类，那个控件就会变成「点不动」——跟壳的 <c>MainView.IsInteractiveSource</c>
-    ///         是同一张排除表的两半，往表单里加控件时要一起看。
-    ///     </para>
-    /// </summary>
-    private bool IsInteractiveSource(object? source)
-    {
-        for (Visual? current = source as Visual; current is not null; current = current.GetVisualParent())
-        {
-            // 走到卡片自己就说明命中的是卡片本身或它以外的结构，不是输入控件。
-            if (ReferenceEquals(current, _sheet))
-                return false;
-
-            if (ReferenceEquals(current, _resizeGrip)
-                || ReferenceEquals(current, _contentChrome)
-                || current is Button or ToggleButton or TextBox or ComboBox or NumericUpDown
-                    or CalendarDatePicker or RangeBase)
-                return true;
-        }
-
-        return false;
-    }
-
-    /// <summary>
-    ///     卡片不含位移时的位置（窗口坐标系），算拖动范围用。
-    ///     <para>
-    ///         沿父链把各级的 <see cref="Visual.Bounds" /> 位置加起来：<c>Bounds</c> 是布局结果、
-    ///     不含 <c>RenderTransform</c>，所以量出来的是<b>基准位置</b>，不会被正在拖的那层位移绕进去。
-    ///     </para>
-    /// </summary>
-    private Point ResolveSheetBasePosition()
-    {
-        if (_sheet is null)
-            return default;
-
-        var x = _sheet.Bounds.X;
-        var y = _sheet.Bounds.Y;
-
-        for (var current = _sheet.GetVisualParent(); current is not null; current = current.GetVisualParent())
-        {
-            x += current.Bounds.X;
-            y += current.Bounds.Y;
-        }
-
-        return new Point(x, y);
-    }
-
-    /// <summary>
-    ///     拖动独立窗口：按 <c>Window.Position</c> 手动位移，跟主窗口标题栏同一套做法。
-    ///     指针位置取<b>屏幕绝对坐标</b>——窗口跟着指针走，用相对位移会自我抵消。
-    /// </summary>
-    private void MoveWindowDrag(Window window, PointerEventArgs e)
-    {
-        var current = GetPointerScreenPoint(e);
-        var target = new PixelPoint(
-            _dragStartWindowPosition.X + (current.X - _dragStartPointerScreen.X),
-            _dragStartWindowPosition.Y + (current.Y - _dragStartPointerScreen.Y));
-
-        if (target != window.Position)
-            window.Position = target;
-    }
-
-    /// <summary>指针的屏幕物理坐标：窗口左上角 + 指针相对窗口的偏移（按缩放折算）。</summary>
-    private PixelPoint GetPointerScreenPoint(PointerEventArgs e)
-    {
-        var topLevel = TopLevel.GetTopLevel(this);
-        var windowPosition = (topLevel as Window)?.Position ?? default;
-        var scaling = topLevel?.RenderScaling ?? 1.0;
-        var position = e.GetPosition(this);
-
-        return new PixelPoint(
-            windowPosition.X + (int)Math.Round(position.X * scaling),
-            windowPosition.Y + (int)Math.Round(position.Y * scaling));
-    }
-
-    /// <summary>
-    ///     收尾：还回指针捕获、清掉拖动状态。
-    ///     <para>捕获必须显式还：留着会让卡片里的输入框点不动、打不了字。</para>
-    /// </summary>
-    private void EndSheetDrag()
-    {
-        _dragPointer?.Capture(null);
-        _dragPointer = null;
-        _dragWindow = null;
-        _isDraggingSheet = false;
-    }
-
-    #endregion
 
     private void InitializeComponent()
     {

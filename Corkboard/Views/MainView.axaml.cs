@@ -48,8 +48,14 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
     /// <summary>长按判定期间允许的指针抖动（DIP）：超过就认为用户在拖内容，不再抢拖动。</summary>
     private const double HoldToDragMoveTolerance = 4;
 
-    /// <summary>贴边多少 DIP 以内算「抓到了边缘」，按下即进入缩放。</summary>
-    private const double ResizeBandThickness = 6;
+    /// <summary>
+    ///     贴边多少 DIP 以内算「抓到了边缘」，按下即进入缩放。
+    ///     <para>
+    ///         取 8：顶部那条边同时压在 <c>FAAppWindow</c> 的标题栏带上，6 太窄了不好抓
+    ///         （用户反馈左上角与顶部拉不动，很大一部分原因是抓不稳）。
+    ///     </para>
+    /// </summary>
+    private const double ResizeBandThickness = 8;
 
     /// <summary>缩放时抓的是哪几条边（可以同时抓两条，那就是角）。</summary>
     [Flags]
@@ -279,15 +285,25 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
             return;
 
         // 抓边缘优先于拖窗口：主窗口没有原生可缩放边框，贴边这几像素就是缩放热区。
+        // 命中后必须标 Handled：顶部与左上角那一条同时落在 FAAppWindow 自己的标题栏带上，
+        // 不标的话库的标题栏处理器随后会把这一下当成「拖窗口」接走，表现为顶部与左上角拉不长。
         if (TryStartWindowResize(e))
+        {
+            e.Handled = true;
             return;
+        }
 
         if (IsInTitleBar(e.Source))
         {
             // 标题栏按下即拖；命中标题栏里的交互控件时让出（导航栏去掉后主界面标题栏暂时没有控件，
             // 但以后加按钮就靠这张排除表，见 IsInteractiveSource）。
+            // 拖动开始后同样标 Handled：否则库的原生标题栏拖动可能再接管一次。
             if (!IsInteractiveSource(e.Source))
+            {
                 StartWindowDrag(e);
+                if (_isDraggingWindow)
+                    e.Handled = true;
+            }
 
             return;
         }

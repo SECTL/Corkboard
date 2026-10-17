@@ -101,6 +101,77 @@ public class HandwritingTests
         Assert.Equal(HandwritingDocument.DefaultAspect, decoded.Aspect, 4);
     }
 
+    [Fact]
+    public void Encode_WritesProprietaryFormatHeader()
+    {
+        var encoded = HandwritingCodec.Encode(SampleDocument());
+
+        Assert.StartsWith(HandwritingCodec.FormatMagic + "/" + HandwritingCodec.FormatVersion, encoded);
+        Assert.Contains("aspect=", encoded);
+        Assert.Contains("ref=", encoded);
+    }
+
+    [Fact]
+    public void EncodeDecode_RoundTripsReferenceWidth()
+    {
+        var document = SampleDocument();
+        document.ReferenceWidth = 720;
+        document.HasReferenceWidth = true;
+
+        Assert.True(HandwritingCodec.TryDecode(HandwritingCodec.Encode(document), out var decoded));
+        Assert.Equal(720, decoded.ReferenceWidth, 2);
+        Assert.True(decoded.HasReferenceWidth);
+    }
+
+    [Fact]
+    public void EncodeDecode_RoundTripsWidthScales()
+    {
+        var document = new HandwritingDocument { Aspect = 1.5, ReferenceWidth = 540 };
+        document.Strokes.Add(new HandwritingStroke
+        {
+            Color = Color.Parse("#FF0078D4"),
+            Width = 6,
+            Points =
+            [
+                HandwritingPoint.Create(0.1, 0.1, HandwritingPoint.MaxWidthScale),
+                HandwritingPoint.Create(0.4, 0.3, 0.75),
+                HandwritingPoint.Create(0.8, 0.6, HandwritingPoint.MinWidthScale)
+            ]
+        });
+
+        Assert.True(HandwritingCodec.TryDecode(HandwritingCodec.Encode(document), out var decoded));
+        var points = decoded.Strokes[0].Points;
+        Assert.Equal(HandwritingPoint.MaxWidthScale, points[0].WidthScale, 3);
+        Assert.Equal(0.75, points[1].WidthScale, 3);
+        Assert.Equal(HandwritingPoint.MinWidthScale, points[2].WidthScale, 3);
+    }
+
+    [Fact]
+    public void Decode_LegacyJsonWithoutReferenceWidthLeavesItUnset()
+    {
+        const string json = """
+                            {"version":1,"aspect":1.6,"strokes":[{"color":"#FF000000","width":4,"points":[0.2,0.2,0.4,0.4]}]}
+                            """;
+
+        Assert.True(HandwritingCodec.TryDecode(json, out var decoded));
+        Assert.False(decoded.HasReferenceWidth);
+        Assert.Equal(2, decoded.Strokes[0].Points.Count);
+        Assert.Equal(HandwritingPoint.DefaultWidthScale, decoded.Strokes[0].Points[1].WidthScale, 3);
+    }
+
+    [Fact]
+    public void Decode_LegacyJsonReadsWidthsArray()
+    {
+        const string json = """
+                            {"version":1,"strokes":[{"color":"#FF000000","width":4,"points":[0.2,0.2,0.4,0.4],"widths":[1.4,0.5]}]}
+                            """;
+
+        Assert.True(HandwritingCodec.TryDecode(json, out var decoded));
+        var points = decoded.Strokes[0].Points;
+        Assert.Equal(1.4, points[0].WidthScale, 3);
+        Assert.Equal(0.5, points[1].WidthScale, 3);
+    }
+
     #endregion
 
     #region 坏数据
@@ -163,7 +234,7 @@ public class HandwritingTests
     #region 归一化夹取
 
     [Fact]
-    public void TryDecode_ClampsCoordinatesIntoUnitRange()
+    public void TryDecode_ClampsCoordinatesIntoValidRange()
     {
         const string json = """
                             {"version":1,"aspect":1.6,"strokes":[{"color":"#FF000000","width":4,
@@ -173,10 +244,11 @@ public class HandwritingTests
         Assert.True(HandwritingCodec.TryDecode(json, out var decoded));
         var points = decoded.Strokes[0].Points;
 
+        // 负数按 0；超出 1 的坐标不夹回 1（内容框拉大后还能往新露出来的地方写），上限是 MaxCoordinate。
         Assert.Equal(0, points[0].X);
         Assert.Equal(0, points[0].Y);
-        Assert.Equal(1, points[1].X);
-        Assert.Equal(1, points[1].Y);
+        Assert.Equal(1.5, points[1].X, 4);
+        Assert.Equal(3, points[1].Y, 4);
         Assert.Equal(0.5, points[2].X, 4);
         Assert.Equal(0.5, points[2].Y, 4);
     }
@@ -186,7 +258,9 @@ public class HandwritingTests
     {
         // NaN / 无穷这类坏值按 0 处理：至少不会把几何画崩。
         Assert.Equal(new HandwritingPoint(0, 0), HandwritingPoint.Create(double.NaN, double.PositiveInfinity));
-        Assert.Equal(new HandwritingPoint(1, 1), HandwritingPoint.Create(5, 9));
+        Assert.Equal(
+            new HandwritingPoint(HandwritingPoint.MaxCoordinate, HandwritingPoint.MaxCoordinate),
+            HandwritingPoint.Create(5, 9));
         Assert.Equal(new HandwritingPoint(0.25, 0.75), HandwritingPoint.Create(0.25, 0.75));
     }
 

@@ -192,12 +192,25 @@ public class RichTextBlock : RichEditor
             EnsureTypingColor();
     }
 
+    /// <summary>
+    ///     库在内容高度上固定多算的底部留白：`MeasureContentHeight` 末尾是 `return num + 40.0`。
+    ///     编辑器里那是给底部留的呼吸区，卡片上就是「内容和标签之间莫名一段空」，只读时扣掉。
+    /// </summary>
+    private const double MeasuredHeightSlack = 40;
+
     protected override Size MeasureOverride(Size availableSize)
     {
         // 先缩图再交给库测量：库算内容高度时直接读 ImageBlock.Height（RichEditor.cs:6696），
         // 所以在测量前改掉尺寸，卡片高度一次就量对，不会先高一下再缩回来。
         FitImagesToWidth(availableSize.Width);
-        return base.MeasureOverride(availableSize);
+
+        var size = base.MeasureOverride(availableSize);
+
+        // 只读（卡片）扣掉库多算的 40 DIP：内容画在顶部，剪掉的是底部的空，不会裁到字。
+        if (!IsReadOnly)
+            return size;
+
+        return new Size(size.Width, Math.Max(0, size.Height - MeasuredHeightSlack));
     }
 
     /// <summary>

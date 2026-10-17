@@ -35,6 +35,25 @@ public sealed class HandwritingDocument
     /// </summary>
     public bool HasAspect { get; set; }
 
+    /// <summary>没有参考宽度信息时按这个宽度（DIP）画。</summary>
+    public const double DefaultReferenceWidth = 540;
+
+    /// <summary>参考宽度下限：再小坐标会粗得没法看。</summary>
+    public const double MinReferenceWidth = 80;
+
+    /// <summary>参考宽度上限：再大归一化坐标的有效精度就不够了。</summary>
+    public const double MaxReferenceWidth = 8000;
+
+    /// <summary>
+    ///     这页手写是按多宽（DIP）画的。笔迹坐标是相对这个宽度归一化的，
+    ///     **不是**相对当前控件的宽度——把布置作业表单里的内容框拖大拖小时，
+    ///     已经写上去的笔迹不能跟着缩放 / 挪位置（用户明确要求）。
+    /// </summary>
+    public double ReferenceWidth { get; set; } = DefaultReferenceWidth;
+
+    /// <summary>落盘的数据里有没有写参考宽度；老数据没有，载入时按控件宽度补一个。</summary>
+    public bool HasReferenceWidth { get; set; }
+
     /// <summary>所有笔画。橡皮擦掉的墨会直接从列表里剪掉，不会在这里留看不见的擦除笔。</summary>
     public List<HandwritingStroke> Strokes { get; set; } = [];
 
@@ -48,5 +67,11 @@ public sealed class HandwritingDocument
     public static double ClampAspect(double aspect)
     {
         return double.IsFinite(aspect) ? Math.Clamp(aspect, MinAspect, MaxAspect) : DefaultAspect;
+    }
+
+    /// <summary>把参考宽度夹进合法区间；非有限值退回 <see cref="DefaultReferenceWidth" />。</summary>
+    public static double ClampReferenceWidth(double width)
+    {
+        return double.IsFinite(width) ? Math.Clamp(width, MinReferenceWidth, MaxReferenceWidth) : DefaultReferenceWidth;
     }
 }

@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
+using Avalonia.Rendering;
 using Corkboard.Core.Handwriting;
 
 namespace Corkboard.Core.Controls;
@@ -22,7 +23,7 @@ namespace Corkboard.Core.Controls;
 ///         没改就丢掉（比如在空白处按了一下橡皮）。
 ///     </para>
 /// </summary>
-public class HandwritingCanvas : Control
+public class HandwritingCanvas : Control, ICustomHitTest
 {
     /// <summary>撤销最多记多少步：再多也没什么用，还占内存。</summary>
     private const int MaxUndoSteps = 100;
@@ -70,6 +71,9 @@ public class HandwritingCanvas : Control
     private bool _hasInk;
     private int _strokeCount;
     private bool _pointerDown;
+
+    /// <summary>正在画这一笔的指针（鼠标 / 触摸 / 手写笔）：只认它自己的移动与抬起。</summary>
+    private IPointer? _activePointer;
     private bool _gestureChanged;
     private bool _syncingData;
     private bool _syncingAspect;
@@ -78,6 +82,21 @@ public class HandwritingCanvas : Control
     private HandwritingDocument _document = new();
     private HandwritingStroke? _activeStroke;
     private Point _lastPointerPosition;
+
+    /// <summary>
+    ///     这页手写是按多宽（DIP）归一化的参考宽度。只在「第一次落笔」或「载入已有笔迹」时定，
+    ///     之后画布被拉大拉小都不改——否则用户拖一下内容框，已经写好的字就会被拉伸 / 挪位置。
+    /// </summary>
+    private double _referenceWidth;
+
+    /// <summary>参考高度（DIP）= 参考宽度 × 文档 aspect，y 坐标相对它归一化。</summary>
+    private double _referenceHeight;
+
+    /// <summary>上一次指针事件的时间戳（毫秒），用来算书写速度。</summary>
+    private ulong _lastPointerTimestamp;
+
+    /// <summary>当前笔锋倍率（平滑过的书写速度结果）。</summary>
+    private double _widthScale = HandwritingPoint.DefaultWidthScale;
 
     /// <summary>撤销快照：每一步是当时笔画列表的浅拷贝（旧笔对象不会被原地改，所以浅拷贝就够）。</summary>
     private readonly List<List<HandwritingStroke>> _undo = [];
@@ -197,6 +216,12 @@ public class HandwritingCanvas : Control
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
+    /// <summary>
+    ///     整块画布都算命中：这是个没有背景的裸 <see cref="Control" />，交给默认命中测试时
+    ///     空白处的按下会被父容器接走（表现就是「鼠标点上去画不出线」）。
+    /// </summary>
+    public bool HitTest(Point point) => new Rect(Bounds.Size).Contains(point);
+
     /// <summary>画布只要把笔迹画出来就行，不用画背景 / 网格。</summary>
     public override void Render(DrawingContext context)
     {
@@ -207,10 +232,17 @@ public class HandwritingCanvas : Control
         if (!double.IsFinite(width) || !double.IsFinite(height) || width <= 0 || height <= 0)
             return;
 
-        HandwritingRenderer.Render(context, _document, new Rect(0, 0, width, height));
+        EnsureReferenceSize();
+
+        // 按「参考尺寸」画、左上角对齐：拖大拖小内容框时笔迹留在原处（用户明确要求），
+        // 多出来的地方只是继续可写的空白，不会把已有的字拉伸。
+        HandwritingRenderer.Render(context, _document, new Rect(0, 0, _referenceWidth, _referenceHeight));
     }
 
-    /// <summary>尺寸一变就按新宽高更新 aspect（点本来就是归一化的，不用动）。</summary>
+    /// <summary>
+    ///     尺寸变化：空画布跟着改参考尺寸（整块区域都能写）；已经有笔迹就<b>什么都不动</b>——
+    ///     参考尺寸不变，笔迹的绝对位置与粗细就都不变（旧实现会改 aspect 并重写数据，表现是笔迹被拉走）。
+    /// </summary>
     protected override void OnSizeChanged(SizeChangedEventArgs e)
     {
         base.OnSizeChanged(e);
@@ -220,34 +252,48 @@ public class HandwritingCanvas : Control
         if (!double.IsFinite(width) || !double.IsFinite(height) || width <= 0 || height <= 0)
             return;
 
-        var aspect = HandwritingDocument.ClampAspect(height / width);
-        if (Math.Abs(aspect - _document.Aspect) <= 1e-9)
+        if (_document.HasInk)
+        {
+            InvalidateVisual();
             return;
+        }
 
-        // 画布形状变了，已存笔迹的 aspect 也跟着变：预览按新比例画回来才不变形。
+        _referenceWidth = HandwritingDocument.ClampReferenceWidth(width);
+        _referenceHeight = _referenceWidth * HandwritingDocument.ClampAspect(height / width);
+        _document.ReferenceWidth = _referenceWidth;
+        _document.HasReferenceWidth = true;
+
+        var aspect = HandwritingDocument.ClampAspect(height / width);
         _document.Aspect = aspect;
         SetAspectProperty(aspect);
-        if (_document.HasInk)
-            SyncDataFromDocument();
+        InvalidateVisual();
     }
 
     protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
         base.OnPointerPressed(e);
 
-        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        // 鼠标要按住左键；触摸与手写笔没有「左键」这个说法，按下就算。
+        var isDrawPointer = e.Pointer.Type is PointerType.Touch or PointerType.Pen
+                            || e.GetCurrentPoint(this).Properties.IsLeftButtonPressed;
+        if (!isDrawPointer)
             return;
 
         if (!double.IsFinite(Bounds.Width) || Bounds.Width <= 0 || !double.IsFinite(Bounds.Height) || Bounds.Height <= 0)
             return;
 
+        EnsureReferenceSize();
+
         e.Pointer.Capture(this);
+        _activePointer = e.Pointer;
         _pointerDown = true;
         _gestureChanged = false;
         PushUndoSnapshot();
 
         var position = e.GetPosition(this);
         _lastPointerPosition = position;
+        _lastPointerTimestamp = e.Timestamp;
+        _widthScale = HandwritingPoint.DefaultWidthScale;
 
         if (IsEraser)
             ApplyEraseAt(position);
@@ -261,16 +307,23 @@ public class HandwritingCanvas : Control
     {
         base.OnPointerMoved(e);
 
-        if (!_pointerDown)
+        if (!_pointerDown || !ReferenceEquals(e.Pointer, _activePointer))
             return;
 
         var position = e.GetPosition(this);
         if (IsEraser)
+        {
             EraseAlong(_lastPointerPosition, position);
+        }
         else
-            ExtendStroke(position);
+        {
+            // 笔锋：按「这段路走了多快」定粗细，慢写粗、快写细，再用指数平滑去掉抖动。
+            _widthScale = ResolveSmoothedWidthScale(_lastPointerPosition, position, e.Timestamp);
+            ExtendStroke(position, _widthScale);
+        }
 
         _lastPointerPosition = position;
+        _lastPointerTimestamp = e.Timestamp;
         e.Handled = true;
     }
 
@@ -278,7 +331,7 @@ public class HandwritingCanvas : Control
     {
         base.OnPointerReleased(e);
 
-        if (!_pointerDown)
+        if (!_pointerDown || !ReferenceEquals(e.Pointer, _activePointer))
             return;
 
         e.Pointer.Capture(null);
@@ -291,7 +344,7 @@ public class HandwritingCanvas : Control
         base.OnPointerCaptureLost(e);
 
         // 指针在画布外抬起 / 被别的控件抢走捕获时也要收尾，否则这一笔会一直挂着。
-        if (_pointerDown)
+        if (_pointerDown && ReferenceEquals(e.Pointer, _activePointer))
             EndGesture();
     }
 
@@ -316,7 +369,7 @@ public class HandwritingCanvas : Control
     }
 
     /// <summary>移动时往当前这一笔上加点；跨度大就按固定间距插值，线不会变成一段段折线。</summary>
-    private void ExtendStroke(Point position)
+    private void ExtendStroke(Point position, double widthScale)
     {
         if (_activeStroke is null)
             return;
@@ -326,11 +379,16 @@ public class HandwritingCanvas : Control
         {
             // 挪得太近：只落一个点（完全没动就不落，免得存一堆重复坐标）。
             if (distance > 0.01)
-                _activeStroke.Points.Add(ToNormalized(position));
+                _activeStroke.Points.Add(ToNormalized(position, widthScale));
 
             InvalidateVisual();
             return;
         }
+
+        // 插值出来的点，笔锋倍率也一起从上一个点线性过渡到这一下算出来的倍率。
+        var previousScale = _activeStroke.Points.Count > 0
+            ? _activeStroke.Points[^1].WidthScale
+            : HandwritingPoint.DefaultWidthScale;
 
         var steps = (int)Math.Ceiling(distance / MinPointSpacing);
         for (var step = 1; step <= steps; step++)
@@ -340,7 +398,8 @@ public class HandwritingCanvas : Control
                 _lastPointerPosition.X + (position.X - _lastPointerPosition.X) * progress,
                 _lastPointerPosition.Y + (position.Y - _lastPointerPosition.Y) * progress);
 
-            _activeStroke.Points.Add(ToNormalized(sample));
+            var scale = previousScale + (widthScale - previousScale) * progress;
+            _activeStroke.Points.Add(ToNormalized(sample, scale));
         }
 
         InvalidateVisual();
@@ -375,8 +434,10 @@ public class HandwritingCanvas : Control
     /// <summary>在某个点上擦一下：命中就替换笔画列表（橡皮不存成看不见的笔画）。</summary>
     private void ApplyEraseAt(Point position)
     {
-        var width = Bounds.Width;
-        var height = Bounds.Height;
+        EnsureReferenceSize();
+
+        var width = _referenceWidth;
+        var height = _referenceHeight;
         if (!double.IsFinite(width) || width <= 0 || !double.IsFinite(height) || height <= 0)
             return;
 
@@ -411,10 +472,14 @@ public class HandwritingCanvas : Control
             return;
 
         _pointerDown = false;
+        _activePointer = null;
         _activeStroke = null;
 
         if (_gestureChanged)
         {
+            // 落笔可能超出参考区域（用户把内容框拖大了又往右边写）：把参考宽度撑大、
+            // 所有归一化坐标按同样比例收回来，笔迹的**绝对位置不变**，但预览不会裁掉外面的部分。
+            NormalizeExtents();
             SyncDataFromDocument();
             RefreshHasInk();
             UpdateCanUndo();
@@ -475,6 +540,10 @@ public class HandwritingCanvas : Control
         _document = document;
         _undo.Clear();
 
+        // 载入的新文档要按它自己的参考宽度画：数据里没写（老格式）就用当前控件宽度补一个。
+        _referenceWidth = 0;
+        _referenceHeight = 0;
+
         SetAspectProperty(HandwritingDocument.ClampAspect(document.Aspect));
 
         RefreshHasInk();
@@ -482,7 +551,7 @@ public class HandwritingCanvas : Control
         InvalidateVisual();
     }
 
-    /// <summary>外部改 <see cref="Aspect" />：夹进合法区间并更新文档（有笔迹时重写 JSON）。</summary>
+    /// <summary>外部改 <see cref="Aspect" />：夹进合法区间并更新文档（不重写数据，数据只在手势结束时落）。</summary>
     private void OnAspectPropertyChanged(double aspect)
     {
         if (_syncingAspect)
@@ -495,7 +564,11 @@ public class HandwritingCanvas : Control
             SetAspectProperty(clamped);
 
         if (_document.HasInk)
-            SyncDataFromDocument();
+        {
+            // aspect 变了只影响预览怎么排；参考尺寸保持不变，笔迹的绝对位置不动。
+            _referenceHeight = _referenceWidth * clamped;
+            InvalidateVisual();
+        }
     }
 
     /// <summary>把 aspect 写回属性（不触发「外部改 aspect」那条分支，避免自己转圈）。</summary>
@@ -576,12 +649,127 @@ public class HandwritingCanvas : Control
 
     private HandwritingPoint ToNormalized(Point position)
     {
-        var width = Bounds.Width;
-        var height = Bounds.Height;
+        return ToNormalized(position, HandwritingPoint.DefaultWidthScale);
+    }
+
+    private HandwritingPoint ToNormalized(Point position, double widthScale)
+    {
+        EnsureReferenceSize();
+
+        var width = _referenceWidth;
+        var height = _referenceHeight;
         if (!double.IsFinite(width) || width <= 0 || !double.IsFinite(height) || height <= 0)
             return new HandwritingPoint(0, 0);
 
-        return HandwritingPoint.Create(position.X / width, position.Y / height);
+        return HandwritingPoint.Create(position.X / width, position.Y / height, widthScale);
+    }
+
+    /// <summary>
+    ///     保证参考尺寸已经定下来：空画布用当前控件尺寸，载入的文档用它自己记着的参考宽度
+    ///     （老数据没有就按当前控件宽度补，并写回文档）。
+    /// </summary>
+    private void EnsureReferenceSize()
+    {
+        if (double.IsFinite(_referenceWidth) && _referenceWidth > 0
+            && double.IsFinite(_referenceHeight) && _referenceHeight > 0)
+        {
+            return;
+        }
+
+        var boundsWidth = Bounds.Width;
+        var boundsHeight = Bounds.Height;
+        if (!double.IsFinite(boundsWidth) || boundsWidth <= 0 || !double.IsFinite(boundsHeight) || boundsHeight <= 0)
+            return;
+
+        if (_document.HasInk)
+        {
+            _referenceWidth = HandwritingDocument.ClampReferenceWidth(
+                _document.HasReferenceWidth ? _document.ReferenceWidth : boundsWidth);
+        }
+        else
+        {
+            _referenceWidth = HandwritingDocument.ClampReferenceWidth(boundsWidth);
+            _document.Aspect = HandwritingDocument.ClampAspect(boundsHeight / boundsWidth);
+        }
+
+        _referenceHeight = Math.Max(1, _referenceWidth * _document.Aspect);
+        _document.ReferenceWidth = _referenceWidth;
+        _document.HasReferenceWidth = true;
+    }
+
+    /// <summary>
+    ///     把超出参考区域的笔迹收回来：参考宽度按「最远那一点」放大 s 倍，所有归一化坐标同时除以 s。
+    ///     <c>坐标 × 参考宽度</c> 这个绝对位置保持不变，所以笔迹不会跳；重新归一化后预览也不会裁边。
+    /// </summary>
+    private void NormalizeExtents()
+    {
+        EnsureReferenceSize();
+
+        if (!_document.HasInk || _referenceWidth <= 0)
+            return;
+
+        var maxX = 1.0;
+        var maxY = 1.0;
+        foreach (var stroke in _document.Strokes)
+        {
+            if (!stroke.IsVisible)
+                continue;
+
+            foreach (var point in stroke.Points)
+            {
+                if (point.X > maxX)
+                    maxX = point.X;
+                if (point.Y > maxY)
+                    maxY = point.Y;
+            }
+        }
+
+        var growth = Math.Max(maxX, maxY);
+        if (!double.IsFinite(growth) || growth <= 1.0001)
+            return;
+
+        var targetWidth = HandwritingDocument.ClampReferenceWidth(_referenceWidth * growth);
+        var factor = targetWidth / _referenceWidth;
+        if (!double.IsFinite(factor) || factor <= 1)
+            return;
+
+        foreach (var stroke in _document.Strokes)
+        {
+            for (var index = 0; index < stroke.Points.Count; index++)
+            {
+                var point = stroke.Points[index];
+                stroke.Points[index] = HandwritingPoint.Create(point.X / factor, point.Y / factor, point.WidthScale);
+            }
+        }
+
+        _referenceWidth = targetWidth;
+        _referenceHeight = targetWidth * _document.Aspect;
+        _document.ReferenceWidth = _referenceWidth;
+        _document.HasReferenceWidth = true;
+    }
+
+    /// <summary>
+    ///     按书写速度算笔锋倍率，并做一次指数平滑（慢写粗、快写细）：
+    ///     速度单位是 DIP/毫秒，正常人写字大概在 0.15–1.6 之间。
+    /// </summary>
+    private double ResolveSmoothedWidthScale(Point from, Point to, ulong timestamp)
+    {
+        var target = HandwritingPoint.DefaultWidthScale;
+
+        var elapsed = timestamp >= _lastPointerTimestamp ? timestamp - _lastPointerTimestamp : 0;
+        if (elapsed > 0)
+        {
+            var speed = Distance(from, to) / elapsed;
+            const double slowSpeed = 0.15;
+            const double fastSpeed = 1.6;
+            var progress = Math.Clamp((speed - slowSpeed) / (fastSpeed - slowSpeed), 0, 1);
+
+            // 慢 → 1.4 倍粗，快 → 0.45 倍细。
+            target = HandwritingPoint.MaxWidthScale - progress * (HandwritingPoint.MaxWidthScale - 0.45);
+        }
+
+        _widthScale = _widthScale * 0.6 + target * 0.4;
+        return Math.Clamp(_widthScale, HandwritingPoint.MinWidthScale, HandwritingPoint.MaxWidthScale);
     }
 
     private static double Distance(Point from, Point to)

@@ -173,6 +173,29 @@ public class BoardServiceTests
     }
 
     [Fact]
+    public void Update_CopiesTagsAsStructuredField()
+    {
+        var (service, _, _) = CreateService();
+        var note = service.Add(new Note { Content = "一", Tags = ["已批改"] });
+
+        // 表单交上来的标签是选中的那些胶囊；空列表 = 把标签全摘掉。
+        Assert.True(service.Update(new Note { Id = note.Id, Content = "一", Tags = ["已讲评", "已批改"] }));
+        Assert.Equal(["已讲评", "已批改"], service.Notes.Single().Tags);
+
+        Assert.True(service.Update(new Note { Id = note.Id, Content = "一" }));
+        Assert.Null(service.Notes.Single().Tags);
+    }
+
+    [Fact]
+    public void NormalizeTags_TrimsDeduplicatesAndKeepsFirstOrder()
+    {
+        Assert.Equal(["已批改", "已讲评"], Note.NormalizeTags([" 已批改 ", "已讲评", "已批改", "", "  "]));
+        Assert.Equal(["A"], Note.NormalizeTags(["A", "a"]));
+        Assert.Null(Note.NormalizeTags(null));
+        Assert.Null(Note.NormalizeTags([]));
+    }
+
+    [Fact]
     public void Update_KeepsCreatedAtAndOrderSoTheNoteStaysInItsDatedFile()
     {
         var (service, _, store) = CreateService();

@@ -125,15 +125,10 @@
                 <StackPanel x:Name="SheetBody" Spacing="12">
                     <!--
                         卡片没有标题栏：第一行就是表单标题（布置作业 / 编辑作业）。
-                        **整张卡片都是拖动面**——按住卡片上任何非输入控件的地方都能把它拖走，
-                        所以标题行不再放抓手图标：那是「只有这里能拖」的暗示，反而让人以为别处拖不动。
-                        光标与提示留在标题行上，作为「能动」的唯一提示（见 code-behind 的 OnSheetPressed）。
+                        卡片本身不能拖动（弹层用来填内容，拖来拖去反而容易失手），
+                        能调的只有内容区右下角那个缩放手柄。
                     -->
-                    <TextBlock Classes="h2"
-                               Background="Transparent"
-                               Cursor="SizeAll"
-                               ToolTip.Tip="{x:Static core:Resources.Board_MoveSheet}"
-                               Text="{Binding FormTitle}" />
+                    <TextBlock Classes="h2" Text="{Binding FormTitle}" />
 
                     <!--
                         内容形态切换：打字（富文本）/ 手写（画布）。
@@ -273,7 +268,8 @@
                                                            ShowPageControls="False"
                                                            Focusable="False" />
 
-                                    <!-- 快捷标签 chips：整行在「手写模式」或「设置里没配标签」时隐藏（见 ShowQuickTags）。
+                                    <!-- 快捷标签 chips：设置里配过标签才出现（见 ShowQuickTags），两种内容形态都能贴。
+                                         点一下是选中 / 取消选中，选中的会随作业存进 Note.Tags、在作业板上画成胶囊。
                                          标签最多 8 颗，卡片窄时会折行（外面用 Grid 的 * 列把可用宽度给到 WrapPanel）。 -->
                                     <Grid ColumnDefinitions="Auto,*"
                                           ColumnSpacing="6"
