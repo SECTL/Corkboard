@@ -120,6 +120,15 @@ public partial class BoardPageViewModel : ViewModelBase
     public bool IsReplaying => _replay.IsActive;
 
     /// <summary>
+    ///     是不是正在导出。导出期间整块板子要「干净」：作业卡片上的编辑 / 删除两颗按钮、
+    ///     科目标题左侧的拖动按钮都不能出现在导出的图片和 PDF 里（它们本来只是鼠标悬停才冒出来的界面元素，
+    ///     而导出图片直接渲染的是屏幕上这块板子）。改动后重建列表，因为这两个开关记在列表项上。
+    /// </summary>
+    [ObservableProperty] private bool _isExporting;
+
+    partial void OnIsExportingChanged(bool value) => RebuildNotes();
+
+    /// <summary>
     ///     作业条右侧那两颗按钮（编辑 / 删除）画不画。两种情况都不画：
     ///     回放看的是历史快照、不接受增删；点击穿透开着时整窗收不到鼠标，画出来只是两颗点不动的图标。
     ///     <para>值记在每个列表项上（<see cref="BoardNoteCardItem.CanModify" />），所以变化时要重建列表。</para>
@@ -271,8 +280,10 @@ public partial class BoardPageViewModel : ViewModelBase
     {
         // 排序方式、默认字号、默认颜色、科目标题与作业条小字的字号都会影响列表内容：
         // 前者改排序，其余几个改渲染出来的样子（字号记在列表项上，所以只能重建）。
+        // 拖拽排序开关只改「区块能不能拖」，但 CanReorder 记在重建出来的列表项上，所以也得重建。
         if (e.PropertyName is null
             or nameof(BoardSettingsConfig.SortMode)
+            or nameof(BoardSettingsConfig.SubjectReorderEnabled)
             or nameof(BoardSettingsConfig.DefaultContentFontSize)
             or nameof(BoardSettingsConfig.DefaultContentColor)
             or nameof(BoardSettingsConfig.SubjectFontSize)
@@ -338,7 +349,8 @@ public partial class BoardPageViewModel : ViewModelBase
                         section.Notes.Select(BuildItem).ToList(),
                         SectionFontSize))
                     .ToList(),
-                !_replay.IsActive,
+                // 回放期间不能改顺序；设置里关掉「拖拽排序」之后连拖动按钮都不画；导出时也不画。
+                Config.BoardSettings.SubjectReorderEnabled && !_replay.IsActive && !IsExporting,
                 SubjectFontSize));
         }
 
@@ -366,7 +378,8 @@ public partial class BoardPageViewModel : ViewModelBase
             ContentDefaultColor,
             NoteMetaFontSize,
             NoteTagFontSize,
-            CanModifyNotes,
+            // 导出时把卡片上的编辑 / 删除按钮一起收掉（导出的图里只留卡片本身）。
+            CanModifyNotes && !IsExporting,
             dueText,
             isOverdue,
             handwriting,

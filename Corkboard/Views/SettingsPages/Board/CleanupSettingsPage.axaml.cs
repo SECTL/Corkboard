@@ -11,7 +11,7 @@ using CR = Corkboard.Core.Langs.Common.Resources;
 
 namespace Corkboard.Views.SettingsPages.Board;
 
-/// <summary>「清理与备份」设置页：到期清理、立即清理、清空作业板与自动备份清单。</summary>
+/// <summary>「清理」设置页：到期清理、立即清理与清空作业板。</summary>
 [PageInfo("settings.board.cleanup", FluentIcons.DeleteFilled, "settings.board.group")]
 public partial class CleanupSettingsPage : UserControl
 {
@@ -30,8 +30,8 @@ public partial class CleanupSettingsPage : UserControl
     private void OnEditorLostFocus(object? sender, RoutedEventArgs e) => ViewModel?.CommitCleanup();
 
     /// <summary>
-    ///     清空作业板：先确认，再备份，备份成功才真的清。
-    ///     备份失败时只提示、不动数据——「宁可这次不清，也不能丢作业」。
+    ///     清空作业板：先确认，再把作业从板子上收起来。收起来只是打「已清理」标记，
+    ///     数据全都还在（之后能在时空回放里还原），所以这一步不会失败，也没有备份要管。
     /// </summary>
     private async void OnClearAllClick(object? sender, RoutedEventArgs e)
     {
@@ -52,12 +52,19 @@ public partial class CleanupSettingsPage : UserControl
         if (await confirm.ShowAsync(topLevel) != FAContentDialogResult.Primary)
             return;
 
-        var result = await viewModel.ClearBoardAsync();
-
-        // 成功说备份留在哪个目录（只报目录名更友好）；失败说这次没有清空。
-        var message = result.Success
-            ? string.Format(CR.Settings_Board_ClearAllDone, Path.GetFileName(result.Directory))
-            : CR.Settings_Board_ClearAllFailed;
+        string message;
+        try
+        {
+            viewModel.ClearBoard();
+            // 说清「只是收起来、数据还在」：不然用户会以为作业被删了。
+            message = CR.Settings_Board_ClearAllDone;
+        }
+        catch (Exception ex)
+        {
+            // 清空要重写板子的作业文件，磁盘出错时别让异常从 async void 里冒出去。
+            System.Diagnostics.Debug.WriteLine($"清空作业板失败：{ex}");
+            message = CR.Settings_Board_ClearAllFailed;
+        }
 
         await new FAContentDialog
         {

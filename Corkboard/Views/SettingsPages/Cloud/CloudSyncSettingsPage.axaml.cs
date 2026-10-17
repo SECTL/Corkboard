@@ -14,7 +14,11 @@ namespace Corkboard.Views.SettingsPages.Cloud;
 /// <summary>
 ///     云同步设置页：把作业板与设置备份到思拓创联云存储，需要时再从云端恢复。
 /// </summary>
-[PageInfo("settings.cloud", FluentIcons.CloudFilled)]
+/// <remarks>
+///     <c>isHide: true</c>：暂不对外开放入口——页面不进设置侧边栏，但注册仍在
+///     （键控 DI 里按 Id 仍可取到），以后要开放时把这个参数去掉即可。
+/// </remarks>
+[PageInfo("settings.cloud", FluentIcons.CloudFilled, isHide: true)]
 public partial class CloudSyncSettingsPage : UserControl
 {
     private readonly CloudSyncSettingsPageViewModel _viewModel;

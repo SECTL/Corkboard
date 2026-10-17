@@ -1,4 +1,4 @@
-﻿<UserControl xmlns="https://github.com/avaloniaui"
+<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -97,8 +97,8 @@
             </fa:FASettingsExpander>
 
             <!--
-                清空作业板：会先自动备份，备份失败时一条作业都不动。
-                确认框在 code-behind 里弹（见 OnClearAllClick）。
+                清空作业板：只是把作业从当前板子上收起来，数据与文件都还在（回放里能还原），
+                所以不会失败、也没有备份要管。确认框在 code-behind 里弹（见 OnClearAllClick）。
             -->
             <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_ClearAll}"
                                    Description="{x:Static core:Resources.Settings_Board_ClearAllDescription}">
@@ -107,34 +107,6 @@
                             Content="{x:Static core:Resources.Settings_Board_ClearAll}"
                             Click="OnClearAllClick" />
                 </fa:FASettingsExpander.Footer>
-            </fa:FASettingsExpander>
-
-            <!--
-                备份清单：只读列表，新的在前。备份目录用户能从资源管理器直接改，
-                所以给一个手动重读的刷新按钮。
-            -->
-            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_Backups}"
-                                   Description="{x:Static core:Resources.Settings_Board_BackupsDescription}">
-                <fa:FASettingsExpander.Footer>
-                    <Button VerticalAlignment="Center"
-                            Content="{x:Static core:Resources.Common_Refresh}"
-                            Command="{Binding RefreshBackupListCommand}" />
-                </fa:FASettingsExpander.Footer>
-
-                <StackPanel Spacing="4" Margin="0 4 0 0">
-                    <TextBlock IsVisible="{Binding !HasBackups}"
-                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                               Text="{x:Static core:Resources.Settings_Board_BackupsEmpty}" />
-
-                    <ItemsControl IsVisible="{Binding HasBackups}"
-                                  ItemsSource="{Binding BackupItems}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="vm:BoardBackupListItem">
-                                <TextBlock Margin="0 2" Text="{Binding DisplayName}" />
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
             </fa:FASettingsExpander>
         </StackPanel>
     </ScrollViewer>

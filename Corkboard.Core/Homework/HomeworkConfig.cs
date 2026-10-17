@@ -2,7 +2,6 @@ using System.Text.Json.Serialization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Corkboard.Shared;
 using Corkboard.Shared.Abstraction;
-using CR = Corkboard.Core.Langs.Common.Resources;
 
 namespace Corkboard.Core.Homework;
 
@@ -21,13 +20,13 @@ public partial class HomeworkConfig : ConfigBase
 
     public const string StorageFileName = "board.json";
 
+    /// <summary>
+    ///     科目清单。默认空：首次运行不再替用户预置「语文 / 数学 / 英语」，
+    ///     科目表由用户在「设置 → 作业板 → 科目与分类」里自己建（迁移旧数据时旧文件里的科目仍会接管，
+    ///     见 <see cref="HomeworkSectionCatalog.DefinitionExists" />）。
+    /// </summary>
     [ObservableProperty]
-    private List<string> _subjects =
-    [
-        CR.Board_Seed_Subject_Chinese,
-        CR.Board_Seed_Subject_Math,
-        CR.Board_Seed_Subject_English
-    ];
+    private List<string> _subjects = [];
 
     /// <summary>
     ///     手动排序下的科目区块先后，由主界面长按手柄拖动后落盘。只记科目名，**不记作业**：

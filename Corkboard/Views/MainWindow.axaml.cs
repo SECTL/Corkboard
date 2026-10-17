@@ -640,6 +640,10 @@ public partial class MainWindow : FAAppWindow
 
         ApplyWindowFeature(WindowFeatures.ClickThrough, handler.Data.Basic.ClickThrough);
 
+        // 点击穿透也是 WS_EX_LAYERED，圆角得重新贴一次（分层窗口走区域裁剪那条路），
+        // 否则从普通窗口切到穿透后圆角会被系统合成器丢掉。
+        ApplyWindowCorners();
+
         // 点击穿透开着时窗口里没有可点的东西了，锁定徽标就是唯一的「解锁」入口。
         _isLockBadgeRequested = handler.Data.Basic.ClickThrough;
         SyncLockBadge();
@@ -832,12 +836,17 @@ public partial class MainWindow : FAAppWindow
         var opacity = hasModalSurface ? 1.0 : handler.Data.Basic.MainWindowOpacity;
 
         ApplyWindowFeature(WindowFeatures.WindowOpacity, enabled: true, opacity: opacity);
+
+        // 不透明度共用 WS_EX_LAYERED：分层窗口 DWM 不给圆角，平台会退回区域裁剪。
+        // 所以半透明开关一变就要重贴一次圆角，否则从「无圆角」切到「圆角」会停在方角上。
+        ApplyWindowCorners();
     }
 
     /// <summary>
-    ///     主窗口圆角：把配置里的开关转给平台。主窗口没有原生边框，系统不会替它画圆角，
-    ///     置底到桌面后还是桌面子窗口、DWM 也不给这一块单独合成圆角，所以平台侧是靠裁窗口区域实现的
-    ///     （见 <c>WindowsWindowFeatureService.TrySetRoundedCorners</c>）。
+    ///     主窗口圆角：把配置里的开关转给平台。主窗口没有原生边框，
+    ///     平台侧优先用 DWM 的圆角偏好（边缘抗锯齿、平滑）；
+    ///     只有分层窗口（开了不透明度 / 点击穿透）与置底后的桌面子窗口走不通，
+    ///     那时才退回裁窗口区域（见 <c>WindowsWindowFeatureService.TrySetRoundedCorners</c>）。
     ///     <para>
     ///         ⚠️ 区域会一直贴在窗口上，<b>尺寸 / 缩放一变就要重裁</b>：不重裁的话圆角半径还按旧尺寸算，
     ///         窗口拉大后四角就变成几条弧线。尺寸变化由 <see cref="OnWindowPropertyChanged" /> 重放，

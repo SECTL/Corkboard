@@ -3,6 +3,7 @@ using System.Linq;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Corkboard.Core.Board;
+using Corkboard.Core.Board.History;
 using Corkboard.Core.Homework;
 using Corkboard.Core.RichText;
 
@@ -41,6 +42,13 @@ public partial class BoardSettingsConfig : ObservableObject
 
     /// <summary>便签排序方式。改它的入口在主界面标题栏的排序按钮（设置里只有排布这类展示设置）。</summary>
     [ObservableProperty] private BoardSortMode _sortMode = BoardSortMode.CreatedDescending;
+
+    /// <summary>
+    ///     拖拽排序：按住科目区块的标题行就能拖动它调整先后（只对「手动」排序有意义）。
+    ///     关掉之后作业板上不再出现那颗拖动按钮，标题行也不接管指针。
+    ///     默认开——用户要的是「能关」，不是默认就关。
+    /// </summary>
+    [ObservableProperty] private bool _subjectReorderEnabled = true;
 
     /// <summary>删除便签前是否弹确认对话框。</summary>
     [ObservableProperty] private bool _confirmBeforeDelete = true;
@@ -88,6 +96,28 @@ public partial class BoardSettingsConfig : ObservableObject
 
     /// <summary>动手时刻的分钟部分。</summary>
     [ObservableProperty] private int _cleanupMinute = HomeworkCleanupDefaults.DefaultMinute;
+
+    /// <summary>
+    ///     同一条作业连续保存的合并窗口（分钟）：两次保存隔得比它近，历史里只留最后一版。
+    ///     读的时候过一遍 <see cref="BoardHistoryPolicy.ClampCoalesceWindow" />。
+    ///     <para>
+    ///         这个值只影响历史写日志的密度，不影响当前作业内容；窗口越大历史越省空间，
+    ///         但也越会「看不出中间改过什么」。
+    ///     </para>
+    /// </summary>
+    [ObservableProperty] private int _historyCoalesceMinutes = BoardHistoryPolicy.DefaultCoalesceMinutes;
+
+    /// <summary>
+    ///     历史保留多少天，超过的日志文件会在清理时删掉。读的时候过一遍
+    ///     <see cref="BoardHistoryPolicy.ClampRetentionDays" />。
+    /// </summary>
+    [ObservableProperty] private int _historyRetentionDays = BoardHistoryPolicy.DefaultRetentionDays;
+
+    /// <summary>
+    ///     历史占用上限（MB），超了先删最老的那几天（最新的一天永远留着）。
+    ///     读的时候过一遍 <see cref="BoardHistoryPolicy.ClampMaxSizeMb" />。
+    /// </summary>
+    [ObservableProperty] private int _historyMaxSizeMb = BoardHistoryPolicy.DefaultMaxSizeMb;
 
     /// <summary>
     ///     作业内容的默认字号：新布置的作业没单独定「整篇字号」时用它，
@@ -233,6 +263,17 @@ public partial class BoardSettingsConfig : ObservableObject
     {
         CleanupHour = HomeworkCleanupDefaults.ClampHour(CleanupHour);
         CleanupMinute = HomeworkCleanupDefaults.ClampMinute(CleanupMinute);
+    }
+
+    /// <summary>
+    ///     读盘后和老配置迁移用：历史的三个数夹进合法区间（老的 settings.json 里没有这几项，
+    ///     会落到默认值；手改过的脏数据在这里被收拾干净，别让 0 天保留 / 0 MB 上限把历史删空）。
+    /// </summary>
+    public void NormalizeHistory()
+    {
+        HistoryCoalesceMinutes = BoardHistoryPolicy.ClampCoalesceMinutes(HistoryCoalesceMinutes);
+        HistoryRetentionDays = BoardHistoryPolicy.ClampRetentionDays(HistoryRetentionDays);
+        HistoryMaxSizeMb = BoardHistoryPolicy.ClampMaxSizeMb(HistoryMaxSizeMb);
     }
 
     /// <summary>

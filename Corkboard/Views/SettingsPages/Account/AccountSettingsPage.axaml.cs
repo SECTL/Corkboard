@@ -14,7 +14,11 @@ namespace Corkboard.Views.SettingsPages.Account;
 /// <summary>
 ///     账号设置页：展示 SECTL 组织账号并处理登录 / 退出。
 /// </summary>
-[PageInfo("settings.account", FluentIcons.PersonFilled)]
+/// <remarks>
+///     <c>isHide: true</c>：暂不对外开放入口——页面不进设置侧边栏，但注册仍在
+///     （键控 DI 里按 Id 仍可取到），以后要开放时把这个参数去掉即可。
+/// </remarks>
+[PageInfo("settings.account", FluentIcons.PersonFilled, isHide: true)]
 public partial class AccountSettingsPage : UserControl
 {
     private readonly AccountSettingsPageViewModel _viewModel;

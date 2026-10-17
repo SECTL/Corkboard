@@ -57,7 +57,7 @@
                                Classes.overdue="{Binding IsOverdue}"
                                IsVisible="{Binding HasDueText}"
                                FontSize="{Binding MetaFontSize}"
-                               TextWrapping="Wrap"
+                               TextWrapping="NoWrap"
                                Text="{Binding DueText}" />
                     <!--
                         作业内容是富文本（HTML 片段），默认字号/颜色由控件补成行内样式。

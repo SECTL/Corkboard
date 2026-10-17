@@ -1,5 +1,7 @@
+using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Templates;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
@@ -10,10 +12,15 @@ using FluentAvalonia.UI.Controls;
 using Corkboard.Core.Abstraction;
 using Corkboard.Core.Attributes;
 using Corkboard.Core.Controls;
+using Corkboard.Core.Export;
 using Corkboard.Core.Icons;
+using Corkboard.Core.Services.Config;
 using Corkboard.Services.Ui;
+using Corkboard.Services.Ui.Export;
+using Corkboard.ViewModels.Export;
 using Corkboard.ViewModels.MainPages.Board;
 using Corkboard.ViewModels.MainPages.Homework;
+using Corkboard.Views.Export;
 using Corkboard.Views.MainPages.Homework;
 using CR = Corkboard.Core.Langs.Common.Resources;
 
@@ -181,23 +188,22 @@ public partial class BoardPage : UserControl
     }
 
     /// <summary>
-    ///     导出图片：把板子的内容容器整块交给 <see cref="BoardExportService" /> 渲染成图片，
-    ///     文件保存在哪里由服务弹系统文件选择器问用户。
+    ///     导出图片（旧入口，保留给页面内的按钮）；真正的流程已改成 <see cref="ExportAsync" />。
+    /// </summary>
+    private async void OnExportImageClick(object? sender, RoutedEventArgs e) => await ExportAsync();
+
+    /// <summary>
+    ///     导出当前板子（入口在主窗口标题栏，见 <c>MainView.ExportImageButton_OnClick</c>）。
     ///     <para>
-    ///         回放里也允许导出（导的是当前看到的这份历史快照）；点击穿透时按钮整颗隐藏，
-    ///     窗口里点不动，这里只做兜底。
+    ///         流程：问格式与范围（设置里关掉「询问导出格式」就不问）→ 图片直接保存 / 复制，
+    ///         PDF 先排版出预览、确认后再保存。回放里也允许导出（导的是当前看到的历史快照）；
+    ///         点击穿透时按钮整颗隐藏，这里只做兜底。
     ///     </para>
     ///     <para>
     ///         成功与失败都只给一条几秒后消失的轻提示，不弹窗；用户在选择器里取消什么都不做。
     ///     </para>
     /// </summary>
-    private async void OnExportImageClick(object? sender, RoutedEventArgs e) => await ExportImageAsync();
-
-    /// <summary>
-    ///     导出当前板子为图片（入口已挪到主窗口标题栏，见 <c>MainView.ExportImageButton_OnClick</c>）。
-    ///     按钮换地方不影响这里：导出用的内容容器是页面自己的，只有页面知道它在哪。
-    /// </summary>
-    public async Task ExportImageAsync()
+    public async Task ExportAsync()
     {
         if (_boardContent is null || ViewModel is not { } viewModel)
             return;
@@ -208,36 +214,184 @@ public partial class BoardPage : UserControl
         if (TopLevel.GetTopLevel(this) is not { } topLevel)
             return;
 
+        // 导出期间先让板子「干净」：卡片上的编辑 / 删除按钮、科目标题的拖动按钮都不进导出结果。
+        viewModel.IsExporting = true;
         try
         {
-            var saved = await _boardExport.ExportImageAsync(
-                _boardContent, topLevel, BuildExportFileName(viewModel));
-            if (saved)
-                viewModel.ShowExportHint(CR.Board_ExportSuccess);
+            var choice = await AskExportChoiceAsync(viewModel);
+            while (choice is not null)
+            {
+                if (choice.Format == ExportFormat.Pdf)
+                {
+                    // 预览里点「返回修改」会回到这里重选；图片这条路不会回来。
+                    if (!await ExportPdfChoiceAsync(choice, viewModel, topLevel))
+                        return;
+
+                    // 预览是独立模态窗口。它刚关掉时主窗口可能还没恢复交互，
+                    // 立刻弹对话框会让用户觉得「返回不回去」——先让出一轮消息循环。
+                    await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
+                }
+                else
+                {
+                    await ExportImageChoiceAsync(choice, viewModel, topLevel);
+                    return;
+                }
+
+                choice = await AskExportChoiceAsync(viewModel);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // 用户中途取消（保存对话框 / 预览窗口关掉）不是失败，不用提示。
         }
         catch (Exception)
         {
-            // 导出链路（选路径、离屏渲染、写文件）都可能失败，也可能是服务还没实现完。
+            // 导出链路（选路径、离屏渲染、写文件）都可能失败。
             // 这些都不值得打断用户，给一条失败提示就够了。
-            viewModel.ShowExportHint(CR.Board_ExportFailed);
+            viewModel.ShowExportHint(CR.Export_Failed);
+        }
+        finally
+        {
+            viewModel.IsExporting = false;
         }
     }
 
     /// <summary>
-    ///     给导出文件起个能认出来的名字：板子名 + 时间戳。板子名是用户数据，可能为空或带非法字符，
-    ///     空的时候退回「导出图片」这个资源文案，非法字符换成下划线（否则系统选择器会直接报错）。
+    ///     问用户导图片还是 PDF、导出全部还是只导一部分。
+    ///     设置里关掉「询问导出格式」时直接返回记住的默认格式（范围全部）。
     /// </summary>
-    private static string BuildExportFileName(BoardPageViewModel viewModel)
+    private async Task<ExportDialogResult?> AskExportChoiceAsync(BoardPageViewModel viewModel)
     {
-        var name = viewModel.Config.BoardSettings.BoardName;
-        if (string.IsNullOrWhiteSpace(name))
-            name = CR.Board_ExportImage;
+        var settings = viewModel.Config.ExportSettings;
+        if (!settings.AskForFormat)
+            return new ExportDialogResult(settings.DefaultFormat, null);
 
-        var safeName = new string(name.Trim()
-            .Select(ch => Path.GetInvalidFileNameChars().Contains(ch) ? '_' : ch)
-            .ToArray());
+        var dialogViewModel = new ExportDialogViewModel(
+            IAppHost.GetService<MainConfigHandler>(), _overlay);
+        var dialog = new ExportDialog(dialogViewModel);
 
-        return $"{safeName}_{DateTime.Now:yyyyMMdd_HHmmss}.png";
+        // 宿主自己关弹层（比如按 Esc）时也要让 await 结束，否则导出流程会一直挂着。
+        void OnOverlayChanged(object? sender, PropertyChangedEventArgs args)
+        {
+            if (args.PropertyName == nameof(PageOverlayService.IsOpen) && !_overlay.IsOpen)
+                dialogViewModel.OnClosedByHost();
+        }
+
+        _overlay.PropertyChanged += OnOverlayChanged;
+        _overlay.Show(dialog);
+        try
+        {
+            return await dialog.Completion;
+        }
+        finally
+        {
+            _overlay.PropertyChanged -= OnOverlayChanged;
+            if (_overlay.IsOpen)
+                _overlay.Close();
+        }
+    }
+
+    /// <summary>图片导出：把整块板面按自然高度渲成一张长图（与板子上看到的一致）。</summary>
+    private async Task ExportImageChoiceAsync(
+        ExportDialogResult choice,
+        BoardPageViewModel viewModel,
+        TopLevel topLevel)
+    {
+        var fileName = ExportFileNameBuilder.Build(DateTime.Now, "png");
+        if (choice.CopyToClipboard)
+        {
+            using var bitmap = await _boardExport.RenderContentBitmapAsync(_boardContent!, topLevel);
+            await _boardExport.CopyImageToClipboardAsync(bitmap, topLevel);
+            viewModel.ShowExportHint(CR.Export_SuccessCopied);
+            return;
+        }
+
+        if (await _boardExport.ExportImageAsync(_boardContent!, topLevel, fileName))
+            viewModel.ShowExportHint(CR.Export_SuccessImage);
+    }
+
+    /// <summary>
+    ///     PDF 导出：先排版、把每一页画出来给用户预览；用户确认后才弹保存对话框写文件。
+    ///     <para>
+    ///         预览里点「返回修改」时返回 <c>true</c> 让调用方重新问格式 / 范围，
+    ///         其它情况（导出完成 / 取消 / 关窗）返回 <c>false</c>。
+    ///     </para>
+    /// </summary>
+    private async Task<bool> ExportPdfChoiceAsync(
+        ExportDialogResult choice,
+        BoardPageViewModel viewModel,
+        TopLevel topLevel)
+    {
+        using var session = BuildPdfSession(choice.NoteIds, viewModel);
+        if (session is null || session.PageCount == 0)
+        {
+            viewModel.ShowExportHint(CR.Export_NoContent);
+            return false;
+        }
+
+        var previews = session.RenderPreview();
+        ExportPreviewChoice previewChoice;
+        try
+        {
+            previewChoice = topLevel is Window owner && owner.IsVisible
+                ? await new ExportPreviewWindow(previews, viewModel.Config.BoardSettings.BoardName).ShowDialog(owner)
+                : ExportPreviewChoice.Export;
+        }
+        finally
+        {
+            foreach (var preview in previews)
+                preview.Dispose();
+        }
+
+        switch (previewChoice)
+        {
+            case ExportPreviewChoice.Cancel:
+                return false;
+            case ExportPreviewChoice.Back:
+                return true;
+        }
+
+        var pages = session.EncodePages();
+        var fileName = ExportFileNameBuilder.Build(DateTime.Now, "pdf");
+        if (await _boardExport.ExportPdfAsync(
+                pages, topLevel, fileName, viewModel.Config.BoardSettings.BoardName))
+            viewModel.ShowExportHint(CR.Export_SuccessPdf);
+
+        return false;
+    }
+
+    /// <summary>建 PDF 排版会话；页面的卡片模板拿不到时返回 <c>null</c>。</summary>
+    private BoardPdfRenderSession? BuildPdfSession(
+        IReadOnlyList<Guid>? noteIds,
+        BoardPageViewModel viewModel)
+    {
+        if (Content is not Panel host || !TryGetCardTemplate(out var template))
+            return null;
+
+        var isWide = _boardContent is { } content && content.Bounds.Width > content.Bounds.Height;
+        return BoardPdfRenderSession.Build(
+            host,
+            template,
+            viewModel.SubjectGroups,
+            noteIds,
+            viewModel.Config.ExportSettings,
+            viewModel.Config.BoardSettings.BoardName,
+            isWide,
+            DateTime.Now);
+    }
+
+
+    /// <summary>取页面资源里的作业卡片模板（导出的卡片与板子上看到的是同一个模板）。</summary>
+    private bool TryGetCardTemplate(out IDataTemplate template)
+    {
+        if (this.TryFindResource("BoardNoteTemplate", out var resource) && resource is IDataTemplate found)
+        {
+            template = found;
+            return true;
+        }
+
+        template = null!;
+        return false;
     }
 
     #region 排布

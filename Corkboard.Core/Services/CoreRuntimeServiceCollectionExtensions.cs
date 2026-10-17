@@ -4,6 +4,7 @@ using Corkboard.Core.Abstraction;
 using Corkboard.Core.Services.Config;
 using Corkboard.Core.Services.Logging;
 using Corkboard.Core.Board;
+using Corkboard.Core.Board.History;
 using Corkboard.Core.Homework;
 using Corkboard.Core.Notes;
 
@@ -23,6 +24,7 @@ public static class CoreRuntimeServiceCollectionExtensions
         services.AddSingleton<MainConfigHandler>();
         services.AddSingleton<INoteStore, NoteStore>();
         services.AddSingleton<HomeworkSectionCatalog>();
+        services.AddSingleton<INoteHistoryStore, NoteHistoryStore>();
         services.AddSingleton<IBoardService, BoardService>();
         services.AddSingleton<HomeworkCleanupService>();
         return services;

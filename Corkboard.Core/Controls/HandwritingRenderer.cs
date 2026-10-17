@@ -13,8 +13,11 @@ namespace Corkboard.Core.Controls;
 ///         （两头再补圆帽）。没有笔锋数据的老笔迹倍率都是 1，画出来就是等宽线。
 ///     </para>
 ///     <para>
-///         笔宽是绝对 DIP（不随画布宽度缩放）：用户挑的「4 像素粗」就是 4 像素粗，
-///         跟内容字号的处理一致。
+///         笔宽是「参考画布上的 DIP」：用户挑的「4 像素粗」在写的时候就是 4 像素粗。
+///         <b>但画到别的尺寸上（卡片预览、导出）时笔宽必须跟着整页一起缩放</b>：
+///         <see cref="Render" /> 按 <see cref="HandwritingDocument.ResolveRenderScale" /> 换算，
+///         否则 661 DIP 宽的手写缩到 300 DIP 宽的卡片上时笔宽还是原样，笔画相对字会粗一倍，
+///         字与字的间隙被墨吃掉（用户反馈过「写的时候间隔正常，卡片上挤在一起」）。
 ///     </para>
 ///     <para>
 ///         性能：每一笔只建一个 <see cref="StreamGeometry" />（不是一个点一个控件/图元）。
@@ -28,6 +31,9 @@ internal static class HandwritingRenderer
     {
         if (area.Width <= 0 || area.Height <= 0)
             return;
+
+        // 预览把整页按卡片宽度缩放，笔宽要乘同一个比例（编辑画布按参考尺寸 1:1 画，比例是 1）。
+        var strokeScale = document.ResolveRenderScale(area.Width);
 
         // 同一次渲染里按颜色复用画刷。
         var brushes = new Dictionary<Color, IBrush>();
@@ -43,9 +49,12 @@ internal static class HandwritingRenderer
                 brushes[stroke.Color] = brush;
             }
 
-            var baseWidth = double.IsFinite(stroke.Width)
-                ? Math.Max(stroke.Width, 0.5)
-                : HandwritingStyle.DefaultPenWidth;
+            // 笔宽 = 用户挑的粗细 × 整页缩放比例；最细也留 0.5 DIP 的可视下限，
+            // 卡片缩得很小时细笔不会变成看不见的一条影子。
+            var baseWidth = (double.IsFinite(stroke.Width)
+                    ? Math.Max(stroke.Width, 0.5)
+                    : HandwritingStyle.DefaultPenWidth) * strokeScale;
+            baseWidth = Math.Max(baseWidth, 0.5);
 
             var points = new List<Point>(stroke.Points.Count);
             var radii = new List<double>(stroke.Points.Count);

@@ -24,8 +24,9 @@ public static class HomeworkDueDateFormatter
     ///     这条作业的截止日期是不是已经过去了——界面措辞的判据：当天还说「今天截止」，
     ///     过了当天才说「已过期 N 天」。
     ///     <para>
-    ///         ⚠️ 自动清理走的是 <see cref="HomeworkExpiryPolicy" />，那个<b>当天就算过期</b>（早一天动手）：
-    ///         清理看的是「这一天到没到」，界面看的是「期限过没过」。两条判据故意不同，别把这边改成 <c>&lt;=</c>。
+    ///         自动清理走的是 <see cref="HomeworkExpiryPolicy" />，<b>用的也是这一条</b>（当天不算过期）：
+    ///         卡片写「今天截止」的作业，当天的清理时刻到了也不会被收走。两边必须同进同退，
+    ///         改这里要一起看 `Corkboard.Core.Tests/HomeworkCleanupTests.cs`。
     ///     </para>
     /// </summary>
     public static bool IsOverdue(DateOnly due, DateOnly today) => due < today;

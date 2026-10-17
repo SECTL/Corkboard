@@ -288,12 +288,12 @@ public class ConfigSerializationTests
     }
 
     [Fact]
-    public void HomeworkConfig_SeedsCommonSubjectsOnFirstRun()
+    public void HomeworkConfig_StartsWithEmptySubjects()
     {
-        // 首次运行给几个常见科目打底，用户不用从零开始建。
+        // 首次运行不再替用户预置科目：科目表从空开始，由用户自己建。
         var config = new HomeworkConfig();
 
-        Assert.NotEmpty(config.Subjects);
+        Assert.Empty(config.Subjects);
     }
 
     [Fact]

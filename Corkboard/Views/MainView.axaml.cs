@@ -19,6 +19,7 @@ using Corkboard.Services.Board;
 using Corkboard.Services.Ui;
 using Corkboard.ViewModels;
 using Corkboard.Views.MainPages.Homework;
+using CR = Corkboard.Core.Langs.Common.Resources;
 
 namespace Corkboard.Views;
 
@@ -78,6 +79,16 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
     private readonly FAFrame? _navigationFrame;
     private readonly Border? _titleBar;
     private readonly Button? _sortButton;
+
+    /// <summary>回放时刻的月历浮层宿主：内容在 XAML 里（<see cref="ReplayCalendarView" />）。</summary>
+    private readonly Popup? _replayCalendarPopup;
+
+    /// <summary>浮层里的月历（从 Popup.Child 拿到），Unloaded 时要退掉它的事件。</summary>
+    private ReplayCalendarView? _replayCalendar;
+
+    /// <summary>浮层上一次被关掉的时刻（UTC），用来挡掉「light dismiss 与按钮 Click 撞在同一下」。</summary>
+    private DateTime _replayCalendarClosedAt;
+
     private InputElement? _dragHost;
     private DispatcherTimer? _holdToDragTimer;
     private PointerPressedEventArgs? _holdToDragPressedEvent;
@@ -121,6 +132,21 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
         _navigationFrame = this.FindControl<FAFrame>("NavigationFrame");
         _titleBar = this.FindControl<Border>("TitleBar");
         _sortButton = this.FindControl<Button>("SortButton");
+        _replayCalendarPopup = this.FindControl<Popup>("ReplayCalendarPopup");
+
+        if (_replayCalendarPopup is { } calendarPopup)
+        {
+            calendarPopup.Closed += OnReplayCalendarPopupClosed;
+
+            // 月历由 XAML 构造（在 Popup 里，这时还不在可视树上），这里把回放状态传给它，
+            // 并把「点了某个时刻」接成收起浮层——用户点完马上就该看到那一刻的板子。
+            if (calendarPopup.Child is ReplayCalendarView calendar)
+            {
+                calendar.Replay = Replay;
+                calendar.StopSelected += OnReplayCalendarStopSelected;
+                _replayCalendar = calendar;
+            }
+        }
 
         if (_navigationFrame is not null)
             _navigationFrame.NavigationPageFactory = this;
@@ -132,6 +158,8 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
 
         // 弹层一打开就把可能还在进行的长按/拖动收掉，免得拖状态留着把弹层里的点击吃掉。
         Overlay.PropertyChanged += OnOverlayChanged;
+        // 回放结束（超时自动退出等）时，月历浮层不能自己留在屏幕上。
+        Replay.PropertyChanged += OnReplayChanged;
 
 
 
@@ -139,6 +167,18 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
         {
             CancelHoldToDrag();
             Overlay.PropertyChanged -= OnOverlayChanged;
+            Replay.PropertyChanged -= OnReplayChanged;
+
+            if (_replayCalendar is not null)
+            {
+                _replayCalendar.StopSelected -= OnReplayCalendarStopSelected;
+                _replayCalendar.Replay = null;
+                _replayCalendar = null;
+            }
+
+            if (_replayCalendarPopup is not null)
+                _replayCalendarPopup.Closed -= OnReplayCalendarPopupClosed;
+
             ViewModel.Detach();
 
             if (ReferenceEquals(Current, this))
@@ -371,13 +411,14 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
     }
 
     /// <summary>
-    ///     标题栏上的「导出图片」：真正的导出逻辑在作业板页面里（它才拿得到内容容器）。
+    ///     标题栏上的「导出」：真正的导出逻辑在作业板页面里（它才拿得到内容容器），
+    ///     会先弹格式 / 范围对话框，PDF 还要过一遍预览。
     ///     主页面不是作业板时什么都不做（当前只有作业板一个主页面）。
     /// </summary>
     private async void ExportImageButton_OnClick(object? sender, RoutedEventArgs e)
     {
         if (_navigationFrame?.Content is MainPages.Board.BoardPage page)
-            await page.ExportImageAsync();
+            await page.ExportAsync();
     }
 
     private void OnHoldToDragTimerTick(object? sender, EventArgs e)
@@ -760,6 +801,76 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
     private void ReplayEnterButton_OnClick(object? sender, RoutedEventArgs e) => Replay.Enter();
 
     private void ReplayExitButton_OnClick(object? sender, RoutedEventArgs e) => Replay.Exit();
+
+    /// <summary>
+    ///     「回放时刻」：展开 / 收起月历浮层。
+    ///     <para>
+    ///         浮层刚被「点外面」收掉的那一下别再弹回来：light dismiss 与这一次按钮 Click
+    ///         走的是同一次点击，两个都会触发，不挡一下会表现为「点一下闪一下又开」。
+    ///     </para>
+    /// </summary>
+    private void ReplayCalendarButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (_replayCalendarPopup is null)
+            return;
+
+        if (!_replayCalendarPopup.IsOpen
+            && DateTime.UtcNow - _replayCalendarClosedAt < TimeSpan.FromMilliseconds(250))
+            return;
+
+        _replayCalendarPopup.IsOpen = !_replayCalendarPopup.IsOpen;
+    }
+
+    /// <summary>月历里点中某个时刻：把浮层收起来，用户马上看到那一刻的板子。</summary>
+    private void OnReplayCalendarStopSelected(object? sender, EventArgs e) => CloseReplayCalendar();
+
+    private void OnReplayCalendarPopupClosed(object? sender, EventArgs e) =>
+        _replayCalendarClosedAt = DateTime.UtcNow;
+
+    /// <summary>
+    ///     回放结束（超时自动退出、或在别处点了退出）时把月历浮层收掉：
+    ///     它所在的那一条控制条已经藏起来了，浮层不能自己留在屏幕上。
+    /// </summary>
+    private void OnReplayChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(BoardReplayService.IsActive) && !Replay.IsActive)
+            CloseReplayCalendar();
+    }
+
+    private void CloseReplayCalendar()
+    {
+        if (_replayCalendarPopup is not null)
+            _replayCalendarPopup.IsOpen = false;
+    }
+
+    /// <summary>
+    ///     「还原到此刻」：把当前停靠点那一刻板子上的作业整份放回当前页面（清掉它们的「已清理」标记）。
+    ///     <para>
+    ///         先确认：回放里看到的是那一刻的快照，点一下这些作业就会全部重新出现在板子上。
+    ///         已经单独删掉的作业不在内存里，还原不回来——文案里说明这一点。
+    ///     </para>
+    /// </summary>
+    private async void ReplayRestoreButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (TopLevel.GetTopLevel(this) is not { } topLevel || !Replay.IsActive || Replay.CurrentAt is null)
+            return;
+
+        var dialog = new FAContentDialog
+        {
+            Title = CR.Board_ReplayRestoreConfirmTitle,
+            Content = CR.Board_ReplayRestoreConfirmMessage,
+            PrimaryButtonText = CR.Board_ReplayRestore,
+            CloseButtonText = CR.Common_Cancel,
+            DefaultButton = FAContentDialogButton.Close
+        };
+
+        // 对话框显示期间让窗口不透明：整窗 alpha 会把对话框一起变透明（见 ModalOpacityScope）。
+        using var modalOpacity = ModalOpacityScope.Begin(this);
+        if (await dialog.ShowAsync(topLevel) != FAContentDialogResult.Primary)
+            return;
+
+        Replay.RestoreCurrentSnapshot();
+    }
 
     /// <summary>
     ///     「收纳」：把主窗口收起来，屏幕上只留一颗展开浮钮（见 <see cref="BoardDockService" />）。

@@ -100,6 +100,36 @@
   <data name="Board_ReplayReadOnlyHint" xml:space="preserve">
     <value>Assignments are read-only while replaying</value>
   </data>
+  <data name="Board_ReplayRestore" xml:space="preserve">
+    <value>Restore to this moment</value>
+  </data>
+  <data name="Board_ReplayRestoreTip" xml:space="preserve">
+    <value>Put the assignments of this moment back on the board</value>
+  </data>
+  <data name="Board_ReplayRestoreConfirmTitle" xml:space="preserve">
+    <value>Restore to this moment</value>
+  </data>
+  <data name="Board_ReplayRestoreConfirmMessage" xml:space="preserve">
+    <value>The board goes back to this moment; assignments added later are tucked away</value>
+  </data>
+  <data name="Board_ReplayCalendarTip" xml:space="preserve">
+    <value>Pick a replay moment</value>
+  </data>
+  <data name="Board_ReplayMonthFormat" xml:space="preserve">
+    <value>{0:MMMM yyyy}</value>
+  </data>
+  <data name="Board_ReplayPickDay" xml:space="preserve">
+    <value>Pick a day that has assignments</value>
+  </data>
+  <data name="Board_ReplayDayStops" xml:space="preserve">
+    <value>Moments that day</value>
+  </data>
+  <data name="Board_ReplayPrevMonth" xml:space="preserve">
+    <value>Previous month</value>
+  </data>
+  <data name="Board_ReplayNextMonth" xml:space="preserve">
+    <value>Next month</value>
+  </data>
   <!-- Seed subjects, editable in settings. -->
   <data name="Board_Seed_Subject_Chinese" xml:space="preserve">
     <value>Chinese</value>
@@ -303,6 +333,12 @@
   <data name="Settings_Board_LayoutDescription" xml:space="preserve">
     <value>One centred column, or columns that fit the window</value>
   </data>
+  <data name="Settings_Board_SubjectReorderEnabled" xml:space="preserve">
+    <value>Drag to reorder</value>
+  </data>
+  <data name="Settings_Board_SubjectReorderEnabledDescription" xml:space="preserve">
+    <value>Hold a subject title to drag it; turning this off hides the drag handle</value>
+  </data>
   <data name="Settings_Board_BlockMinWidth" xml:space="preserve">
     <value>Block width</value>
   </data>
@@ -427,7 +463,7 @@
     <value>Automatic cleanup</value>
   </data>
   <data name="Settings_Board_CleanupDescription" xml:space="preserve">
-    <value>Notes leave the board on their due date, data stays</value>
+    <value>Cleared after the due date, at the cleanup time</value>
   </data>
   <data name="Settings_Board_CleanupEnabled" xml:space="preserve">
     <value>Enable automatic cleanup</value>
@@ -436,7 +472,7 @@
     <value>Run</value>
   </data>
   <data name="Settings_Board_CleanupFrequencyDescription" xml:space="preserve">
-    <value>How often it runs, a missed run happens next launch</value>
+    <value>How often it runs, only after the cleanup time</value>
   </data>
   <data name="Settings_Board_CleanupFrequency_Daily" xml:space="preserve">
     <value>Every day</value>
@@ -451,7 +487,7 @@
     <value>At</value>
   </data>
   <data name="Settings_Board_CleanupTimeDescription" xml:space="preserve">
-    <value>What time it runs, notes without a due date stay</value>
+    <value>What time it runs, nothing happens before then</value>
   </data>
   <data name="Settings_Board_CleanupRunNow" xml:space="preserve">
     <value>Clean up now</value>
@@ -833,7 +869,7 @@
     <value>Quick tags</value>
   </data>
   <data name="Settings_Board_Cleanup_Title" xml:space="preserve">
-    <value>Cleanup and backup</value>
+    <value>Cleanup</value>
   </data>
   <data name="Settings_Board_Dock_Title" xml:space="preserve">
     <value>Collapse</value>
@@ -917,31 +953,73 @@
     <value>Clear the board</value>
   </data>
   <data name="Settings_Board_ClearAllDescription" xml:space="preserve">
-    <value>Remove every note, backing up first</value>
+    <value>Tuck assignments away, data stays and can be restored in Time replay</value>
   </data>
   <data name="Settings_Board_ClearAllConfirmTitle" xml:space="preserve">
     <value>Clear the board</value>
   </data>
   <data name="Settings_Board_ClearAllConfirmMessage" xml:space="preserve">
-    <value>All notes will be removed after a backup is saved</value>
+    <value>Assignments will be tucked away; files and data stay, restorable in Time replay</value>
   </data>
   <data name="Settings_Board_ClearAllDone" xml:space="preserve">
-    <value>Cleared, backup kept at {0}</value>
+    <value>Assignments are tucked away; data stays and can be restored in Time replay</value>
   </data>
   <data name="Settings_Board_ClearAllFailed" xml:space="preserve">
-    <value>Backup failed, nothing was cleared</value>
+    <value>Clearing failed, assignments are still on the board</value>
   </data>
-  <data name="Settings_Board_Backups" xml:space="preserve">
-    <value>Automatic backups</value>
+  <data name="Settings_Board_History_Title" xml:space="preserve">
+    <value>History and replay</value>
   </data>
-  <data name="Settings_Board_BackupsDescription" xml:space="preserve">
-    <value>A copy is saved here before the board is cleared</value>
+  <data name="Settings_Board_History_Coalesce" xml:space="preserve">
+    <value>Save spacing</value>
   </data>
-  <data name="Settings_Board_BackupsEmpty" xml:space="preserve">
-    <value>No backups yet</value>
+  <data name="Settings_Board_History_CoalesceDescription" xml:space="preserve">
+    <value>Edits to the same assignment within a few minutes become one entry</value>
   </data>
-  <data name="Settings_Board_BackupItemFormat" xml:space="preserve">
-    <value>{0} · {1}</value>
+  <data name="Settings_Board_History_CoalesceUnit" xml:space="preserve">
+    <value>min</value>
+  </data>
+  <data name="Settings_Board_History_Retention" xml:space="preserve">
+    <value>Days to keep</value>
+  </data>
+  <data name="Settings_Board_History_RetentionDescription" xml:space="preserve">
+    <value>History older than this many days is deleted automatically</value>
+  </data>
+  <data name="Settings_Board_History_RetentionUnit" xml:space="preserve">
+    <value>days</value>
+  </data>
+  <data name="Settings_Board_History_MaxSize" xml:space="preserve">
+    <value>Size limit</value>
+  </data>
+  <data name="Settings_Board_History_MaxSizeDescription" xml:space="preserve">
+    <value>Past the limit the oldest days are deleted first</value>
+  </data>
+  <data name="Settings_Board_History_MaxSizeUnit" xml:space="preserve">
+    <value>MB</value>
+  </data>
+  <data name="Settings_Board_History_Usage" xml:space="preserve">
+    <value>History usage</value>
+  </data>
+  <data name="Settings_Board_History_UsageDescription" xml:space="preserve">
+    <value>See how much history is stored and purge it right here</value>
+  </data>
+  <data name="Settings_Board_History_StatEntries" xml:space="preserve">
+    <value>Entries</value>
+  </data>
+  <data name="Settings_Board_History_StatSnapshots" xml:space="preserve">
+    <value>Snapshots</value>
+  </data>
+  <data name="Settings_Board_History_StatSize" xml:space="preserve">
+    <value>Size</value>
+  </data>
+  <data name="Settings_Board_History_PruneNow" xml:space="preserve">
+    <value>Purge history now</value>
+  </data>
+  <data name="Settings_Board_History_PruneResultFormat" xml:space="preserve">
+    <value>Purged {0} days of history</value>
+  </data>
+  <data name="Settings_Board_History_PruneNothing" xml:space="preserve">
+    <value>Nothing to purge</value>
   </data>
   <data name="Settings_Board_Dock_Enabled" xml:space="preserve">
     <value>Collapse the board</value>
@@ -1092,5 +1170,360 @@
   </data>
   <data name="Settings_Board_Sections_DuplicateName" xml:space="preserve">
     <value>A category with this name already exists</value>
+  </data>
+  <!--
+    Update settings page. Page copy mirrors the upstream SecRandom-C Update page;
+    Update_M_* and Update_Notification_* are read by Core's UpdateText through the ResourceManager (service side).
+  -->
+  <data name="Settings_Update_Title" xml:space="preserve">
+    <value>Updates</value>
+  </data>
+  <data name="Update_S_Strategy" xml:space="preserve">
+    <value>Update strategy</value>
+  </data>
+  <data name="Update_S_Strategy_AutoUpdateMode" xml:space="preserve">
+    <value>Automatic updates</value>
+  </data>
+  <data name="Update_S_Strategy_AutoUpdateMode_D" xml:space="preserve">
+    <value>What to do with a new version: notify, download or install</value>
+  </data>
+  <data name="Update_O_AutoUpdateMode_Off" xml:space="preserve">
+    <value>Off</value>
+  </data>
+  <data name="Update_O_AutoUpdateMode_Notify" xml:space="preserve">
+    <value>Check and notify me</value>
+  </data>
+  <data name="Update_O_AutoUpdateMode_Download" xml:space="preserve">
+    <value>Check and download</value>
+  </data>
+  <data name="Update_O_AutoUpdateMode_Install" xml:space="preserve">
+    <value>Check and install</value>
+  </data>
+  <data name="Update_S_Strategy_Channel" xml:space="preserve">
+    <value>Update channel</value>
+  </data>
+  <data name="Update_S_Strategy_Channel_D" xml:space="preserve">
+    <value>Pick stable or preview builds</value>
+  </data>
+  <data name="Update_O_UpdateChannel_Stable" xml:space="preserve">
+    <value>Stable</value>
+  </data>
+  <data name="Update_O_UpdateChannel_Beta" xml:space="preserve">
+    <value>Beta</value>
+  </data>
+  <data name="Update_O_UpdateChannel_Alpha" xml:space="preserve">
+    <value>Alpha</value>
+  </data>
+  <data name="Update_C_CheckUpdates" xml:space="preserve">
+    <value>Check for updates</value>
+  </data>
+  <data name="Update_C_InstallUpdate" xml:space="preserve">
+    <value>Install update</value>
+  </data>
+  <data name="Update_C_DownloadAndInstall" xml:space="preserve">
+    <value>Download and install</value>
+  </data>
+  <data name="Update_C_ForceCheckUpdates" xml:space="preserve">
+    <value>Force check for updates</value>
+  </data>
+  <data name="Update_C_ForceCheckUpdates_D" xml:space="preserve">
+    <value>Check the newest build in this channel even if it is older than the running one</value>
+  </data>
+  <data name="Update_S_Check" xml:space="preserve">
+    <value>Check for updates</value>
+  </data>
+  <data name="Update_S_Check_D" xml:space="preserve">
+    <value>Only reads the signed release manifest, never downloads in the background</value>
+  </data>
+  <data name="Update_S_Strategy_LastCheckTime" xml:space="preserve">
+    <value>Last checked</value>
+  </data>
+  <data name="Update_S_Strategy_LastCheckTime_D" xml:space="preserve">
+    <value>When the updater last ran</value>
+  </data>
+  <data name="Update_Notification_Title" xml:space="preserve">
+    <value>Corkboard update</value>
+  </data>
+  <data name="Update_Notification_Message" xml:space="preserve">
+    <value>Version {0} is available</value>
+  </data>
+  <data name="Update_M_StatusNotChecked" xml:space="preserve">
+    <value>No update check yet</value>
+  </data>
+  <data name="Update_M_StatusChecking" xml:space="preserve">
+    <value>Checking for updates</value>
+  </data>
+  <data name="Update_M_StatusUpToDate" xml:space="preserve">
+    <value>You are on the latest version</value>
+  </data>
+  <data name="Update_M_StatusUpdateAvailable" xml:space="preserve">
+    <value>Version {0} is available</value>
+  </data>
+  <data name="Update_M_StatusUpdateAvailableSelect" xml:space="preserve">
+    <value>Version {0} is available, pick a full package</value>
+  </data>
+  <data name="Update_M_StatusCancelled" xml:space="preserve">
+    <value>Update cancelled</value>
+  </data>
+  <data name="Update_M_StatusDownloading" xml:space="preserve">
+    <value>Downloading full package {0}</value>
+  </data>
+  <data name="Update_M_StatusVerifying" xml:space="preserve">
+    <value>Verifying the package</value>
+  </data>
+  <data name="Update_M_StatusPreparing" xml:space="preserve">
+    <value>Preparing the update</value>
+  </data>
+  <data name="Update_M_StatusReadyToInstall" xml:space="preserve">
+    <value>Update downloaded, ready to install</value>
+  </data>
+  <data name="Update_M_StatusRestarting" xml:space="preserve">
+    <value>Restarting to apply the update</value>
+  </data>
+  <data name="Update_M_NoUpdateSourceAvailable" xml:space="preserve">
+    <value>No update source is available</value>
+  </data>
+  <data name="Update_M_UpdateSourceUnavailable" xml:space="preserve">
+    <value>Update source is temporarily unavailable, try again later</value>
+  </data>
+  <data name="Update_M_ReleaseManifestMissing" xml:space="preserve">
+    <value>This channel has no verifiable release yet</value>
+  </data>
+  <data name="Update_M_NoCompatibleArtifact" xml:space="preserve">
+    <value>This version has no full package for your system, architecture and install type</value>
+  </data>
+  <data name="Update_M_MetadataEmpty" xml:space="preserve">
+    <value>Update metadata is empty</value>
+  </data>
+  <data name="Update_M_MetadataInvalid" xml:space="preserve">
+    <value>Update metadata is malformed</value>
+  </data>
+  <data name="Update_M_MetadataChannelMissing" xml:space="preserve">
+    <value>Channel {0} has no release tag</value>
+  </data>
+  <data name="Update_M_ManifestSignatureInvalid" xml:space="preserve">
+    <value>Update manifest signature is invalid, check the public key and source</value>
+  </data>
+  <data name="Update_M_ManifestInvalid" xml:space="preserve">
+    <value>Update manifest is malformed</value>
+  </data>
+  <data name="Update_M_ManifestMismatch" xml:space="preserve">
+    <value>Update manifest does not match the selected channel</value>
+  </data>
+  <data name="Update_M_PublicKeyInvalid" xml:space="preserve">
+    <value>Built-in update public key is invalid</value>
+  </data>
+  <data name="Update_M_PortableLauncherMissing" xml:space="preserve">
+    <value>This portable build has no stable launcher, download a new full ZIP once</value>
+  </data>
+  <data name="Update_M_ZipAppDirectoryMissing" xml:space="preserve">
+    <value>Full ZIP has no version directory</value>
+  </data>
+  <data name="Update_M_ZipMarkerMissing" xml:space="preserve">
+    <value>Full ZIP has no package marker</value>
+  </data>
+  <data name="Update_M_ZipMismatch" xml:space="preserve">
+    <value>Full ZIP does not match the running environment</value>
+  </data>
+  <data name="Update_M_TargetVersionExists" xml:space="preserve">
+    <value>Target version directory already exists, check for updates again</value>
+  </data>
+  <data name="Update_M_ZipLauncherMissing" xml:space="preserve">
+    <value>Full ZIP has no launcher</value>
+  </data>
+  <data name="Update_M_ArtifactLengthMismatch" xml:space="preserve">
+    <value>Package size does not match the manifest</value>
+  </data>
+  <data name="Update_M_ArtifactHashMismatch" xml:space="preserve">
+    <value>Package SHA-512 check failed</value>
+  </data>
+  <data name="Update_M_ZipEntryLimit" xml:space="preserve">
+    <value>Full ZIP has too many files</value>
+  </data>
+  <data name="Update_M_ZipInvalidPath" xml:space="preserve">
+    <value>Full ZIP contains an invalid file path</value>
+  </data>
+  <data name="Update_M_ZipSizeLimit" xml:space="preserve">
+    <value>Full ZIP unpacks to more bytes than allowed</value>
+  </data>
+  <data name="Update_M_ZipOutsidePath" xml:space="preserve">
+    <value>Full ZIP contains a path outside the target</value>
+  </data>
+  <data name="Update_M_InstallerUnsupported" xml:space="preserve">
+    <value>This package type is not supported</value>
+  </data>
+  <data name="Update_M_InstallerStartFailed" xml:space="preserve">
+    <value>Could not start the system installer</value>
+  </data>
+  <data name="Update_M_UnknownPackageKind" xml:space="preserve">
+    <value>Manifest contains an unknown package type</value>
+  </data>
+  <data name="Export_DialogTitle" xml:space="preserve">
+    <value>Export board</value>
+  </data>
+  <data name="Export_FormatLabel" xml:space="preserve">
+    <value>Format</value>
+  </data>
+  <data name="Export_FormatImage" xml:space="preserve">
+    <value>Image</value>
+  </data>
+  <data name="Export_FormatImageDescription" xml:space="preserve">
+    <value>One long image of the whole board</value>
+  </data>
+  <data name="Export_FormatPdf" xml:space="preserve">
+    <value>PDF</value>
+  </data>
+  <data name="Export_FormatPdfDescription" xml:space="preserve">
+    <value>Repaginated for printing, one PDF file</value>
+  </data>
+  <data name="Export_ScopeLabel" xml:space="preserve">
+    <value>Scope</value>
+  </data>
+  <data name="Export_ScopeAll" xml:space="preserve">
+    <value>All notes</value>
+  </data>
+  <data name="Export_ScopePartial" xml:space="preserve">
+    <value>Selected notes</value>
+  </data>
+  <data name="Export_SelectAll" xml:space="preserve">
+    <value>Select all</value>
+  </data>
+  <data name="Export_SelectedCount" xml:space="preserve">
+    <value>{0} of {1} selected</value>
+  </data>
+  <data name="Export_RememberChoice" xml:space="preserve">
+    <value>Always use this format</value>
+  </data>
+  <data name="Export_CopyImage" xml:space="preserve">
+    <value>Copy image</value>
+  </data>
+  <data name="Export_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Export_Next" xml:space="preserve">
+    <value>Next</value>
+  </data>
+  <data name="Export_Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Export_PreviewTitle" xml:space="preserve">
+    <value>Export preview</value>
+  </data>
+  <data name="Export_PreviewPageCount" xml:space="preserve">
+    <value>{0} page(s)</value>
+  </data>
+  <data name="Export_PreviewBack" xml:space="preserve">
+    <value>Back</value>
+  </data>
+  <data name="Export_PreviewExport" xml:space="preserve">
+    <value>Export PDF</value>
+  </data>
+  <data name="Export_SuccessImage" xml:space="preserve">
+    <value>Image saved</value>
+  </data>
+  <data name="Export_SuccessPdf" xml:space="preserve">
+    <value>PDF saved</value>
+  </data>
+  <data name="Export_SuccessCopied" xml:space="preserve">
+    <value>Image copied to clipboard</value>
+  </data>
+  <data name="Export_Failed" xml:space="preserve">
+    <value>Export failed, try again later</value>
+  </data>
+  <data name="Export_NoContent" xml:space="preserve">
+    <value>No notes on the board</value>
+  </data>
+  <data name="Settings_Export_Title" xml:space="preserve">
+    <value>Export</value>
+  </data>
+  <data name="Settings_Export_Behavior" xml:space="preserve">
+    <value>Export behavior</value>
+  </data>
+  <data name="Settings_Export_BehaviorDescription" xml:space="preserve">
+    <value>Whether to ask for a format when exporting</value>
+  </data>
+  <data name="Settings_Export_AskForFormat" xml:space="preserve">
+    <value>Ask for format</value>
+  </data>
+  <data name="Settings_Export_DefaultFormat" xml:space="preserve">
+    <value>Default format</value>
+  </data>
+  <data name="Settings_Export_PdfLayout" xml:space="preserve">
+    <value>PDF layout</value>
+  </data>
+  <data name="Settings_Export_PdfLayoutDescription" xml:space="preserve">
+    <value>Paper, pagination and header/footer</value>
+  </data>
+  <data name="Settings_Export_PageSize" xml:space="preserve">
+    <value>Paper size</value>
+  </data>
+  <data name="Settings_Export_Orientation" xml:space="preserve">
+    <value>Orientation</value>
+  </data>
+  <data name="Settings_Export_OrientationDescription" xml:space="preserve">
+    <value>Auto matches a wide board</value>
+  </data>
+  <data name="Settings_Export_Margin" xml:space="preserve">
+    <value>Margins</value>
+  </data>
+  <data name="Settings_Export_Columns" xml:space="preserve">
+    <value>Columns</value>
+  </data>
+  <data name="Settings_Export_ColumnsDescription" xml:space="preserve">
+    <value>More columns fit more notes per page</value>
+  </data>
+  <data name="Settings_Export_Sort" xml:space="preserve">
+    <value>Sort order</value>
+  </data>
+  <data name="Settings_Export_SortDescription" xml:space="preserve">
+    <value>Follow the board or reorder by date</value>
+  </data>
+  <data name="Settings_Export_SubjectPageBreak" xml:space="preserve">
+    <value>New page per subject</value>
+  </data>
+  <data name="Settings_Export_SubjectPageBreakDescription" xml:space="preserve">
+    <value>Each subject starts on a new page</value>
+  </data>
+  <data name="Settings_Export_HeaderFooter" xml:space="preserve">
+    <value>Header and footer</value>
+  </data>
+  <data name="Settings_Export_HeaderFooterDescription" xml:space="preserve">
+    <value>Board name on top, page numbers below</value>
+  </data>
+  <data name="Export_Orientation_Auto" xml:space="preserve">
+    <value>Auto</value>
+  </data>
+  <data name="Export_Orientation_Portrait" xml:space="preserve">
+    <value>Portrait</value>
+  </data>
+  <data name="Export_Orientation_Landscape" xml:space="preserve">
+    <value>Landscape</value>
+  </data>
+  <data name="Export_Margin_Narrow" xml:space="preserve">
+    <value>Narrow</value>
+  </data>
+  <data name="Export_Margin_Normal" xml:space="preserve">
+    <value>Normal</value>
+  </data>
+  <data name="Export_Margin_Wide" xml:space="preserve">
+    <value>Wide</value>
+  </data>
+  <data name="Export_Sort_FollowBoard" xml:space="preserve">
+    <value>Follow board</value>
+  </data>
+  <data name="Export_Sort_CreatedDescending" xml:space="preserve">
+    <value>Created (newest first)</value>
+  </data>
+  <data name="Export_Sort_CreatedAscending" xml:space="preserve">
+    <value>Created (oldest first)</value>
+  </data>
+  <data name="Export_Sort_UpdatedDescending" xml:space="preserve">
+    <value>Updated (newest first)</value>
+  </data>
+  <data name="Export_Sort_Subject" xml:space="preserve">
+    <value>By subject name</value>
+  </data>
+  <data name="Export_Sort_Fixed" xml:space="preserve">
+    <value>Keep fixed order</value>
   </data>
 </root>

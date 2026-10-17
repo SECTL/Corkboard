@@ -408,13 +408,18 @@ public class HandwritingCanvas : Control, ICustomHitTest
         {
             _touchPoints[e.Pointer] = e.GetPosition(this);
 
-            if (_touchGestureActive && _touchPoints.Count >= 2)
+            // 双指手势：只挪 / 缩视口，不落笔。
+            if (_touchGestureActive || _touchPoints.Count >= 2)
             {
-                UpdateTouchGesture();
+                if (_touchGestureActive)
+                    UpdateTouchGesture();
+
                 e.Handled = true;
+                return;
             }
 
-            return;
+            // ⚠️ 单指必须继续往下走落笔分支。这里以前直接 return，手指拖动只落得下按下的那一个点
+            //    （用户反馈「手指按到屏幕上之后拖动，其实只有一个点」）。
         }
 
         if (!_pointerDown || !ReferenceEquals(e.Pointer, _activePointer))
@@ -459,6 +464,12 @@ public class HandwritingCanvas : Control, ICustomHitTest
             if (_touchPoints.Count == 0)
                 _suppressTouchDraw = false;
 
+            // ⚠️ 单指画完抬起来必须收尾：不收尾 _pointerDown 会一直挂着，
+            //    「撤销一笔」「清除」都因为「画到一半」被忽略（用户反馈点了没反应），
+            //    这一笔也永远走不到 SyncDataFromDocument，表单保存时笔迹是空的。
+            if (_pointerDown && ReferenceEquals(e.Pointer, _activePointer))
+                EndGesture();
+
             e.Handled = true;
             return;
         }
@@ -484,6 +495,10 @@ public class HandwritingCanvas : Control, ICustomHitTest
 
             if (_touchPoints.Count == 0)
                 _suppressTouchDraw = false;
+
+            // 和抬起一样：捕获在画布外丢掉时也要把这一笔收掉，否则 _pointerDown 会一直挂住。
+            if (_pointerDown && ReferenceEquals(e.Pointer, _activePointer))
+                EndGesture();
 
             return;
         }

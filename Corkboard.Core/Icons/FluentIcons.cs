@@ -28,6 +28,9 @@ public static class FluentIcons
     public const string ColorFilled = "\uE51D";
     public const string SyncFilled = "\uE160";
 
+    /// <summary>设置里的更新页。码位来自上游图标映射表 <c>arrow_sync_20_filled</c>（与 <see cref="SyncFilled" /> 同码位）。</summary>
+    public const string ArrowSyncFilled = "\uE160";
+
     /// <summary>「需要重启」提示按钮用。码位来自上游图标映射表 <c>arrow_counterclockwise_20_filled</c>。</summary>
     public const string ArrowCounterclockwiseFilled = "\uE0BC";
 

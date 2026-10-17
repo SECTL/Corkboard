@@ -92,7 +92,7 @@ public class HomeworkCleanupTests : IDisposable
     // ── 判定：只看截止日期 ──────────────────────────────────────────────────
 
     /// <summary>
-    ///     过期只有一条规则：<b>到了截止日期就算过期</b>（当天就算，不是第二天）。
+    ///     过期只有一条规则：<b>过了截止日期才算过期</b>（截止当天不算，要等第二天）。
     ///     没填截止日期的作业不管建了多久都不会被清掉。
     /// </summary>
     [Fact]
@@ -106,21 +106,20 @@ public class HomeworkCleanupTests : IDisposable
 
         Assert.Null(HomeworkExpiryPolicy.ExpiryDate(ancient));
         Assert.False(HomeworkExpiryPolicy.IsExpired(ancient, Today));
-        Assert.True(HomeworkExpiryPolicy.IsExpired(dueToday, Today));
+        Assert.False(HomeworkExpiryPolicy.IsExpired(dueToday, Today));
         Assert.False(HomeworkExpiryPolicy.IsExpired(dueTomorrow, Today));
         Assert.True(HomeworkExpiryPolicy.IsExpired(dueYesterday, Today));
         Assert.True(HomeworkExpiryPolicy.IsExpired(dueLongAgo, Today));
     }
 
     /// <summary>
-    ///     清理判据比界面那行「今天截止 / 过期 N 天」早一天：界面当天还说「今天截止」，
-    ///     清理在当天就算过期（用户要的是「截止时刻到了之后它就算没了」）。
-    ///     两条判据故意不同，但方向必须一致——界面说已过期的，清理一定也认为过期。
+    ///     清理判据与界面那行「今天截止 / 过期 N 天」<b>完全一致</b>：截止当天两边都说还没过期，
+    ///     第二天两边才都算过期。用户明确要求「今天截止的作业今天不应该清理」。
     /// </summary>
     [Fact]
-    public void Expiry_StartsOnTheDueDateEvenThoughTheCardLabelWaitsOneMoreDay()
+    public void Expiry_MatchesTheCardLabel()
     {
-        foreach (var offset in new[] { -3, -1, 1, 7 })
+        foreach (var offset in new[] { -7, -3, -1, 0, 1, 7 })
         {
             var due = Today.AddDays(offset);
             var note = new Note { DueDate = due };
@@ -128,9 +127,9 @@ public class HomeworkCleanupTests : IDisposable
             Assert.Equal(HomeworkDueDateFormatter.IsOverdue(due, Today), HomeworkExpiryPolicy.IsExpired(note, Today));
         }
 
-        // 当天：界面还说「今天截止」，清理已经把它算过期了。
+        // 当天：界面的文案是「今天截止」，清理也不该动它。
         Assert.False(HomeworkDueDateFormatter.IsOverdue(Today, Today));
-        Assert.True(HomeworkExpiryPolicy.IsExpired(new Note { DueDate = Today }, Today));
+        Assert.False(HomeworkExpiryPolicy.IsExpired(new Note { DueDate = Today }, Today));
     }
 
     /// <summary>自动清理默认开着（用户明确要的默认值），设置页第一眼看到的就是已启用。</summary>
@@ -145,37 +144,47 @@ public class HomeworkCleanupTests : IDisposable
     // ── 到点判定 ────────────────────────────────────────────────────────────
 
     [Fact]
-    public void Schedule_DailySlotFiresOncePerDayAfterTheConfiguredTime()
+    public void Schedule_DailySlotFiresOnlyAfterTodaysConfiguredTime()
     {
         var now = LocalTime(2026, 5, 20, 5);
 
-        // 还没到今天的 6 点：最近一个时刻是昨天 6 点，这次会话还没动过手 → 立刻补清。
-        Assert.True(HomeworkCleanupSchedule.ShouldRun(HomeworkCleanupFrequency.Daily, DayOfWeek.Monday, 6, 0, null, now));
+        // 还没到今天的 6 点：就算这次会话还没动过手（凌晨刚启动），也一律不动手。
+        Assert.Null(HomeworkCleanupSchedule.DueSlotToday(HomeworkCleanupFrequency.Daily, DayOfWeek.Monday, 6, 0, now));
+        Assert.False(HomeworkCleanupSchedule.ShouldRun(HomeworkCleanupFrequency.Daily, DayOfWeek.Monday, 6, 0, null, now));
 
         // 昨天 6 点已经清过了 → 今天 6 点还没到，不该再动手。
         Assert.False(HomeworkCleanupSchedule.ShouldRun(HomeworkCleanupFrequency.Daily, DayOfWeek.Monday, 6, 0, LocalTime(2026, 5, 19, 6), now));
 
         // 到了今天的 6 点之后，昨天那次就不算数了。
+        Assert.Equal(
+            LocalTime(2026, 5, 20, 6),
+            HomeworkCleanupSchedule.DueSlotToday(HomeworkCleanupFrequency.Daily, DayOfWeek.Monday, 6, 0, LocalTime(2026, 5, 20, 6)));
         Assert.True(HomeworkCleanupSchedule.ShouldRun(HomeworkCleanupFrequency.Daily, DayOfWeek.Monday, 6, 0, LocalTime(2026, 5, 19, 6), LocalTime(2026, 5, 20, 6, 0)));
 
-        // 刚刚清过（同一时刻）不再重复动手。
+        // 今天已经清过一次（哪怕清了之后还没到 6 点——比如刚清完就把时刻往后调），也不再重复。
         var justRan = LocalTime(2026, 5, 20, 6);
         Assert.False(HomeworkCleanupSchedule.ShouldRun(HomeworkCleanupFrequency.Daily, DayOfWeek.Monday, 6, 0, justRan, justRan));
     }
 
     [Fact]
-    public void Schedule_WeeklySlotFiresOnTheConfiguredWeekday()
+    public void Schedule_WeeklySlotFiresOnlyOnTheConfiguredWeekdayAfterTheConfiguredTime()
     {
-        // 2026-05-20 是星期三，目标定在星期一 6 点：最近一个时刻是 5 月 18 日星期一。
-        var now = LocalTime(2026, 5, 20, 5);
-        var slot = HomeworkCleanupSchedule.LastDueSlot(HomeworkCleanupFrequency.Weekly, DayOfWeek.Monday, 6, 0, now);
+        // 2026-05-20 是星期三：按周清理定在星期一 6 点，这一整天都不该动手。
+        var wednesday = LocalTime(2026, 5, 20, 5);
+        Assert.Null(HomeworkCleanupSchedule.DueSlotToday(HomeworkCleanupFrequency.Weekly, DayOfWeek.Monday, 6, 0, wednesday));
+        Assert.False(HomeworkCleanupSchedule.ShouldRun(HomeworkCleanupFrequency.Weekly, DayOfWeek.Monday, 6, 0, null, wednesday));
 
-        Assert.Equal(LocalTime(2026, 5, 18, 6), slot);
-        Assert.False(HomeworkCleanupSchedule.ShouldRun(HomeworkCleanupFrequency.Weekly, DayOfWeek.Monday, 6, 0, LocalTime(2026, 5, 18, 6), now));
+        // 星期一但还没到 6 点：不动手；过了 6 点：动手，并且只认今天这个时刻。
+        var mondayBefore = LocalTime(2026, 5, 18, 5);
+        Assert.Null(HomeworkCleanupSchedule.DueSlotToday(HomeworkCleanupFrequency.Weekly, DayOfWeek.Monday, 6, 0, mondayBefore));
+        Assert.False(HomeworkCleanupSchedule.ShouldRun(HomeworkCleanupFrequency.Weekly, DayOfWeek.Monday, 6, 0, null, mondayBefore));
 
-        // 目标就是今天，而且还没到点：最近一个时刻回退到上周同一天。
-        var monday = LocalTime(2026, 5, 18, 5);
-        Assert.Equal(LocalTime(2026, 5, 11, 6), HomeworkCleanupSchedule.LastDueSlot(HomeworkCleanupFrequency.Weekly, DayOfWeek.Monday, 6, 0, monday));
+        var mondayAfter = LocalTime(2026, 5, 18, 6);
+        Assert.Equal(
+            LocalTime(2026, 5, 18, 6),
+            HomeworkCleanupSchedule.DueSlotToday(HomeworkCleanupFrequency.Weekly, DayOfWeek.Monday, 6, 0, mondayAfter));
+        Assert.True(HomeworkCleanupSchedule.ShouldRun(HomeworkCleanupFrequency.Weekly, DayOfWeek.Monday, 6, 0, LocalTime(2026, 5, 11, 6), mondayAfter));
+        Assert.False(HomeworkCleanupSchedule.ShouldRun(HomeworkCleanupFrequency.Weekly, DayOfWeek.Monday, 6, 0, mondayAfter, mondayAfter));
     }
 
     /// <summary>自动清理关掉时，到点判定永远为假（手动「立即清理」不受影响，见下）。</summary>
@@ -201,8 +210,8 @@ public class HomeworkCleanupTests : IDisposable
     // ── 清理：从板子上拿掉，数据原地不动 ──────────────────────────────────────
 
     /// <summary>
-    ///     到了截止日期就从板子上清掉——不管作业是哪天建的，也不管现在是几点
-    ///     （用户点「立即清理」本来就该立刻见效）；没填截止日期的作业一条都不动。
+    ///     过了截止日期就从板子上清掉——不管作业是哪天建的，也不管现在是几点
+    ///     （用户点「立即清理」本来就该立刻见效）；截止当天的不动、没填截止日期的一条都不动。
     /// </summary>
     [Fact]
     public void Run_ClearsExpiredNotesFromTheBoardAndLeavesTheDataInPlace()
@@ -220,14 +229,15 @@ public class HomeworkCleanupTests : IDisposable
 
         // 清掉的只是「板子上看不见」：作业仍旧留在内存集合里——不留在集合里的话，
         // 下一次落盘会把这条日期文件整个重写成没有它的样子，那就真没了。
-        Assert.Equal(3, result.Cleaned);
+        // 今天截止的那条不算过期（用户明确要求今天不清理），要等明天。
+        Assert.Equal(2, result.Cleaned);
         Assert.Equal(5, board.Notes.Count);
         Assert.NotNull(board.Notes.Single(note => note.Id == overdueLong.Id).CleanedAt);
         Assert.NotNull(board.Notes.Single(note => note.Id == overdueYesterday.Id).CleanedAt);
-        Assert.NotNull(board.Notes.Single(note => note.Id == dueToday.Id).CleanedAt);
+        Assert.Null(board.Notes.Single(note => note.Id == dueToday.Id).CleanedAt);
         Assert.False(board.Notes.Single(note => note.Id == overdueLong.Id).IsOnBoard);
         Assert.False(board.Notes.Single(note => note.Id == overdueYesterday.Id).IsOnBoard);
-        Assert.False(board.Notes.Single(note => note.Id == dueToday.Id).IsOnBoard);
+        Assert.True(board.Notes.Single(note => note.Id == dueToday.Id).IsOnBoard);
         Assert.True(board.Notes.Single(note => note.Id == dueLater.Id).IsOnBoard);
         Assert.True(board.Notes.Single(note => note.Id == withoutDueDate.Id).IsOnBoard);
 
@@ -240,7 +250,7 @@ public class HomeworkCleanupTests : IDisposable
         var reloaded = CreateStore().LoadAll();
         Assert.Equal(5, reloaded.Count);
         Assert.NotNull(reloaded.Single(note => note.Id == overdueLong.Id).CleanedAt);
-        Assert.NotNull(reloaded.Single(note => note.Id == dueToday.Id).CleanedAt);
+        Assert.Null(reloaded.Single(note => note.Id == dueToday.Id).CleanedAt);
         Assert.Null(reloaded.Single(note => note.Id == dueLater.Id).CleanedAt);
     }
 

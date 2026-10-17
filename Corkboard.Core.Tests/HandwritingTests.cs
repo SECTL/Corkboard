@@ -174,6 +174,65 @@ public class HandwritingTests
 
     #endregion
 
+    #region 渲染缩放（卡片预览）
+
+    // 卡片把整页缩到自己的宽度上时，笔宽必须乘同一个比例：坐标缩了、笔宽没缩，笔画相对字就会变粗，
+    // 字与字的间隙被墨吃掉（用户反馈「写的时候间隔正常，卡片上挤成一团」）。
+
+    [Fact]
+    public void ResolveRenderScale_ScalesPenWidthWithPreviewWidth()
+    {
+        var document = new HandwritingDocument { HasReferenceWidth = true, ReferenceWidth = 661.33 };
+
+        Assert.Equal(0.5, document.ResolveRenderScale(330.665), 4);
+        Assert.Equal(1.0, document.ResolveRenderScale(661.33), 4);
+        Assert.Equal(2.0, document.ResolveRenderScale(1322.66), 4);
+    }
+
+    [Fact]
+    public void ResolveRenderScale_IsOneOnTheReferenceCanvas()
+    {
+        // 编辑画布就是按参考尺寸 1:1 画的：算出来必须正好是 1，笔迹不能因为这条规则变粗细。
+        var document = new HandwritingDocument { HasReferenceWidth = true, ReferenceWidth = 720 };
+
+        Assert.Equal(1.0, document.ResolveRenderScale(720), 6);
+    }
+
+    [Fact]
+    public void ResolveRenderScale_FallsBackToOneWithoutReferenceWidth()
+    {
+        // 老数据没有 ref：不知道原画布多宽，宁可保持原样，也不要瞎猜一个比例把笔迹画细。
+        var document = new HandwritingDocument();
+
+        Assert.False(document.HasReferenceWidth);
+        Assert.Equal(1.0, document.ResolveRenderScale(300), 6);
+    }
+
+    [Fact]
+    public void ResolveRenderScale_BadRenderWidthFallsBackToOne()
+    {
+        var document = new HandwritingDocument { HasReferenceWidth = true, ReferenceWidth = 540 };
+
+        Assert.Equal(1.0, document.ResolveRenderScale(0), 6);
+        Assert.Equal(1.0, document.ResolveRenderScale(-100), 6);
+        Assert.Equal(1.0, document.ResolveRenderScale(double.NaN), 6);
+        Assert.Equal(1.0, document.ResolveRenderScale(double.PositiveInfinity), 6);
+    }
+
+    [Fact]
+    public void ResolveRenderScale_SurvivesCodecRoundTrip()
+    {
+        // 预览控件只有落盘数据可用：ref 必须能从编码里读回来，比例才算得出来。
+        var document = SampleDocument();
+        document.ReferenceWidth = 720;
+        document.HasReferenceWidth = true;
+
+        Assert.True(HandwritingCodec.TryDecode(HandwritingCodec.Encode(document), out var decoded));
+        Assert.Equal(0.5, decoded.ResolveRenderScale(360), 4);
+    }
+
+    #endregion
+
     #region 坏数据
 
     [Theory]

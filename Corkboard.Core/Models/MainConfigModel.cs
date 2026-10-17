@@ -2,8 +2,10 @@ using System.Text.Json.Serialization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Corkboard.Core.Models.SubConfigs.Board;
 using Corkboard.Core.Models.SubConfigs.Cloud;
+using Corkboard.Core.Models.SubConfigs.Export;
 using Corkboard.Core.Models.SubConfigs.General;
 using Corkboard.Core.Models.SubConfigs.Personalized;
+using Corkboard.Core.Models.SubConfigs.Update;
 using Corkboard.Shared;
 using Corkboard.Shared.Abstraction;
 
@@ -22,6 +24,8 @@ public partial class MainConfigModel : ConfigBase
     [ObservableProperty] private AppearanceSettingsConfig _appearance = new();
     [ObservableProperty] private BoardSettingsConfig _boardSettings = new();
     [ObservableProperty] private CloudSyncSettingsConfig _cloud = new();
+    [ObservableProperty] private UpdateSettingsConfig _updateSettings = new();
+    [ObservableProperty] private ExportSettingsConfig _exportSettings = new();
 
     [JsonIgnore] public override string ConfigFilePath => Utils.GetFilePath("config", "settings.json");
 
@@ -34,6 +38,9 @@ public partial class MainConfigModel : ConfigBase
     {
         BoardSettings.NormalizeBoardExtras();
         BoardSettings.NormalizeCleanup();
+        BoardSettings.NormalizeHistory();
+        ExportSettings.Normalize();
+        UpdateSettings.Normalize();
     }
 
     [JsonIgnore]

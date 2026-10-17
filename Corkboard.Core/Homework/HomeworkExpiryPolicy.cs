@@ -6,17 +6,16 @@ namespace Corkboard.Core.Homework;
 ///     「哪些作业算过期」的纯判定：不碰磁盘、不看界面，连「今天」都由调用方传进来，
 ///     所以能直接对着日期单测。
 ///     <para>
-///         只有一条规则：<b>到了截止日期就算过期</b>——当天就算，不是第二天。到了那天的清理时刻，
-///         <see cref="HomeworkCleanupService" /> 就把它从板子上收走（用户的原话是「截止时刻到了之后，
-///         它就算没了」，所以默认「明天截止」的作业会在明天那个时刻消失）。
+///         只有一条规则：<b>过了截止日期才算过期</b>——截止当天不算，要等第二天。
+///         用户明确要求「今天截止的作业今天不应该清理」，所以截止日期那天的清理时刻到了也不动它，
+///         到第二天清理时刻才收走。
 ///         没填截止日期的作业永远不会被自动清掉——板子上本来就是些「做完就删」的便签，
 ///         没有期限的那些不该被时间顺手拿走。
 ///     </para>
 ///     <para>
-///         ⚠️ 这里比界面上那行「今天截止 / 过期 N 天」<b>早一天</b>：界面只在过了当天之后才说「已过期」
-///         （<see cref="HomeworkDueDateFormatter.IsOverdue" />），当天仍说「今天截止」，
-///         免得用户看到「过期」两个字却发现期限还没过。两条判据故意不同，
-///         方向必须一致（界面说已过期的，清理一定也认为过期），改一条要一起想清楚。
+///         这条判据与界面上那行「今天截止 / 过期 N 天」现在<b>完全一致</b>
+///         （<see cref="HomeworkDueDateFormatter.IsOverdue" /> 也是当天不算过期）：
+///         卡片写着「今天截止」的作业不会再被当天的清理顺手收走。
 ///     </para>
 /// </summary>
 public static class HomeworkExpiryPolicy
@@ -28,7 +27,7 @@ public static class HomeworkExpiryPolicy
         return note.DueDate;
     }
 
-    /// <summary>截止日期到了没有（当天就算到）。</summary>
+    /// <summary>截止日期过了没有（截止当天还不算，第二天才算）。</summary>
     public static bool IsExpired(Note note, DateOnly today)
-        => ExpiryDate(note) is { } due && due <= today;
+        => ExpiryDate(note) is { } due && due < today;
 }

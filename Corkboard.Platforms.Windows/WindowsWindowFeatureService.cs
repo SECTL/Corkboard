@@ -38,6 +38,24 @@ public sealed class WindowsWindowFeatureService : IWindowFeatureService
 
     /// <summary><c>DWMWA_CAPTION_BUTTON_BOUNDS</c>：系统按钮矩形，相对窗口左上角的物理像素。</summary>
     private const int DwmwaCaptionButtonBounds = 5;
+
+    /// <summary>
+    ///     <c>DWMWA_WINDOW_CORNER_PREFERENCE</c>：让 DWM 给窗口画系统圆角。
+    ///     它对「没被裁剪区域盖住、也没有分层」的顶层窗口有效，边缘是抗锯齿的，比 1 位区域锯齿自然得多。
+    /// </summary>
+    private const int DwmwaWindowCornerPreference = 33;
+
+    /// <summary><c>DWMWCP_DEFAULT</c>：交还给系统默认（Win11 上普通窗口本来就是圆角）。</summary>
+    private const int DwmwcpDefault = 0;
+
+    /// <summary><c>DWMWCP_ROUND</c>：明确的系统圆角。</summary>
+    private const int DwmwcpRound = 2;
+
+    /// <summary><c>GWL_STYLE</c>：取常规窗口样式（用来判断窗口是不是被置底成了桌面子窗口）。</summary>
+    private const int GwlStyle = -16;
+
+    /// <summary><c>WS_CHILD</c>：置底到桌面后窗口会变成桌面宿主的子窗口。</summary>
+    private const long WsChild = 0x40000000L;
     private const WindowFeatures StyleFeatures = WindowFeatures.ToolWindow |
                                                 WindowFeatures.SkipTaskSwitcher |
                                                 WindowFeatures.NoActivate |
@@ -217,11 +235,11 @@ public sealed class WindowsWindowFeatureService : IWindowFeatureService
     }
 
     /// <summary>
-    ///     圆角靠裁窗口区域（<see cref="SetWindowRgn" />）实现，而不是 DWM 的
-    ///     <c>DWMWA_WINDOW_CORNERPREFERENCE</c>：
-    ///     主窗口是 <c>WindowDecorations.None</c>，没有原生边框，DWM 那个偏好对无边框窗口不生效；
-    ///     置底到桌面后它还是桌面子窗口，DWM 更完全不给这一块单独合成圆角。
-    ///     区域裁剪两种形态都有效，代价是边缘没有抗锯齿——半径小、实际看不出锯齿。
+    ///     圆角分两条路：普通顶层窗口交给 DWM 的 <c>DWMWA_WINDOW_CORNER_PREFERENCE</c>——
+    ///     它由系统合成器画，边缘有抗锯齿、弧度是平滑的；
+    ///     分层窗口（不透明度 / 点击穿透共用 <c>WS_EX_LAYERED</c>）与置底后的桌面子窗口，DWM 不给圆角，
+    ///     退回裁窗口区域（<see cref="SetWindowRgn" />）。区域是 1 位掩码，边缘必然是锯齿的，
+    ///     所以只在 DWM 那条路走不通时才用。
     ///     <para>
     ///         ⚠️ 区域是<b>物理像素</b>、且会一直贴在窗口上：窗口尺寸或 DPI 一变就得重裁一次
     ///         （调用方在 <c>MainWindow</c> 的尺寸/缩放变化里重放这条能力），否则圆角会被拉成弧线。
@@ -232,7 +250,22 @@ public sealed class WindowsWindowFeatureService : IWindowFeatureService
         try
         {
             if (!enabled)
+            {
+                // 两条路都退掉：DWM 偏好交还系统默认，区域清空恢复方角。
+                TrySetDwmCornerPreference(window, DwmwcpDefault);
                 return TryClearWindowRegion(window, out failure);
+            }
+
+            if (CanUseDwmCorners(window))
+            {
+                // 以前可能贴过区域（比如刚从半透明 / 置底切回来）：先摘掉，否则方角区域会盖住 DWM 的圆角。
+                TryClearWindowRegion(window, out _);
+                if (TrySetDwmCornerPreference(window, DwmwcpRound))
+                {
+                    failure = null;
+                    return true;
+                }
+            }
 
             if (!GetWindowRect(window, out var bounds))
             {
@@ -277,6 +310,38 @@ public sealed class WindowsWindowFeatureService : IWindowFeatureService
         catch (Exception exception)
         {
             failure = exception.Message;
+            return false;
+        }
+    }
+
+    /// <summary>
+    ///     DWM 圆角只对普通顶层窗口生效：分层窗口走 per-pixel 合成，系统圆角偏好会被忽略；
+    ///     置底到桌面后窗口变成桌面宿主的子窗口，DWM 也不给这一块单独合成圆角。
+    /// </summary>
+    private static bool CanUseDwmCorners(nint window)
+    {
+        var exStyle = GetWindowLongPtr(window, GwlExStyle).ToInt64();
+        if ((exStyle & WsExLayered) != 0)
+            return false;
+
+        var style = GetWindowLongPtr(window, GwlStyle).ToInt64();
+        return (style & WsChild) == 0;
+    }
+
+    /// <summary>写 DWM 圆角偏好。系统太老没有这个属性时返回 <c>false</c>，调用方据此退回区域裁剪。</summary>
+    private static bool TrySetDwmCornerPreference(nint window, int preference)
+    {
+        try
+        {
+            var value = preference;
+            return DwmSetWindowAttribute(window, DwmwaWindowCornerPreference, ref value, sizeof(int)) == 0;
+        }
+        catch (DllNotFoundException)
+        {
+            return false;
+        }
+        catch (EntryPointNotFoundException)
+        {
             return false;
         }
     }
@@ -518,6 +583,10 @@ public sealed class WindowsWindowFeatureService : IWindowFeatureService
 
     [DllImport("dwmapi.dll")]
     private static extern int DwmGetWindowAttribute(nint hWnd, int attribute, out NativeRect value, int size);
+
+    /// <summary><c>DwmSetWindowAttribute</c>：写窗口的 DWM 属性（圆角偏好走这里）。</summary>
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmSetWindowAttribute(nint hWnd, int attribute, ref int value, int size);
 
     [DllImport("user32.dll")]
     private static extern uint GetDpiForWindow(nint hWnd);

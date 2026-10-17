@@ -63,6 +63,26 @@ public sealed class HandwritingDocument
     /// <summary>能画出来的笔画数（不含橡皮历史记录）。</summary>
     public int VisibleStrokeCount => Strokes.Count(stroke => stroke.IsVisible);
 
+    /// <summary>
+    ///     把整页笔迹画进 <paramref name="renderWidth" /> 宽的画面时，笔宽要乘的比例。
+    ///     <para>
+    ///         坐标本来就是相对 <see cref="ReferenceWidth" /> 归一化的，预览控件把它们铺到卡片宽度上时
+    ///         位置已经跟着缩放了；<b>笔宽必须乘同一个比例</b>，否则卡片上笔画相对字变粗、
+    ///         字与字的空隙被墨吃掉（用户反馈：「写的时候间隔正常，卡片上挤成一团」）。
+    ///         编辑画布按参考尺寸 1:1 画，算出来正好是 1，所以对它没有影响。
+    ///     </para>
+    /// </summary>
+    /// <param name="renderWidth">实际用来画整页的宽度（DIP）。</param>
+    /// <returns>笔宽缩放比例；没有参考宽度或宽度离谱时退回 1。</returns>
+    public double ResolveRenderScale(double renderWidth)
+    {
+        if (!HasReferenceWidth || !double.IsFinite(renderWidth) || renderWidth <= 0)
+            return 1;
+
+        var referenceWidth = ClampReferenceWidth(ReferenceWidth);
+        return referenceWidth > 0 ? renderWidth / referenceWidth : 1;
+    }
+
     /// <summary>把高宽比夹进合法区间；非有限值退回 <see cref="DefaultAspect" />。</summary>
     public static double ClampAspect(double aspect)
     {

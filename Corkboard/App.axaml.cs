@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
+using System.Net.Http;
 using System.Text.Json;
 using Avalonia;
 using Avalonia.Controls;
@@ -37,11 +38,14 @@ using Corkboard.Services.Ipc;
 using Corkboard.Services.Board;
 using Corkboard.Services.Homework;
 using Corkboard.Services.Ui;
+using Corkboard.Services.Updates;
+using Corkboard.Shared;
 using Corkboard.ViewModels;
 using Corkboard.ViewModels.MainPages.Board;
 using Corkboard.ViewModels.MainPages.Homework;
 using Corkboard.ViewModels.SettingsPages;
 using Corkboard.ViewModels.SettingsPages.Board;
+using Corkboard.ViewModels.SettingsPages.Export;
 using Corkboard.Views;
 using Corkboard.Views.MainPages.Board;
 using Corkboard.Views.MainPages.Homework;
@@ -49,8 +53,10 @@ using Corkboard.Views.SettingsPages.About;
 using Corkboard.Views.SettingsPages.Account;
 using Corkboard.Views.SettingsPages.Board;
 using Corkboard.Views.SettingsPages.Cloud;
+using Corkboard.Views.SettingsPages.Export;
 using Corkboard.Views.SettingsPages.General;
 using Corkboard.Views.SettingsPages.Personalized;
+using Corkboard.Views.SettingsPages.Update;
 using CR = Corkboard.Core.Langs.Common.Resources;
 
 namespace Corkboard;
@@ -173,14 +179,21 @@ public partial class App : Application
         // 用系统默认程序打开网址：关于页的链接用它，视图不直接碰原生启动 API。
         services.AddSingleton<IExternalLauncher, SystemExternalLauncher>();
 
+        // 自动更新：metadata 渠道 → 签名更新清单 → 下载/校验 → 便携部署或系统安装器。
+        // 更新页与后台调度必须共用同一个单例，否则页面看不到调度器查出来的状态。
+        services.AddHttpClient("updates", client => client.Timeout = TimeSpan.FromSeconds(30));
+        services.AddSingleton<UpdateCenterService>(serviceProvider => new UpdateCenterService(
+            serviceProvider.GetRequiredService<MainConfigHandler>(),
+            serviceProvider.GetRequiredService<ILogger<UpdateCenterService>>(),
+            serviceProvider.GetRequiredService<IHttpClientFactory>().CreateClient("updates")));
+        services.AddSingleton<IUpdateNotificationService, UpdateNotificationService>();
+        services.AddHostedService<UpdateScheduler>();
+
         // 页面级弹层宿主：页面把表单塞进来，壳在窗口内容最上层画出来（遮罩才能盖住标题栏）。
         services.AddSingleton<PageOverlayService>();
 
         // 时空回放：入口在主界面标题栏，作业列表在主页面，两边靠这个单例共享状态。
         services.AddSingleton<BoardReplayService>();
-
-        // 作业板备份：清空作业板之前自动把 data/board/ 整份存到 data/backups/ 下。
-        services.AddSingleton<BoardBackupService>();
 
         // 导出作业板图片：只渲染板子上面那块内容，不带上窗口底色与桌面。
         services.AddSingleton<BoardExportService>();
@@ -190,6 +203,9 @@ public partial class App : Application
 
         // 作业自动清理：到点给过期作业打 CleanedAt 标记、从主页面上拿掉（规则与判定都在 Core 的 HomeworkCleanupService）。
         services.AddHostedService<HomeworkCleanupHostedService>();
+
+        // 作业历史：把「历史与回放」的三项设置同步给存储层，并每小时按保留天数与容量上限清一次旧历史。
+        services.AddHostedService<BoardHistoryHostedService>();
 
         // ViewModel 与页面。AddMainPage/AddSettingsPage 同时写导航注册表和键控 DI，两者必须成对。
         services.AddTransient<MainViewModel>();
@@ -202,18 +218,22 @@ public partial class App : Application
         services.AddTransient<AboutSettingsPageViewModel>();
         services.AddTransient<AccountSettingsPageViewModel>();
         services.AddTransient<CloudSyncSettingsPageViewModel>();
+        services.AddTransient<UpdateSettingsPageViewModel>();
         services.AddTransient<BoardSectionsSettingsPageViewModel>();
         services.AddTransient<HandwritingSettingsPageViewModel>();
         services.AddTransient<QuickTagsSettingsPageViewModel>();
         services.AddTransient<CleanupSettingsPageViewModel>();
+        services.AddTransient<HistorySettingsPageViewModel>();
         services.AddTransient<DockSettingsPageViewModel>();
+        services.AddTransient<ExportSettingsPageViewModel>();
 
         // 主页面标题的默认文案；用户可以在作业板设置里改成别的名字。
         services.AddMainPage<BoardPage>(CR.Board_Title);
 
         services.AddSettingsPageSeparator();
-        // 通用设置是顶层项：注册表按 GroupId 是否为空决定「顶层项」还是「可折叠分组」。
+        // 顶层项顺序 = 注册顺序。「基础设置」之后紧跟「外观」，再往后才是「作业板」分组。
         services.AddSettingsPage<BasicSettingsPage>(CR.Settings_Basic_Title);
+        services.AddSettingsPage<AppearanceSettingsPage>(CR.Settings_Appearance_Title);
 
         // 「作业板」是可折叠分组：分组本身出现在侧边栏，点开才是它底下的各个设置子页。
         // 子页的 PageInfo 上必须带同一个 groupId，否则会被当成顶层项平铺出去。
@@ -223,11 +243,17 @@ public partial class App : Application
         services.AddSettingsPage<HandwritingSettingsPage>(CR.Settings_Board_Handwriting_Title);
         services.AddSettingsPage<QuickTagsSettingsPage>(CR.Settings_Board_QuickTags_Title);
         services.AddSettingsPage<CleanupSettingsPage>(CR.Settings_Board_Cleanup_Title);
+        services.AddSettingsPage<HistorySettingsPage>(CR.Settings_Board_History_Title);
         services.AddSettingsPage<DockSettingsPage>(CR.Settings_Board_Dock_Title);
+        // 「导出」在作业板分组里：导出的就是作业板，放顶层会让人找不着。
+        services.AddSettingsPage<ExportSettingsPage>(CR.Settings_Export_Title);
 
-        services.AddSettingsPage<AppearanceSettingsPage>(CR.Settings_Appearance_Title);
+        // 「账号」「云同步」暂不开放入口：两个页面的 PageInfo 上标了 isHide: true，不进侧边栏。
+        // 注册保留（键控 DI 仍按 Id 可取到），以后开放时去掉 PageInfo 上的 isHide 即可。
         services.AddSettingsPage<AccountSettingsPage>(CR.Settings_Account_Title);
         services.AddSettingsPage<CloudSyncSettingsPage>(CR.Settings_Cloud_Title);
+        // 更新页沉在底部（PageInfo 的 location），与「关于」同区；注册顺序只影响上半区。
+        services.AddSettingsPage<UpdateSettingsPage>(CR.Settings_Update_Title);
         // 「关于」沉在导航栏底部：位置由 AboutSettingsPage 上的 PageInfo(Location = Bottom) 决定，
         // 和这里注册在第几位无关（注册顺序只决定上半区那几项的先后）。
         services.AddSettingsPage<AboutSettingsPage>(CR.Settings_About_Title);
@@ -535,6 +561,35 @@ public partial class App : Application
     /// <summary>退出应用：先停 Host，再关窗口。</summary>
     public async Task StopAsync()
     {
+        await StopCoreAsync().ConfigureAwait(true);
+        _desktopLifetime?.Shutdown();
+    }
+
+    /// <summary>
+    ///     通过便携版 Launcher 重启到刚部署的新版本：先停 Host（释放文件与后台服务，
+    ///     与上游 SecRandom-C 同序：Stop → Start Launcher → Shutdown），再拉起 Launcher，
+    ///     由它从 <c>app-*</c> 目录里挑最新的一份启动，最后关掉当前进程。
+    ///     安装版走系统安装程序，不会调用这里。
+    /// </summary>
+    public async Task RestartThroughLauncherAsync()
+    {
+        var launcherName = OperatingSystem.IsWindows() ? "CorkboardLauncher.exe" : "CorkboardLauncher";
+        var launcherPath = Path.Combine(Utils.PackageRoot, launcherName);
+        if (!File.Exists(launcherPath))
+            throw new FileNotFoundException("便携版 Launcher 不存在。", launcherPath);
+
+        await StopCoreAsync().ConfigureAwait(true);
+        Process.Start(new ProcessStartInfo(launcherPath)
+        {
+            WorkingDirectory = Utils.PackageRoot,
+            UseShellExecute = false
+        });
+        _desktopLifetime?.Shutdown();
+    }
+
+    /// <summary>停 Host 但不关生命周期；<see cref="StopAsync" /> 与 Launcher 重启共用。</summary>
+    private async Task StopCoreAsync()
+    {
         if (_isStopping)
             return;
 
@@ -560,11 +615,9 @@ public partial class App : Application
         {
             Debug.WriteLine(exception);
         }
-
-        _desktopLifetime?.Shutdown();
     }
 
-    /// <summary>重启：启动同一份可执行文件后退出当前进程。便携包应交给 Launcher 处理，骨架阶段先直接重启。</summary>
+    /// <summary>重启：直接拉起当前可执行文件后退出。便携版更新请用 <see cref="RestartThroughLauncherAsync" />。</summary>
     public void Restart()
     {
         var executable = Environment.ProcessPath;

@@ -5,7 +5,6 @@
              xmlns:fa="using:FluentAvalonia.UI.Controls"
              xmlns:icons="using:Corkboard.Core.Icons"
              xmlns:core="using:Corkboard.Core.Langs.Common"
-             xmlns:ui="using:Corkboard.Services.Board"
              xmlns:enums="using:Corkboard.Core.Board"
              xmlns:views="using:Corkboard.Views"
              mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="600"
@@ -145,13 +144,13 @@
                         </Button>
 
                         <!--
-                            导出图片：把作业板内容整块渲染成 PNG。
+                            导出：先弹格式 / 范围对话框，图片直接保存、PDF 先预览再保存。
                             按钮从作业板页面右上角搬到了标题栏（用户要求「保存按钮放到顶部去」），
                             真正的导出仍由页面自己做（它才知道板子内容容器在哪）。
                         -->
                         <Button VerticalAlignment="Center"
                                 IsVisible="{Binding ViewModel.ShowTitleBarExport}"
-                                ToolTip.Tip="{x:Static core:Resources.Board_ExportImageTip}"
+                                ToolTip.Tip="{x:Static core:Resources.Export_DialogTitle}"
                                 WindowDecorationProperties.ElementRole="User"
                                 Click="ExportImageButton_OnClick">
                             <TextBlock Text="{x:Static icons:FluentIcons.SaveFilled}"
@@ -176,23 +175,64 @@
                                        VerticalAlignment="Center" />
                         </Button>
 
-                        <!-- 回放控制条：只留日期下拉与退出，进来就能挑任意一天往回看。 -->
+                        <!--
+                            回放控制条：月历 + 「还原到此刻」+ 退出，进来就能挑任意一天往回看，
+                            也可以直接把那一刻板上的作业整份放回当前板子。
+                        -->
                         <StackPanel Orientation="Horizontal"
                                     Spacing="6"
                                     VerticalAlignment="Center"
                                     IsVisible="{Binding Replay.IsActive}">
 
-                            <ComboBox MinWidth="180"
-                                      VerticalAlignment="Center"
-                                      ItemsSource="{Binding Replay.Stops}"
-                                      SelectedItem="{Binding Replay.SelectedStop, Mode=TwoWay}"
-                                      WindowDecorationProperties.ElementRole="User">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate x:DataType="ui:BoardReplayStopItem">
-                                        <TextBlock Text="{Binding DisplayName}" />
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
+                            <!--
+                                回放时刻：原来是一个停靠点下拉框（一长串按秒排的时刻，滚都滚不完），
+                                现在换成「按钮 + 月历浮层」——按钮上显示当前选中的那一刻，
+                                点开按日期挑，挑完下面列出那天所有的时刻。
+                                浮层内容挂在 Popup 里而不是 Button.Flyout：Popup 与按钮在同一个可视树里，
+                                主题资源（深浅色）和 DataContext 都跟着走，这里也方便从代码里拿到内容。
+                                ⚠️ 标题栏按下即拖，按钮必须标 ElementRole="User"，否则会被判成拖窗口、点不动。
+                            -->
+                            <Panel VerticalAlignment="Center">
+                                <Button x:Name="ReplayCalendarButton"
+                                        MinWidth="170"
+                                        VerticalAlignment="Center"
+                                        ToolTip.Tip="{x:Static core:Resources.Board_ReplayCalendarTip}"
+                                        WindowDecorationProperties.ElementRole="User"
+                                        Click="ReplayCalendarButton_OnClick">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <!--
+                                            日历字形：Assets/FluentSystemIcons-Resizable.json 里的
+                                            ic_fluent_calendar_20_filled（U+E303）。图标常量在 Core，
+                                            那边不让动，所以这里直接写码位。
+                                        -->
+                                        <TextBlock Text="&#xE303;"
+                                                   FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                                   VerticalAlignment="Center" />
+                                        <TextBlock VerticalAlignment="Center"
+                                                   Text="{Binding Replay.SelectedStop.DisplayName}" />
+                                    </StackPanel>
+                                </Button>
+
+                                <Popup x:Name="ReplayCalendarPopup"
+                                       PlacementTarget="{Binding #ReplayCalendarButton}"
+                                       Placement="BottomEdgeAlignedRight"
+                                       IsLightDismissEnabled="True">
+                                    <views:ReplayCalendarView x:Name="ReplayCalendar" />
+                                </Popup>
+                            </Panel>
+
+                            <Button VerticalAlignment="Center"
+                                    ToolTip.Tip="{x:Static core:Resources.Board_ReplayRestoreTip}"
+                                    WindowDecorationProperties.ElementRole="User"
+                                    Click="ReplayRestoreButton_OnClick">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <TextBlock Text="{x:Static icons:FluentIcons.ArrowCounterclockwiseFilled}"
+                                               FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                               VerticalAlignment="Center" />
+                                    <TextBlock Text="{x:Static core:Resources.Board_ReplayRestore}"
+                                               VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
 
                             <Button VerticalAlignment="Center"
                                     Classes="accent"

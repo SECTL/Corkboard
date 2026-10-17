@@ -58,6 +58,17 @@
             </fa:FASettingsExpander>
 
             <!--
+                 拖拽排序：关掉之后作业板上不再画那颗拖动按钮，科目区块的标题行也不接管指针。
+                 它是显示偏好，不影响任何数据；默认开着（用户要的是「能关」）。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_SubjectReorderEnabled}"
+                                   Description="{x:Static core:Resources.Settings_Board_SubjectReorderEnabledDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding Config.BoardSettings.SubjectReorderEnabled, Mode=TwoWay}" />
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <!--
                 区块宽度（展示设置）：只在「区块」排布下起作用。上面那一格是单块的基准宽度——
                 它决定一行排几块；下面那个开关决定这宽度是死的还是活的：开着时单块在基准宽度与
                 它的上限之间随窗口伸缩（宽到上限才换行），关掉就固定成基准宽度。

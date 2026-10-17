@@ -146,6 +146,36 @@
   <data name="Board_ReplayReadOnlyHint" xml:space="preserve">
     <value>回放期间不能改动作业</value>
   </data>
+  <data name="Board_ReplayRestore" xml:space="preserve">
+    <value>还原到此刻</value>
+  </data>
+  <data name="Board_ReplayRestoreTip" xml:space="preserve">
+    <value>把这一刻板上的作业放回当前作业板</value>
+  </data>
+  <data name="Board_ReplayRestoreConfirmTitle" xml:space="preserve">
+    <value>还原到此刻</value>
+  </data>
+  <data name="Board_ReplayRestoreConfirmMessage" xml:space="preserve">
+    <value>这一刻板上的作业会整份回到当前作业板，这一刻之后才加的作业会先收起来</value>
+  </data>
+  <data name="Board_ReplayCalendarTip" xml:space="preserve">
+    <value>选择回放时刻</value>
+  </data>
+  <data name="Board_ReplayMonthFormat" xml:space="preserve">
+    <value>{0:yyyy 年 M 月}</value>
+  </data>
+  <data name="Board_ReplayPickDay" xml:space="preserve">
+    <value>先选一个有作业的日期</value>
+  </data>
+  <data name="Board_ReplayDayStops" xml:space="preserve">
+    <value>当天的时刻</value>
+  </data>
+  <data name="Board_ReplayPrevMonth" xml:space="preserve">
+    <value>上个月</value>
+  </data>
+  <data name="Board_ReplayNextMonth" xml:space="preserve">
+    <value>下个月</value>
+  </data>
   <!-- 首次运行打底的科目，用户可以在设置里改。 -->
   <data name="Board_Seed_Subject_Chinese" xml:space="preserve">
     <value>语文</value>
@@ -308,6 +338,12 @@
   <data name="Settings_Board_LayoutDescription" xml:space="preserve">
     <value>单列居中，或者按窗口宽度分栏</value>
   </data>
+  <data name="Settings_Board_SubjectReorderEnabled" xml:space="preserve">
+    <value>拖拽排序</value>
+  </data>
+  <data name="Settings_Board_SubjectReorderEnabledDescription" xml:space="preserve">
+    <value>按住科目标题就能拖动位置，关掉后不显示拖动按钮</value>
+  </data>
   <data name="Settings_Board_BlockMinWidth" xml:space="preserve">
     <value>区块宽度</value>
   </data>
@@ -432,7 +468,7 @@
     <value>自动清理</value>
   </data>
   <data name="Settings_Board_CleanupDescription" xml:space="preserve">
-    <value>到了截止日期就从板子上收走，数据还在</value>
+    <value>过了截止日期，到清理时刻才从板子上收走</value>
   </data>
   <data name="Settings_Board_CleanupEnabled" xml:space="preserve">
     <value>启用自动清理</value>
@@ -441,7 +477,7 @@
     <value>清理周期</value>
   </data>
   <data name="Settings_Board_CleanupFrequencyDescription" xml:space="preserve">
-    <value>多久清一次，当时没开机就下次启动补上</value>
+    <value>多久清一次，只在清理时刻之后动手</value>
   </data>
   <data name="Settings_Board_CleanupFrequency_Daily" xml:space="preserve">
     <value>每天</value>
@@ -456,7 +492,7 @@
     <value>清理时刻</value>
   </data>
   <data name="Settings_Board_CleanupTimeDescription" xml:space="preserve">
-    <value>每天几点动手，没填截止日期的不会清</value>
+    <value>每天几点动手，没到点不会清</value>
   </data>
   <data name="Settings_Board_CleanupRunNow" xml:space="preserve">
     <value>立即清理</value>
@@ -838,7 +874,7 @@
     <value>快捷标签</value>
   </data>
   <data name="Settings_Board_Cleanup_Title" xml:space="preserve">
-    <value>清理与备份</value>
+    <value>清理</value>
   </data>
   <data name="Settings_Board_Dock_Title" xml:space="preserve">
     <value>收纳</value>
@@ -922,31 +958,73 @@
     <value>清空作业板</value>
   </data>
   <data name="Settings_Board_ClearAllDescription" xml:space="preserve">
-    <value>把板子上的作业全清掉，清之前会自动备份</value>
+    <value>把作业从板子上收起来，数据还留着，之后能在时空回放里还原</value>
   </data>
   <data name="Settings_Board_ClearAllConfirmTitle" xml:space="preserve">
     <value>清空作业板</value>
   </data>
   <data name="Settings_Board_ClearAllConfirmMessage" xml:space="preserve">
-    <value>板上的作业会全部清掉，清之前会自动备份一份</value>
+    <value>作业会从板子上收起来，文件和数据都留着，之后可以在时空回放里还原</value>
   </data>
   <data name="Settings_Board_ClearAllDone" xml:space="preserve">
-    <value>已清空，备份留在 {0}</value>
+    <value>作业已经从板子上收起来了，数据还留着，可以在时空回放里还原</value>
   </data>
   <data name="Settings_Board_ClearAllFailed" xml:space="preserve">
-    <value>备份没成功，这次没有清空</value>
+    <value>清空没成功，作业还在板子上</value>
   </data>
-  <data name="Settings_Board_Backups" xml:space="preserve">
-    <value>自动备份</value>
+  <data name="Settings_Board_History_Title" xml:space="preserve">
+    <value>历史与回放</value>
   </data>
-  <data name="Settings_Board_BackupsDescription" xml:space="preserve">
-    <value>清空作业板之前会先存一份，留在这里</value>
+  <data name="Settings_Board_History_Coalesce" xml:space="preserve">
+    <value>保存粒度</value>
   </data>
-  <data name="Settings_Board_BackupsEmpty" xml:space="preserve">
-    <value>还没有备份</value>
+  <data name="Settings_Board_History_CoalesceDescription" xml:space="preserve">
+    <value>同一条作业连着改，几分钟内的改动合成一条</value>
   </data>
-  <data name="Settings_Board_BackupItemFormat" xml:space="preserve">
-    <value>{0} · {1}</value>
+  <data name="Settings_Board_History_CoalesceUnit" xml:space="preserve">
+    <value>分钟</value>
+  </data>
+  <data name="Settings_Board_History_Retention" xml:space="preserve">
+    <value>保留天数</value>
+  </data>
+  <data name="Settings_Board_History_RetentionDescription" xml:space="preserve">
+    <value>超过这么多天的历史会自动删掉</value>
+  </data>
+  <data name="Settings_Board_History_RetentionUnit" xml:space="preserve">
+    <value>天</value>
+  </data>
+  <data name="Settings_Board_History_MaxSize" xml:space="preserve">
+    <value>容量上限</value>
+  </data>
+  <data name="Settings_Board_History_MaxSizeDescription" xml:space="preserve">
+    <value>历史占的空间超过上限，就从最老的开始删</value>
+  </data>
+  <data name="Settings_Board_History_MaxSizeUnit" xml:space="preserve">
+    <value>MB</value>
+  </data>
+  <data name="Settings_Board_History_Usage" xml:space="preserve">
+    <value>历史占用</value>
+  </data>
+  <data name="Settings_Board_History_UsageDescription" xml:space="preserve">
+    <value>现在记了多少历史，也可以马上清一次</value>
+  </data>
+  <data name="Settings_Board_History_StatEntries" xml:space="preserve">
+    <value>记录条数</value>
+  </data>
+  <data name="Settings_Board_History_StatSnapshots" xml:space="preserve">
+    <value>快照份数</value>
+  </data>
+  <data name="Settings_Board_History_StatSize" xml:space="preserve">
+    <value>占用大小</value>
+  </data>
+  <data name="Settings_Board_History_PruneNow" xml:space="preserve">
+    <value>立即清理历史</value>
+  </data>
+  <data name="Settings_Board_History_PruneResultFormat" xml:space="preserve">
+    <value>清掉了 {0} 天的历史</value>
+  </data>
+  <data name="Settings_Board_History_PruneNothing" xml:space="preserve">
+    <value>没有要清理的历史</value>
   </data>
   <data name="Settings_Board_Dock_Enabled" xml:space="preserve">
     <value>收纳作业板</value>
@@ -1097,5 +1175,360 @@
   </data>
   <data name="Settings_Board_Sections_DuplicateName" xml:space="preserve">
     <value>已经有同名分类了，换一个名字</value>
+  </data>
+  <!--
+    设置页「更新」：页面文案照上游 SecRandom-C 的 Update 页；
+    Update_M_* 与 Update_Notification_* 由 Core 的 UpdateText 走 ResourceManager 取（服务层用，不需要 Designer 属性）。
+  -->
+  <data name="Settings_Update_Title" xml:space="preserve">
+    <value>更新</value>
+  </data>
+  <data name="Update_S_Strategy" xml:space="preserve">
+    <value>更新策略</value>
+  </data>
+  <data name="Update_S_Strategy_AutoUpdateMode" xml:space="preserve">
+    <value>自动更新模式</value>
+  </data>
+  <data name="Update_S_Strategy_AutoUpdateMode_D" xml:space="preserve">
+    <value>自动检查发现的新版本，可选择通知、下载或安装</value>
+  </data>
+  <data name="Update_O_AutoUpdateMode_Off" xml:space="preserve">
+    <value>关闭</value>
+  </data>
+  <data name="Update_O_AutoUpdateMode_Notify" xml:space="preserve">
+    <value>自动检查更新并通知</value>
+  </data>
+  <data name="Update_O_AutoUpdateMode_Download" xml:space="preserve">
+    <value>自动检查更新并下载</value>
+  </data>
+  <data name="Update_O_AutoUpdateMode_Install" xml:space="preserve">
+    <value>自动检查更新并安装</value>
+  </data>
+  <data name="Update_S_Strategy_Channel" xml:space="preserve">
+    <value>更新通道</value>
+  </data>
+  <data name="Update_S_Strategy_Channel_D" xml:space="preserve">
+    <value>选择稳定版或预览版更新</value>
+  </data>
+  <data name="Update_O_UpdateChannel_Stable" xml:space="preserve">
+    <value>稳定版</value>
+  </data>
+  <data name="Update_O_UpdateChannel_Beta" xml:space="preserve">
+    <value>测试版</value>
+  </data>
+  <data name="Update_O_UpdateChannel_Alpha" xml:space="preserve">
+    <value>开发版</value>
+  </data>
+  <data name="Update_C_CheckUpdates" xml:space="preserve">
+    <value>检查更新</value>
+  </data>
+  <data name="Update_C_InstallUpdate" xml:space="preserve">
+    <value>安装更新</value>
+  </data>
+  <data name="Update_C_DownloadAndInstall" xml:space="preserve">
+    <value>下载并安装</value>
+  </data>
+  <data name="Update_C_ForceCheckUpdates" xml:space="preserve">
+    <value>强制检查更新</value>
+  </data>
+  <data name="Update_C_ForceCheckUpdates_D" xml:space="preserve">
+    <value>检查当前通道的最新版本，即使其低于当前版本</value>
+  </data>
+  <data name="Update_S_Check" xml:space="preserve">
+    <value>检查更新</value>
+  </data>
+  <data name="Update_S_Check_D" xml:space="preserve">
+    <value>仅检查已签名的完整发布清单，不会在后台下载更新</value>
+  </data>
+  <data name="Update_S_Strategy_LastCheckTime" xml:space="preserve">
+    <value>上次检查时间</value>
+  </data>
+  <data name="Update_S_Strategy_LastCheckTime_D" xml:space="preserve">
+    <value>显示最近一次检查更新的时间</value>
+  </data>
+  <data name="Update_Notification_Title" xml:space="preserve">
+    <value>Corkboard 更新</value>
+  </data>
+  <data name="Update_Notification_Message" xml:space="preserve">
+    <value>发现新版本 {0}</value>
+  </data>
+  <data name="Update_M_StatusNotChecked" xml:space="preserve">
+    <value>尚未检查更新</value>
+  </data>
+  <data name="Update_M_StatusChecking" xml:space="preserve">
+    <value>正在检查更新</value>
+  </data>
+  <data name="Update_M_StatusUpToDate" xml:space="preserve">
+    <value>当前已是最新版本</value>
+  </data>
+  <data name="Update_M_StatusUpdateAvailable" xml:space="preserve">
+    <value>发现新版本 {0}</value>
+  </data>
+  <data name="Update_M_StatusUpdateAvailableSelect" xml:space="preserve">
+    <value>发现新版本 {0}，请选择完整安装包</value>
+  </data>
+  <data name="Update_M_StatusCancelled" xml:space="preserve">
+    <value>已取消更新操作</value>
+  </data>
+  <data name="Update_M_StatusDownloading" xml:space="preserve">
+    <value>正在下载完整安装包 {0}</value>
+  </data>
+  <data name="Update_M_StatusVerifying" xml:space="preserve">
+    <value>正在验证安装包完整性</value>
+  </data>
+  <data name="Update_M_StatusPreparing" xml:space="preserve">
+    <value>正在准备应用更新</value>
+  </data>
+  <data name="Update_M_StatusReadyToInstall" xml:space="preserve">
+    <value>更新已下载，等待安装</value>
+  </data>
+  <data name="Update_M_StatusRestarting" xml:space="preserve">
+    <value>正在重启以应用更新</value>
+  </data>
+  <data name="Update_M_NoUpdateSourceAvailable" xml:space="preserve">
+    <value>没有可用的更新来源</value>
+  </data>
+  <data name="Update_M_UpdateSourceUnavailable" xml:space="preserve">
+    <value>更新源暂时不可用，请稍后重试</value>
+  </data>
+  <data name="Update_M_ReleaseManifestMissing" xml:space="preserve">
+    <value>当前更新通道尚未发布可验证的更新包</value>
+  </data>
+  <data name="Update_M_NoCompatibleArtifact" xml:space="preserve">
+    <value>该版本没有适用于当前系统、架构和安装形态的完整安装包</value>
+  </data>
+  <data name="Update_M_MetadataEmpty" xml:space="preserve">
+    <value>更新元数据为空</value>
+  </data>
+  <data name="Update_M_MetadataInvalid" xml:space="preserve">
+    <value>更新元数据格式无效</value>
+  </data>
+  <data name="Update_M_MetadataChannelMissing" xml:space="preserve">
+    <value>更新通道 {0} 没有版本标签</value>
+  </data>
+  <data name="Update_M_ManifestSignatureInvalid" xml:space="preserve">
+    <value>更新清单签名校验失败，请检查发布公钥和更新源</value>
+  </data>
+  <data name="Update_M_ManifestInvalid" xml:space="preserve">
+    <value>更新清单格式无效</value>
+  </data>
+  <data name="Update_M_ManifestMismatch" xml:space="preserve">
+    <value>更新清单与所选通道不匹配</value>
+  </data>
+  <data name="Update_M_PublicKeyInvalid" xml:space="preserve">
+    <value>内置更新公钥无效</value>
+  </data>
+  <data name="Update_M_PortableLauncherMissing" xml:space="preserve">
+    <value>当前便携版缺少稳定 Launcher，无法自动部署版本目录，请下载一次新的全量 ZIP</value>
+  </data>
+  <data name="Update_M_ZipAppDirectoryMissing" xml:space="preserve">
+    <value>完整 ZIP 缺少版本目录</value>
+  </data>
+  <data name="Update_M_ZipMarkerMissing" xml:space="preserve">
+    <value>完整 ZIP 缺少包形态标记</value>
+  </data>
+  <data name="Update_M_ZipMismatch" xml:space="preserve">
+    <value>完整 ZIP 与当前运行环境不匹配</value>
+  </data>
+  <data name="Update_M_TargetVersionExists" xml:space="preserve">
+    <value>目标版本目录已存在，请重新检查更新</value>
+  </data>
+  <data name="Update_M_ZipLauncherMissing" xml:space="preserve">
+    <value>完整 ZIP 缺少 Launcher</value>
+  </data>
+  <data name="Update_M_ArtifactLengthMismatch" xml:space="preserve">
+    <value>安装包大小与更新清单不一致</value>
+  </data>
+  <data name="Update_M_ArtifactHashMismatch" xml:space="preserve">
+    <value>安装包 SHA-512 校验失败</value>
+  </data>
+  <data name="Update_M_ZipEntryLimit" xml:space="preserve">
+    <value>完整 ZIP 的文件数量超过安全上限</value>
+  </data>
+  <data name="Update_M_ZipInvalidPath" xml:space="preserve">
+    <value>完整 ZIP 包含非法文件路径</value>
+  </data>
+  <data name="Update_M_ZipSizeLimit" xml:space="preserve">
+    <value>完整 ZIP 解压后的总大小超过安全上限</value>
+  </data>
+  <data name="Update_M_ZipOutsidePath" xml:space="preserve">
+    <value>完整 ZIP 包含越界文件路径</value>
+  </data>
+  <data name="Update_M_InstallerUnsupported" xml:space="preserve">
+    <value>不支持该安装包类型</value>
+  </data>
+  <data name="Update_M_InstallerStartFailed" xml:space="preserve">
+    <value>无法启动系统安装程序</value>
+  </data>
+  <data name="Update_M_UnknownPackageKind" xml:space="preserve">
+    <value>更新清单包含未知安装包类型</value>
+  </data>
+  <data name="Export_DialogTitle" xml:space="preserve">
+    <value>导出作业板</value>
+  </data>
+  <data name="Export_FormatLabel" xml:space="preserve">
+    <value>导出格式</value>
+  </data>
+  <data name="Export_FormatImage" xml:space="preserve">
+    <value>图片</value>
+  </data>
+  <data name="Export_FormatImageDescription" xml:space="preserve">
+    <value>把整块板子导成一张长图</value>
+  </data>
+  <data name="Export_FormatPdf" xml:space="preserve">
+    <value>PDF</value>
+  </data>
+  <data name="Export_FormatPdfDescription" xml:space="preserve">
+    <value>重新排版、自动分页，适合打印</value>
+  </data>
+  <data name="Export_ScopeLabel" xml:space="preserve">
+    <value>导出范围</value>
+  </data>
+  <data name="Export_ScopeAll" xml:space="preserve">
+    <value>全部作业</value>
+  </data>
+  <data name="Export_ScopePartial" xml:space="preserve">
+    <value>只导出一部分</value>
+  </data>
+  <data name="Export_SelectAll" xml:space="preserve">
+    <value>全选</value>
+  </data>
+  <data name="Export_SelectedCount" xml:space="preserve">
+    <value>已选 {0} / {1} 条</value>
+  </data>
+  <data name="Export_RememberChoice" xml:space="preserve">
+    <value>以后直接导出这个格式</value>
+  </data>
+  <data name="Export_CopyImage" xml:space="preserve">
+    <value>复制图片到剪贴板</value>
+  </data>
+  <data name="Export_Cancel" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="Export_Next" xml:space="preserve">
+    <value>下一步</value>
+  </data>
+  <data name="Export_Save" xml:space="preserve">
+    <value>保存</value>
+  </data>
+  <data name="Export_PreviewTitle" xml:space="preserve">
+    <value>导出预览</value>
+  </data>
+  <data name="Export_PreviewPageCount" xml:space="preserve">
+    <value>共 {0} 页</value>
+  </data>
+  <data name="Export_PreviewBack" xml:space="preserve">
+    <value>返回修改</value>
+  </data>
+  <data name="Export_PreviewExport" xml:space="preserve">
+    <value>导出 PDF</value>
+  </data>
+  <data name="Export_SuccessImage" xml:space="preserve">
+    <value>图片已保存</value>
+  </data>
+  <data name="Export_SuccessPdf" xml:space="preserve">
+    <value>PDF 已保存</value>
+  </data>
+  <data name="Export_SuccessCopied" xml:space="preserve">
+    <value>图片已复制到剪贴板</value>
+  </data>
+  <data name="Export_Failed" xml:space="preserve">
+    <value>导出失败，请稍后重试</value>
+  </data>
+  <data name="Export_NoContent" xml:space="preserve">
+    <value>板上还没有作业</value>
+  </data>
+  <data name="Settings_Export_Title" xml:space="preserve">
+    <value>导出</value>
+  </data>
+  <data name="Settings_Export_Behavior" xml:space="preserve">
+    <value>导出行为</value>
+  </data>
+  <data name="Settings_Export_BehaviorDescription" xml:space="preserve">
+    <value>点导出时要不要先问格式</value>
+  </data>
+  <data name="Settings_Export_AskForFormat" xml:space="preserve">
+    <value>询问导出格式</value>
+  </data>
+  <data name="Settings_Export_DefaultFormat" xml:space="preserve">
+    <value>默认格式</value>
+  </data>
+  <data name="Settings_Export_PdfLayout" xml:space="preserve">
+    <value>PDF 排版</value>
+  </data>
+  <data name="Settings_Export_PdfLayoutDescription" xml:space="preserve">
+    <value>纸张、分页与页眉页脚</value>
+  </data>
+  <data name="Settings_Export_PageSize" xml:space="preserve">
+    <value>纸张大小</value>
+  </data>
+  <data name="Settings_Export_Orientation" xml:space="preserve">
+    <value>页面方向</value>
+  </data>
+  <data name="Settings_Export_OrientationDescription" xml:space="preserve">
+    <value>自动时横向板子用横向纸</value>
+  </data>
+  <data name="Settings_Export_Margin" xml:space="preserve">
+    <value>页面边距</value>
+  </data>
+  <data name="Settings_Export_Columns" xml:space="preserve">
+    <value>每页列数</value>
+  </data>
+  <data name="Settings_Export_ColumnsDescription" xml:space="preserve">
+    <value>内容多的板子可以多排几列</value>
+  </data>
+  <data name="Settings_Export_Sort" xml:space="preserve">
+    <value>导出排序</value>
+  </data>
+  <data name="Settings_Export_SortDescription" xml:space="preserve">
+    <value>跟随板子或按时间重排</value>
+  </data>
+  <data name="Settings_Export_SubjectPageBreak" xml:space="preserve">
+    <value>每个科目另起一页</value>
+  </data>
+  <data name="Settings_Export_SubjectPageBreakDescription" xml:space="preserve">
+    <value>打开后一科从新页开始</value>
+  </data>
+  <data name="Settings_Export_HeaderFooter" xml:space="preserve">
+    <value>页眉页脚</value>
+  </data>
+  <data name="Settings_Export_HeaderFooterDescription" xml:space="preserve">
+    <value>页眉写板名、页脚写页码</value>
+  </data>
+  <data name="Export_Orientation_Auto" xml:space="preserve">
+    <value>自动</value>
+  </data>
+  <data name="Export_Orientation_Portrait" xml:space="preserve">
+    <value>竖向</value>
+  </data>
+  <data name="Export_Orientation_Landscape" xml:space="preserve">
+    <value>横向</value>
+  </data>
+  <data name="Export_Margin_Narrow" xml:space="preserve">
+    <value>窄</value>
+  </data>
+  <data name="Export_Margin_Normal" xml:space="preserve">
+    <value>普通</value>
+  </data>
+  <data name="Export_Margin_Wide" xml:space="preserve">
+    <value>宽</value>
+  </data>
+  <data name="Export_Sort_FollowBoard" xml:space="preserve">
+    <value>跟随作业板</value>
+  </data>
+  <data name="Export_Sort_CreatedDescending" xml:space="preserve">
+    <value>创建时间（新→旧）</value>
+  </data>
+  <data name="Export_Sort_CreatedAscending" xml:space="preserve">
+    <value>创建时间（旧→新）</value>
+  </data>
+  <data name="Export_Sort_UpdatedDescending" xml:space="preserve">
+    <value>更新时间（新→旧）</value>
+  </data>
+  <data name="Export_Sort_Subject" xml:space="preserve">
+    <value>按科目名</value>
+  </data>
+  <data name="Export_Sort_Fixed" xml:space="preserve">
+    <value>保持固定顺序</value>
   </data>
 </root>
