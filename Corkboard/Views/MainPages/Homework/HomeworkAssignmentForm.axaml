@@ -118,8 +118,8 @@
         -->
         <Border Classes="sheet"
                 x:Name="Sheet"
-                MinWidth="380"
-                MaxWidth="720"
+                MinWidth="480"
+                MaxWidth="960"
                 controls:WindowDragGesture.Suppress="True">
             <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <StackPanel x:Name="SheetBody" Spacing="12">
@@ -130,34 +130,55 @@
                     -->
                     <TextBlock Classes="h2" Text="{Binding FormTitle}" />
 
-                    <!--
-                        内容形态切换：打字（富文本）/ 手写（画布）。
-                        两颗 ToggleButton 的 IsChecked 只做单向绑定（源是只读的 IsTextMode / IsHandwritingMode），
-                        点击走命令：这样点已经选中的那颗时它不会被自己取消勾选（命令里会再通知一遍，见 ViewModel 的 SetMode）。
-                    -->
-                    <Border Classes="mode-switch">
-                        <StackPanel Orientation="Horizontal" Spacing="2">
-                            <ToggleButton Classes="mode-tab"
-                                          IsChecked="{Binding IsTextMode, Mode=OneWay}"
-                                          Command="{Binding SwitchToTextCommand}"
-                                          Content="{x:Static core:Resources.Board_TextTab}" />
-                            <ToggleButton Classes="mode-tab"
-                                          IsChecked="{Binding IsHandwritingMode, Mode=OneWay}"
-                                          Command="{Binding SwitchToHandwritingCommand}"
-                                          Content="{x:Static core:Resources.Board_HandwritingTab}" />
-                        </StackPanel>
-                    </Border>
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                        <!-- 内容形态切换：打字（富文本）/ 手写（画布）。
+                             两颗 ToggleButton 的 IsChecked 只做单向绑定（源是只读的 IsTextMode / IsHandwritingMode），
+                             点击走命令：这样点已经选中的那颗时它不会被自己取消勾选（命令里会再通知一遍，见 ViewModel 的 SetMode）。 -->
+                        <Border Grid.Column="0" Classes="mode-switch" VerticalAlignment="Center">
+                            <StackPanel Orientation="Horizontal" Spacing="2">
+                                <ToggleButton Classes="mode-tab"
+                                              IsChecked="{Binding IsTextMode, Mode=OneWay}"
+                                              Command="{Binding SwitchToTextCommand}"
+                                              Content="{x:Static core:Resources.Board_TextTab}" />
+                                <ToggleButton Classes="mode-tab"
+                                              IsChecked="{Binding IsHandwritingMode, Mode=OneWay}"
+                                              Command="{Binding SwitchToHandwritingCommand}"
+                                              Content="{x:Static core:Resources.Board_HandwritingTab}" />
+                            </StackPanel>
+                        </Border>
 
-                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                        <TextBlock Grid.Column="0" Classes="caption" VerticalAlignment="Center"
-                                   Text="{x:Static core:Resources.Board_SubjectLabel}" />
-                        <ComboBox Grid.Column="1"
-                                  HorizontalAlignment="Stretch"
-                                  ItemsSource="{Binding SubjectOptions}"
-                                  SelectedItem="{Binding DraftSubject, Mode=TwoWay}"
-                                  PlaceholderText="{x:Static core:Resources.Board_SubjectLabel}" />
+                        <!-- 科目在形态切换右边。 -->
+                        <Grid Grid.Column="1" ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                            <TextBlock Grid.Column="0" Classes="caption" VerticalAlignment="Center"
+                                       Text="{x:Static core:Resources.Board_SubjectLabel}" />
+                            <ComboBox Grid.Column="1"
+                                      HorizontalAlignment="Stretch"
+                                      ItemsSource="{Binding SubjectOptions}"
+                                      SelectedItem="{Binding DraftSubject, Mode=TwoWay}"
+                                      PlaceholderText="{x:Static core:Resources.Board_SubjectLabel}" />
+                        </Grid>
+
+                        <!-- 截止日期放在最后。
+                             默认填明天（见 ViewModel 构造期），可以改、也可以清掉；判过期只看这个日期。
+                             用 Avalonia 自带的 CalendarDatePicker，省事，也不会出现「2 月 31 日」这种输入。
+                             选择器自己没地方把已挑的日期退回空值，所以「不设截止日期」由旁边那个清除按钮给。
+                             ⚠️ 它是 TemplatedControl，必须进 code-behind 的 IsInteractiveSource 排除表。 -->
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <TextBlock Classes="caption"
+                                       VerticalAlignment="Center"
+                                       Text="{x:Static core:Resources.Settings_Board_DueDate}" />
+                            <CalendarDatePicker VerticalAlignment="Center"
+                                                PlaceholderText="{x:Static core:Resources.Settings_Board_DueDateNone}"
+                                                SelectedDate="{Binding DueDateDraft, Mode=TwoWay}"
+                                                ToolTip.Tip="{x:Static core:Resources.Settings_Board_DueDateDescription}" />
+                            <Button VerticalAlignment="Center"
+                                    IsVisible="{Binding HasDueDate}"
+                                    Command="{Binding ClearDueDateCommand}"
+                                    Content="{x:Static core:Resources.Settings_Board_DueDateClear}" />
+                        </StackPanel>
                     </Grid>
 
+                    <!-- 二级分类放在形态/科目/日期这一行的下面。 -->
                     <!--
                         二级分类：选项 = 「不分类」+ 当前科目的分类（ViewModel 里按科目重建，见 RefreshSectionOptions）；
                         右边那颗小按钮展开一行输入，新建的分类直接存进 board.json（IBoardService.AddSection）。
@@ -205,31 +226,35 @@
                     </Grid>
 
                     <!--
-                        截止日期：默认填明天（见 ViewModel 构造期），可以改、也可以清掉。
-                        判过期只看这个日期，没填的作业永远不会被自动清理。
-                        用 Avalonia 自带的 CalendarDatePicker 点一下挑日历，省事，也不会再出现
-                        「2 月 31 日」这种要靠夹才能收场的非法输入。
-                        选择器自己没地方把已挑的日期退回空值（点日历只会换一天），
-                        所以「不设截止日期」这个状态得由旁边那个清除按钮给。
-                        ⚠️ 它是 TemplatedControl，不在「按住卡片拖动」的排除表里，必须自己加进去
-                        （见 code-behind 的 IsInteractiveSource），否则按在它身上会被当成拖卡片。
+                        快捷标签 chips：设置里配过标签才出现（见 ShowQuickTags）。
+                        放在内容区上面、两种形态（打字 / 手写）都能看到，点一下是选中 / 取消选中，
+                        选中的会随作业存进 Note.Tags、在作业板上画成胶囊。
+                        标签最多 16 颗，卡片窄时会折行（外面用 Grid 的 * 列把可用宽度给到 WrapPanel）。
                     -->
-                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                        <TextBlock Grid.Column="0"
-                                   Classes="caption"
+                    <Grid ColumnDefinitions="Auto,*"
+                          ColumnSpacing="6"
+                          IsVisible="{Binding ShowQuickTags}">
+                        <TextBlock Classes="caption"
                                    VerticalAlignment="Center"
-                                   Text="{x:Static core:Resources.Settings_Board_DueDate}" />
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                            <CalendarDatePicker VerticalAlignment="Center"
-                                                HorizontalAlignment="Left"
-                                                PlaceholderText="{x:Static core:Resources.Settings_Board_DueDateNone}"
-                                                SelectedDate="{Binding DueDateDraft, Mode=TwoWay}"
-                                                ToolTip.Tip="{x:Static core:Resources.Settings_Board_DueDateDescription}" />
-                            <Button VerticalAlignment="Center"
-                                    IsVisible="{Binding HasDueDate}"
-                                    Command="{Binding ClearDueDateCommand}"
-                                    Content="{x:Static core:Resources.Settings_Board_DueDateClear}" />
-                        </StackPanel>
+                                   Text="{x:Static core:Resources.Board_QuickTags}" />
+                        <ItemsControl Grid.Column="1"
+                                      ItemsSource="{Binding QuickTagOptions}"
+                                      VerticalAlignment="Center">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:HomeworkQuickTagOption">
+                                    <!-- 选中的高亮由 IsChecked 自己切（样式在上面的 ToggleButton.chip）。 -->
+                                    <ToggleButton Classes="chip"
+                                                  Margin="0 0 6 4"
+                                                  Content="{Binding Text}"
+                                                  IsChecked="{Binding IsSelected, Mode=TwoWay}" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </Grid>
 
                     <!--
@@ -244,11 +269,11 @@
                         Grid 跟着内容区走（HorizontalAlignment=Left），手柄才会贴在区块右下角而不是卡片右下角。
                     -->
                     <Grid x:Name="ContentArea"
-                          Width="540"
-                          Height="300"
-                          MinWidth="340"
+                          Width="680"
+                          Height="400"
+                          MinWidth="420"
                           MinHeight="150"
-                          HorizontalAlignment="Left">
+                          HorizontalAlignment="Center">
                         <Border x:Name="ContentBoxChrome"
                                 Classes="content-box"
                                 ClipToBounds="True">
@@ -268,35 +293,7 @@
                                                            ShowPageControls="False"
                                                            Focusable="False" />
 
-                                    <!-- 快捷标签 chips：设置里配过标签才出现（见 ShowQuickTags），两种内容形态都能贴。
-                                         点一下是选中 / 取消选中，选中的会随作业存进 Note.Tags、在作业板上画成胶囊。
-                                         标签最多 8 颗，卡片窄时会折行（外面用 Grid 的 * 列把可用宽度给到 WrapPanel）。 -->
-                                    <Grid ColumnDefinitions="Auto,*"
-                                          ColumnSpacing="6"
-                                          IsVisible="{Binding ShowQuickTags}">
-                                        <TextBlock Classes="caption"
-                                                   VerticalAlignment="Center"
-                                                   Text="{x:Static core:Resources.Board_QuickTags}" />
-                                        <ItemsControl Grid.Column="1"
-                                                      ItemsSource="{Binding QuickTagOptions}"
-                                                      VerticalAlignment="Center">
-                                            <ItemsControl.ItemsPanel>
-                                                <ItemsPanelTemplate>
-                                                    <WrapPanel Orientation="Horizontal" />
-                                                </ItemsPanelTemplate>
-                                            </ItemsControl.ItemsPanel>
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate x:DataType="vm:HomeworkQuickTagOption">
-                                                    <!-- 选中的高亮由 IsChecked 自己切（样式在上面的 ToggleButton.chip）。 -->
-                                                    <ToggleButton Classes="chip"
-                                                                  Margin="0 0 6 4"
-                                                                  Content="{Binding Text}"
-                                                                  IsChecked="{Binding IsSelected, Mode=TwoWay}" />
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </Grid>
-                                </StackPanel>
+</StackPanel>
 
                                 <!--
                                     手写形态的工具栏。一排 WrapPanel：窗口窄 / 卡片窄时自己折行，不会把按钮挤没。
@@ -402,10 +399,6 @@
                                                    Text="{Binding EraserWidth, StringFormat='{}{0:0}'}" />
                                     </StackPanel>
 
-                                    <TextBlock Classes="caption"
-                                               VerticalAlignment="Center"
-                                               Margin="0 0 0 4"
-                                               Text="{x:Static core:Resources.Board_HandwritingHint}" />
                                 </WrapPanel>
 
                                 <!-- 打字形态的编辑区。 -->
@@ -444,19 +437,13 @@
                                                                 EraserWidth="{Binding EraserWidth}"
                                                                 IsEraser="{Binding IsEraserMode}"
                                                                 Data="{Binding HandwritingData, Mode=TwoWay}" />
-                                    <TextBlock IsVisible="{Binding ShowHandwritingHint}"
-                                               IsHitTestVisible="False"
-                                               HorizontalAlignment="Center"
-                                               VerticalAlignment="Center"
-                                               Classes="caption"
-                                               Text="{x:Static core:Resources.Board_HandwritingEmpty}" />
                                 </Grid>
                             </Grid>
                         </Border>
 
                         <Border x:Name="ResizeGrip"
-                                Width="18"
-                                Height="18"
+                                Width="26"
+                                Height="26"
                                 Margin="0 0 3 3"
                                 HorizontalAlignment="Right"
                                 VerticalAlignment="Bottom"
@@ -467,7 +454,7 @@
                                 PointerMoved="OnResizeGripMoved"
                                 PointerReleased="OnResizeGripReleased"
                                 PointerCaptureLost="OnResizeGripCaptureLost">
-                            <Path Data="M7,15 L15,7 M11,15 L15,11"
+                            <Path Data="M9,20 L20,9 M14,20 L20,14"
                                   Stroke="#88909090"
                                   StrokeThickness="1.2"
                                   HorizontalAlignment="Right"

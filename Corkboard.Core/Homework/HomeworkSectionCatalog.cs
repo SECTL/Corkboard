@@ -8,7 +8,7 @@ namespace Corkboard.Core.Homework;
 /// <summary>
 ///     作业板「定义」数据（科目清单与手动排序顺序）的读写：对应 <c>data/board/board.json</c>。
 ///     <para>
-///         和作业本身（<c>&lt;年&gt;/&lt;月&gt;/&lt;日&gt;/notes.json</c>，见
+///         和作业本身（<c>&lt;年&gt;/&lt;月&gt;/&lt;日&gt;/&lt;Id&gt;.cbnote</c>，见
 ///         <c>INoteStore</c>）分开：这里是用户维护的科目表与区块先后，
 ///         不随作业增删而整份重写。
 ///     </para>

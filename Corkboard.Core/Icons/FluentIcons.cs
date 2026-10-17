@@ -37,6 +37,12 @@ public static class FluentIcons
     /// <summary>退出回放。码位来自上游图标映射表 <c>arrow_exit_20_filled</c>。</summary>
     public const string ArrowExitFilled = "\uE0DE";
 
+    /// <summary>收起 / 最小化（收纳按钮与「收纳」设置页用）。</summary>
+    public const string ArrowMinimizeFilled = "\uE10E";
+
+    /// <summary>下拉箭头（收纳位置选择那种「点开才展开」的入口用）。</summary>
+    public const string ChevronDownFilled = "\uE447";
+
     /// <summary>未锁定（可以点得动）。码位来自上游图标映射表 <c>lock_open_20_filled</c>。</summary>
     public const string LockOpenFilled = "\uEAF7";
 

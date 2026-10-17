@@ -5,6 +5,7 @@
              xmlns:fa="using:FluentAvalonia.UI.Controls"
              xmlns:vm="using:Corkboard.ViewModels.SettingsPages.Board"
              xmlns:core="using:Corkboard.Core.Langs.Common"
+             xmlns:icons="using:Corkboard.Core.Icons"
              mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="450"
              x:Class="Corkboard.Views.SettingsPages.Board.DockSettingsPage"
              x:DataType="vm:DockSettingsPageViewModel">
@@ -25,46 +26,82 @@
             </fa:FASettingsExpander>
 
             <!--
-                位置：画一个「屏幕」示意框，里面按九宫格摆九颗圆点，点哪颗就把贴靠位置设成哪个。
-                选中那颗用 accent 样式亮起来；圆点本身是离散点击，点一下直接写配置，不需要提交草稿。
+                位置：平时只显示一颗像下拉框的按钮（「右上」这种文案），点开才在浮层里展开九宫格
+                圆点图——九宫格常驻太占面积（用户反馈）。选中那颗用 accent 样式亮起来；
+                圆点本身是离散点击，点一下直接写配置，不需要提交草稿。
             -->
             <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_Dock_Anchor}"
                                    Description="{x:Static core:Resources.Settings_Board_Dock_AnchorDescription}">
-                <StackPanel Spacing="8">
-                    <TextBlock FontSize="12"
-                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                               Text="{x:Static core:Resources.Settings_Board_Dock_AnchorHint}" />
-                    <!-- 「屏幕」示意框：只是给九颗圆点一个参照，本身不参与任何交互。 -->
-                    <Border Width="288"
-                            Height="168"
-                            HorizontalAlignment="Left"
-                            Background="{DynamicResource ControlFillColorSecondaryBrush}"
-                            BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
-                            BorderThickness="1"
-                            CornerRadius="8"
-                            Padding="8">
-                        <ItemsControl ItemsSource="{Binding AnchorOptions}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <UniformGrid Rows="3" Columns="3" />
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="vm:DockAnchorOption">
-                                    <Button Width="32"
-                                            Height="32"
-                                            MinWidth="0"
-                                            Padding="0"
-                                            HorizontalAlignment="Center"
-                                            VerticalAlignment="Center"
-                                            CornerRadius="16"
-                                            Classes.accent="{Binding IsSelected}"
-                                            Command="{Binding SelectCommand}" />
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </Border>
-                </StackPanel>
+                <fa:FASettingsExpander.Footer>
+                    <Panel>
+                        <Button x:Name="AnchorPickerButton"
+                                MinWidth="180"
+                                HorizontalContentAlignment="Stretch"
+                                ToolTip.Tip="{x:Static core:Resources.Settings_Board_Dock_AnchorHint}"
+                                Click="OnAnchorPickerClick">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                <TextBlock VerticalAlignment="Center" Text="{Binding AnchorText}" />
+                                <TextBlock Grid.Column="1"
+                                           VerticalAlignment="Center"
+                                           FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                           Text="{x:Static icons:FluentIcons.ChevronDownFilled}" />
+                            </Grid>
+                        </Button>
+
+                        <!--
+                            ⚠️ 这里用 Popup 而不是 Button.Flyout：Flyout 的内容在独立弹窗里，
+                            DataContext 不会跟着按钮走，九宫格圆点的 Command 会静默失效
+                            （用户反馈「点圆点没反应、下拉框一直显示右下」就是这么来的）。
+                            Popup 声明在同一个可视树里，DataContext 正常继承，圆点才点得动。
+                        -->
+                        <Popup x:Name="AnchorPopup"
+                               PlacementTarget="{Binding #AnchorPickerButton}"
+                               Placement="BottomEdgeAlignedRight"
+                               IsLightDismissEnabled="True">
+                            <Border Background="{DynamicResource SolidBackgroundFillColorQuarternaryBrush}"
+                                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="8"
+                                    Padding="12">
+                                <StackPanel Spacing="8">
+                                    <TextBlock FontSize="12"
+                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                               Text="{x:Static core:Resources.Settings_Board_Dock_AnchorHint}" />
+                                    <!-- 「屏幕」示意框：只是给九颗圆点一个参照，本身不参与任何交互。 -->
+                                    <Border Width="264"
+                                            Height="150"
+                                            Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                            BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="8"
+                                            Padding="8">
+                                        <ItemsControl ItemsSource="{Binding AnchorOptions}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <UniformGrid Rows="3" Columns="3" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:DockAnchorOption">
+                                                    <Button Width="32"
+                                                            Height="32"
+                                                            MinWidth="0"
+                                                            Padding="0"
+                                                            HorizontalAlignment="Center"
+                                                            VerticalAlignment="Center"
+                                                            CornerRadius="16"
+                                                            Classes.accent="{Binding IsSelected}"
+                                                            Command="{Binding SelectCommand}"
+                                                            Click="OnAnchorDotClick" />
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+                        </Popup>
+                    </Panel>
+                </fa:FASettingsExpander.Footer>
             </fa:FASettingsExpander>
 
             <!--

@@ -35,6 +35,8 @@ public partial class BoardSettingsPageViewModel : ViewModelBase
         _defaultFontSizeDraft = (decimal)RichTextStyle.ClampFontSize(Board.DefaultContentFontSize);
         _subjectFontSizeDraft = (decimal)BoardTextStyle.ClampSubjectFontSize(Board.SubjectFontSize);
         _noteMetaFontSizeDraft = (decimal)BoardTextStyle.ClampMetaFontSize(Board.NoteMetaFontSize);
+        _sectionFontSizeDraft = (decimal)BoardTextStyle.ClampSectionFontSize(Board.SectionFontSize);
+        _noteTagFontSizeDraft = (decimal)BoardTextStyle.ClampTagFontSize(Board.NoteTagFontSize);
         _blockMinWidthDraft = (decimal)BoardBlockStyle.ClampMinItemWidth(Board.BlockMinWidth);
 
         // 老版本的 settings.json 里没有色板字段（或者被手改脏了），进页面时先在原地收拾干净，
@@ -78,6 +80,12 @@ public partial class BoardSettingsPageViewModel : ViewModelBase
 
     /// <summary>作业条小字（类型与字段值、截止日期）字号的输入草稿。</summary>
     [ObservableProperty] private decimal? _noteMetaFontSizeDraft;
+
+    /// <summary>二级分类小标题字号的输入草稿（与「科目与分类」页写的是同一个配置项）。</summary>
+    [ObservableProperty] private decimal? _sectionFontSizeDraft;
+
+    /// <summary>快捷标签胶囊字号的输入草稿。</summary>
+    [ObservableProperty] private decimal? _noteTagFontSizeDraft;
 
     /// <summary>取色器停手多久才把颜色写进配置。拖光谱时每帧都在变，写盘要攒一攒。</summary>
     private static readonly TimeSpan ColorCommitDelay = TimeSpan.FromMilliseconds(400);
@@ -229,6 +237,28 @@ public partial class BoardSettingsPageViewModel : ViewModelBase
         var metaNormalized = (decimal)meta;
         if (NoteMetaFontSizeDraft != metaNormalized)
             NoteMetaFontSizeDraft = metaNormalized;
+
+        var section = SectionFontSizeDraft is { } sectionDraft
+            ? BoardTextStyle.ClampSectionFontSize((double)sectionDraft)
+            : BoardTextStyle.ClampSectionFontSize(Board.SectionFontSize);
+
+        if (Math.Abs(Board.SectionFontSize - section) > double.Epsilon)
+            Board.SectionFontSize = section;
+
+        var sectionNormalized = (decimal)section;
+        if (SectionFontSizeDraft != sectionNormalized)
+            SectionFontSizeDraft = sectionNormalized;
+
+        var tag = NoteTagFontSizeDraft is { } tagDraft
+            ? BoardTextStyle.ClampTagFontSize((double)tagDraft)
+            : BoardTextStyle.ClampTagFontSize(Board.NoteTagFontSize);
+
+        if (Math.Abs(Board.NoteTagFontSize - tag) > double.Epsilon)
+            Board.NoteTagFontSize = tag;
+
+        var tagNormalized = (decimal)tag;
+        if (NoteTagFontSizeDraft != tagNormalized)
+            NoteTagFontSizeDraft = tagNormalized;
     }
 
     /// <summary>

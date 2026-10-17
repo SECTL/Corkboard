@@ -8,6 +8,7 @@ using Corkboard.Core.Models.SubConfigs.General;
 using Corkboard.Core.Models.SubConfigs.Board;
 using Corkboard.ViewModels.MainPages.Board;
 using Corkboard.Core.Services.Config;
+using Corkboard.Services.Board;
 using CR = Corkboard.Core.Langs.Common.Resources;
 
 namespace Corkboard.ViewModels;
@@ -23,11 +24,16 @@ namespace Corkboard.ViewModels;
 /// </summary>
 public partial class MainViewModel : ViewModelBase
 {
-    public MainViewModel(MainConfigHandler configHandler) : base(configHandler)
+    public MainViewModel(MainConfigHandler configHandler, BoardReplayService replay) : base(configHandler)
     {
+        _replay = replay;
         Config.BoardSettings.PropertyChanged += OnBoardSettingsChanged;
         Config.Basic.PropertyChanged += OnBasicSettingsChanged;
+        _replay.PropertyChanged += OnReplayChanged;
     }
+
+    /// <summary>时空回放状态（标题栏的「布置作业 / 回放入口」显隐要看它）。</summary>
+    private readonly BoardReplayService _replay;
 
     [ObservableProperty] private object? _frameContent;
     [ObservableProperty] private bool _isRequestedRestart;
@@ -59,6 +65,31 @@ public partial class MainViewModel : ViewModelBase
     ///     （那时整窗收不到鼠标，浮标只是颗点不动的装饰，和标题栏右上角那一排同理）。
     /// </summary>
     public bool ShowCornerAssignButton => Config.Basic.ShowCornerAssignButton && !Config.Basic.ClickThrough;
+
+    /// <summary>
+    ///     标题栏右上角那几颗动作按钮画不画（「设置 → 作业板 → 顶部按钮」）。
+    ///     配置开关只决定「允不允许显示」，各自还要叠上原有条件：
+    ///     布置作业在回放期间不显示、回放入口没作业时不显示、收纳自己还有开关。
+    ///     <para>
+    ///         「锁定窗口」那颗不在这一组里——它是穿透状态下唯一的解锁入口，必须常驻。
+    ///     </para>
+    /// </summary>
+    public bool ShowTitleBarSettings => Config.BoardSettings.ShowTitleBarSettings;
+
+    /// <summary>排序菜单那顆。</summary>
+    public bool ShowTitleBarSort => Config.BoardSettings.ShowTitleBarSort;
+
+    /// <summary>布置作业。</summary>
+    public bool ShowTitleBarAssign => Config.BoardSettings.ShowTitleBarAssign && !_replay.IsActive;
+
+    /// <summary>导出图片。</summary>
+    public bool ShowTitleBarExport => Config.BoardSettings.ShowTitleBarExport;
+
+    /// <summary>时空回放入口。</summary>
+    public bool ShowTitleBarReplay => Config.BoardSettings.ShowTitleBarReplay && _replay.CanEnterReplay;
+
+    /// <summary>收纳（两个开关都开着才显示）。</summary>
+    public bool ShowTitleBarDock => Config.BoardSettings.ShowTitleBarDock && Config.BoardSettings.DockEnabled;
 
     // 菜单里的勾选不在这里：菜单项画在弹出层里、拿不到这里的 DataContext，
     // 所以由 MainView 在弹出时按 SelectedSortOption 直接写（见 MainView.RefreshSortMenuChecks）。
@@ -103,6 +134,24 @@ public partial class MainViewModel : ViewModelBase
             OnPropertyChanged(nameof(SelectedSortOption));
             OnPropertyChanged(nameof(SortTip));
         }
+
+        // 顶部按钮的显隐：字段少，逐个判名字不划算，直接六个一起通知。
+        OnPropertyChanged(nameof(ShowTitleBarSettings));
+        OnPropertyChanged(nameof(ShowTitleBarSort));
+        OnPropertyChanged(nameof(ShowTitleBarAssign));
+        OnPropertyChanged(nameof(ShowTitleBarExport));
+        OnPropertyChanged(nameof(ShowTitleBarReplay));
+        OnPropertyChanged(nameof(ShowTitleBarDock));
+    }
+
+    /// <summary>回放状态变了：只有「布置作业」与「回放入口」两颗受它影响。</summary>
+    private void OnReplayChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(BoardReplayService.IsActive) or null)
+            OnPropertyChanged(nameof(ShowTitleBarAssign));
+
+        if (e.PropertyName is nameof(BoardReplayService.CanEnterReplay) or nameof(BoardReplayService.IsActive) or null)
+            OnPropertyChanged(nameof(ShowTitleBarReplay));
     }
 
     private void OnBasicSettingsChanged(object? sender, PropertyChangedEventArgs e)
@@ -120,5 +169,6 @@ public partial class MainViewModel : ViewModelBase
     {
         Config.BoardSettings.PropertyChanged -= OnBoardSettingsChanged;
         Config.Basic.PropertyChanged -= OnBasicSettingsChanged;
+        _replay.PropertyChanged -= OnReplayChanged;
     }
 }

@@ -112,6 +112,10 @@ public partial class BoardPageViewModel : ViewModelBase
     public double NoteMetaFontSize =>
         BoardTextStyle.ClampMetaFontSize(Config.BoardSettings.NoteMetaFontSize);
 
+    /// <summary>作业板上快捷标签胶囊的字号（设置 → 作业板 → 字号）。同样记在列表项上。</summary>
+    public double NoteTagFontSize =>
+        BoardTextStyle.ClampTagFontSize(Config.BoardSettings.NoteTagFontSize);
+
     /// <summary>是否在回放中。为真时页面顶部给出提示、并且不显示删除按钮。</summary>
     public bool IsReplaying => _replay.IsActive;
 
@@ -273,7 +277,8 @@ public partial class BoardPageViewModel : ViewModelBase
             or nameof(BoardSettingsConfig.DefaultContentColor)
             or nameof(BoardSettingsConfig.SubjectFontSize)
             or nameof(BoardSettingsConfig.SectionFontSize)
-            or nameof(BoardSettingsConfig.NoteMetaFontSize))
+            or nameof(BoardSettingsConfig.NoteMetaFontSize)
+            or nameof(BoardSettingsConfig.NoteTagFontSize))
         {
             RebuildNotes();
         }
@@ -360,6 +365,7 @@ public partial class BoardPageViewModel : ViewModelBase
             ContentDefaultFontSize,
             ContentDefaultColor,
             NoteMetaFontSize,
+            NoteTagFontSize,
             CanModifyNotes,
             dueText,
             isOverdue,

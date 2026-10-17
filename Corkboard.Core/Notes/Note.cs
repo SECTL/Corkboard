@@ -166,7 +166,7 @@ public partial class Note : ObservableObject
     /// <summary>
     ///     被自动清理收走的时刻；为空表示还留在板子上。
     ///     <para>
-    ///         清理<b>不动数据</b>：作业仍然在原来那个 <c>&lt;年&gt;/&lt;月&gt;/&lt;日&gt;/notes.json</c> 里，
+    ///         清理<b>不动数据</b>：作业仍然在原来那个 <c>&lt;年&gt;/&lt;月&gt;/&lt;日&gt;/&lt;Id&gt;.cbnote</c> 里，
     ///         只是主页面不再显示它。所以这是一个标记，不是归档——没有第二个目录，也不会把文件搬走甚至删掉。
     ///         想让它回到板子上，把这一项清空再落盘即可。
     ///     </para>

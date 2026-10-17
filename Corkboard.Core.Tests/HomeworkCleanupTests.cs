@@ -366,16 +366,16 @@ public class HomeworkCleanupTests : IDisposable
             DueDate = new DateOnly(2026, 3, 2)
         });
 
-        var filled = Path.Combine(BoardRoot, "2020", "03", "02", NoteStore.NotesFileName);
+        var filled = Path.Combine(BoardRoot, "2020", "03", "02", NoteFileFormat.GetFileName(with));
         var todayFile = Path.Combine(
             BoardRoot,
             Today.Year.ToString("D4"),
             Today.Month.ToString("D2"),
             Today.Day.ToString("D2"),
-            NoteStore.NotesFileName);
+            NoteFileFormat.GetFileName(without));
 
-        Assert.Contains("due_date", File.ReadAllText(filled));
-        Assert.DoesNotContain("due_date", File.ReadAllText(todayFile));
+        Assert.Contains("due=", File.ReadAllText(filled));
+        Assert.DoesNotContain("due=", File.ReadAllText(todayFile));
 
         var reloaded = CreateStore().LoadAll();
         Assert.Null(reloaded.Single(note => note.Id == without.Id).DueDate);

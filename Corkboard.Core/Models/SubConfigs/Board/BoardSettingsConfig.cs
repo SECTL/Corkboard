@@ -46,6 +46,31 @@ public partial class BoardSettingsConfig : ObservableObject
     [ObservableProperty] private bool _confirmBeforeDelete = true;
 
     /// <summary>
+    ///     标题栏右上角那几个动作按钮各显示不显示。默认全开；用户嫌哪颗多余就关掉哪颗
+    ///     （「设置 → 作业板 → 顶部按钮」）。这些都是界面偏好，不影响数据。
+    ///     <para>
+    ///         ⚠️ 「锁定窗口」那颗不在这里管：它是点击穿透状态下唯一的解锁入口，
+    ///         藏掉就再也点不回来了，必须常驻。
+    ///     </para>
+    /// </summary>
+    [ObservableProperty] private bool _showTitleBarSettings = true;
+
+    /// <inheritdoc cref="_showTitleBarSettings" />
+    [ObservableProperty] private bool _showTitleBarSort = true;
+
+    /// <inheritdoc cref="_showTitleBarSettings" />
+    [ObservableProperty] private bool _showTitleBarAssign = true;
+
+    /// <inheritdoc cref="_showTitleBarSettings" />
+    [ObservableProperty] private bool _showTitleBarExport = true;
+
+    /// <inheritdoc cref="_showTitleBarSettings" />
+    [ObservableProperty] private bool _showTitleBarReplay = true;
+
+    /// <summary>收纳按钮：还要 <see cref="DockEnabled" /> 也开着才显示。</summary>
+    [ObservableProperty] private bool _showTitleBarDock = true;
+
+    /// <summary>
     ///     是否按下面的规则自动清理过期作业。关掉之后只剩设置页里的「立即清理」这一个入口。
     ///     默认开：清理只是把作业从板子上拿掉，数据不删、随时能在时空回放里看到，
     ///     关着反而会让人以为功能坏了。
@@ -87,6 +112,11 @@ public partial class BoardSettingsConfig : ObservableObject
     ///     读的时候一律过一遍 <see cref="BoardTextStyle.ClampMetaFontSize" />。
     /// </summary>
     [ObservableProperty] private double _noteMetaFontSize = BoardTextStyle.DefaultMetaFontSize;
+
+    /// <summary>
+    ///     作业板卡片上快捷标签胶囊的字号。读的时候一律过一遍 <see cref="BoardTextStyle.ClampTagFontSize" />。
+    /// </summary>
+    [ObservableProperty] private double _noteTagFontSize = BoardTextStyle.DefaultTagFontSize;
 
     /// <summary>
     ///     二级分类小标题的字号（科目下面那一层）。读的时候过一遍
@@ -211,6 +241,16 @@ public partial class BoardSettingsConfig : ObservableObject
     /// </summary>
     public void NormalizeBoardExtras()
     {
+        // 手写笔宽的旧默认值是 4（细得像针），新默认值是 10。老配置读进来如果还是 4，
+        // 说明没手动调过，这里跟着抬到新默认值；显式选过 4 的也会被抬上来，旧默认太细了。
+        if (Math.Abs(HandwritingPenWidth - 4) < 1e-9)
+            HandwritingPenWidth = Handwriting.HandwritingStyle.DefaultPenWidth;
+
+        SubjectFontSize = BoardTextStyle.ClampSubjectFontSize(SubjectFontSize);
+        SectionFontSize = BoardTextStyle.ClampSectionFontSize(SectionFontSize);
+        NoteMetaFontSize = BoardTextStyle.ClampMetaFontSize(NoteMetaFontSize);
+        NoteTagFontSize = BoardTextStyle.ClampTagFontSize(NoteTagFontSize);
+
         HandwritingPenWidth = Handwriting.HandwritingStyle.ClampPenWidth(HandwritingPenWidth);
         HandwritingEraserWidth = Handwriting.HandwritingStyle.ClampEraserWidth(HandwritingEraserWidth);
         DockAnchor = DockAnchors.Normalize(DockAnchor);
@@ -253,7 +293,7 @@ public partial class BoardSettingsConfig : ObservableObject
     }
 
     /// <summary>快捷标签最多几个：再多布置作业那一行就摆不下了。</summary>
-    public const int MaxQuickTags = 8;
+    public const int MaxQuickTags = 16;
 
     /// <summary>把一串标签收拾成能用的样子（纯逻辑、有单测）。</summary>
     public static List<string> NormalizeQuickTagList(IEnumerable<string?>? tags)

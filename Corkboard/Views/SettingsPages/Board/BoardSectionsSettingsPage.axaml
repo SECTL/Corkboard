@@ -25,15 +25,78 @@
                 科目清单：逗号分隔的草稿，失焦 / 回车时提交并落盘（科目是业务数据，不走配置管道）。
                 不用按回车也能提交——离开页面时 Unloaded 会再提交一次。
             -->
+            <!--
+                科目清单：**一个一个加**（输入框 + 添加按钮，回车也行），不再用逗号分隔的长文本框
+                （用户明确要求）。每行右侧的叉删掉这个科目，删之前确认一次。
+                科目与分类都是业务数据（存在 board.json），这边显式落盘，不走配置管道。
+            -->
             <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_Subjects}"
-                                   Description="{x:Static core:Resources.Settings_Board_SubjectsDescription}">
-                <TextBox Margin="0 4 0 0"
-                         MinWidth="240"
-                         HorizontalAlignment="Stretch"
-                         Text="{Binding SubjectsDraft, Mode=TwoWay}"
-                         LostFocus="OnSubjectsLostFocus"
-                         KeyDown="OnSubjectsKeyDown"
-                         ToolTip.Tip="{x:Static core:Resources.Settings_Board_Subjects}" />
+                                   Description="{x:Static core:Resources.Settings_Board_SubjectsDescription}"
+                                   IsExpanded="True">
+                <StackPanel Margin="0 4 0 0" Spacing="8">
+                    <TextBlock Classes="caption"
+                               IsVisible="{Binding HasSubjectHint}"
+                               Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                               Text="{Binding SubjectHint}" />
+
+                    <TextBlock Classes="caption"
+                               IsVisible="{Binding HasNoSubjects}"
+                               Text="{x:Static core:Resources.Settings_Board_Subjects_Empty}" />
+
+                    <!--
+                        已有的科目：**胶囊横排、多了自动换行**（用户要求：语文、数学这种短名字
+                        横着放就行，不必一行一个竖着排）。胶囊里是名字 + 一颗小叉删科目；
+                        改名请删了重加（科目是数据里的定义，直接改名会牵扯作业归属）。
+                    -->
+                    <ItemsControl ItemsSource="{Binding SubjectItems}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:BoardSectionsSubjectItem">
+                                <Border Margin="0 0 8 8"
+                                        Padding="12 4 4 4"
+                                        CornerRadius="14"
+                                        Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                        BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                        BorderThickness="1">
+                                    <StackPanel Orientation="Horizontal" Spacing="2">
+                                        <TextBlock VerticalAlignment="Center"
+                                                   Text="{Binding DisplayName}" />
+                                        <Button Background="Transparent"
+                                                BorderThickness="0"
+                                                Padding="4"
+                                                VerticalAlignment="Center"
+                                                FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                                FontSize="12"
+                                                Content="{x:Static icons:FluentIcons.DeleteFilled}"
+                                                ToolTip.Tip="{x:Static core:Resources.Settings_Board_Subjects_Delete}"
+                                                Click="OnDeleteSubjectClick" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- 新建科目：输入框里有字才能点「添加」；回车也能加。 -->
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <TextBox Grid.Column="0"
+                                 MinHeight="32"
+                                 VerticalContentAlignment="Center"
+                                 Text="{Binding NewSubjectDraft, Mode=TwoWay}"
+                                 PlaceholderText="{x:Static core:Resources.Settings_Board_Subjects_NewPlaceholder}"
+                                 KeyDown="OnNewSubjectKeyDown" />
+                        <Button Grid.Column="1"
+                                MinHeight="32"
+                                Padding="12 0"
+                                VerticalAlignment="Center"
+                                IsEnabled="{Binding CanAddSubject}"
+                                Content="{x:Static core:Resources.Settings_Board_Subjects_Add}"
+                                Click="OnAddSubjectClick" />
+                    </Grid>
+                </StackPanel>
             </fa:FASettingsExpander>
 
             <!--
@@ -42,85 +105,115 @@
                 失败（重名之类）时卡片顶部出现一句提示，不用弹窗。
             -->
             <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_Sections_Categories}"
-                                   Description="{x:Static core:Resources.Settings_Board_Sections_CategoriesDescription}">
+                                   Description="{x:Static core:Resources.Settings_Board_Sections_CategoriesDescription}"
+                                   IsExpanded="True">
                 <StackPanel Margin="0 4 0 0" Spacing="12">
                     <TextBlock Classes="caption"
                                IsVisible="{Binding HasSectionHint}"
                                Foreground="{DynamicResource SystemFillColorCriticalBrush}"
                                Text="{Binding SectionHint}" />
 
-                    <ItemsControl ItemsSource="{Binding SubjectItems}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="vm:BoardSectionsSubjectItem">
-                                <StackPanel Margin="0 0 0 10" Spacing="6">
-                                    <TextBlock FontWeight="Bold"
-                                               TextWrapping="Wrap"
-                                               Text="{Binding DisplayName}" />
-                                    <TextBlock Classes="caption"
-                                               IsVisible="{Binding !HasCategories}"
-                                               Text="{x:Static core:Resources.Settings_Board_Sections_NoCategories}" />
+                    <!--
+                        左边选科目、右边编辑：科目多了以后一行一行往下排太长（用户要求改成这种布局）。
+                        右边只放选中那个科目的分类行，**不再放科目下拉框**——左边既然能选，右边再来一颗就是重复。
+                    -->
+                    <Grid ColumnDefinitions="220,*"
+                          ColumnSpacing="16"
+                          MinHeight="280">
+                        <Border Grid.Column="0"
+                                Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="4">
+                            <ListBox ItemsSource="{Binding SubjectItems}"
+                                     SelectedItem="{Binding SelectedSubjectItem, Mode=TwoWay}"
+                                     Background="Transparent"
+                                     BorderThickness="0">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:BoardSectionsSubjectItem">
+                                        <StackPanel Spacing="2" Margin="0 2">
+                                            <TextBlock FontWeight="Bold"
+                                                       Text="{Binding DisplayName}"
+                                                       TextWrapping="Wrap" />
+                                            <TextBlock Classes="caption" Text="{Binding CategoryCountText}" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Border>
 
-                                    <!-- 已定义的分类：一行一个，输入框直接改名（失焦 / 回车提交）。 -->
-                                    <ItemsControl ItemsSource="{Binding Categories}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate x:DataType="vm:BoardSectionsCategoryItem">
-                                                <Grid Margin="0 0 0 4"
-                                                      ColumnDefinitions="*,Auto"
-                                                      ColumnSpacing="8">
-                                                    <TextBox Grid.Column="0"
-                                                             Text="{Binding NameDraft, Mode=TwoWay}"
-                                                             LostFocus="OnCategoryNameLostFocus"
-                                                             KeyDown="OnCategoryNameKeyDown"
-                                                             ToolTip.Tip="{x:Static core:Resources.Settings_Board_Sections_RenameCategory}" />
-                                                    <Button Grid.Column="1"
-                                                            Background="Transparent"
-                                                            BorderThickness="0"
-                                                            Padding="6"
-                                                            VerticalAlignment="Center"
-                                                            FontFamily="{DynamicResource FluentSystemIconsResizeable}"
-                                                            Content="{x:Static icons:FluentIcons.DeleteFilled}"
-                                                            ToolTip.Tip="{x:Static core:Resources.Settings_Board_Sections_DeleteCategory}"
-                                                            Click="OnDeleteCategoryClick" />
-                                                </Grid>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
+                        <!--
+                            右列只放「当前科目的分类」。科目本身由左边列表选（用户要求：
+                            左边既然能选，上面就不要再多一颗科目下拉框了）。
+                            行距刻意放宽一点：输入框之间挨太近看着挤（用户反馈）。
+                        -->
+                        <ContentControl Grid.Column="1"
+                                        Margin="0 2"
+                                        Content="{Binding SelectedSubjectItem}">
+                            <ContentControl.ContentTemplate>
+                                <DataTemplate x:DataType="vm:BoardSectionsSubjectItem">
+                                    <!--
+                                        **统一**行距（用户反馈：不要忽大忽小，也不要太大）：
+                                        列表行之间、列表行与新建行之间都是同一个 8 DIP；
+                                        行内不再加 Margin，输入框高度固定 32、文字垂直居中，
+                                        不靠 Padding 撑高——那样看着像「一行字上面又套了个空框」。
+                                    -->
+                                    <StackPanel Spacing="8">
+                                        <!-- 已定义的分类：一行一个，输入框直接改名（失焦 / 回车提交）。 -->
+                                        <ItemsControl ItemsSource="{Binding Categories}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:BoardSectionsCategoryItem">
+                                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                                        <TextBox Grid.Column="0"
+                                                                 MinHeight="32"
+                                                                 VerticalContentAlignment="Center"
+                                                                 Text="{Binding NameDraft, Mode=TwoWay}"
+                                                                 LostFocus="OnCategoryNameLostFocus"
+                                                                 KeyDown="OnCategoryNameKeyDown"
+                                                                 ToolTip.Tip="{x:Static core:Resources.Settings_Board_Sections_RenameCategory}" />
+                                                        <Button Grid.Column="1"
+                                                                Background="Transparent"
+                                                                BorderThickness="0"
+                                                                Padding="6"
+                                                                VerticalAlignment="Center"
+                                                                FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                                                Content="{x:Static icons:FluentIcons.DeleteFilled}"
+                                                                ToolTip.Tip="{x:Static core:Resources.Settings_Board_Sections_DeleteCategory}"
+                                                                Click="OnDeleteCategoryClick" />
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
 
-                                    <!-- 新建分类：输入框里有字才能点按钮；回车也能建。 -->
-                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                        <TextBox Grid.Column="0"
-                                                 Text="{Binding NewCategoryDraft, Mode=TwoWay}"
-                                                 PlaceholderText="{x:Static core:Resources.Settings_Board_Sections_NewCategoryPlaceholder}"
-                                                 KeyDown="OnNewCategoryKeyDown" />
-                                        <Button Grid.Column="1"
-                                                VerticalAlignment="Center"
-                                                IsEnabled="{Binding CanAddCategory}"
-                                                Content="{x:Static core:Resources.Settings_Board_Sections_AddCategory}"
-                                                Click="OnAddCategoryClick" />
-                                    </Grid>
-                                </StackPanel>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                                        <TextBlock Classes="caption"
+                                                   IsVisible="{Binding !HasCategories}"
+                                                   Text="{x:Static core:Resources.Settings_Board_Sections_NoCategories}" />
+
+                                        <!-- 新建分类：输入框里有字才能点按钮；回车也能建。 -->
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                            <TextBox Grid.Column="0"
+                                                     MinHeight="32"
+                                                     VerticalContentAlignment="Center"
+                                                     Text="{Binding NewCategoryDraft, Mode=TwoWay}"
+                                                     PlaceholderText="{x:Static core:Resources.Settings_Board_Sections_NewCategoryPlaceholder}"
+                                                     KeyDown="OnNewCategoryKeyDown" />
+                                            <Button Grid.Column="1"
+                                                    MinHeight="32"
+                                                    Padding="12 0"
+                                                    VerticalAlignment="Center"
+                                                    IsEnabled="{Binding CanAddCategory}"
+                                                    Content="{x:Static core:Resources.Settings_Board_Sections_AddCategory}"
+                                                    Click="OnAddCategoryClick" />
+                                        </Grid>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ContentControl.ContentTemplate>
+                        </ContentControl>
+                    </Grid>
                 </StackPanel>
             </fa:FASettingsExpander>
 
-            <!--
-                分类标题字号：只影响科目区块里那层小标题，牌面分层靠它区分。
-                绑草稿而不是配置：NumericUpDown 每动一下就会写一次 settings.json。
-            -->
-            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_SectionFontSize}"
-                                   Description="{x:Static core:Resources.Settings_Board_SectionFontSizeDescription}">
-                <fa:FASettingsExpander.Footer>
-                    <NumericUpDown MinWidth="130"
-                                   Minimum="9"
-                                   Maximum="32"
-                                   Increment="1"
-                                   FormatString="0"
-                                   Value="{Binding SectionFontSizeDraft, Mode=TwoWay}"
-                                   LostFocus="OnSectionFontSizeLostFocus" />
-                </fa:FASettingsExpander.Footer>
-            </fa:FASettingsExpander>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

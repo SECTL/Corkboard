@@ -7,6 +7,7 @@ using Corkboard.Core.Models.SubConfigs.Board;
 using Corkboard.Core.Services.Config;
 using Corkboard.Services.Board;
 using Corkboard.ViewModels;
+using CR = Corkboard.Core.Langs.Common.Resources;
 
 namespace Corkboard.ViewModels.SettingsPages.Board;
 
@@ -56,6 +57,23 @@ public partial class DockSettingsPageViewModel : ViewModelBase
 
     /// <summary>位置示意图上的九颗圆点（左上 → 右下）。</summary>
     public ObservableCollection<DockAnchorOption> AnchorOptions { get; }
+
+    /// <summary>
+    ///     当前贴靠位置的短文案（「右上」「左下」…），给设置页那颗像下拉框的按钮显示用。
+    ///     九宫格本身收进浮层里，不占常驻面积。
+    /// </summary>
+    public string AnchorText => DockAnchors.Normalize(Settings.DockAnchor) switch
+    {
+        DockAnchor.TopLeft => CR.Settings_Board_Dock_Anchor_TopLeft,
+        DockAnchor.TopCenter => CR.Settings_Board_Dock_Anchor_TopCenter,
+        DockAnchor.TopRight => CR.Settings_Board_Dock_Anchor_TopRight,
+        DockAnchor.MiddleLeft => CR.Settings_Board_Dock_Anchor_MiddleLeft,
+        DockAnchor.Center => CR.Settings_Board_Dock_Anchor_Center,
+        DockAnchor.MiddleRight => CR.Settings_Board_Dock_Anchor_MiddleRight,
+        DockAnchor.BottomLeft => CR.Settings_Board_Dock_Anchor_BottomLeft,
+        DockAnchor.BottomCenter => CR.Settings_Board_Dock_Anchor_BottomCenter,
+        _ => CR.Settings_Board_Dock_Anchor_BottomRight
+    };
 
     /// <summary>「左右偏移」的草稿：失焦 / 离页时经 <see cref="CommitAll" /> 夹取后写配置。</summary>
     [ObservableProperty]
@@ -179,6 +197,8 @@ public partial class DockSettingsPageViewModel : ViewModelBase
         var current = DockAnchors.Normalize(Settings.DockAnchor);
         foreach (var option in AnchorOptions)
             option.IsSelected = option.Anchor == current;
+
+        OnPropertyChanged(nameof(AnchorText));
     }
 
     /// <summary>配置变化：外部改了值就把草稿同步过来（与服务端 / 云端恢复走同一条路）。</summary>

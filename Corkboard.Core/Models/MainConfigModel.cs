@@ -25,6 +25,17 @@ public partial class MainConfigModel : ConfigBase
 
     [JsonIgnore] public override string ConfigFilePath => Utils.GetFilePath("config", "settings.json");
 
+    /// <summary>
+    ///     读盘后统一收拾一遍子配置：字号/宽度越界、收纳位置越界、手写笔宽的旧默认值迁移等。
+    ///     由 <c>FileConfigService.LoadConfig</c> 在反序列化之后调用——**不要**挪进设置页：
+    ///     作业板在设置页打开之前就会先按脏值渲染，手写表单也会继续用旧的默认笔宽。
+    /// </summary>
+    public void NormalizeLoaded()
+    {
+        BoardSettings.NormalizeBoardExtras();
+        BoardSettings.NormalizeCleanup();
+    }
+
     [JsonIgnore]
     public BasicSettingsConfig Basic
     {

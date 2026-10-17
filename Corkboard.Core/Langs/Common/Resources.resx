@@ -272,6 +272,30 @@
   <data name="Settings_Board_NamePlaceholder" xml:space="preserve">
     <value>留空则用默认名称</value>
   </data>
+  <data name="Settings_Board_TitleBarButtons" xml:space="preserve">
+    <value>顶部按钮</value>
+  </data>
+  <data name="Settings_Board_TitleBarButtonsDescription" xml:space="preserve">
+    <value>右上角那排按钮留哪些，关掉的就不显示</value>
+  </data>
+  <data name="Settings_Board_TitleBarSettings" xml:space="preserve">
+    <value>设置按钮</value>
+  </data>
+  <data name="Settings_Board_TitleBarSort" xml:space="preserve">
+    <value>排序按钮</value>
+  </data>
+  <data name="Settings_Board_TitleBarAssign" xml:space="preserve">
+    <value>布置作业按钮</value>
+  </data>
+  <data name="Settings_Board_TitleBarExport" xml:space="preserve">
+    <value>导出图片按钮</value>
+  </data>
+  <data name="Settings_Board_TitleBarReplay" xml:space="preserve">
+    <value>时空回放按钮</value>
+  </data>
+  <data name="Settings_Board_TitleBarDock" xml:space="preserve">
+    <value>收纳按钮</value>
+  </data>
   <data name="Settings_Board_Layout" xml:space="preserve">
     <value>排布</value>
   </data>
@@ -314,8 +338,29 @@
   <data name="Settings_Board_Subjects" xml:space="preserve">
     <value>科目</value>
   </data>
+  <data name="Settings_Board_Subjects_NewPlaceholder" xml:space="preserve">
+    <value>科目名称</value>
+  </data>
+  <data name="Settings_Board_Subjects_Add" xml:space="preserve">
+    <value>添加</value>
+  </data>
+  <data name="Settings_Board_Subjects_Duplicate" xml:space="preserve">
+    <value>这个科目已经有了</value>
+  </data>
+  <data name="Settings_Board_Subjects_Empty" xml:space="preserve">
+    <value>还没有科目，先加一个</value>
+  </data>
+  <data name="Settings_Board_Subjects_Delete" xml:space="preserve">
+    <value>删除</value>
+  </data>
+  <data name="Settings_Board_Subjects_DeleteConfirmTitle" xml:space="preserve">
+    <value>删除科目</value>
+  </data>
+  <data name="Settings_Board_Subjects_DeleteConfirmMessage" xml:space="preserve">
+    <value>这个科目和它下面的分类会一起删掉，已经布置的作业不会被删</value>
+  </data>
   <data name="Settings_Board_SubjectsDescription" xml:space="preserve">
-    <value>用逗号分开，布置作业时从这里挑</value>
+    <value>一个一个加进来，布置作业时从这里挑</value>
   </data>
   <!-- 内容的默认字号/颜色：新作业没单独定的时候用它们。 -->
   <data name="Settings_Board_ContentStyle" xml:space="preserve">
@@ -348,6 +393,12 @@
   </data>
   <data name="Settings_Board_NoteMetaFontSize" xml:space="preserve">
     <value>作业条小字字号</value>
+  </data>
+  <data name="Settings_Board_NoteTagFontSize" xml:space="preserve">
+    <value>标签字号</value>
+  </data>
+  <data name="Settings_Board_NoteTagFontSizeDescription" xml:space="preserve">
+    <value>作业卡片上快捷标签胶囊的字号</value>
   </data>
   <data name="Settings_Board_NoteMetaFontSizeDescription" xml:space="preserve">
     <value>截止日期那行小字的字号</value>
@@ -789,6 +840,12 @@
   <data name="Settings_Board_Sections_Categories" xml:space="preserve">
     <value>二级分类</value>
   </data>
+  <data name="Settings_Board_Sections_SubjectPicker" xml:space="preserve">
+    <value>科目</value>
+  </data>
+  <data name="Settings_Board_Sections_CategoryCount" xml:space="preserve">
+    <value>{0} 个分类</value>
+  </data>
   <data name="Settings_Board_Sections_CategoriesDescription" xml:space="preserve">
     <value>每个科目下面可以再分几个小标题，布置作业时按科目挑</value>
   </data>
@@ -895,10 +952,37 @@
     <value>按钮位置</value>
   </data>
   <data name="Settings_Board_Dock_AnchorDescription" xml:space="preserve">
-    <value>点示意图上的圆点，选按钮停在哪个位置</value>
+    <value>点开后选按钮停屏幕哪个位置</value>
   </data>
   <data name="Settings_Board_Dock_AnchorHint" xml:space="preserve">
     <value>点圆点选位置</value>
+  </data>
+  <data name="Settings_Board_Dock_Anchor_TopLeft" xml:space="preserve">
+    <value>左上</value>
+  </data>
+  <data name="Settings_Board_Dock_Anchor_TopCenter" xml:space="preserve">
+    <value>上中</value>
+  </data>
+  <data name="Settings_Board_Dock_Anchor_TopRight" xml:space="preserve">
+    <value>右上</value>
+  </data>
+  <data name="Settings_Board_Dock_Anchor_MiddleLeft" xml:space="preserve">
+    <value>左中</value>
+  </data>
+  <data name="Settings_Board_Dock_Anchor_Center" xml:space="preserve">
+    <value>居中</value>
+  </data>
+  <data name="Settings_Board_Dock_Anchor_MiddleRight" xml:space="preserve">
+    <value>右中</value>
+  </data>
+  <data name="Settings_Board_Dock_Anchor_BottomLeft" xml:space="preserve">
+    <value>左下</value>
+  </data>
+  <data name="Settings_Board_Dock_Anchor_BottomCenter" xml:space="preserve">
+    <value>下中</value>
+  </data>
+  <data name="Settings_Board_Dock_Anchor_BottomRight" xml:space="preserve">
+    <value>右下</value>
   </data>
   <data name="Settings_Board_Dock_Offset" xml:space="preserve">
     <value>离屏幕边的距离</value>

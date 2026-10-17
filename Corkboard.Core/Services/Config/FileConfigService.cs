@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Corkboard.Core.Abstraction;
+using Corkboard.Core.Models;
 using Corkboard.Shared.Abstraction;
 
 namespace Corkboard.Core.Services.Config;
@@ -37,7 +38,13 @@ public sealed class FileConfigService(ILogger<FileConfigService> logger) : Confi
             if (!IsPlainJsonObject(json))
                 return fallback;
 
-            return JsonSerializer.Deserialize<T>(json, JsonOptions) ?? fallback;
+            var config = JsonSerializer.Deserialize<T>(json, JsonOptions) ?? fallback;
+
+            // 读盘后统一收拾一遍（字号夹取、手写笔宽旧默认值迁移等），见 MainConfigModel.NormalizeLoaded。
+            if (config is MainConfigModel main)
+                main.NormalizeLoaded();
+
+            return config;
         }
         catch (Exception ex)
         {

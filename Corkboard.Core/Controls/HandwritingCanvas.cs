@@ -98,6 +98,43 @@ public class HandwritingCanvas : Control, ICustomHitTest
     /// <summary>当前笔锋倍率（平滑过的书写速度结果）。</summary>
     private double _widthScale = HandwritingPoint.DefaultWidthScale;
 
+    /// <summary>视口左上角在「参考坐标」里的位置（DIP），用来平移画布写更多内容。</summary>
+    private Point _viewOffset;
+
+    /// <summary>视口缩放（1 = 跟手写坐标一样大）。</summary>
+    private double _viewZoom = 1;
+
+    /// <summary>可缩放范围：太小看不清、太大一屏放不下几个字。</summary>
+    private const double MinViewZoom = 0.5;
+
+    private const double MaxViewZoom = 4;
+
+    /// <summary>当前按在画布上的触摸点（多指手势用；键盘/鼠标不会进这张表）。</summary>
+    private readonly Dictionary<IPointer, Point> _touchPoints = [];
+
+    /// <summary>双指手势进行中：此时不画线，只平移 / 缩放视口。</summary>
+    private bool _touchGestureActive;
+
+    /// <summary>
+    ///     双指手势结束、还有手指没抬起来时置真：剩下那根手指不要再落笔
+    ///     （否则缩放手势松手时会多出一小段杂线）。
+    /// </summary>
+    private bool _suppressTouchDraw;
+
+    /// <summary>双指手势起点：锚点在文档坐标里的位置、起始缩放与两指间距。</summary>
+    private Point _touchAnchorDocument;
+
+    private double _touchStartZoom = 1;
+
+    private double _touchStartDistance;
+
+    /// <summary>正在用右键 / 中键拖动画布的指针。</summary>
+    private IPointer? _panPointer;
+
+    private Point _panStartPosition;
+
+    private Point _panStartOffset;
+
     /// <summary>撤销快照：每一步是当时笔画列表的浅拷贝（旧笔对象不会被原地改，所以浅拷贝就够）。</summary>
     private readonly List<List<HandwritingStroke>> _undo = [];
 
@@ -236,7 +273,12 @@ public class HandwritingCanvas : Control, ICustomHitTest
 
         // 按「参考尺寸」画、左上角对齐：拖大拖小内容框时笔迹留在原处（用户明确要求），
         // 多出来的地方只是继续可写的空白，不会把已有的字拉伸。
-        HandwritingRenderer.Render(context, _document, new Rect(0, 0, _referenceWidth, _referenceHeight));
+        // 外面再套一层视口变换：右键/中键拖动平移、Ctrl+滚轮缩放，可以写到大画布的更多角落。
+        var transform = Matrix.CreateScale(_viewZoom, _viewZoom)
+                        * Matrix.CreateTranslation(-_viewOffset.X * _viewZoom, -_viewOffset.Y * _viewZoom);
+
+        using (context.PushTransform(transform))
+            HandwritingRenderer.Render(context, _document, new Rect(0, 0, _referenceWidth, _referenceHeight));
     }
 
     /// <summary>
@@ -273,6 +315,47 @@ public class HandwritingCanvas : Control, ICustomHitTest
     {
         base.OnPointerPressed(e);
 
+        // 右键 / 中键拖动画布（平移到别处写）；左键、触摸、手写笔画线。
+        if (e.Pointer.Type == PointerType.Mouse)
+        {
+            var properties = e.GetCurrentPoint(this).Properties;
+            if (properties.IsRightButtonPressed || properties.IsMiddleButtonPressed)
+            {
+                if (!double.IsFinite(Bounds.Width) || Bounds.Width <= 0 || !double.IsFinite(Bounds.Height) || Bounds.Height <= 0)
+                    return;
+
+                _panPointer = e.Pointer;
+                _panStartPosition = e.GetPosition(this);
+                _panStartOffset = _viewOffset;
+
+                e.Pointer.Capture(this);
+                e.Handled = true;
+                return;
+            }
+        }
+
+        // 触控：单指落笔（和以前一样），第二根手指落下时改成「平移 / 缩放视口」。
+        if (e.Pointer.Type == PointerType.Touch)
+        {
+            if (!double.IsFinite(Bounds.Width) || Bounds.Width <= 0 || !double.IsFinite(Bounds.Height) || Bounds.Height <= 0)
+                return;
+
+            e.Pointer.Capture(this);
+            _touchPoints[e.Pointer] = e.GetPosition(this);
+
+            if (_touchPoints.Count >= 2)
+            {
+                // 已经落笔的那一段丢掉：用户要的是挪画布，不是画一截。
+                CancelActiveTouchStroke();
+                BeginTouchGesture();
+            }
+
+            e.Handled = true;
+
+            if (_touchGestureActive || _suppressTouchDraw || _touchPoints.Count >= 2)
+                return;
+        }
+
         // 鼠标要按住左键；触摸与手写笔没有「左键」这个说法，按下就算。
         var isDrawPointer = e.Pointer.Type is PointerType.Touch or PointerType.Pen
                             || e.GetCurrentPoint(this).Properties.IsLeftButtonPressed;
@@ -307,6 +390,33 @@ public class HandwritingCanvas : Control, ICustomHitTest
     {
         base.OnPointerMoved(e);
 
+        if (_panPointer is not null && ReferenceEquals(e.Pointer, _panPointer))
+        {
+            var panPosition = e.GetPosition(this);
+            var dx = (panPosition.X - _panStartPosition.X) / _viewZoom;
+            var dy = (panPosition.Y - _panStartPosition.Y) / _viewZoom;
+
+            _viewOffset = new Point(_panStartOffset.X - dx, _panStartOffset.Y - dy);
+            ClampViewOffset();
+            InvalidateVisual();
+
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Pointer.Type == PointerType.Touch && _touchPoints.ContainsKey(e.Pointer))
+        {
+            _touchPoints[e.Pointer] = e.GetPosition(this);
+
+            if (_touchGestureActive && _touchPoints.Count >= 2)
+            {
+                UpdateTouchGesture();
+                e.Handled = true;
+            }
+
+            return;
+        }
+
         if (!_pointerDown || !ReferenceEquals(e.Pointer, _activePointer))
             return;
 
@@ -331,6 +441,28 @@ public class HandwritingCanvas : Control, ICustomHitTest
     {
         base.OnPointerReleased(e);
 
+        if (_panPointer is not null && ReferenceEquals(e.Pointer, _panPointer))
+        {
+            EndPan();
+            e.Handled = true;
+            return;
+        }
+
+        if (e.Pointer.Type == PointerType.Touch)
+        {
+            _touchPoints.Remove(e.Pointer);
+            e.Pointer.Capture(null);
+
+            if (_touchPoints.Count < 2)
+                _touchGestureActive = false;
+
+            if (_touchPoints.Count == 0)
+                _suppressTouchDraw = false;
+
+            e.Handled = true;
+            return;
+        }
+
         if (!_pointerDown || !ReferenceEquals(e.Pointer, _activePointer))
             return;
 
@@ -342,6 +474,19 @@ public class HandwritingCanvas : Control, ICustomHitTest
     protected override void OnPointerCaptureLost(PointerCaptureLostEventArgs e)
     {
         base.OnPointerCaptureLost(e);
+
+        if (e.Pointer.Type == PointerType.Touch)
+        {
+            _touchPoints.Remove(e.Pointer);
+
+            if (_touchPoints.Count < 2)
+                _touchGestureActive = false;
+
+            if (_touchPoints.Count == 0)
+                _suppressTouchDraw = false;
+
+            return;
+        }
 
         // 指针在画布外抬起 / 被别的控件抢走捕获时也要收尾，否则这一笔会一直挂着。
         if (_pointerDown && ReferenceEquals(e.Pointer, _activePointer))
@@ -647,6 +792,142 @@ public class HandwritingCanvas : Control, ICustomHitTest
         SetCurrentValue(EraserWidthProperty, clamped);
     }
 
+    /// <summary>Ctrl + 滚轮缩放画布（以指针位置为锚点），这样一屏装不下时能放大写细节。</summary>
+    protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
+    {
+        base.OnPointerWheelChanged(e);
+
+        if (!e.KeyModifiers.HasFlag(KeyModifiers.Control) || e.Delta.Y == 0)
+            return;
+
+        var position = e.GetPosition(this);
+        var anchor = ToDocument(position);
+
+        var zoom = Math.Clamp(_viewZoom * (e.Delta.Y > 0 ? 1.1 : 1 / 1.1), MinViewZoom, MaxViewZoom);
+        if (Math.Abs(zoom - _viewZoom) <= 1e-9)
+            return;
+
+        _viewZoom = zoom;
+        _viewOffset = new Point(anchor.X - position.X / _viewZoom, anchor.Y - position.Y / _viewZoom);
+        ClampViewOffset();
+        InvalidateVisual();
+
+        e.Handled = true;
+    }
+
+    /// <summary>双指手势起点：记下锚点（文档坐标）、起始缩放与两指间距。</summary>
+    private void BeginTouchGesture()
+    {
+        _touchGestureActive = true;
+        _suppressTouchDraw = true;
+
+        var centroid = TouchCentroid();
+        _touchAnchorDocument = ToDocument(centroid);
+        _touchStartZoom = _viewZoom;
+        _touchStartDistance = TouchSpread();
+    }
+
+    /// <summary>
+    ///     双指移动：两指中点的位移 = 平移，两指间距的变化 = 缩放（以起点锚点为准）。
+    ///     平移和缩放用同一个锚点算式，拖动时「手指下的那一点」始终跟着手指走，手感不会漂。
+    /// </summary>
+    private void UpdateTouchGesture()
+    {
+        var centroid = TouchCentroid();
+        var spread = TouchSpread();
+
+        var zoom = _touchStartZoom;
+        if (_touchStartDistance > 1 && spread > 1)
+            zoom = Math.Clamp(_touchStartZoom * (spread / _touchStartDistance), MinViewZoom, MaxViewZoom);
+
+        _viewZoom = zoom;
+        _viewOffset = new Point(
+            _touchAnchorDocument.X - centroid.X / zoom,
+            _touchAnchorDocument.Y - centroid.Y / zoom);
+
+        ClampViewOffset();
+        InvalidateVisual();
+    }
+
+    /// <summary>第二根手指落下时把正在画的那一笔 / 正在擦的那一段整个撤掉。</summary>
+    private void CancelActiveTouchStroke()
+    {
+        if (!_pointerDown)
+            return;
+
+        if (_undo.Count > 0)
+        {
+            _document.Strokes = _undo[^1];
+            _undo.RemoveAt(_undo.Count - 1);
+        }
+
+        _pointerDown = false;
+        _activePointer = null;
+
+        RefreshHasInk();
+        UpdateCanUndo();
+        InvalidateVisual();
+    }
+
+    private Point TouchCentroid()
+    {
+        var sumX = 0.0;
+        var sumY = 0.0;
+        foreach (var position in _touchPoints.Values)
+        {
+            sumX += position.X;
+            sumY += position.Y;
+        }
+
+        var count = Math.Max(1, _touchPoints.Count);
+        return new Point(sumX / count, sumY / count);
+    }
+
+    /// <summary>两指之间的最大距离（超过两指时取最远的一对，够用就行）。</summary>
+    private double TouchSpread()
+    {
+        var max = 0.0;
+        foreach (var first in _touchPoints.Values)
+        {
+            foreach (var second in _touchPoints.Values)
+            {
+                var dx = second.X - first.X;
+                var dy = second.Y - first.Y;
+                max = Math.Max(max, Math.Sqrt(dx * dx + dy * dy));
+            }
+        }
+
+        return max;
+    }
+
+    /// <summary>屏幕坐标 → 参考坐标（视口的反变换）。</summary>
+    private Point ToDocument(Point position)
+    {
+        return new Point(position.X / _viewZoom + _viewOffset.X, position.Y / _viewZoom + _viewOffset.Y);
+    }
+
+    private void EndPan()
+    {
+        _panPointer?.Capture(null);
+        _panPointer = null;
+    }
+
+    /// <summary>别让视口跑到笔迹范围之外：左上角最多退到原点，右下角最多越过参考区域一屏。</summary>
+    private void ClampViewOffset()
+    {
+        if (!double.IsFinite(Bounds.Width) || !double.IsFinite(Bounds.Height) || Bounds.Width <= 0 || Bounds.Height <= 0)
+            return;
+
+        var visibleWidth = Bounds.Width / _viewZoom;
+        var visibleHeight = Bounds.Height / _viewZoom;
+        var maxX = Math.Max(0, _referenceWidth - visibleWidth);
+        var maxY = Math.Max(0, _referenceHeight - visibleHeight);
+
+        _viewOffset = new Point(
+            Math.Clamp(_viewOffset.X, -visibleWidth * 0.25, maxX + visibleWidth * 0.25),
+            Math.Clamp(_viewOffset.Y, -visibleHeight * 0.25, maxY + visibleHeight * 0.25));
+    }
+
     private HandwritingPoint ToNormalized(Point position)
     {
         return ToNormalized(position, HandwritingPoint.DefaultWidthScale);
@@ -661,7 +942,8 @@ public class HandwritingCanvas : Control, ICustomHitTest
         if (!double.IsFinite(width) || width <= 0 || !double.IsFinite(height) || height <= 0)
             return new HandwritingPoint(0, 0);
 
-        return HandwritingPoint.Create(position.X / width, position.Y / height, widthScale);
+        var documentPosition = ToDocument(position);
+        return HandwritingPoint.Create(documentPosition.X / width, documentPosition.Y / height, widthScale);
     }
 
     /// <summary>
@@ -749,8 +1031,8 @@ public class HandwritingCanvas : Control, ICustomHitTest
     }
 
     /// <summary>
-    ///     按书写速度算笔锋倍率，并做一次指数平滑（慢写粗、快写细）：
-    ///     速度单位是 DIP/毫秒，正常人写字大概在 0.15–1.6 之间。
+    ///     按书写速度算笔锋倍率，再做平滑与限幅（慢写略粗、快写略细）：
+    ///     速度单位是 DIP/毫秒，正常人写字大概在 0.2–1.2 之间。
     /// </summary>
     private double ResolveSmoothedWidthScale(Point from, Point to, ulong timestamp)
     {
@@ -760,16 +1042,21 @@ public class HandwritingCanvas : Control, ICustomHitTest
         if (elapsed > 0)
         {
             var speed = Distance(from, to) / elapsed;
-            const double slowSpeed = 0.15;
-            const double fastSpeed = 1.6;
-            var progress = Math.Clamp((speed - slowSpeed) / (fastSpeed - slowSpeed), 0, 1);
 
-            // 慢 → 1.4 倍粗，快 → 0.45 倍细。
-            target = HandwritingPoint.MaxWidthScale - progress * (HandwritingPoint.MaxWidthScale - 0.45);
+            // 速度 → 倍率：慢写 1.25 倍、快写 0.75 倍。两端都夹住——快甩时不该细成头发丝，
+            // 慢写时也不该糊成一块（用户反馈过「速度太快会被拉得特别细」）。
+            const double slowSpeed = 0.2;
+            const double fastSpeed = 1.2;
+            var progress = Math.Clamp((speed - slowSpeed) / (fastSpeed - slowSpeed), 0, 1);
+            target = 1.25 - progress * 0.5;
         }
 
-        _widthScale = _widthScale * 0.6 + target * 0.4;
-        return Math.Clamp(_widthScale, HandwritingPoint.MinWidthScale, HandwritingPoint.MaxWidthScale);
+        // 平滑 + 自动矫正：一次极端速度不该把后面几笔全带粗/带细，每点最多变 0.12；
+        // 结果再夹进 0.72–1.3，保证笔迹始终看得清。
+        var smoothed = _widthScale * 0.65 + target * 0.35;
+        _widthScale = Math.Clamp(smoothed, _widthScale - 0.12, _widthScale + 0.12);
+        _widthScale = Math.Clamp(_widthScale, 0.72, 1.3);
+        return _widthScale;
     }
 
     private static double Distance(Point from, Point to)

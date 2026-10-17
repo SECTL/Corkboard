@@ -9,15 +9,20 @@
         CanResize="False"
         ShowInTaskbar="False"
         SizeToContent="WidthAndHeight"
-        WindowStartupLocation="CenterScreen">
+        WindowStartupLocation="CenterScreen"
+        TransparencyLevelHint="Transparent"
+        Background="Transparent">
     <!--
-        弹层内容的容器。内容自己带 Border.sheet 外观（见 HomeworkAssignmentForm），
-        这里不要再套一层卡片，否则两张卡片叠在一起。
-
-        窗口刻意不做透明（不设 TransparencyLevelHint、不设透明 Background）：
-        卡片笔刷本身是半透明的，在壳内弹层里它叠在不透明的页面背景上看着是实心卡片，
-        但独立窗口若做成透明，背后没有任何一层可叠，桌面就会透上来。
-        留默认的 Fluent 窗口背景即可，观感与主窗口一致，也不用引新的主题笔刷键。
+        黑角修复：窗口本身改成透明（TransparencyLevelHint="Transparent" + Background 透明），
+        否则无边框窗口的方形底会在圆角卡片四角露出一块黑色。
+        但**不能在透明窗里放半透明内容**——独立窗口背后没有页面可以叠，桌面会直接透上来，
+        所以这里自己叠一层「实体 + 圆角」的背景当卡片底座（SolidBackgroundFillColorQuarternaryBrush
+        是实体色，不是 Fluent 那几个半透明 CardFill），并 ClipToBounds 把子内容裁成同样的圆角。
+        浮层里的表单自带 Border.sheet（实体底 + 描边），所以这一层不再画描边，免得出现双线。
     -->
-    <ContentControl x:Name="OverlayHost" />
+    <Border Background="{DynamicResource SolidBackgroundFillColorQuarternaryBrush}"
+            CornerRadius="8"
+            ClipToBounds="True">
+        <ContentControl x:Name="OverlayHost" />
+    </Border>
 </Window>

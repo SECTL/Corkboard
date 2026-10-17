@@ -152,6 +152,7 @@ public partial class HomeworkAssignmentForm : UserControl
                     // 这时再对齐一次，缩放手柄的上下限才不会一拖就跳。
                     ApplySheetSizeLimits();
                     FitContentAreaToLimit();
+                    SyncSheetWidthToContent();
 
                     // 工具条的颜色第一遍在首帧布局之后换（见 OnToolbarLayoutUpdated）：
                     // LayoutUpdated 只会为后续的重建兜底，这一发保证「打开就生效」。
@@ -381,6 +382,8 @@ public partial class HomeworkAssignmentForm : UserControl
 
         if (area.Height > maxHeight)
             area.Height = Math.Max(area.MinHeight, maxHeight);
+
+        SyncSheetWidthToContent();
     }
 
     /// <summary>
@@ -438,6 +441,45 @@ public partial class HomeworkAssignmentForm : UserControl
 
         _contentArea.Width = Math.Clamp(_resizeStartWidth + delta.X, _contentArea.MinWidth, maxWidth);
         _contentArea.Height = Math.Clamp(_resizeStartHeight + delta.Y, _contentArea.MinHeight, maxHeight);
+
+        // 卡片宽度跟着内容区走：内容变宽卡片就变宽，弹层是把卡片居中摆的，于是整张框始终在窗口中间。
+        SyncSheetWidthToContent();
+    }
+
+    /// <summary>
+    ///     让卡片宽度 = 内容区宽度 + 卡片内边距。
+    ///     <para>
+    ///         ⚠️ 卡片外面套着纵向 <c>ScrollViewer</c>，横向滚动被关掉时它会用视口宽度去量内容，
+    ///         内容区再宽也撑不宽卡片——拖右下角手柄时卡片不跟着长，看起来就像「内容跑到框外面、框不居中」。
+    ///         所以这里直接给卡片一个显式宽度（跟着内容区走），卡片由弹层居中摆放，拖大拖小都停在窗口中央。
+    ///     </para>
+    /// </summary>
+    private void SyncSheetWidthToContent()
+    {
+        if (_sheet is null || _contentArea is null)
+            return;
+
+        var contentWidth = double.IsFinite(_contentArea.Width) && _contentArea.Width > 0
+            ? _contentArea.Width
+            : _contentArea.Bounds.Width;
+
+        if (!double.IsFinite(contentWidth) || contentWidth <= 0)
+            return;
+
+        var padding = _sheet.Padding.Left + _sheet.Padding.Right
+                      + _sheet.BorderThickness.Left + _sheet.BorderThickness.Right;
+
+        var width = contentWidth + padding;
+        if (double.IsFinite(_sheet.MaxWidth))
+            width = Math.Min(width, _sheet.MaxWidth);
+        if (double.IsFinite(_sheet.MinWidth))
+            width = Math.Max(width, _sheet.MinWidth);
+
+        if (double.IsFinite(_sheet.Width) && Math.Abs(_sheet.Width - width) <= 0.5)
+            return;
+
+        _sheet.Width = width;
+        _sheet.InvalidateMeasure();
     }
 
     private void OnResizeGripReleased(object? sender, PointerReleasedEventArgs e)

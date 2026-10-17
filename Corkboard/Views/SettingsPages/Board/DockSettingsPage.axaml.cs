@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Corkboard.Core.Abstraction;
@@ -11,7 +12,7 @@ namespace Corkboard.Views.SettingsPages.Board;
 /// <summary>
 ///     「收纳」设置页：开关、按钮位置（九宫格示意图）、左右 / 上下偏移与按钮大小。
 /// </summary>
-[PageInfo("settings.board.dock", FluentIcons.ArrowExitFilled, "settings.board.group")]
+[PageInfo("settings.board.dock", FluentIcons.ArrowMinimizeFilled, "settings.board.group")]
 public partial class DockSettingsPage : UserControl
 {
     public DockSettingsPage()
@@ -35,6 +36,20 @@ public partial class DockSettingsPage : UserControl
     private void OnEditorLostFocus(object? sender, RoutedEventArgs e) => ViewModel?.CommitAll();
 
     private void ResetButton_OnClick(object? sender, RoutedEventArgs e) => ViewModel?.ResetToDefault();
+
+    /// <summary>点下拉样按钮：展开 / 收起九宫格浮层。</summary>
+    private void OnAnchorPickerClick(object? sender, RoutedEventArgs e)
+    {
+        if (this.FindControl<Popup>("AnchorPopup") is { } popup)
+            popup.IsOpen = !popup.IsOpen;
+    }
+
+    /// <summary>九宫格圆点：位置已经写进配置，点完顺手把浮层收起来。</summary>
+    private void OnAnchorDotClick(object? sender, RoutedEventArgs e)
+    {
+        if (this.FindControl<Popup>("AnchorPopup") is { } popup)
+            popup.IsOpen = false;
+    }
 
     private void InitializeComponent()
     {

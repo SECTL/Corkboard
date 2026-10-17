@@ -74,6 +74,7 @@
                             标题栏按下即拖，所以按钮必须标 User，否则按下会被判成拖窗口、点不动。
                         -->
                         <Button VerticalAlignment="Center"
+                                IsVisible="{Binding ViewModel.ShowTitleBarSettings}"
                                 ToolTip.Tip="{x:Static core:Resources.Menu_OpenSettings}"
                                 WindowDecorationProperties.ElementRole="User"
                                 Click="OpenSettingsButton_OnClick">
@@ -84,6 +85,7 @@
 
                         <Button x:Name="SortButton"
                                 VerticalAlignment="Center"
+                                IsVisible="{Binding ViewModel.ShowTitleBarSort}"
                                 ToolTip.Tip="{Binding ViewModel.SortTip}"
                                 WindowDecorationProperties.ElementRole="User"
                                 Click="SortButton_OnClick">
@@ -134,10 +136,25 @@
                         <!-- 要的是图标不是文字：与右下角那颗浮标同款加号，含义交给 ToolTip。 -->
                         <Button VerticalAlignment="Center"
                                 ToolTip.Tip="{x:Static core:Resources.Board_AddNote}"
-                                IsVisible="{Binding !Replay.IsActive}"
+                                IsVisible="{Binding ViewModel.ShowTitleBarAssign}"
                                 WindowDecorationProperties.ElementRole="User"
                                 Click="AddAssignmentButton_OnClick">
                             <TextBlock Text="{x:Static icons:FluentIcons.AddFilled}"
+                                       FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                       VerticalAlignment="Center" />
+                        </Button>
+
+                        <!--
+                            导出图片：把作业板内容整块渲染成 PNG。
+                            按钮从作业板页面右上角搬到了标题栏（用户要求「保存按钮放到顶部去」），
+                            真正的导出仍由页面自己做（它才知道板子内容容器在哪）。
+                        -->
+                        <Button VerticalAlignment="Center"
+                                IsVisible="{Binding ViewModel.ShowTitleBarExport}"
+                                ToolTip.Tip="{x:Static core:Resources.Board_ExportImageTip}"
+                                WindowDecorationProperties.ElementRole="User"
+                                Click="ExportImageButton_OnClick">
+                            <TextBlock Text="{x:Static icons:FluentIcons.SaveFilled}"
                                        FontFamily="{DynamicResource FluentSystemIconsResizeable}"
                                        VerticalAlignment="Center" />
                         </Button>
@@ -150,7 +167,7 @@
                         -->
                         <Button VerticalAlignment="Center"
                                 Classes.accent="{Binding Replay.IsArmed}"
-                                IsVisible="{Binding Replay.CanEnterReplay}"
+                                IsVisible="{Binding ViewModel.ShowTitleBarReplay}"
                                 ToolTip.Tip="{Binding Replay.EnterButtonText}"
                                 WindowDecorationProperties.ElementRole="User"
                                 Click="ReplayEnterButton_OnClick">
@@ -201,11 +218,11 @@
                             开关关掉时整颗不显示（DockEnabled）。
                         -->
                         <Button VerticalAlignment="Center"
-                                IsVisible="{Binding ViewModel.Config.BoardSettings.DockEnabled}"
+                                IsVisible="{Binding ViewModel.ShowTitleBarDock}"
                                 ToolTip.Tip="{x:Static core:Resources.Board_Dock_Collapse}"
                                 WindowDecorationProperties.ElementRole="User"
                                 Click="DockButton_OnClick">
-                            <TextBlock Text="{x:Static icons:FluentIcons.ArrowExitFilled}"
+                            <TextBlock Text="{x:Static icons:FluentIcons.ArrowMinimizeFilled}"
                                        FontFamily="{DynamicResource FluentSystemIconsResizeable}"
                                        VerticalAlignment="Center" />
                         </Button>

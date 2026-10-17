@@ -452,9 +452,10 @@ public class NoteStoreTests : IDisposable
     public void SaveAll_WritesIntoYearMonthDayFolders()
     {
         var store = CreateStore();
-        store.SaveAll([Note("一", 2026, 3, 4)]);
+        var note = Note("一", 2026, 3, 4);
+        store.SaveAll([note]);
 
-        var file = Path.Combine(_root, "2026", "03", "04", NoteStore.NotesFileName);
+        var file = Path.Combine(_root, "2026", "03", "04", NoteFileFormat.GetFileName(note));
 
         Assert.True(File.Exists(file));
     }
@@ -465,10 +466,10 @@ public class NoteStoreTests : IDisposable
         var store = CreateStore();
         store.SaveAll([Note("一", 2026, 3, 4), Note("二", 2026, 3, 4), Note("三", 2026, 3, 5)]);
 
-        Assert.True(File.Exists(Path.Combine(_root, "2026", "03", "04", NoteStore.NotesFileName)));
-        Assert.True(File.Exists(Path.Combine(_root, "2026", "03", "05", NoteStore.NotesFileName)));
+        // 一条作业一个文件：同一天两条落在同一个日期目录里，另一天单独一个目录。
+        Assert.Equal(2, Directory.GetFiles(Path.Combine(_root, "2026", "03", "04"), "*" + NoteFileFormat.FileExtension).Length);
+        Assert.Single(Directory.GetFiles(Path.Combine(_root, "2026", "03", "05"), "*" + NoteFileFormat.FileExtension));
 
-        // 同一天的两条合进一个文件，另一天单独一个文件。
         Assert.Equal(3, store.LoadAll().Count);
         Assert.Equal(2, store.LoadAll().Count(note => note.CreatedAt.Day == 4));
     }
@@ -494,7 +495,8 @@ public class NoteStoreTests : IDisposable
 
         store.SaveAll([kept]);
 
-        Assert.True(File.Exists(Path.Combine(_root, "2026", "03", "04", NoteStore.NotesFileName)));
+        Assert.True(File.Exists(Path.Combine(_root, "2026", "03", "04", NoteFileFormat.GetFileName(kept))));
+        Assert.False(File.Exists(Path.Combine(_root, "2026", "03", "05", NoteFileFormat.GetFileName(removed))));
         // 空掉的日期目录也要一起回收，不留空壳。
         Assert.False(Directory.Exists(Path.Combine(_root, "2026", "03", "05")));
     }

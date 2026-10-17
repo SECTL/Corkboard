@@ -133,6 +133,8 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
         // 弹层一打开就把可能还在进行的长按/拖动收掉，免得拖状态留着把弹层里的点击吃掉。
         Overlay.PropertyChanged += OnOverlayChanged;
 
+
+
         Unloaded += (_, _) =>
         {
             CancelHoldToDrag();
@@ -149,6 +151,7 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
         if (e.PropertyName is nameof(PageOverlayService.IsOpen) && Overlay.IsOpen)
             EndWindowDrag();
     }
+
 
     /// <summary>
     ///     拖动手势挂在<b>窗口</b>上而不是这个壳上：主窗口顶部那条标题栏带宽是
@@ -202,6 +205,12 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
 
         // 隧道阶段 + handledEventsToo：内容里的按钮、滚动区、输入框，以及窗口标题栏层，
         // 都不会在我们之前把按下事件吃掉。
+        // 窗口级的边缘兜底：顶部 / 左上角那一条同时压在 FAAppWindow 的标题栏上，
+        // 模板自己的处理器可能先把它当成「拖窗口」吃掉（把作业板置底到桌面时，顶部和左边就拉不动了）。
+        // 这里在窗口层再加一道隧道监听（handledEventsToo = true），命中边缘就由我们开始缩放。
+        if (host is Window windowHost)
+            windowHost.AddHandler(PointerPressedEvent, OnWindowEdgeGuard, RoutingStrategies.Tunnel, handledEventsToo: true);
+
         host.AddHandler(PointerPressedEvent, OnPointerPressedForDrag, RoutingStrategies.Tunnel,
             handledEventsToo: true);
         host.AddHandler(PointerMovedEvent, OnPointerMovedForDrag, RoutingStrategies.Tunnel,
@@ -272,11 +281,41 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
     ///     按住不动到时间后都开始拖动，期间移动超过阈值就放弃，这样短按点击、输入、滚动
     ///     仍然归控件，只有「按住不动」才被判成长按拖动。
     /// </summary>
+    /// <summary>
+    ///     窗口级边缘兜底：指针在窗口四边 8 DIP 以内按下时优先开始缩放。
+    ///     <para>
+    ///         用「相对窗口」的坐标判定，而不是相对 MainView：作业板置底成桌面子窗口后，
+    ///         MainView 不一定正好贴着窗口四条边，用 MainView 的 Bounds 判定会让顶部 / 左边永远差一点点、
+    ///         点上去变成拖窗口或干脆没反应（用户反馈「置底后顶部和左边拉不动」）。
+    ///     </para>
+    /// </summary>
+    private void OnWindowEdgeGuard(object? sender, PointerPressedEventArgs e)
+    {
+        if (_isResizingWindow || _isDraggingWindow || Overlay.IsOpen)
+            return;
+
+        if (e.Pointer.Type == PointerType.Mouse && !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+            return;
+
+        if (TopLevel.GetTopLevel(this) is not Window { WindowState: WindowState.Normal } window)
+            return;
+
+        var point = e.GetPosition(window);
+        if (HitTestResizeSides(point, window.Bounds.Size) == ResizeSides.None)
+            return;
+
+        if (TryStartWindowResize(e))
+            e.Handled = true;
+    }
+
     private void OnPointerPressedForDrag(object? sender, PointerPressedEventArgs e)
     {
         // 上一次拖动如果没收到 PointerReleased / PointerCaptureLost（指针在窗口外抬起、
         // 被别的控件抢走捕获等），状态和捕获会留在壳上，表现为「整窗点不动」。
         // 新的按下就是最好的收尾时机：先把它清干净，再按这次按下重新判定。
+        if (e.Handled)
+            return;
+
         EndWindowDrag();
         EndWindowResize();
 
@@ -329,6 +368,16 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
         _holdToDragTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(HoldToDragMilliseconds) };
         _holdToDragTimer.Tick += OnHoldToDragTimerTick;
         _holdToDragTimer.Start();
+    }
+
+    /// <summary>
+    ///     标题栏上的「导出图片」：真正的导出逻辑在作业板页面里（它才拿得到内容容器）。
+    ///     主页面不是作业板时什么都不做（当前只有作业板一个主页面）。
+    /// </summary>
+    private async void ExportImageButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (_navigationFrame?.Content is MainPages.Board.BoardPage page)
+            await page.ExportImageAsync();
     }
 
     private void OnHoldToDragTimerTick(object? sender, EventArgs e)
@@ -479,10 +528,13 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
     /// </summary>
     private bool TryStartWindowResize(PointerPressedEventArgs e)
     {
+        if (_isResizingWindow)
+            return false;
+
         if (TopLevel.GetTopLevel(this) is not Window { WindowState: WindowState.Normal } window)
             return false;
 
-        var sides = HitTestResizeSides(e.GetPosition(this));
+        var sides = HitTestResizeSides(e.GetPosition(this), Bounds.Size);
         if (sides == ResizeSides.None)
             return false;
 
@@ -567,8 +619,13 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
     /// </summary>
     private ResizeSides HitTestResizeSides(Point point)
     {
-        var width = Bounds.Width;
-        var height = Bounds.Height;
+        return HitTestResizeSides(point, Bounds.Size);
+    }
+
+    private static ResizeSides HitTestResizeSides(Point point, Size size)
+    {
+        var width = size.Width;
+        var height = size.Height;
         if (width <= 0 || height <= 0)
             return ResizeSides.None;
 

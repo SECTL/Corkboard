@@ -32,7 +32,7 @@ public sealed record HomeworkCleanupResult(DateTimeOffset RanAt, int Cleaned)
 ///     </para>
 ///     <para>
 ///         清理<b>不动作业数据</b>：只给作业打上 <see cref="Note.CleanedAt" />，作业仍然留在
-///         它原本那个 <c>&lt;年&gt;/&lt;月&gt;/&lt;日&gt;/notes.json</c> 里，只是主页面不再显示它。
+///         它原本那个 <c>&lt;年&gt;/&lt;月&gt;/&lt;日&gt;/&lt;Id&gt;.cbnote</c> 里，只是主页面不再显示它。
 ///         没有第二个目录，也就没有「搬走了但没删掉」这种两步事情——最坏情况是这一次没清干净，下次再来。
 ///     </para>
 /// </summary>

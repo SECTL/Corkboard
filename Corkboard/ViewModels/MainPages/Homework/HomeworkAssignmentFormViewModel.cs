@@ -250,10 +250,16 @@ public partial class HomeworkAssignmentFormViewModel : ObservableObject
 
         // 按内容格式自动切到对应形态，并把那一份草稿装进表单。
         // 另一份草稿（比如手写作业的 DraftHtml）保持为空：用户要切成另一种形态就是从白纸开始写。
-        if (note.ContentKind == RichTextContentKind.Handwriting)
+        // 形态判定不能只看 ContentKind：历史数据里有「笔迹在、kind 却被洗成 Html」的作业
+        // （旧版本编辑时按打字态保存过），那种作业一点「编辑」会停在打字页签，
+        // 用户再保存一次就把整段笔迹抹了。所以只要笔迹非空，就按手写打开。
+        var hasHandwriting = !string.IsNullOrWhiteSpace(note.Handwriting);
+        HandwritingData = note.Handwriting;
+
+        if (note.ContentKind == RichTextContentKind.Handwriting
+            || (hasHandwriting && string.IsNullOrWhiteSpace(note.Content)))
         {
-            HandwritingData = note.Handwriting;
-            HasInk = !string.IsNullOrWhiteSpace(note.Handwriting);
+            HasInk = hasHandwriting;
             SetMode(HomeworkComposeMode.Handwriting);
         }
         else
@@ -261,6 +267,10 @@ public partial class HomeworkAssignmentFormViewModel : ObservableObject
             DraftHtml = note.Content ?? string.Empty;
             SetMode(HomeworkComposeMode.Text);
         }
+
+        // 载入完再通知一遍：表单是先把 DataContext 挂上、再调 LoadForEdit 的，
+        // 这一步保证两颗页签按最终形态扶正（不依赖绑定求值的先后）。
+        NotifyModeProperties();
 
         // 截止日期：没设过的作业留空，选择器就是空的。
         DueDateDraft = note.DueDate is { } due ? due.ToDateTime(TimeOnly.MinValue) : null;
@@ -333,6 +343,11 @@ public partial class HomeworkAssignmentFormViewModel : ObservableObject
         if (IsHandwritingMode)
         {
             // 手写：内容在 Handwriting（归一化坐标的笔迹 JSON）里，Content 留空、ContentKind 标成 Handwriting。
+            note.SetHandwriting(HandwritingData);
+        }
+        else if (string.IsNullOrWhiteSpace(DraftHtml) && !string.IsNullOrWhiteSpace(HandwritingData))
+        {
+            // 兜底：文本页签里正文是空的、但这条作业带着笔迹——按手写保存，别把笔迹抹掉。
             note.SetHandwriting(HandwritingData);
         }
         else

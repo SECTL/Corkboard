@@ -11,7 +11,7 @@ namespace Corkboard.Core.Board;
 ///     <para>
 ///         落盘分两处，都是业务数据、都在 <c>data/board/</c>（与设置文件 <c>data/config/</c> 分开）：
 ///         科目写单份 <c>board.json</c>（由 <see cref="HomeworkSectionCatalog" /> 管）；
-///         **作业本身按创建日期分文件**，落在 <c>&lt;年&gt;/&lt;月&gt;/&lt;日&gt;/notes.json</c>，
+///         **作业本身按创建日期分文件**，落在 <c>&lt;年&gt;/&lt;月&gt;/&lt;日&gt;/&lt;Id&gt;.cbnote</c>，
 ///         由 <see cref="INoteStore" /> 负责。
 ///     </para>
 /// </summary>

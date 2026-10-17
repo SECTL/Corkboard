@@ -154,12 +154,26 @@ public partial class BoardSettingsConfig : ObservableObject
   `FAContentDialog` 只用于一句话的确认框（见 `BoardPage.OnDeleteNoteClick`）。
   ⚠️ **唯一例外：主窗口置底到桌面时要改用独立顶层窗口**。置底后主窗口是桌面宿主的子窗口，
   Windows 不给它键盘焦点（`hwndFocus` 恒为 0），壳内弹层**一个字都打不进去**，且无法绕过。
-  此时 `PageOverlayService.UseSeparateWindow` 为真，表单由 `PageOverlayWindow`（无边框、不进任务栏、
-  不透明）承载。标志只在**置底实际生效**时置真，并要结合请求方向判断（`Apply` 在关闭时也会把
+  此时 `PageOverlayService.UseSeparateWindow` 为真，表单由 `PageOverlayWindow`（无边框、不进任务栏）承载。
+  ⚠️ **这个窗口要「透明窗 + 圆角实体底座」**：`TransparencyLevelHint="Transparent"` + `Background="Transparent"`，
+  否则无边框窗口的方形底会在卡片四角露出**黑色角**（用户反馈过）；同时**不能**让内容变成半透明——
+  独立窗口背后没有页面可叠、桌面会透上来，所以窗口内容外面必须自己叠一层
+  `Border`：`SolidBackgroundFillColorQuarternaryBrush`（实体色，不是 Fluent 那几个半透明 CardFill）+
+  `CornerRadius="8"` + `ClipToBounds="True"`，不画描边（里面的 `Border.sheet` 自带）。标志只在**置底实际生效**时置真，并要结合请求方向判断（`Apply` 在关闭时也会把
   `DesktopBottom` 报成已应用）。详见 `docs/board.md`。
   ⚠️ **弹层与整窗拖动会打架**：壳的 `HoldToDragWindow` 长按会捕获指针，拖动结束**必须显式
   `Capture(null)`**——指针在窗口外抬起时收不到 `PointerReleased`，捕获留在壳上会让整窗点不动、
   输入框无法聚焦（表现就是「输入框打不了字」）；并且弹层打开时不参与长按拖动。
+- **布置作业表单顶部的布局**（`HomeworkAssignmentForm`）：第一行左边是「打字 / 手写」形态切换，
+  右边依次是科目与截止日期（`CalendarDatePicker` + 清除按钮），**二级分类在新一行、在下面**；
+  快捷标签 chips 放在分类行下面、内容区上面，**两种形态（含手写）都看得到**。
+  内容区默认 680×400（`MinWidth` 420），右下角缩放手柄 26×26 DIP（触控也点得到；原来 18 太小），
+  卡片默认更宽（`MinWidth` 480 / `MaxWidth` 960），
+  内容区 `HorizontalAlignment="Center"`；卡片宽度由 `SyncSheetWidthToContent()` 跟着内容区走
+  （= 内容区宽 + 卡片内边距，夹在 `MinWidth`/`MaxWidth` 里，显式写 `Sheet.Width`）——
+  ⚠️ 卡片外面套着纵向 `ScrollViewer`、横向滚动关掉时它会用视口宽度去量内容，内容区再宽也撑不宽卡片，
+  表现就是「拖大后卡片不跟着长、整框不居中」。拖手柄过程中、`FitContentAreaToLimit()` 末尾都要调一次。
+  手写工具栏末尾的提示文案与空画布中间那句提示已按用户要求删掉，**不要再加回去**。
 - **布置作业表单的卡片不能拖动**（`HomeworkAssignmentForm`）：位置由弹层布局居中决定，标题行不要放拖动光标、
   也不要「拖动移动卡片」提示；能调的只有右下角缩放手柄（尺寸上限见下一条）。
   曾经做过「整卡拖动」（`SheetDragLimits` + `RenderTransform` 位移、置底形态改拖 `PageOverlayWindow`），
@@ -253,7 +267,9 @@ public partial class BoardSettingsConfig : ObservableObject
 - **主界面标题栏右上角承载主页面动作**：「设置」「布置作业」与「时空回放」都在这里。
   「设置」是主窗口里唯一的设置入口（`App.ShowSettingsWindow()`，另一个入口在托盘菜单），
   必须在「布置作业」左边、标 `ElementRole="User"`。
-  作业板页面上只剩列表、顶部右侧的「导出图片」按钮（`BoardExportService`，导出的是板上的作业内容、不含桌面背景）与一句回放提示；
+  作业板页面上只剩列表与一句回放提示；**「导出图片」按钮已搬到标题栏**（`MainView` 里、回放左边，图标 `SaveFilled`），
+  点击走 `MainView.ExportImageButton_OnClick` → `(NavigationFrame.Content as BoardPage).ExportImageAsync()`
+  （导出仍由页面做：只有它拿得到内容容器 `BoardContent`；`BoardExportService` 导的是板上的作业内容、不含桌面背景）；
   排布切换仍在设置里（「设置 → 作业板 → 常规 → 排布」下拉框，写回 `BoardSettingsConfig.LayoutMode`）。
   标题栏按下即拖动，所以这些按钮一律要标 `WindowDecorationProperties.ElementRole="User"`，
   并进 `MainView.IsInteractiveSource` 的排除表（`Button` / `ToggleButton` / `TextBox` / `ComboBox` / `Slider`），
@@ -342,9 +358,13 @@ public partial class BoardSettingsConfig : ObservableObject
   由 `BoardService` 在每次变更后落盘（`IBoardService.Subjects` 是「调用方直接改集合、
   改完调 `Save()`」的用法）。这样绕开了上一条的坑，也把「应用偏好」和「用户数据」分开。
   设置页负责编辑它们，但**存储位置不等于设置项**：编辑界面在设置里，数据仍在 `data/board/`。
-- **作业按创建日期分文件归档**：`data/board/<年>/<月>/<日>/notes.json`（`NoteStore`），
-  一天一个文件、同一天的多条作业合并其中；科目这类**定义**才写单份 `data/board/board.json`。
-  作业从内存整份重写时，没有落笔的旧日期文件会被删掉、空目录逐级回收。
+- **一条作业一个专有文件**：`data/board/<年>/<月>/<日>/<作业 Id>.cbnote`（`NoteStore` + `NoteFileFormat`，
+  扩展名 `.cbnote`、不是 JSON）：元数据、富文本内容（`text=` 块）、手写笔迹（`ink=` 块）全在同一个文件里；
+  文件名就是作业 Id，改内容不换文件、删作业删文件。科目这类**定义**才写单份 `data/board/board.json`。
+  作业从内存整份重写时，没有落笔的旧 `.cbnote` 会被删掉、空目录逐级回收。
+  ⚠️ **旧版 `notes.json` 只用于读取兼容与迁移**：`LoadAll` 会把它一起读进来（同 Id 以新文件为准），
+  下一次 `SaveAll` 把所有作业改写成 `.cbnote` 后删掉旧文件；**解析失败的旧文件原地保留**（留给用户排查），
+  删之前会再解析一次，避免云同步里临时 new 出来的 `NoteStore` 误删。
   旧版挤在 `data/config/board.json` 里的数据由 `BoardService` 在归档为空时一次性搬迁（见 `LegacyNoteFile`）。
 - **过期作业是「打标记清理」不是「删文件、搬目录」**：到点由 `HomeworkCleanupService` 给命中的作业写上
   `Note.CleanedAt`（`DateTimeOffset?`，`[JsonIgnore(WhenWritingNull)]`），**数据原地不动**——
@@ -352,7 +372,7 @@ public partial class BoardSettingsConfig : ObservableObject
   只是主页面不再显示（`BoardPageViewModel.RebuildNotes` 按 `Note.IsOnBoard` 过滤）。
   之所以不真删：`ReplayTimeline` 把内存里的作业摊成时间轴，真删会连回放历史一起砍掉；
   用户要的就是「只把主页面上的清掉，文件本身还在」，回放期间照旧显示已清理的作业。
-  ⚠️ **已清理的作业必须继续留在 `IBoardService.Notes` 里**：`SaveAll` 会删掉这一轮没落笔的日期文件，
+  ⚠️ **已清理的作业必须继续留在 `IBoardService.Notes` 里**：`SaveAll` 会删掉这一轮没落笔的 `.cbnote` 文件，
   把它们从集合里摘掉就等于删文件。
   ⚠️ **`data/board/_trash/` 是旧版遗留目录**（`NoteStore.EnumerateNoteFiles` 里按字面量 `_trash`
   排除）：它按 `Directory.EnumerateFiles(root, "notes.json", AllDirectories)` 扫，遗留回收目录里的
@@ -393,6 +413,10 @@ public partial class BoardSettingsConfig : ObservableObject
   `HomeworkAssignmentForm.axaml.cs` 的 `IsInteractiveSource` 排除表**，否则按在它身上会被当成「拖卡片」。
   卡片上由 `HomeworkDueDateFormatter.Describe` 说成「今天 / 明天 / yyyy-MM-dd / 过期 N 天」。
 - 配置文件一律经配置服务（原子写入 + 统一 JSON 选项），**不要自己 `File.WriteAllText` 写配置**。
+- **读盘后统一收拾子配置**：`MainConfigModel.NormalizeLoaded()` 由 `FileConfigService.LoadConfig` 在反序列化后调用，
+  里面夹字号/宽度/收纳位置、并把**手写笔宽旧的默认值 4 迁移成 10**（`BoardSettingsConfig.NormalizeBoardExtras`）。
+  ⚠️ 这类迁移**必须挂在这里**，不要塞进设置页——作业板在设置页打开前就会按脏值渲染、手写表单也会继续用旧默认笔宽
+  （曾经 `NormalizeBoardExtras`/`NormalizeCleanup` 没有任何调用点，等于死代码）。
 - **作业内容是所见即所得富文本（HTML 片段）**：`Note.Content` 存的就是第三方富文本控件
   （`AvaloniaRichEditor`）`ToHtml()` 的输出，颜色/字号是片段里的行内 `<span style="…">`；
   `Note.ContentKind`（`Markdown = 0` / `Html = 1`，枚举按数字落盘）标记这一段是哪种格式——
@@ -430,31 +454,120 @@ public partial class BoardSettingsConfig : ObservableObject
 
 ## 作业板功能（2026-10 新增）
 
-- **手写**：`Note.ContentKind` 追加 `Handwriting = 2`，笔迹存 `Note.Handwriting`，但**不是 JSON**——
+- **手写**：`Note.ContentKind` 追加 `Handwriting = 2`，笔迹在内存里是 `Note.Handwriting` 字符串，
+  落盘时写在作业专有文件的 `ink=` 块里，**不是 JSON**——
   `Corkboard.Core/Handwriting/HandwritingCodec` 编的是专有文本格式（首行 `CORKBOARD-INK/2` 魔数，随后
   `aspect=`/`ref=` 元数据，每笔一行 `#AARRGGBB|笔宽|橡皮|x,y,笔锋倍率;…`）；旧版本存成 JSON 的数据由
   `TryDecode` 自动兼容（`{` 开头走旧解析），解码永不抛异常。写内容一律走 `Note.SetHandwriting`；
   **参考宽度 `ref`**：坐标相对它归一化，拖大拖小内容框不改它，所以笔迹的绝对位置与粗细不动
   （`HandwritingCanvas` 有笔迹时 `OnSizeChanged` 只重绘、不改 aspect；笔迹超出参考区时
   `NormalizeExtents` 等比扩大参考宽度并把所有坐标同倍收回，绝对位置仍然不变）。
-  **笔锋**：每个点带 `WidthScale`（0.4–1.5），画布按指针时间戳算书写速度（慢写粗、快写细）并平滑，
-  `HandwritingRenderer` 据此画粗细渐变的多边形，两端按弧长收锋成**尖**（不补圆帽——用户明确要「锋利的」）。
+  **笔锋**：每个点带 `WidthScale`（0.4–1.5，画布落点收在 0.72–1.3），画布按指针时间戳算书写速度
+  （慢写 1.25 倍、快写 0.75 倍），再做指数平滑 + 每点最大变化 0.12 的**自动矫正**——
+  快甩不该细成头发丝，慢写也不该糊成一块；`HandwritingRenderer` 据此画粗细渐变的多边形，
+  两端按弧长收锋成**尖**（不补圆帽——用户明确要「锋利的」），最细处留 0.35 DIP，
+  收锋长度 = 1.6 倍笔宽、最多占全长 22%（太长粗笔会像拖把）。
+  ⚠️ **几何画法别退回去**：粗笔把中心线推成「整条带子」的多边形会自交，出现毛刺/缺口/「毛笔分叉」脏边；
+  现在的画法是**一段一个梯形 + 每个顶点一个圆盘**（圆角连接与端头，分段数按半径 10–48），
+  全部塞进同一个 `StreamGeometry` 并用 `FillRule.NonZero` 填充——梯形永远凸、不自交，边缘才是光滑的。
   编辑用 `Corkboard.Core/Controls/HandwritingCanvas`（实现 `ICustomHitTest`，鼠标左键 / 触摸 / 手写笔都能画；
   多色、粗细、橡皮粗细、橡皮、清除、撤销一笔），只读展示用 `HandwritingPreview`（卡片、导出走同一份渲染器）。
+  **画布视口可以平移/缩放**（写更多内容）：**触控双指**手势（两指中点位移 = 平移、间距变化 = 缩放，
+  锚点算式 `offset = anchorDoc − centroid/zoom`，所以手指下那一点始终跟手；第二根手指落下时会把
+  已经画了一半的那笔整个撤掉，双指结束后剩下那根手指不再落笔，直到全部抬起——`_touchPoints` /
+  `_touchGestureActive` / `_suppressTouchDraw`；橡皮擦状态同样适用）；桌面端右键 / 中键拖动平移、
+  `Ctrl + 滚轮` 以指针为锚点缩放（0.5–4 倍），
+  `Render` 里 `context.PushTransform(Matrix.CreateScale * Matrix.CreateTranslation)`、输入走 `ToDocument` 反变换，
+  `ClampViewOffset` 把视口夹在参考区域附近；视口只是控件状态，**不落盘**（打开时 1:1）。
+  **默认笔宽是 10**（`HandwritingStyle.DefaultPenWidth`，旧默认 4 由 `NormalizeBoardExtras` 迁移）。
+  ⚠️ **编辑手写作业必须落在「手写」页签**：`HomeworkAssignmentFormViewModel.LoadForEdit` 不只看
+  `ContentKind == Handwriting`，也接受「笔迹非空且正文为空」的历史数据（kind 被旧版本洗成 Html 的），
+  载入末尾再 `NotifyModeProperties()` 一次；`Confirm` 里文本态但正文为空、笔迹还在时按手写保存。
+  解码侧（`NoteFileFormat.TryDecode`）对 kind=Html + 正文空 + ink 非空的数据也按手写读。
+  ⚠️ **存储层还有一道兜底**：`NoteStore.SaveAll` 写盘前若内存里该作业「空正文 + 空笔迹」、
+  磁盘上却有笔迹，就拒绝覆盖（`PreserveInkInsteadOfEmptyOverwrite`，日志警告）——
+  用户真踩过「编辑后保存把整段手写抹掉、重启后只剩白卡片」，丢的内容不可恢复。
   ⚠️ 表单里画布的 `Data` 是画布用 `SetCurrentValue` 内部写的，TwoWay 绑定不会回传源，所以
   `HomeworkAssignmentForm.axaml.cs` 的 `RefreshHandwritingState()` **必须**把 `_canvas.Data` 显式写回
   `ViewModel.HandwritingData`——漏了它，保存出来的作业没有笔迹（「手写内容关掉再打开就没了」就是这么来的）。
+- **标题栏右上角的按钮可以在设置里逐颗隐藏**（「设置 → 作业板 → 常规 → 顶部按钮」卡）：配置是
+  `BoardSettingsConfig.ShowTitleBarSettings/Sort/Assign/Export/Replay/Dock`（全部默认 `true`），
+  界面只看 `MainViewModel.ShowTitleBar*` 这六个**计算属性**——配置开关只决定「允不允许显示」，
+  各自还要叠原有条件：布置作业在回放中不显示（`!_replay.IsActive`）、回放入口没作业时不显示
+  （`_replay.CanEnterReplay`）、收纳要求 `DockEnabled` 也开着。`MainViewModel` 因此多了个
+  `BoardReplayService` 构造参数，并在 `OnReplayChanged` 里补通知。
+  ⚠️ **「锁定窗口」那颗不能进这组开关**：点击穿透状态下它是唯一的解锁入口，藏掉就再也点不回来；
+  ⚠️ 别把这些计算属性挂到 `MainView` 上——`UserControl` 的 `OnPropertyChanged(string)` 是 Avalonia 属性
+  通知（参数是 `AvaloniaPropertyChangedEventArgs`），不是 `INotifyPropertyChanged`，绑了也不会刷新。
+- **字号统一只在「作业板 → 常规 → 字号」一张卡里改**（科目标题 / 作业条小字 / 分类小标题 / 标签胶囊）；
+  「科目与分类」页**不再放「分类标题字号」**（那是重复入口，用户要求去掉），该页 VM 的
+  `SectionFontSizeDraft` / `CommitSectionFontSize` / `CommitAll` 已删除。
+- **「科目与分类」设置页里的科目是「输入框 + 添加」一个一个加**（`BoardSectionsSettingsPage` 的「科目」卡）：
+  不再用逗号分隔的长文本框（用户明确要求）。科目**胶囊横排、多了自动换行**（`ItemsControl` 的
+  `ItemsPanel` 用 `WrapPanel Orientation="Horizontal"`）——语文、数学这种短名字不用一行一个竖着排
+  （用户要求）；胶囊里是名字 + 一颗小叉删科目（`OnDeleteSubjectClick`，先
+  `FAContentDialog` 确认，`RemoveSubject` 会连带删掉该科目下的分类定义，已布置的作业不动）；
+  最后一行是「科目名称 + 添加」输入框与按钮（`AddSubject`，重名给提示、回车也能加，落盘走
+  `IBoardService.Save()` → `Changed` → 列表重建）。资源键 `Settings_Board_Subjects_NewPlaceholder/Add/
+  Duplicate/Empty/Delete/DeleteConfirmTitle/DeleteConfirmMessage`。`SubjectsDraft` / `CommitSubjects` 已删除，
+  `CommitAll()` 只剩字号提交。
+- **「科目与分类」设置页的二级分类是「左边选科目、右边编辑」**（`BoardSectionsSettingsPage`）：二级分类那张卡的
+  内容区左列是科目 `ListBox`（显示科目名 + `CategoryCountText`），右列只放选中那个科目的分类行
+  （改名 / 删除）与新建行——**标题栏里不要再放科目下拉框**：左边既然能选，右边再来一颗就是重复
+  （用户明确要求去掉）。两栏都绑 `ViewModel.SelectedSubjectItem`；`ReloadSubjectItems()` 重建后按 `_selectedSubjectName`
+  把选中项找回来（否则每次增删分类都会跳回第一个科目）。右半边用 `ContentControl` 绑
+  `SelectedSubjectItem`，里面的按钮事件照旧从 `sender.DataContext` 拿那一项。
+  资源键：`Settings_Board_Sections_CategoryCount`（`{0} 个分类`，写在
+  `BoardSectionsSubjectItem.CategoryCountText`）。
+  行距是**统一**的 8 DIP：容器 `Spacing="8"`、行内不再加 `Margin`、新建行与列表行同一档；
+  输入框 `MinHeight="32"` + `VerticalContentAlignment="Center"`（**不要**用自定义 `Padding` 撑高，
+  那样看起来像「一行字上面又套了个空框」，用户反馈过）；删除按钮 `Padding="6"`。
+  曾经试过 10 DIP（太散）与 6 DIP + 大 Padding（太高、不统一），都别退回去。
+  「科目」与「二级分类」两张卡**默认展开**（`IsExpanded="True"`），进页面直接就看到内容与**第一个科目**
+  （VM 构造期 `ReloadSubjectItems()` 已经把 `SelectedSubjectItem` 落到第一项）。
 - **二级分类**：「科目 → 分类」两级。`HomeworkConfig.Sections`（`HomeworkSection{Subject,Name}`，顺序即展示顺序）
   + `Note.Section`（空 = 未分类），`HomeworkSectionCatalog` 负责增删改，展示由 `NoteGrouping.GroupWithSections`
   两层分组；分类小标题字号是 `BoardSettingsConfig.SectionFontSize`。
-- **快捷标签**：`BoardSettingsConfig.QuickTags`（≤ 8 个，设置 → 作业板 → 快捷标签里配）。布置作业时点选的是
+- **作业卡片上的编辑 / 删除按钮是「悬停或点一下才出来」的浮层**（`BoardNoteCardItem` + `BoardPage.axaml`）：
+  鼠标停在作业上就露出来（`PointerEntered/Exited` → `IsPointerOver`），触摸设备点这条作业任意处
+  `Tapped`（`OnNoteTapped`）切换 `IsActionsVisible`、再点一下收起；
+  模板绑的是 `ShowActions = CanModify && (IsActionsVisible || IsPointerOver)`。两颗按钮画在**同一格网格的上层**
+  （`Border` + `HorizontalAlignment="Right"` / `VerticalAlignment="Top"`），
+  **不能给它们单独开一列**——那样会吃掉内容宽度，作业内容会被挤窄（用户明确要求）。
+  ⚠️ **模板根那个 `Grid` 必须写 `Background="Transparent"`**：没有底色的 `Grid` 不参与命中测试，
+  点空白处与悬停的事件被外层卡片底色的 `Border` 接走（只向上冒泡、不会往子级传），
+  表现就是「按钮永远不出现、点卡片也没反应」——已经踩过一次。
+  `BoardNoteCardItem` 因此从 `record` 改成了 `sealed partial class : ObservableObject`（要能通知显隐）；
+  点编辑 / 删除时先把按钮收回（`IsActionsVisible = false`）。回放与点击穿透时 `CanModify=false`，
+  按钮永远不冒出来。
+- **科目区块是一张按主题配色的卡片**（`BoardPage.axaml` 的 `Border.note`）：底色 / 描边走页面资源里的
+  `ResourceDictionary.ThemeDictionaries`（`BoardNoteCardBackground` / `BoardNoteCardBorder`，浅色白卡、
+  深色比页面亮一档的深灰卡），**不要**退回 `Transparent` 底 + Fluent 半透明卡刷——浅色页面是浅灰 Mica、
+  深色页面接近纯黑，同一个半透明色两边都跟背景糊在一起（用户反馈「区块分区不明显」）。
+  三种排布**统一都是 1px 描边 + `CornerRadius=8` + `Padding=12`**；单列排布**不要**再覆写成「只剩一条底线」。
+- **快捷标签**：`BoardSettingsConfig.QuickTags`（≤ 16 个，`MaxQuickTags`；设置 → 作业板 → 快捷标签里配，
+  列表是**胶囊横排、多了自动换行**，和科目胶囊同一套做法，胶囊里带一颗小叉删标签）。布置作业时点选的是
   **结构化字段** `Note.Tags`（`Note.NormalizeTags` 去空白、忽略大小写去重），**不往正文里插字**；
   作业板卡片上用 `Border.note-tag` 画成胶囊（`BoardNoteCardItem.Tags` / `HasTags`），手写作业一样能贴，
   **位置在这条作业自己的内容下面**（不是卡片顶上）。⚠️ 库的 `MeasureContentHeight` 末尾固定 `+40.0`，
   卡片一旦只读就必须在 `RichTextBlock.MeasureOverride` 里扣掉（`MeasuredHeightSlack`），否则标签与内容
   之间会凭空多出一大段空白。
+- **作业板文字字号**（设置 → 作业板 → 字号一张卡里四行）：科目标题 `SubjectFontSize`、
+  作业条小字 `NoteMetaFontSize`、二级分类小标题 `SectionFontSize`（与「科目与分类」页写同一个配置项）、
+  快捷标签胶囊 `NoteTagFontSize`（新增，8–32，默认 12；卡片模板绑 `BoardNoteCardItem.NoteTagFontSize`）。
+  夹取一律走 `Corkboard.Core/Board/BoardTextStyle`（`ClampTagFontSize` 等），页面与卡片不要各写一组数字。
 - **界面字号**：`AppearanceSettingsConfig.UiFontSize`（10–24），`App.ApplyFontSettings` 写 `AppFontSize` +
   `ControlContentThemeFontSize`，`StylesBase.axaml` 的 `:is(Window)` 与 `fa|FAContentDialog` 各加一条 `FontSize`。
+- **收纳的位置选择是「下拉样按钮 + Flyout」**（`DockSettingsPage`）：展开器右侧只放一颗像 ComboBox 的
+  `Button`（`AnchorPickerButton`，显示 `ViewModel.AnchorText` + `ChevronDownFilled`），点开才在 `Flyout` 里
+  展开九宫格圆点图（常驻太占面积，用户要求改掉）；九个位置文案是资源键
+  `Settings_Board_Dock_Anchor_TopLeft` … `_BottomRight`，`AnchorText` 在 `RefreshAnchorSelection()` 里发通知。
+  点完圆点由 code-behind 的 `OnAnchorDotClick` 收起浮层。
+  ⚠️ **这里必须用 `Popup`，不能用 `Button.Flyout`**：Flyout 的内容在独立弹窗里、`DataContext`
+  不会跟着按钮走，九宫格圆点的 `Command="{Binding SelectCommand}"` 会静默失效
+  （用户反馈「点圆点没反应、下拉框永远显示右下」）。现在的写法是 `Panel` 里并列
+  `Button`（`OnAnchorPickerClick` 切换 `Popup.IsOpen`）+ `Popup`（`PlacementTarget` 绑按钮、
+  `IsLightDismissEnabled`），`Popup` 声明在同一棵可视树里、`DataContext` 正常继承。
 - **收纳**：标题栏按钮把主窗口收成屏幕角落的一颗浮钮（`BoardDockService` / `BoardDockWindow`），位置用九宫格
   `DockAnchor` + `DockOffsetX/Y`（离选中那条边的距离，正数朝屏幕内侧）+ `DockScalePercent`（60–200）；
   `BoardSettingsConfig.DockEnabled` 控制入口显不显示。
@@ -468,6 +581,10 @@ public partial class BoardSettingsConfig : ObservableObject
   按创建时刻累计，下拉显示 `yyyy-MM-dd HH:mm:ss`。
 - **主窗口缩放**：四边四角都能拉（`MainView` 的 `ResizeBandThickness = 8`）；顶部与左上角压在 `FAAppWindow`
   自己的标题栏带上，命中缩放热区后**必须 `e.Handled = true`**，否则库的标题栏处理器会把这一下当成拖窗口接走。
+  ⚠️ **作业板置底到桌面时顶部/左边拉不动**：窗口成了桌面子窗口后 `MainView` 不一定贴着窗口四条边，
+  用 `MainView.Bounds` 判定会差一点。所以 `SetDragHost` 里还给窗口挂了一道隧道兜底
+  `OnWindowEdgeGuard`（`handledEventsToo: true`，按 `HitTestResizeSides(e.GetPosition(window), window.Bounds.Size)` 判定），
+  命中就先开始缩放；`TryStartWindowResize` 里要挡掉 `_isResizingWindow`，`OnPointerPressedForDrag` 开头要挡掉 `e.Handled`。
 
 ## 字体
 
@@ -491,6 +608,9 @@ public partial class BoardSettingsConfig : ObservableObject
   （两边字体文件字节一致，码位可直接对照）。**不要照抄 Segoe MDL2 / Segoe Fluent Icons 的码位**——
   例：`E72B` 是 MDL2 的「返回」，在本字体里是文档图标，画出来完全不是那个意思。
   能用样式模板里的 `FluentIcons.*` 常量就别在 XAML 里手写 `&#xXXXX;`（范例：`Button.nav-back` 画返回箭头）。
+  **要加新图标**：从 `Corkboard/Assets/FluentSystemIcons-Resizable.json` 按 `ic_fluent_<name>_20_filled` 查十进制码位、
+  转成 `\uXXXX` 加进 `FluentIcons.cs`（例：`ArrowMinimizeFilled = "\uE10E"` 来自 57614，用在收纳按钮与「收纳」设置页；
+  「科目与分类」设置页图标改成了 `ArrowSortFilled`）。
 - **主题与主题色**（设置 → 个性化 → 外观）：`Appearance.Theme`（跟随系统 / 浅色 / 深色）与
   `ThemeColorMode`（跟随系统 = 系统个性化里用户挑的主题色 / 自定义 = `ThemeColor`）由
   `App.ApplyThemeSettings` 写到 `FluentAvaloniaTheme` 上，写法照上游 SecRandom-C，**顺序不能颠倒**：

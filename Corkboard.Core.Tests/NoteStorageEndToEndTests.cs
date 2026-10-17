@@ -97,8 +97,10 @@ public class NoteStorageEndToEndTests : IDisposable
 
         // 三条作业都读回来了，并按各自创建日期摊到「年/月/日」目录：第二天单独一个文件。
         Assert.Equal(3, service.Notes.Count);
-        Assert.True(File.Exists(Path.Combine(BoardRoot, "2026", "10", "06", NoteStore.NotesFileName)));
-        Assert.True(File.Exists(Path.Combine(BoardRoot, "2026", "10", "07", NoteStore.NotesFileName)));
+        Assert.Equal(2, Directory.GetFiles(Path.Combine(BoardRoot, "2026", "10", "06"),
+            "*" + NoteFileFormat.FileExtension).Length);
+        Assert.Single(Directory.GetFiles(Path.Combine(BoardRoot, "2026", "10", "07"),
+            "*" + NoteFileFormat.FileExtension));
         Assert.Equal(2, CreateStore().LoadAll().Count(note => note.CreatedAt.Day == 6));
 
         // 旧文件已删掉，重启不会再搬一次。
@@ -132,10 +134,10 @@ public class NoteStorageEndToEndTests : IDisposable
         // 没有任何作业时不该先建出一堆空目录。
         Assert.False(Directory.Exists(BoardRoot));
 
-        service.Add(new Note { Content = "第一条", Subject = "语文" });
+        var note = service.Add(new Note { Content = "第一条", Subject = "语文" });
 
         var segments = NoteStore.GetDateSegments(DateTimeOffset.Now);
-        var file = Path.Combine(BoardRoot, segments[0], segments[1], segments[2], NoteStore.NotesFileName);
+        var file = Path.Combine(BoardRoot, segments[0], segments[1], segments[2], NoteFileFormat.GetFileName(note));
         Assert.True(File.Exists(file));
         Assert.Single(CreateStore().LoadAll());
 
@@ -155,11 +157,12 @@ public class NoteStorageEndToEndTests : IDisposable
 
         var segments = NoteStore.GetDateSegments(DateTimeOffset.Now);
         var directory = Path.Combine(BoardRoot, segments[0], segments[1], segments[2]);
-        var file = Path.Combine(directory, NoteStore.NotesFileName);
 
-        // 同一天的两条作业合并在同一个文件里。
+        // 同一天的两条作业各自一个文件，都在同一个日期目录里。
         Assert.Equal(2, CreateStore().LoadAll().Count);
-        Assert.Contains("一", File.ReadAllText(file));
+        Assert.Equal(2, Directory.GetFiles(directory, "*" + NoteFileFormat.FileExtension).Length);
+        Assert.Contains("一", File.ReadAllText(Path.Combine(directory, NoteFileFormat.GetFileName(first))));
+        Assert.Contains("二", File.ReadAllText(Path.Combine(directory, NoteFileFormat.GetFileName(second))));
 
         // 删光之后文件与空掉的日期目录都不该留下。
         service.Remove(first.Id);

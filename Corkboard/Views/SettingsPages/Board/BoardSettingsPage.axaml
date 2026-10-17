@@ -95,6 +95,45 @@
                 </fa:FASettingsExpander.Footer>
             </fa:FASettingsExpander>
 
+            <!--
+                标题栏右上角那排动作按钮的显隐：嫌哪颗多余就关掉哪颗（用户要求）。
+                直接双向绑配置：开关本身就是布尔、点了就落一次盘，不存在「一路动一路写」的问题。
+                「锁定窗口」那颗不在这里——它是穿透状态下唯一的解锁入口，必须常驻。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_TitleBarButtons}"
+                                   Description="{x:Static core:Resources.Settings_Board_TitleBarButtonsDescription}">
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_TitleBarSettings}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ToggleSwitch IsChecked="{Binding Config.BoardSettings.ShowTitleBarSettings, Mode=TwoWay}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_TitleBarSort}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ToggleSwitch IsChecked="{Binding Config.BoardSettings.ShowTitleBarSort, Mode=TwoWay}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_TitleBarAssign}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ToggleSwitch IsChecked="{Binding Config.BoardSettings.ShowTitleBarAssign, Mode=TwoWay}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_TitleBarExport}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ToggleSwitch IsChecked="{Binding Config.BoardSettings.ShowTitleBarExport, Mode=TwoWay}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_TitleBarReplay}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ToggleSwitch IsChecked="{Binding Config.BoardSettings.ShowTitleBarReplay, Mode=TwoWay}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_TitleBarDock}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ToggleSwitch IsChecked="{Binding Config.BoardSettings.ShowTitleBarDock, Mode=TwoWay}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+            </fa:FASettingsExpander>
+
             <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_ConfirmBeforeDelete}">
                 <fa:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding Board.ConfirmBeforeDelete}" />
@@ -174,6 +213,32 @@
                                        Increment="1"
                                        FormatString="0"
                                        Value="{Binding NoteMetaFontSizeDraft, Mode=TwoWay}"
+                                       LostFocus="OnEditorLostFocus" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_SectionFontSize}"
+                                           Description="{x:Static core:Resources.Settings_Board_SectionFontSizeDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <NumericUpDown MinWidth="130"
+                                       Minimum="9"
+                                       Maximum="32"
+                                       Increment="1"
+                                       FormatString="0"
+                                       Value="{Binding SectionFontSizeDraft, Mode=TwoWay}"
+                                       LostFocus="OnEditorLostFocus" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_NoteTagFontSize}"
+                                           Description="{x:Static core:Resources.Settings_Board_NoteTagFontSizeDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <NumericUpDown MinWidth="130"
+                                       Minimum="8"
+                                       Maximum="32"
+                                       Increment="1"
+                                       FormatString="0"
+                                       Value="{Binding NoteTagFontSizeDraft, Mode=TwoWay}"
                                        LostFocus="OnEditorLostFocus" />
                     </fa:FASettingsExpanderItem.Footer>
                 </fa:FASettingsExpanderItem>

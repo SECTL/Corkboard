@@ -106,8 +106,9 @@ internal static class HandwritingRenderer
             return;
         }
 
-        // 收锋长度：太短不尖，太长整笔都在收；大致 2.5 倍笔宽，最多占全长的 35%。
-        var tipLength = Math.Clamp(baseWidth * 2.5, 4, Math.Max(4, total * 0.35));
+        // 收锋长度：太短不尖，太长整笔都在收、粗笔看起来就像拖把。取 1.6 倍笔宽，
+        // 最多占全长的 22%——粗笔的端头不会收成一大片斜边。
+        var tipLength = Math.Clamp(baseWidth * 1.6, 3, Math.Max(3, total * 0.22));
 
         var widths = new double[count];
         for (var index = 0; index < count; index++)
@@ -117,48 +118,83 @@ internal static class HandwritingRenderer
 
             // 平方根曲线：离开端点时快速长粗，到收锋尽头自然接回正常笔宽。
             var envelope = Math.Sqrt(Math.Min(fromStart, fromEnd));
-            widths[index] = Math.Max(radii[index] * envelope, 0.08);
+
+            // 最细处也留 0.35 DIP：收锋要尖，但不能细成一根看不见的头发丝。
+            widths[index] = Math.Clamp(radii[index] * envelope, 0.35, radii[index] * 1.6);
         }
 
-        var left = new Point[count];
-        var right = new Point[count];
-
-        // 上一段的有效方向：重合点没有方向时沿用，免得在那里戳出一个洞。
-        var normalX = 0.0;
-        var normalY = 0.0;
-
-        for (var index = 0; index < count; index++)
-        {
-            var previous = points[Math.Max(index - 1, 0)];
-            var next = points[Math.Min(index + 1, count - 1)];
-
-            var direction = next - previous;
-            var length = Math.Sqrt(direction.X * direction.X + direction.Y * direction.Y);
-            if (length >= 1e-6)
-            {
-                normalX = -direction.Y / length;
-                normalY = direction.X / length;
-            }
-
-            left[index] = new Point(points[index].X + normalX * widths[index], points[index].Y + normalY * widths[index]);
-            right[index] = new Point(points[index].X - normalX * widths[index], points[index].Y - normalY * widths[index]);
-        }
-
+        // 粗笔时把中心线往两侧推成「一条带子」的多边形会自交：笔越粗、拐得越急，交叉越厉害，
+        // 边缘就出现毛刺、缺口和「毛笔分叉」那种脏边（用户反馈过）。
+        // 所以改成「一段一个梯形 + 每个顶点一个圆盘」：梯形永远是凸的、不自交，
+        // 顶点圆盘把两段之间的接缝补圆（等于圆角连接），两者用 NonZero 填充合成一条笔迹。
         var geometry = new StreamGeometry();
         using (var geometryContext = geometry.Open())
         {
-            geometryContext.BeginFigure(left[0], true);
-            for (var index = 1; index < count; index++)
-                geometryContext.LineTo(left[index], true);
+            geometryContext.SetFillRule(FillRule.NonZero);
 
-            geometryContext.LineTo(right[count - 1], true);
-            for (var index = count - 2; index >= 0; index--)
-                geometryContext.LineTo(right[index], true);
+            for (var index = 0; index + 1 < count; index++)
+            {
+                var startPoint = points[index];
+                var endPoint = points[index + 1];
+                var dx = endPoint.X - startPoint.X;
+                var dy = endPoint.Y - startPoint.Y;
+                var length = Math.Sqrt(dx * dx + dy * dy);
+                if (length < 1e-6)
+                    continue;
 
-            geometryContext.EndFigure(true);
+                // 这一段的法线只用这一段自己的方向：不跟相邻段平均，梯形才是凸的。
+                var normalX = -dy / length;
+                var normalY = dx / length;
+                var startWidth = widths[index];
+                var endWidth = widths[index + 1];
+
+                geometryContext.BeginFigure(
+                    new Point(startPoint.X + normalX * startWidth, startPoint.Y + normalY * startWidth), true);
+                geometryContext.LineTo(
+                    new Point(endPoint.X + normalX * endWidth, endPoint.Y + normalY * endWidth), true);
+                geometryContext.LineTo(
+                    new Point(endPoint.X - normalX * endWidth, endPoint.Y - normalY * endWidth), true);
+                geometryContext.LineTo(
+                    new Point(startPoint.X - normalX * startWidth, startPoint.Y - normalY * startWidth), true);
+                geometryContext.EndFigure(true);
+            }
+
+            // 顶点圆盘：补上接缝和起止端头。半径跟着这一点的实际笔宽走，所以收锋处自然收成尖点。
+            for (var index = 0; index < count; index++)
+                AppendDisc(geometryContext, points[index], widths[index]);
         }
 
         context.DrawGeometry(brush, null, geometry);
+    }
+
+    /// <summary>
+    ///     在 <paramref name="center" /> 处补一个实心圆（多边形近似），用来做圆角连接与端头。
+    ///     分段数按半径定：细笔 10 段就够，粗笔才需要更多段，免得边缘看出棱角。
+    /// </summary>
+    private static void AppendDisc(StreamGeometryContext context, Point center, double radius)
+    {
+        if (!double.IsFinite(radius) || radius <= 0)
+            return;
+
+        var segments = Math.Clamp((int)Math.Ceiling(radius * 3) + 8, 10, 48);
+        var step = Math.PI * 2 / segments;
+        var normalX = 0.0;
+        var normalY = 0.0;
+
+        for (var index = 0; index < segments; index++)
+        {
+            var angle = index * step;
+            normalX = Math.Cos(angle);
+            normalY = Math.Sin(angle);
+
+            var point = new Point(center.X + normalX * radius, center.Y + normalY * radius);
+            if (index == 0)
+                context.BeginFigure(point, true);
+            else
+                context.LineTo(point, true);
+        }
+
+        context.EndFigure(true);
     }
     /// <summary>
     ///     把笔宽磨一下：速度算出来的倍率有抖动，直接画会出现一粗一细的疙瘩；

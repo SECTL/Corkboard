@@ -29,8 +29,6 @@ public partial class BoardSectionsSettingsPageViewModel : ViewModelBase
         : base(configHandler)
     {
         _boardService = boardService;
-        _subjectsDraft = string.Join("，", _boardService.Subjects);
-        _sectionFontSizeDraft = (decimal)BoardTextStyle.ClampSectionFontSize(Settings.SectionFontSize);
 
         _boardService.Changed += OnBoardChanged;
         ReloadSubjectItems();
@@ -38,21 +36,47 @@ public partial class BoardSectionsSettingsPageViewModel : ViewModelBase
 
     public BoardSettingsConfig Settings => Config.BoardSettings;
 
-    /// <summary>每个科目一张卡：科目名 + 它下面已定义的分类行 + 新建分类那一行。</summary>
+    /// <summary>科目列表：左边当导航用，右上角下拉框也绑同一份（两处选中态联动）。</summary>
     public ObservableCollection<BoardSectionsSubjectItem> SubjectItems { get; } = [];
 
-    /// <summary>
-    ///     科目清单的输入草稿，逗号分隔（中英文逗号都认）。**不直接绑业务数据**：
-    ///     <see cref="IBoardService.Subjects" /> 是「改集合再 Save」的用法，每敲一个字符改一次会很脏。
-    /// </summary>
-    [ObservableProperty] private string _subjectsDraft;
+    /// <summary>上一次选中的科目名，重建列表后按它把选中项找回来。</summary>
+    private string? _selectedSubjectName;
 
     /// <summary>
-    ///     分类标题字号的输入草稿（设置里的 <see cref="BoardSettingsConfig.SectionFontSize" />）。
-    ///     NumericUpDown 一路动一路变，直接双向绑配置会每动一下写一遍 <c>settings.json</c>，
-    ///     所以先存草稿，失焦 / 离开页面时再提交。
+    ///     当前在右半边编辑的科目。左边 <c>ListBox</c> 与右上角 <c>ComboBox</c> 都双向绑它，
+    ///     所以「左边点一下」和「下拉框换一个」是同一个状态。
     /// </summary>
-    [ObservableProperty] private decimal? _sectionFontSizeDraft;
+    [ObservableProperty] private BoardSectionsSubjectItem? _selectedSubjectItem;
+
+    /// <summary>有没有选中的科目；没选时右半边显示一句提示，不显示空表单。</summary>
+    public bool HasSelectedSubjectItem => SelectedSubjectItem is not null;
+
+    partial void OnSelectedSubjectItemChanged(BoardSectionsSubjectItem? value)
+    {
+        _selectedSubjectName = value?.Subject;
+        OnPropertyChanged(nameof(HasSelectedSubjectItem));
+    }
+
+    /// <summary>
+    ///     新建科目的输入草稿。**不直接绑业务数据**：<see cref="IBoardService.Subjects" /> 是
+    ///     「改集合再 Save」的用法，每敲一个字符改一次会很脏；现在是「输入框 + 添加按钮/回车」，
+    ///     一次加一个（用户明确要求不要逗号分隔的那一套）。
+    /// </summary>
+    [ObservableProperty] private string _newSubjectDraft = string.Empty;
+
+    /// <summary>输入框里有字才能点「添加」。</summary>
+    public bool CanAddSubject => NewSubjectDraft.Trim().Length > 0;
+
+    partial void OnNewSubjectDraftChanged(string value) => OnPropertyChanged(nameof(CanAddSubject));
+
+    /// <summary>加科目失败（重名之类）时的一句话提示。</summary>
+    [ObservableProperty] private string _subjectHint = string.Empty;
+
+    /// <summary>提示有没有内容，模板据此显隐那一行。</summary>
+    [ObservableProperty] private bool _hasSubjectHint;
+
+    /// <summary>科目列表是不是空的（空的时候显示一句「还没有科目」）。</summary>
+    public bool HasNoSubjects => SubjectItems.Count == 0;
 
     /// <summary>分类增删改失败时的一句话提示。成功时清空，不弹窗。</summary>
     [ObservableProperty] private string _sectionHint = string.Empty;
@@ -92,6 +116,12 @@ public partial class BoardSectionsSettingsPageViewModel : ViewModelBase
             item.RefreshHasCategories();
             SubjectItems.Add(item);
         }
+
+        // 重建后把选中项找回来（按科目名；第一次进入就选第一个），
+        // 否则每改一次分类都会跳回第一个科目。
+        SelectedSubjectItem = SubjectItems.FirstOrDefault(item => item.Subject == _selectedSubjectName)
+                              ?? SubjectItems.FirstOrDefault();
+        OnPropertyChanged(nameof(HasNoSubjects));
     }
 
     /// <summary>不重名地列出要编辑的科目：先按科目清单的顺序，再补上只在分类定义里出现的科目。</summary>
@@ -115,51 +145,46 @@ public partial class BoardSectionsSettingsPageViewModel : ViewModelBase
     }
 
     /// <summary>
-    ///     把科目草稿写回领域服务并落盘。返回是否真的变了（没变就不用白写一次盘）。
-    ///     <para>
-    ///         和旧设置页同一套写法：清空 <see cref="IBoardService.Subjects" /> 再按新顺序灌进去；
-    ///         从清单里删掉的科目，服务会顺带把它的手动排序也清掉。
-    ///     </para>
+    ///     把输入框里的科目加进清单并落盘。重名时给一句提示、不重复加。
+    ///     落盘会通知 <see cref="IBoardService.Changed" />，列表跟着重建。
     /// </summary>
-    public bool CommitSubjects()
+    public bool AddSubject()
     {
-        var parsed = SubjectsDraft
-            .Split([',', '，', ';', '；'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Distinct(StringComparer.CurrentCulture)
-            .ToList();
-
-        if (parsed.SequenceEqual(_boardService.Subjects))
+        var name = NewSubjectDraft.Trim();
+        if (name.Length == 0)
             return false;
 
-        _boardService.Subjects.Clear();
-        foreach (var subject in parsed)
-            _boardService.Subjects.Add(subject);
+        if (_boardService.Subjects.Any(subject => string.Equals(subject.Trim(), name, StringComparison.CurrentCultureIgnoreCase)))
+        {
+            ShowSubjectHint(CR.Settings_Board_Subjects_Duplicate);
+            return false;
+        }
 
+        _boardService.Subjects.Add(name);
         _boardService.Save();
+        NewSubjectDraft = string.Empty;
+        ClearSubjectHint();
         return true;
     }
 
-    /// <summary>提交分类标题字号草稿。手输越界值时夹回 9–32，并把夹过的值同步回界面。</summary>
-    public void CommitSectionFontSize()
+    /// <summary>
+    ///     删掉一个科目（调用方已经确认过）：先把它下面的分类定义删掉，再从清单里移除并落盘。
+    ///     删的是定义，已经布置的作业不会被删。
+    /// </summary>
+    public void RemoveSubject(BoardSectionsSubjectItem item)
     {
-        var size = SectionFontSizeDraft is { } draft
-            ? BoardTextStyle.ClampSectionFontSize((double)draft)
-            : BoardTextStyle.ClampSectionFontSize(Settings.SectionFontSize);
+        foreach (var section in _boardService.GetSections(item.Subject).ToList())
+            _boardService.RemoveSection(item.Subject, section.Name);
 
-        if (Math.Abs(Settings.SectionFontSize - size) > double.Epsilon)
-            Settings.SectionFontSize = size;
-
-        var normalized = (decimal)size;
-        if (SectionFontSizeDraft != normalized)
-            SectionFontSizeDraft = normalized;
+        _boardService.Subjects.Remove(item.Subject);
+        _boardService.Save();
+        ClearSubjectHint();
     }
+
+    /// <summary>提交分类标题字号草稿。手输越界值时夹回 9–32，并把夹过的值同步回界面。</summary>
 
     /// <summary>设置页所有编辑的收口：草稿提交（输入框失焦与离开页面时都会调）。</summary>
-    public void CommitAll()
-    {
-        CommitSectionFontSize();
-        CommitSubjects();
-    }
+
 
     /// <summary>在某个科目下新建一条分类。重名时给一句话提示，不重复建。</summary>
     public bool AddCategory(BoardSectionsSubjectItem item)
@@ -238,6 +263,14 @@ public partial class BoardSectionsSettingsPageViewModel : ViewModelBase
     }
 
     private void ClearSectionHint() => ShowSectionHint(string.Empty);
+
+    private void ShowSubjectHint(string text)
+    {
+        SubjectHint = text;
+        HasSubjectHint = text.Length > 0;
+    }
+
+    private void ClearSubjectHint() => ShowSubjectHint(string.Empty);
 }
 
 /// <summary>
@@ -264,7 +297,20 @@ public partial class BoardSectionsSubjectItem : ObservableObject
     /// <summary>输入框里有字才能点「新建分类」。</summary>
     public bool CanAddCategory => NewCategoryDraft.Trim().Length > 0;
 
-    public void RefreshHasCategories() => HasCategories = Categories.Count > 0;
+    public void RefreshHasCategories()
+    {
+        HasCategories = Categories.Count > 0;
+        OnPropertyChanged(nameof(CategoryCount));
+        OnPropertyChanged(nameof(CategoryCountText));
+    }
+
+    /// <summary>这个科目下有几条分类（左边导航与下拉框里显示用）。</summary>
+    public int CategoryCount => Categories.Count;
+
+    /// <summary>「N 个分类」的文案，空分类时说「还没有分类」。</summary>
+    public string CategoryCountText => CategoryCount > 0
+        ? string.Format(CR.Settings_Board_Sections_CategoryCount, CategoryCount)
+        : CR.Settings_Board_Sections_NoCategories;
 
     partial void OnNewCategoryDraftChanged(string value) => OnPropertyChanged(nameof(CanAddCategory));
 }

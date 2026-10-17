@@ -1528,8 +1528,9 @@ public sealed class CloudSyncService : ICloudSyncService, IDisposable
         foreach (var file in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories))
         {
             var relative = Path.GetRelativePath(source, file);
-            if (string.Equals(Path.GetFileName(relative), NoteStore.NotesFileName,
-                    StringComparison.OrdinalIgnoreCase))
+            var fileName = Path.GetFileName(relative);
+            if (string.Equals(fileName, NoteStore.NotesFileName, StringComparison.OrdinalIgnoreCase)
+                || fileName.EndsWith(NoteFileFormat.FileExtension, StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }

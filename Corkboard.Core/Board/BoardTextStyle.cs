@@ -51,6 +51,21 @@ public static class BoardTextStyle
         return double.IsFinite(size) ? Math.Clamp(size, MinMetaFontSize, MaxMetaFontSize) : DefaultMetaFontSize;
     }
 
+    /// <summary>作业板卡片上快捷标签胶囊没设过时的字号。</summary>
+    public const double DefaultTagFontSize = 12;
+
+    /// <summary>快捷标签字号下限。</summary>
+    public const double MinTagFontSize = 8;
+
+    /// <summary>快捷标签字号上限。</summary>
+    public const double MaxTagFontSize = 32;
+
+    /// <summary>把快捷标签字号夹进合法区间。坏值退回默认字号。</summary>
+    public static double ClampTagFontSize(double size)
+    {
+        return double.IsFinite(size) ? Math.Clamp(size, MinTagFontSize, MaxTagFontSize) : DefaultTagFontSize;
+    }
+
     /// <summary>把二级分类小标题字号夹进合法区间。坏值同样退回默认字号。</summary>
     public static double ClampSectionFontSize(double size)
     {

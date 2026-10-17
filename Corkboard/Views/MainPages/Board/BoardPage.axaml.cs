@@ -104,6 +104,37 @@ public partial class BoardPage : UserControl
     ///     编辑入口：复用「布置作业」那份表单，打开时把这条作业填进去，确定即写回。
     ///     <para>弹层挂在壳那一层，所以这里只管把控件交给 <see cref="PageOverlayService" />。</para>
     /// </summary>
+    /// <summary>
+    ///     点一条作业：把它的编辑 / 删除按钮打开或收起（默认收着，点一下才出来、再点一下回去）。
+    ///     用 Tapped 而不是 PointerPressed：按住不动 / 拖动时不该切换。
+    /// </summary>
+    private void OnNoteTapped(object? sender, Avalonia.Input.TappedEventArgs e)
+    {
+        if (sender is not Control { DataContext: BoardNoteCardItem item } || !item.CanModify)
+            return;
+
+        item.IsActionsVisible = !item.IsActionsVisible;
+        e.Handled = true;
+    }
+
+    /// <summary>
+    ///     指针进到某条作业上：临时把编辑 / 删除按钮露出来。
+    ///     ⚠️ 模板根的那个 <c>Grid</c> 必须写 <c>Background="Transparent"</c>——没有底色的
+    ///     Grid 不参与命中测试，点卡片空白处 / 悬停都落不到它身上（事件被外层卡片的底色接走），
+    ///     表现就是「按钮永远不出现」。
+    /// </summary>
+    private void OnNotePointerEntered(object? sender, Avalonia.Input.PointerEventArgs e)
+    {
+        if (sender is Control { DataContext: BoardNoteCardItem item } && item.CanModify)
+            item.IsPointerOver = true;
+    }
+
+    private void OnNotePointerExited(object? sender, Avalonia.Input.PointerEventArgs e)
+    {
+        if (sender is Control { DataContext: BoardNoteCardItem item })
+            item.IsPointerOver = false;
+    }
+
     private void OnEditNoteClick(object? sender, RoutedEventArgs e)
     {
         if (sender is not Control { DataContext: BoardNoteCardItem item })
@@ -113,6 +144,8 @@ public partial class BoardPage : UserControl
         if (ViewModel is { IsReplaying: true })
             return;
 
+        // 打开编辑后把按钮收回去：弹层关掉时卡片上不该还挂着一排按钮。
+        item.IsActionsVisible = false;
         _overlay.Show(HomeworkAssignmentForm.ForEdit(item.Note));
     }
 
@@ -124,6 +157,9 @@ public partial class BoardPage : UserControl
     {
         if (sender is not Control { DataContext: BoardNoteCardItem item } || ViewModel is not { } viewModel)
             return;
+
+        // 点了删除就先把这排按钮收回去，别让它挂在卡片上等对话框。
+        item.IsActionsVisible = false;
 
         if (viewModel.ConfirmBeforeDelete && TopLevel.GetTopLevel(this) is { } topLevel)
         {
@@ -155,7 +191,13 @@ public partial class BoardPage : UserControl
     ///         成功与失败都只给一条几秒后消失的轻提示，不弹窗；用户在选择器里取消什么都不做。
     ///     </para>
     /// </summary>
-    private async void OnExportImageClick(object? sender, RoutedEventArgs e)
+    private async void OnExportImageClick(object? sender, RoutedEventArgs e) => await ExportImageAsync();
+
+    /// <summary>
+    ///     导出当前板子为图片（入口已挪到主窗口标题栏，见 <c>MainView.ExportImageButton_OnClick</c>）。
+    ///     按钮换地方不影响这里：导出用的内容容器是页面自己的，只有页面知道它在哪。
+    /// </summary>
+    public async Task ExportImageAsync()
     {
         if (_boardContent is null || ViewModel is not { } viewModel)
             return;

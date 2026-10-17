@@ -267,6 +267,30 @@
   <data name="Settings_Board_NamePlaceholder" xml:space="preserve">
     <value>Leave empty to use the default name</value>
   </data>
+  <data name="Settings_Board_TitleBarButtons" xml:space="preserve">
+    <value>Top bar buttons</value>
+  </data>
+  <data name="Settings_Board_TitleBarButtonsDescription" xml:space="preserve">
+    <value>Pick which buttons stay in the top-right corner</value>
+  </data>
+  <data name="Settings_Board_TitleBarSettings" xml:space="preserve">
+    <value>Settings button</value>
+  </data>
+  <data name="Settings_Board_TitleBarSort" xml:space="preserve">
+    <value>Sort button</value>
+  </data>
+  <data name="Settings_Board_TitleBarAssign" xml:space="preserve">
+    <value>Add homework button</value>
+  </data>
+  <data name="Settings_Board_TitleBarExport" xml:space="preserve">
+    <value>Export image button</value>
+  </data>
+  <data name="Settings_Board_TitleBarReplay" xml:space="preserve">
+    <value>Time replay button</value>
+  </data>
+  <data name="Settings_Board_TitleBarDock" xml:space="preserve">
+    <value>Dock button</value>
+  </data>
   <data name="Settings_Board_Layout" xml:space="preserve">
     <value>Layout</value>
   </data>
@@ -309,8 +333,29 @@
   <data name="Settings_Board_Subjects" xml:space="preserve">
     <value>Subjects</value>
   </data>
+  <data name="Settings_Board_Subjects_NewPlaceholder" xml:space="preserve">
+    <value>Subject name</value>
+  </data>
+  <data name="Settings_Board_Subjects_Add" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="Settings_Board_Subjects_Duplicate" xml:space="preserve">
+    <value>That subject already exists</value>
+  </data>
+  <data name="Settings_Board_Subjects_Empty" xml:space="preserve">
+    <value>No subjects yet — add one below</value>
+  </data>
+  <data name="Settings_Board_Subjects_Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="Settings_Board_Subjects_DeleteConfirmTitle" xml:space="preserve">
+    <value>Delete subject</value>
+  </data>
+  <data name="Settings_Board_Subjects_DeleteConfirmMessage" xml:space="preserve">
+    <value>The subject and its categories will be deleted. Homework is kept.</value>
+  </data>
   <data name="Settings_Board_SubjectsDescription" xml:space="preserve">
-    <value>Separate with commas, pick one when adding a note</value>
+    <value>Add them one by one, pick one when adding a note</value>
   </data>
   <!-- 内容的默认字号/颜色：新作业没单独定的时候用它们。 -->
   <data name="Settings_Board_ContentStyle" xml:space="preserve">
@@ -343,6 +388,12 @@
   </data>
   <data name="Settings_Board_NoteMetaFontSize" xml:space="preserve">
     <value>Note detail size</value>
+  </data>
+  <data name="Settings_Board_NoteTagFontSize" xml:space="preserve">
+    <value>Tag size</value>
+  </data>
+  <data name="Settings_Board_NoteTagFontSizeDescription" xml:space="preserve">
+    <value>How big quick tag chips are on cards</value>
   </data>
   <data name="Settings_Board_NoteMetaFontSizeDescription" xml:space="preserve">
     <value>How big the due date and small text is</value>
@@ -784,6 +835,12 @@
   <data name="Settings_Board_Sections_Categories" xml:space="preserve">
     <value>Categories</value>
   </data>
+  <data name="Settings_Board_Sections_SubjectPicker" xml:space="preserve">
+    <value>Subject</value>
+  </data>
+  <data name="Settings_Board_Sections_CategoryCount" xml:space="preserve">
+    <value>{0} categories</value>
+  </data>
   <data name="Settings_Board_Sections_CategoriesDescription" xml:space="preserve">
     <value>Add sub-headings under a subject and pick them when assigning</value>
   </data>
@@ -890,7 +947,34 @@
     <value>Button position</value>
   </data>
   <data name="Settings_Board_Dock_AnchorDescription" xml:space="preserve">
-    <value>Click a dot on the map to pick where the button sits</value>
+    <value>Open and pick where the button sits</value>
+  </data>
+  <data name="Settings_Board_Dock_Anchor_TopLeft" xml:space="preserve">
+    <value>Top left</value>
+  </data>
+  <data name="Settings_Board_Dock_Anchor_TopCenter" xml:space="preserve">
+    <value>Top center</value>
+  </data>
+  <data name="Settings_Board_Dock_Anchor_TopRight" xml:space="preserve">
+    <value>Top right</value>
+  </data>
+  <data name="Settings_Board_Dock_Anchor_MiddleLeft" xml:space="preserve">
+    <value>Middle left</value>
+  </data>
+  <data name="Settings_Board_Dock_Anchor_Center" xml:space="preserve">
+    <value>Center</value>
+  </data>
+  <data name="Settings_Board_Dock_Anchor_MiddleRight" xml:space="preserve">
+    <value>Middle right</value>
+  </data>
+  <data name="Settings_Board_Dock_Anchor_BottomLeft" xml:space="preserve">
+    <value>Bottom left</value>
+  </data>
+  <data name="Settings_Board_Dock_Anchor_BottomCenter" xml:space="preserve">
+    <value>Bottom center</value>
+  </data>
+  <data name="Settings_Board_Dock_Anchor_BottomRight" xml:space="preserve">
+    <value>Bottom right</value>
   </data>
   <data name="Settings_Board_Dock_AnchorHint" xml:space="preserve">
     <value>Click a dot</value>

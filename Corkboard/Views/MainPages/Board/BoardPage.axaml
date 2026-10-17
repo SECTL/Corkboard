@@ -14,12 +14,39 @@
              PointerReleased="OnReorderReleased"
              PointerCaptureLost="OnReorderCaptureLost">
     <UserControl.Resources>
+        <ResourceDictionary>
+        <!--
+            作业区块卡片的底色与描边必须按主题给两套。
+            只用 Fluent 的 CardBackgroundFillColorDefaultBrush 这种半透明色不行：浅色主题下页面
+            是浅灰 Mica、深色主题下接近纯黑，同一个半透明色在两边都跟背景糊成一片（用户反馈
+            「每个作业区块的分区不明显」）。这里浅色给白卡、深色给比页面亮一档的深灰卡。
+        -->
+        <ResourceDictionary.ThemeDictionaries>
+            <ResourceDictionary x:Key="Light">
+                <SolidColorBrush x:Key="BoardNoteCardBackground" Color="#FFFFFFFF" />
+                <SolidColorBrush x:Key="BoardNoteCardBorder" Color="#FFE4E4E4" />
+            </ResourceDictionary>
+            <ResourceDictionary x:Key="Dark">
+                <SolidColorBrush x:Key="BoardNoteCardBackground" Color="#FF2F2F2F" />
+                <SolidColorBrush x:Key="BoardNoteCardBorder" Color="#FF4C4C4C" />
+            </ResourceDictionary>
+        </ResourceDictionary.ThemeDictionaries>
         <!--
             一条作业：左边是内容（截止日期小字 + 富文本 / 手写预览都只读），右边是编辑与删除。
             手写作业画 HandwritingPreview，普通作业画 RichTextBlock，两者按 IsHandwriting 切换。
         -->
         <DataTemplate x:Key="BoardNoteTemplate" DataType="vm:BoardNoteCardItem">
-            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+            <!--
+                一条作业只占一层网格：内容铺满整行宽度，编辑 / 删除两颗按钮叠在它上面的
+                右上角（同一格里，靠对齐 + IsVisible 冒出来）。**不能**再给按钮单独开一列——
+                那样按钮会吃掉内容宽度（用户要求：按钮不要占实际显示作业的位置）。
+                点这条作业任意处切换按钮显隐（Tapped → OnNoteTapped），默认是收着的；
+                鼠标悬停时也临时冒出来（PointerEntered / PointerExited），鼠标用户不用先点一下。
+            -->
+            <Grid Background="Transparent"
+                  Tapped="OnNoteTapped"
+                  PointerEntered="OnNotePointerEntered"
+                  PointerExited="OnNotePointerExited">
                 <StackPanel Spacing="2">
                     <!--
                         截止日期：没设过就整行不显示。过期那一条换成系统的警示色
@@ -61,7 +88,7 @@
                     <ItemsControl IsVisible="{Binding HasTags}"
                                   ItemsSource="{Binding Tags}"
                                   Margin="0 6 0 0"
-                                  FontSize="{Binding MetaFontSize}">
+                                  FontSize="{Binding NoteTagFontSize}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <WrapPanel Orientation="Horizontal" />
@@ -76,21 +103,30 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </StackPanel>
-                <!-- 回放期间与点击穿透锁住窗口时列表项自带 CanModify=false，两个按钮随之隐藏。 -->
-                <Button Grid.Column="1" VerticalAlignment="Top"
-                        Background="Transparent" BorderThickness="0" Padding="6"
-                        FontFamily="{DynamicResource FluentSystemIconsResizeable}"
-                        Content="{x:Static icons:FluentIcons.EditFilled}"
-                        IsVisible="{Binding CanModify}"
-                        ToolTip.Tip="{x:Static core:Resources.Board_EditNote}"
-                        Click="OnEditNoteClick" />
-                <Button Grid.Column="2" VerticalAlignment="Top"
-                        Background="Transparent" BorderThickness="0" Padding="6"
-                        FontFamily="{DynamicResource FluentSystemIconsResizeable}"
-                        Content="{x:Static icons:FluentIcons.DeleteFilled}"
-                        IsVisible="{Binding CanModify}"
-                        ToolTip.Tip="{x:Static core:Resources.Board_DeleteNote}"
-                        Click="OnDeleteNoteClick" />
+                <!--
+                    浮层：两颗按钮贴着这条作业的右上角，叠在内容上面、不参与布局。
+                    底色用半透明卡片色，压在文字上方也看得清；回放 / 穿透时 CanModify=false，
+                    ShowActions 恒为 false，永远不冒出来。
+                -->
+                <Border HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        IsVisible="{Binding ShowActions}"
+                        CornerRadius="6"
+                        Padding="2"
+                        Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}">
+                    <StackPanel Orientation="Horizontal" Spacing="2">
+                        <Button Background="Transparent" BorderThickness="0" Padding="6"
+                                FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                Content="{x:Static icons:FluentIcons.EditFilled}"
+                                ToolTip.Tip="{x:Static core:Resources.Board_EditNote}"
+                                Click="OnEditNoteClick" />
+                        <Button Background="Transparent" BorderThickness="0" Padding="6"
+                                FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                Content="{x:Static icons:FluentIcons.DeleteFilled}"
+                                ToolTip.Tip="{x:Static core:Resources.Board_DeleteNote}"
+                                Click="OnDeleteNoteClick" />
+                    </StackPanel>
+                </Border>
             </Grid>
         </DataTemplate>
         <!--
@@ -162,14 +198,16 @@
                 </StackPanel>
             </Border>
         </DataTemplate>
+        </ResourceDictionary>
     </UserControl.Resources>
     <UserControl.Styles>
-        <!-- 纯文字区块，边界使用描边或分隔线。 -->
+        <!-- 科目区块是一张卡：实体卡底 + 1px 描边，深浅主题各一套配色（见 Resources 里的主题字典）。 -->
         <Style Selector="Border.note">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
-            <Setter Property="CornerRadius" Value="4" />
-            <Setter Property="Padding" Value="10" />
+            <Setter Property="Background" Value="{DynamicResource BoardNoteCardBackground}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BoardNoteCardBorder}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="12" />
             <!-- 抓起来 / 放下都要是「抬一下」而不是硬切，所以这几个属性走过渡。 -->
             <Setter Property="Transitions">
                 <Transitions>
@@ -177,10 +215,6 @@
                     <BoxShadowsTransition Property="BoxShadow" Duration="0:0:0.15" />
                 </Transitions>
             </Setter>
-        </Style>
-        <Style Selector="ItemsControl.layout-single Border.note">
-            <Setter Property="BorderThickness" Value="0,0,0,1" />
-            <Setter Property="CornerRadius" Value="0" />
         </Style>
         <!-- 合并后高度随内容增长，避免隐藏同科目的后续作业。 -->
         <Style Selector="ItemsControl.layout-block Border.note">
@@ -299,14 +333,6 @@
                            VerticalAlignment="Center"
                            IsVisible="{Binding HasExportHint}"
                            Text="{Binding ExportHint}" />
-                <Button Classes="board-export"
-                        IsVisible="{Binding CanExportImage}"
-                        ToolTip.Tip="{x:Static core:Resources.Board_ExportImageTip}"
-                        automation:AutomationProperties.Name="{x:Static core:Resources.Board_ExportImage}"
-                        Click="OnExportImageClick">
-                    <TextBlock FontFamily="{DynamicResource FluentSystemIconsResizeable}"
-                               Text="{x:Static icons:FluentIcons.SaveFilled}" />
-                </Button>
             </StackPanel>
         </Grid>
 
