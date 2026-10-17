@@ -1,10 +1,11 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Corkboard.Core.Abstraction;
-using Corkboard.Core.Abstraction.Services;
-using Corkboard.Core.Services.Board;
 using Corkboard.Core.Services.Config;
 using Corkboard.Core.Services.Logging;
+using Corkboard.Core.Board;
+using Corkboard.Core.Homework;
+using Corkboard.Core.Notes;
 
 namespace Corkboard.Core.Services;
 
@@ -20,9 +21,10 @@ public static class CoreRuntimeServiceCollectionExtensions
 
         services.AddSingleton<ConfigServiceBase, FileConfigService>();
         services.AddSingleton<MainConfigHandler>();
-        services.AddSingleton<IBoardNoteStore, BoardNoteStore>();
+        services.AddSingleton<INoteStore, NoteStore>();
+        services.AddSingleton<HomeworkSectionCatalog>();
         services.AddSingleton<IBoardService, BoardService>();
-        services.AddSingleton<BoardCleanupService>();
+        services.AddSingleton<HomeworkCleanupService>();
         return services;
     }
 

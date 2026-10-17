@@ -5,9 +5,14 @@ using Corkboard.Core.Abstraction;
 using Corkboard.Core.Enums;
 using Corkboard.Core.Enums.Configs;
 using Corkboard.Core.Models;
-using Corkboard.Core.Models.Board;
 using Corkboard.Core.Models.SubConfigs.Board;
 using CR = Corkboard.Core.Langs.Common.Resources;
+
+using Corkboard.Core.Board;
+using Corkboard.Core.Homework;
+using Corkboard.Core.Notes;
+using Corkboard.Core.Notes.Legacy;
+using Corkboard.Core.RichText;
 
 namespace Corkboard.Core.Tests;
 
@@ -221,7 +226,7 @@ public class ConfigSerializationTests
     }
 
     [Fact]
-    public void BoardNote_IgnoresRemovedLegacyFields()
+    public void Note_IgnoresRemovedLegacyFields()
     {
         // 老数据里的 title / color_hex / is_pinned 必须被静默忽略：
         // JsonOptions 没有开 UnmappedMemberHandling.Disallow，所以不需要写迁移代码。
@@ -230,17 +235,17 @@ public class ConfigSerializationTests
         { "notes": [ { "title": "旧便签", "content": "正文", "color_hex": "#FFFFFF", "is_pinned": true } ] }
         """;
 
-        var restored = JsonSerializer.Deserialize<BoardDayFile>(legacy, ConfigServiceBase.JsonOptions)!;
+        var restored = JsonSerializer.Deserialize<NoteDayFile>(legacy, ConfigServiceBase.JsonOptions)!;
 
         Assert.Single(restored.Notes);
         Assert.Equal("正文", restored.Notes[0].Content);
     }
 
     [Fact]
-    public void BoardNote_NoLongerSerializesTitleOrCompletion()
+    public void Note_NoLongerSerializesTitleOrCompletion()
     {
-        var day = new BoardDayFile();
-        day.Notes.Add(new BoardNote { Content = "正文", Subject = "数学" });
+        var day = new NoteDayFile();
+        day.Notes.Add(new Note { Content = "正文", Subject = "数学" });
 
         var json = JsonSerializer.Serialize(day, ConfigServiceBase.JsonOptions);
 
@@ -249,13 +254,13 @@ public class ConfigSerializationTests
     }
 
     [Fact]
-    public void BoardDayFile_RoundTripsNotes()
+    public void NoteDayFile_RoundTripsNotes()
     {
-        var day = new BoardDayFile();
-        day.Notes.Add(new BoardNote { Content = "数学", Subject = "数学", DueDate = new DateOnly(2026, 10, 13) });
+        var day = new NoteDayFile();
+        day.Notes.Add(new Note { Content = "数学", Subject = "数学", DueDate = new DateOnly(2026, 10, 13) });
 
         var json = JsonSerializer.Serialize(day, ConfigServiceBase.JsonOptions);
-        var restored = JsonSerializer.Deserialize<BoardDayFile>(json, ConfigServiceBase.JsonOptions)!;
+        var restored = JsonSerializer.Deserialize<NoteDayFile>(json, ConfigServiceBase.JsonOptions)!;
 
         Assert.Single(restored.Notes);
         Assert.Equal("数学", restored.Notes[0].Content);
@@ -264,7 +269,7 @@ public class ConfigSerializationTests
     }
 
     [Fact]
-    public void LegacyBoardFile_ReadsNotesAndSubjects()
+    public void LegacyNoteFile_ReadsNotesAndSubjects()
     {
         // 旧版把好几样东西塞在一个文件里，搬迁时该读的要读出来，已经删掉的功能留下的键静默忽略。
         const string legacy = """
@@ -275,7 +280,7 @@ public class ConfigSerializationTests
         }
         """;
 
-        var restored = JsonSerializer.Deserialize<LegacyBoardFile>(legacy, ConfigServiceBase.JsonOptions)!;
+        var restored = JsonSerializer.Deserialize<LegacyNoteFile>(legacy, ConfigServiceBase.JsonOptions)!;
 
         Assert.Single(restored.Notes);
         Assert.Equal("旧作业", restored.Notes[0].Content);
@@ -283,10 +288,10 @@ public class ConfigSerializationTests
     }
 
     [Fact]
-    public void BoardConfig_SeedsCommonSubjectsOnFirstRun()
+    public void HomeworkConfig_SeedsCommonSubjectsOnFirstRun()
     {
         // 首次运行给几个常见科目打底，用户不用从零开始建。
-        var config = new BoardConfig();
+        var config = new HomeworkConfig();
 
         Assert.NotEmpty(config.Subjects);
     }
@@ -307,16 +312,16 @@ public class ConfigSerializationTests
     }
 
     [Fact]
-    public void BoardNote_RoundTripsContentFontSizeAndFormatRanges()
+    public void Note_RoundTripsContentFontSizeAndFormatRanges()
     {
-        var day = new BoardDayFile();
-        day.Notes.Add(new BoardNote
+        var day = new NoteDayFile();
+        day.Notes.Add(new Note
         {
             Content = "数学 **练习册**",
             ContentFontSize = 22,
             Formats =
             [
-                new BoardTextFormatRange
+                new LegacyTextFormatRange
                 {
                     Start = 3,
                     Length = 5,
@@ -333,7 +338,7 @@ public class ConfigSerializationTests
         // 结束下标是从 start + length 推出来的，不进磁盘格式。
         Assert.DoesNotContain("\"end\"", json);
 
-        var restored = JsonSerializer.Deserialize<BoardDayFile>(json, ConfigServiceBase.JsonOptions)!;
+        var restored = JsonSerializer.Deserialize<NoteDayFile>(json, ConfigServiceBase.JsonOptions)!;
         var note = Assert.Single(restored.Notes);
         Assert.Equal("数学 **练习册**", note.Content);
         Assert.Equal(22, note.ContentFontSize);
@@ -347,23 +352,23 @@ public class ConfigSerializationTests
     }
 
     [Fact]
-    public void BoardNote_OldDataWithoutFormatRangesStillLoads()
+    public void Note_OldDataWithoutFormatRangesStillLoads()
     {
         // 旧数据里没有 formats / content_font_size：读出来是空值，不需要写迁移代码。
         const string legacy = """{ "notes": [ { "content": "旧作业" } ] }""";
 
-        var restored = JsonSerializer.Deserialize<BoardDayFile>(legacy, ConfigServiceBase.JsonOptions)!;
+        var restored = JsonSerializer.Deserialize<NoteDayFile>(legacy, ConfigServiceBase.JsonOptions)!;
 
         Assert.Null(restored.Notes[0].Formats);
         Assert.Null(restored.Notes[0].ContentFontSize);
-        Assert.Equal(BoardContentKind.Markdown, restored.Notes[0].ContentKind);
+        Assert.Equal(RichTextContentKind.Markdown, restored.Notes[0].ContentKind);
     }
 
     [Fact]
-    public void BoardNote_RichTextContentRoundTripsWithoutLegacyFields()
+    public void Note_RichTextContentRoundTripsWithoutLegacyFields()
     {
-        var day = new BoardDayFile();
-        var note = new BoardNote();
+        var day = new NoteDayFile();
+        var note = new Note();
         note.SetHtmlContent("<p>数学 <span style=\"font-size:15pt\">练习册</span></p>");
         day.Notes.Add(note);
 
@@ -375,9 +380,9 @@ public class ConfigSerializationTests
         Assert.DoesNotContain("\"formats\"", json);
         Assert.DoesNotContain("\"content_font_size\"", json);
 
-        var restored = JsonSerializer.Deserialize<BoardDayFile>(json, ConfigServiceBase.JsonOptions)!;
+        var restored = JsonSerializer.Deserialize<NoteDayFile>(json, ConfigServiceBase.JsonOptions)!;
         var loaded = Assert.Single(restored.Notes);
-        Assert.Equal(BoardContentKind.Html, loaded.ContentKind);
+        Assert.Equal(RichTextContentKind.Html, loaded.ContentKind);
         Assert.Equal("<p>数学 <span style=\"font-size:15pt\">练习册</span></p>", loaded.Content);
         Assert.Null(loaded.Formats);
         Assert.Null(loaded.ContentFontSize);
@@ -431,7 +436,7 @@ public class ConfigSerializationTests
         var legacy = JsonSerializer.Deserialize<MainConfigModel>(
             """{ "board_settings": { "board_name": "作业" } }""", ConfigServiceBase.JsonOptions)!;
         Assert.Empty(legacy.BoardSettings.PaletteColors);
-        Assert.Equal(BoardPalette.DefaultColors, legacy.BoardSettings.ResolvePaletteColors());
+        Assert.Equal(RichTextPalette.DefaultColors, legacy.BoardSettings.ResolvePaletteColors());
 
         // 存了脏数据时要能收拾干净、不抛异常：全透明色丢掉，重复色只留一个，超过上限的截断。
         // 这里故意用 6 位十六进制——磁盘上 8 位是 #RRGGBBAA（alpha 在尾），6 位则与顺序无关，不会写错。
@@ -443,7 +448,7 @@ public class ConfigSerializationTests
         Assert.Equal(8, dirty.BoardSettings.PaletteColors.Count);
 
         var cleaned = dirty.BoardSettings.ResolvePaletteColors();
-        Assert.Equal(BoardPalette.MaxColors, cleaned.Count);
+        Assert.Equal(RichTextPalette.MaxColors, cleaned.Count);
         Assert.DoesNotContain(cleaned, color => color.A == 0);
         Assert.Equal(cleaned.Count, cleaned.Distinct().Count());
         Assert.Equal([Color.Parse("#FF000000"), Color.Parse("#FFFFFFFF"), Color.Parse("#FFFF0000"),

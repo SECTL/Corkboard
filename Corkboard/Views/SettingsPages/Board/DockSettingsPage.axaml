@@ -1,0 +1,124 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fa="using:FluentAvalonia.UI.Controls"
+             xmlns:vm="using:Corkboard.ViewModels.SettingsPages.Board"
+             xmlns:core="using:Corkboard.Core.Langs.Common"
+             mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="450"
+             x:Class="Corkboard.Views.SettingsPages.Board.DockSettingsPage"
+             x:DataType="vm:DockSettingsPageViewModel">
+    <ScrollViewer>
+        <StackPanel Classes="page-container">
+            <!-- 页标题画在 page-container 里：它才和设置卡同宽、同左边缘，并随卡片一起滚动。 -->
+            <TextBlock Margin="0 4 0 0"
+                       FontWeight="Normal"
+                       Text="{x:Static core:Resources.Settings_Board_Dock_Title}"
+                       Theme="{StaticResource TitleTextBlockStyle}" />
+
+            <!-- 开关：决定标题栏上有没有「收纳」按钮。开关是离散动作，直接双向绑配置即可。 -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_Dock_Enabled}"
+                                   Description="{x:Static core:Resources.Settings_Board_Dock_EnabledDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding Settings.DockEnabled, Mode=TwoWay}" />
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <!--
+                位置：画一个「屏幕」示意框，里面按九宫格摆九颗圆点，点哪颗就把贴靠位置设成哪个。
+                选中那颗用 accent 样式亮起来；圆点本身是离散点击，点一下直接写配置，不需要提交草稿。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_Dock_Anchor}"
+                                   Description="{x:Static core:Resources.Settings_Board_Dock_AnchorDescription}">
+                <StackPanel Spacing="8">
+                    <TextBlock FontSize="12"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Text="{x:Static core:Resources.Settings_Board_Dock_AnchorHint}" />
+                    <!-- 「屏幕」示意框：只是给九颗圆点一个参照，本身不参与任何交互。 -->
+                    <Border Width="288"
+                            Height="168"
+                            HorizontalAlignment="Left"
+                            Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                            BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="8">
+                        <ItemsControl ItemsSource="{Binding AnchorOptions}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <UniformGrid Rows="3" Columns="3" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:DockAnchorOption">
+                                    <Button Width="32"
+                                            Height="32"
+                                            MinWidth="0"
+                                            Padding="0"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            CornerRadius="16"
+                                            Classes.accent="{Binding IsSelected}"
+                                            Command="{Binding SelectCommand}" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Border>
+                </StackPanel>
+            </fa:FASettingsExpander>
+
+            <!--
+                位置微调：以刚才选中的位置为基准挪一点，一行左右、一行上下。
+                连续输入走草稿，失焦或离开页面才提交（见 DockSettingsPageViewModel.CommitAll）。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_Dock_Offset}"
+                                   Description="{x:Static core:Resources.Settings_Board_Dock_OffsetDescription}">
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_Dock_OffsetX}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <NumericUpDown MinWidth="130"
+                                       Minimum="0"
+                                       Maximum="2000"
+                                       Increment="10"
+                                       FormatString="0"
+                                       Value="{Binding DockOffsetXDraft, Mode=TwoWay}"
+                                       LostFocus="OnEditorLostFocus" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_Dock_OffsetY}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <NumericUpDown MinWidth="130"
+                                       Minimum="0"
+                                       Maximum="2000"
+                                       Increment="10"
+                                       FormatString="0"
+                                       Value="{Binding DockOffsetYDraft, Mode=TwoWay}"
+                                       LostFocus="OnEditorLostFocus" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+            </fa:FASettingsExpander>
+
+            <!-- 按钮大小：按百分比缩放浮钮，落盘后已经收起来的那颗会立刻换大小。 -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_Dock_Scale}"
+                                   Description="{x:Static core:Resources.Settings_Board_Dock_ScaleDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <StackPanel Orientation="Horizontal"
+                                VerticalAlignment="Center"
+                                Spacing="8">
+                        <NumericUpDown MinWidth="130"
+                                       Minimum="60"
+                                       Maximum="200"
+                                       Increment="5"
+                                       FormatString="0"
+                                       Value="{Binding DockScaleDraft, Mode=TwoWay}"
+                                       LostFocus="OnEditorLostFocus" />
+                        <TextBlock VerticalAlignment="Center" Text="%" />
+                    </StackPanel>
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <Button HorizontalAlignment="Left"
+                    Content="{x:Static core:Resources.Settings_Board_Dock_Reset}"
+                    Click="ResetButton_OnClick" />
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

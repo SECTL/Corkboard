@@ -1,0 +1,333 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Corkboard.ViewModels.MainPages.Board"
+             xmlns:core="using:Corkboard.Core.Langs.Common"
+             xmlns:icons="using:Corkboard.Core.Icons"
+             xmlns:controls="using:Corkboard.Core.Controls"
+             xmlns:automation="using:Avalonia.Automation"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="Corkboard.Views.MainPages.Board.BoardPage"
+             x:DataType="vm:BoardPageViewModel"
+             PointerMoved="OnReorderMoved"
+             PointerReleased="OnReorderReleased"
+             PointerCaptureLost="OnReorderCaptureLost">
+    <UserControl.Resources>
+        <!--
+            一条作业：左边是内容（截止日期小字 + 富文本 / 手写预览都只读），右边是编辑与删除。
+            手写作业画 HandwritingPreview，普通作业画 RichTextBlock，两者按 IsHandwriting 切换。
+        -->
+        <DataTemplate x:Key="BoardNoteTemplate" DataType="vm:BoardNoteCardItem">
+            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                <StackPanel Spacing="2">
+                    <!--
+                        截止日期：没设过就整行不显示。过期那一条换成系统的警示色
+                        （类名跟着 IsOverdue 开关），这是卡片上唯一会自己变色的文字。
+                        字号来自设置里的「作业条小字字号」，样式里不再写死。
+                    -->
+                    <TextBlock Classes="note-due"
+                               Classes.overdue="{Binding IsOverdue}"
+                               IsVisible="{Binding HasDueText}"
+                               FontSize="{Binding MetaFontSize}"
+                               TextWrapping="Wrap"
+                               Text="{Binding DueText}" />
+                    <!--
+                        作业内容是富文本（HTML 片段），默认字号/颜色由控件补成行内样式。
+                        列表里用不能选中、也不接收指针的控件而不是 SelectableTextBlock：
+                        后者会吃掉指针手势，跟壳的整窗长按拖动、区块拖动排序打架。
+                    -->
+                    <controls:RichTextBlock IsVisible="{Binding ShowHtml}"
+                                            IsHitTestVisible="False"
+                                            ShowPageBoundaries="False"
+                                            ShowPageNumbers="False"
+                                            Html="{Binding Html}"
+                                            DefaultContentFontSize="{Binding ContentFontSize}"
+                                            DefaultContentColor="{Binding ContentColor}" />
+                    <!--
+                        手写作业：只读预览，同样不接收指针。高度由控件按 Aspect（高 / 宽）
+                        和卡片内容宽度自己算，宽卡片画得高、窄卡片画得矮，笔迹不变形。
+                    -->
+                    <controls:HandwritingPreview IsVisible="{Binding HasHandwriting}"
+                                                 IsHitTestVisible="False"
+                                                 HorizontalAlignment="Stretch"
+                                                 Data="{Binding Handwriting}"
+                                                 Aspect="{Binding HandwritingAspect}" />
+                </StackPanel>
+                <!-- 回放期间与点击穿透锁住窗口时列表项自带 CanModify=false，两个按钮随之隐藏。 -->
+                <Button Grid.Column="1" VerticalAlignment="Top"
+                        Background="Transparent" BorderThickness="0" Padding="6"
+                        FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                        Content="{x:Static icons:FluentIcons.EditFilled}"
+                        IsVisible="{Binding CanModify}"
+                        ToolTip.Tip="{x:Static core:Resources.Board_EditNote}"
+                        Click="OnEditNoteClick" />
+                <Button Grid.Column="2" VerticalAlignment="Top"
+                        Background="Transparent" BorderThickness="0" Padding="6"
+                        FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                        Content="{x:Static icons:FluentIcons.DeleteFilled}"
+                        IsVisible="{Binding CanModify}"
+                        ToolTip.Tip="{x:Static core:Resources.Board_DeleteNote}"
+                        Click="OnDeleteNoteClick" />
+            </Grid>
+        </DataTemplate>
+        <!--
+            科目区块里的一个二级分类：一条小标题 + 它下面的作业。
+            这棵子树不画卡片边框（边界留给一级的 Border.note），靠字号、次要色与轻微缩进分层。
+            没归进任何分类的那批作业 ShowTitle=false：不画「未分类」小标题，直接跟在科目名下面。
+        -->
+        <DataTemplate x:Key="BoardSubsectionTemplate" DataType="vm:BoardSubsectionItem">
+            <StackPanel Classes="board-subsection">
+                <TextBlock Classes="board-subsection-title"
+                           IsVisible="{Binding ShowTitle}"
+                           FontSize="{Binding TitleFontSize}"
+                           TextWrapping="Wrap"
+                           Text="{Binding Title}" />
+                <ItemsControl Classes="board-notes"
+                              Classes.titled="{Binding ShowTitle}"
+                              ItemsSource="{Binding Notes}"
+                              ItemTemplate="{StaticResource BoardNoteTemplate}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><StackPanel Spacing="8" /></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+            </StackPanel>
+        </DataTemplate>
+        <!-- 一个科目一个区块，区块内再按二级分类分小节；科目名只出现一次。 -->
+        <DataTemplate x:Key="BoardSubjectTemplate" DataType="vm:BoardSectionItem">
+            <Border Classes="note">
+                <StackPanel Spacing="8">
+                    <!--
+                        区块标题行整条都是拖动面：左边是排序手柄字形，右边是科目名。
+                        按下即接管指针，挪动超过阈值就换位置、松手落盘——**不需要长按**：
+                        手柄本身就是「抓这里拖」的意思，而且 500ms 长按正好和壳的整窗长按拖动
+                        撞车（判定条件一样，同一次按住会被判成两件事）。
+                        手柄只有一个小字形，用户根本找不到也不好按，所以整条标题行都能抓。
+                        ⚠️ 这棵树必须标 WindowDragGesture.Suppress：壳的整窗长按拖动要让出去。
+                    -->
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="4"
+                          Background="Transparent"
+                          controls:WindowDragGesture.Suppress="True"
+                          PointerPressed="OnReorderPressed">
+                        <Border Grid.Column="0"
+                                Classes="sort-handle"
+                                IsVisible="{Binding CanReorder}"
+                                Cursor="SizeAll"
+                                ToolTip.Tip="{x:Static core:Resources.Board_ReorderSubject}">
+                            <TextBlock FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                       Text="{x:Static icons:FluentIcons.ReOrderDotsVerticalFilled}" />
+                        </Border>
+                        <TextBlock Grid.Column="1"
+                                   FontWeight="Bold"
+                                   FontSize="{Binding SubjectFontSize}"
+                                   TextWrapping="Wrap"
+                                   VerticalAlignment="Center"
+                                   Text="{Binding Subject}" />
+                    </Grid>
+                    <!--
+                        二级分类小节。分类顺序由 Core 的 NoteGrouping.GroupWithSections 定：
+                        没分类的作业在最前（不带小标题），然后是按定义顺序、有作业的分类，
+                        已删除分类的历史残留按名称排在最后；没有任何作业的分类不出现在这里。
+                    -->
+                    <ItemsControl ItemsSource="{Binding Sections}"
+                                  ItemTemplate="{StaticResource BoardSubsectionTemplate}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><StackPanel Spacing="8" /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+    </UserControl.Resources>
+    <UserControl.Styles>
+        <!-- 纯文字区块，边界使用描边或分隔线。 -->
+        <Style Selector="Border.note">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Padding" Value="10" />
+            <!-- 抓起来 / 放下都要是「抬一下」而不是硬切，所以这几个属性走过渡。 -->
+            <Setter Property="Transitions">
+                <Transitions>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.15" />
+                    <BoxShadowsTransition Property="BoxShadow" Duration="0:0:0.15" />
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="ItemsControl.layout-single Border.note">
+            <Setter Property="BorderThickness" Value="0,0,0,1" />
+            <Setter Property="CornerRadius" Value="0" />
+        </Style>
+        <!-- 合并后高度随内容增长，避免隐藏同科目的后续作业。 -->
+        <Style Selector="ItemsControl.layout-block Border.note">
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+        <!--
+            区块排布里 **每个区块各自定高**。
+            自适应面板会把同一行的项摆成等宽，于是某个科目作业多了、或者内容字号大了，
+            同行的其它科目也跟着被拉长——看着像「垒成一样高的一排」。VerticalAlignment=Top
+            让每个区块只占自己内容的高度，行内其余位置留空；行高本身仍是这一行最高那块决定的，
+            这是换行排布的固有代价，不想要就选「单列」排布。
+        -->
+        <Style Selector="ItemsControl.layout-single ContentPresenter,
+                         ItemsControl.layout-block ContentPresenter">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="VerticalContentAlignment" Value="Top" />
+            <Setter Property="VerticalAlignment" Value="Top" />
+        </Style>
+
+        <!--
+            科目区块的排序手柄：区块标题行左边的小字形，是「抓这里拖」的手感提示。
+            光标与提示挂在它身上（回放期间它整颗隐藏），真正接手势的是整条标题行。
+            背景平时全透明、指针悬停才浅浅显一下。
+        -->
+        <Style Selector="Border.sort-handle">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Padding" Value="2 0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Border.sort-handle:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+        </Style>
+        <!-- 正被拎起来的那一块：稍稍淡一点、加一层投影，看着像离开了板面。 -->
+        <Style Selector="Border.note.dragging">
+            <Setter Property="Opacity" Value="0.9" />
+            <Setter Property="BoxShadow" Value="0 6 16 0 #33000000" />
+        </Style>
+
+        <!--
+            作业条上的截止日期。不叠 caption 类：两个类都设 Foreground 时谁赢取决于样式来源的顺序，
+            不如让这一行自己说清楚。**字号也不写在这里**——它来自设置里的「作业条小字字号」，
+            由模板上的局部绑定给（局部值比样式优先级高）。过期换成系统警示色——「该交了」必须
+            一眼看见；万一主题里没有这个画刷，Foreground 退回继承色，文字照样看得见。
+        -->
+        <Style Selector="TextBlock.note-due">
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        </Style>
+        <Style Selector="TextBlock.note-due.overdue">
+            <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+        </Style>
+
+        <!--
+            二级分类的小标题：只做一条柔和的行，不再套一层卡片边框，免得两层框叠在一起。
+            字号来自设置（模板上按项绑），颜色用次要前景色——比一级科目名弱一档，
+            需要更醒目就在设置里把「分类标题字号」调大。
+        -->
+        <Style Selector="TextBlock.board-subsection-title">
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+            <Setter Property="Margin" Value="2 2 2 0" />
+        </Style>
+        <!-- 有标题的分类，作业往右缩一点，一眼看出是从属关系；没标题的那批不缩，直接贴科目名。 -->
+        <Style Selector="ItemsControl.board-notes.titled">
+            <Setter Property="Margin" Value="10 0 0 0" />
+        </Style>
+
+        <!--
+            右上角的导出图片按钮：平时透明，悬停才浅浅显一下，免得在板子上多一个「按钮块」。
+            点击穿透开着或板上没有作业时整颗隐藏（见 ViewModel.CanExportImage）。
+        -->
+        <Style Selector="Button.board-export">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="6" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.board-export:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+        </Style>
+    </UserControl.Styles>
+    <Grid RowDefinitions="Auto,*">
+        <!--
+            顶部这一行不再有工具条：排布切换搬进「设置 → 作业板」（下拉框），
+            「布置作业」与时空回放的入口都在主界面标题栏上（见 MainView）。
+            左边是回放提示（明确告诉用户现在看的不是实时板子），右边是导出图片按钮；
+            导出导的是下面那块内容容器，不受视口限制。
+        -->
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="12 0 12 8">
+            <TextBlock Grid.Column="0"
+                       Classes="caption"
+                       VerticalAlignment="Center"
+                       IsVisible="{Binding IsReplaying}"
+                       Text="{Binding ReplayBanner}" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                <!-- 导出结果的轻提示：几秒后自己消失，成功失败都只闪一下。 -->
+                <TextBlock Classes="caption"
+                           VerticalAlignment="Center"
+                           IsVisible="{Binding HasExportHint}"
+                           Text="{Binding ExportHint}" />
+                <Button Classes="board-export"
+                        IsVisible="{Binding CanExportImage}"
+                        ToolTip.Tip="{x:Static core:Resources.Board_ExportImageTip}"
+                        automation:AutomationProperties.Name="{x:Static core:Resources.Board_ExportImage}"
+                        Click="OnExportImageClick">
+                    <TextBlock FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                               Text="{x:Static icons:FluentIcons.SaveFilled}" />
+                </Button>
+            </StackPanel>
+        </Grid>
+
+        <!--
+            横向**不滚动**：区块排布靠自适应面板按可用宽度分栏，页面上永远不应该出现横向滚动条；
+            显式写死也免得平台默认值变了之后，面板拿到的是无限宽度、整排挤成一行。
+        -->
+        <ScrollViewer Grid.Row="1"
+                      HorizontalScrollBarVisibility="Disabled">
+            <!--
+                这块 StackPanel 就是「板子上的内容」：导出图片导的是它（不是视口、更不是整窗），
+                超出窗口的部分也完整导得出来。单列的限宽按这一层的实际宽度算，
+                所以宽度挂钩也挂在它身上（见 BoardPage.OnBoardContentSizeChanged）。
+            -->
+            <StackPanel x:Name="BoardContent"
+                        Margin="12 0 12 12"
+                        Spacing="8"
+                        SizeChanged="OnBoardContentSizeChanged">
+                <StackPanel Spacing="4" IsVisible="{Binding !HasNotes}">
+                    <TextBlock Classes="h2" Text="{x:Static core:Resources.Board_EmptyTitle}" />
+                    <TextBlock Classes="caption" Text="{Binding EmptyHint}" />
+                </StackPanel>
+
+                <!--
+                    回放暂停时补一句说明：这时看不到删除按钮，是因为历史快照不能改。
+                -->
+                <TextBlock Classes="caption"
+                           IsVisible="{Binding IsReplaying}"
+                           Text="{x:Static core:Resources.Board_ReplayReadOnlyHint}" />
+                <!--
+                    单列：一张便签占一行、便签之间用分隔线，整列限宽居中（宽度由代码给，
+                    见 BoardPage.SingleColumnMaxWidth）。不限宽的话，宽窗口下每一条都会
+                    从左边一路拉到最右边，读起来费劲、屏幕上还放不下几条。
+                -->
+                <ItemsControl x:Name="SingleColumnList"
+                              Classes="layout-single"
+                              HorizontalAlignment="Center"
+                              IsVisible="{Binding IsSingleColumnLayout}"
+                              ItemsSource="{Binding SubjectGroups}" ItemTemplate="{StaticResource BoardSubjectTemplate}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><StackPanel Spacing="8" /></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+                <!--
+                    区块：等宽区块，一块块放进当前最矮的那一列（矮块下面不留空，后面的块补上来）。
+                    区块宽度不是定值，由 controls:AdaptiveWrapPanel 按当前可用宽度现算——窗口变宽就多
+                    排一列、每列跟着变窄，窗口窄了自己收成一列，所以同一套面板在大小窗口里都合身。
+                    最小宽度是用户在「设置 → 作业板 → 区块宽度」里填的那个值（默认 300），
+                    宽度上限按它推出来。
+                -->
+                <ItemsControl Classes="layout-block"
+                              IsVisible="{Binding IsBlockLayout}"
+                              ItemsSource="{Binding SubjectGroups}" ItemTemplate="{StaticResource BoardSubjectTemplate}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <controls:AdaptiveWrapPanel MinItemWidth="{Binding BlockMinWidth}"
+                                                        MaxItemWidth="{Binding BlockMaxWidth}"
+                                                        Spacing="8"
+                                                        LineSpacing="8" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

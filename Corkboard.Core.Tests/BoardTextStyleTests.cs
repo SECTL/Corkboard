@@ -1,4 +1,5 @@
-using Corkboard.Core.Models.Board;
+
+using Corkboard.Core.Board;
 
 namespace Corkboard.Core.Tests;
 

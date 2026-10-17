@@ -1,0 +1,44 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:core="using:Corkboard.Core.Langs.Common"
+        xmlns:icons="using:Corkboard.Core.Icons"
+        mc:Ignorable="d" d:DesignWidth="56" d:DesignHeight="56"
+        x:Class="Corkboard.Views.BoardDockWindow"
+        Title="Corkboard"
+        WindowDecorations="None"
+        CanResize="False"
+        ShowInTaskbar="False"
+        ShowActivated="False"
+        Topmost="True"
+        Width="56" Height="56"
+        Background="Transparent">
+    <!--
+        作业板「收起」之后留在屏幕上的那颗小按钮。窗口就是按钮本身那么大、无边框、透明、置顶，
+        不进任务栏、出现时不抢焦点（ShowActivated=False）——它只是桌面上的一颗开关，
+        不该像普通窗口那样把焦点从用户正在用的程序手里抢走。
+
+        位置与大小由 BoardDockService 按「设置 → 作业板 → 收纳」算：窗口刚好包住按钮，
+        Width/Height 与 CornerRadius 都在 SetButtonDiameter 里跟着按钮大小一起改，
+        所以这里不写死尺寸，只给一个初始值（100% 时是 56）。
+    -->
+    <Button x:Name="ExpandButton"
+            Width="56" Height="56"
+            Padding="0"
+            CornerRadius="28"
+            Classes="accent"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch"
+            HorizontalContentAlignment="Center"
+            VerticalContentAlignment="Center"
+            ToolTip.Tip="{x:Static core:Resources.Board_Dock_Expand}"
+            Click="ExpandButton_OnClick">
+        <TextBlock x:Name="ExpandIcon"
+                   Text="{x:Static icons:FluentIcons.BoardFilled}"
+                   FontSize="24"
+                   FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center" />
+    </Button>
+</Window>

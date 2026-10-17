@@ -15,6 +15,7 @@ using Microsoft.Extensions.Logging;
 using Corkboard.Core;
 using Corkboard.Core.Abstraction;
 using Corkboard.Core.Attributes;
+using Corkboard.Core.Board;
 using Corkboard.Core.Controls;
 using Corkboard.Core.Enums;
 using Corkboard.Core.Enums.Configs;
@@ -33,12 +34,17 @@ using Corkboard.Services.Auth;
 using Corkboard.Services.Cloud;
 using Corkboard.Services.Desktop;
 using Corkboard.Services.Ipc;
+using Corkboard.Services.Board;
+using Corkboard.Services.Homework;
 using Corkboard.Services.Ui;
 using Corkboard.ViewModels;
-using Corkboard.ViewModels.MainPages;
+using Corkboard.ViewModels.MainPages.Board;
+using Corkboard.ViewModels.MainPages.Homework;
 using Corkboard.ViewModels.SettingsPages;
+using Corkboard.ViewModels.SettingsPages.Board;
 using Corkboard.Views;
-using Corkboard.Views.MainPages;
+using Corkboard.Views.MainPages.Board;
+using Corkboard.Views.MainPages.Homework;
 using Corkboard.Views.SettingsPages.About;
 using Corkboard.Views.SettingsPages.Account;
 using Corkboard.Views.SettingsPages.Board;
@@ -173,29 +179,52 @@ public partial class App : Application
         // 时空回放：入口在主界面标题栏，作业列表在主页面，两边靠这个单例共享状态。
         services.AddSingleton<BoardReplayService>();
 
-        // 作业自动清理：到点把过期作业收进回收目录（规则与判定都在 Core 的 BoardCleanupService）。
-        services.AddHostedService<BoardCleanupHostedService>();
+        // 作业板备份：清空作业板之前自动把 data/board/ 整份存到 data/backups/ 下。
+        services.AddSingleton<BoardBackupService>();
+
+        // 导出作业板图片：只渲染板子上面那块内容，不带上窗口底色与桌面。
+        services.AddSingleton<BoardExportService>();
+
+        // 收纳：把主窗口收成屏幕角落的一颗展开按钮，位置与大小来自「设置 → 作业板 → 收纳」。
+        services.AddSingleton<BoardDockService>();
+
+        // 作业自动清理：到点给过期作业打 CleanedAt 标记、从主页面上拿掉（规则与判定都在 Core 的 HomeworkCleanupService）。
+        services.AddHostedService<HomeworkCleanupHostedService>();
 
         // ViewModel 与页面。AddMainPage/AddSettingsPage 同时写导航注册表和键控 DI，两者必须成对。
         services.AddTransient<MainViewModel>();
         services.AddTransient<SettingsViewModel>();
         services.AddTransient<BoardPageViewModel>();
-        services.AddTransient<BoardAssignmentFormViewModel>();
+        services.AddTransient<HomeworkAssignmentFormViewModel>();
         services.AddTransient<BasicSettingsPageViewModel>();
         services.AddTransient<BoardSettingsPageViewModel>();
         services.AddTransient<AppearanceSettingsPageViewModel>();
         services.AddTransient<AboutSettingsPageViewModel>();
         services.AddTransient<AccountSettingsPageViewModel>();
         services.AddTransient<CloudSyncSettingsPageViewModel>();
+        services.AddTransient<BoardSectionsSettingsPageViewModel>();
+        services.AddTransient<HandwritingSettingsPageViewModel>();
+        services.AddTransient<QuickTagsSettingsPageViewModel>();
+        services.AddTransient<CleanupSettingsPageViewModel>();
+        services.AddTransient<DockSettingsPageViewModel>();
 
         // 主页面标题的默认文案；用户可以在作业板设置里改成别的名字。
         services.AddMainPage<BoardPage>(CR.Board_Title);
 
         services.AddSettingsPageSeparator();
-        // 设置项直接平铺：注册表按 GroupId 是否为空决定「顶层项」还是「可折叠分组」，
-        // 单页分组只会在侧边栏多一个 chevron，所以这里不建分组（要归组再加 AddGroup + groupId）。
+        // 通用设置是顶层项：注册表按 GroupId 是否为空决定「顶层项」还是「可折叠分组」。
         services.AddSettingsPage<BasicSettingsPage>(CR.Settings_Basic_Title);
-        services.AddSettingsPage<BoardSettingsPage>(CR.Settings_Board_Title);
+
+        // 「作业板」是可折叠分组：分组本身出现在侧边栏，点开才是它底下的各个设置子页。
+        // 子页的 PageInfo 上必须带同一个 groupId，否则会被当成顶层项平铺出去。
+        services.AddGroup(new PageGroupInfo(CR.Settings_Board_Group, "settings.board.group", FluentIcons.BoardFilled));
+        services.AddSettingsPage<BoardSettingsPage>(CR.Settings_Board_General_Title);
+        services.AddSettingsPage<BoardSectionsSettingsPage>(CR.Settings_Board_Sections_Title);
+        services.AddSettingsPage<HandwritingSettingsPage>(CR.Settings_Board_Handwriting_Title);
+        services.AddSettingsPage<QuickTagsSettingsPage>(CR.Settings_Board_QuickTags_Title);
+        services.AddSettingsPage<CleanupSettingsPage>(CR.Settings_Board_Cleanup_Title);
+        services.AddSettingsPage<DockSettingsPage>(CR.Settings_Board_Dock_Title);
+
         services.AddSettingsPage<AppearanceSettingsPage>(CR.Settings_Appearance_Title);
         services.AddSettingsPage<AccountSettingsPage>(CR.Settings_Account_Title);
         services.AddSettingsPage<CloudSyncSettingsPage>(CR.Settings_Cloud_Title);
@@ -421,6 +450,13 @@ public partial class App : Application
         Resources[@"AppFontFamily"] = fontFamily;
         Resources[@"ContentControlThemeFontFamily"] = fontFamily;
         Resources[@"AppFontWeight"] = ToFontWeight(settings.FontWeight);
+
+        // 界面字号：AppFontSize 供 Core 的 :is(Window) 样式直接继承，
+        // ControlContentThemeFontSize 是 Fluent 控件模板取字号的键——只改窗口 FontSize
+        // 管不到模板里写死的字号，两个一起写才能让标签、按钮、菜单跟着一起变。
+        var uiFontSize = AppearanceSettingsConfig.ClampUiFontSize(settings.UiFontSize);
+        Resources[@"AppFontSize"] = uiFontSize;
+        Resources[@"ControlContentThemeFontSize"] = uiFontSize;
     }
 
     private static FontWeight ToFontWeight(FontWeightMode mode)

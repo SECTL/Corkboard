@@ -3,9 +3,10 @@ using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Corkboard.Core.Attributes;
-using Corkboard.Core.Enums.Configs;
+using Corkboard.Core.Board;
 using Corkboard.Core.Models.SubConfigs.General;
 using Corkboard.Core.Models.SubConfigs.Board;
+using Corkboard.ViewModels.MainPages.Board;
 using Corkboard.Core.Services.Config;
 using CR = Corkboard.Core.Langs.Common.Resources;
 

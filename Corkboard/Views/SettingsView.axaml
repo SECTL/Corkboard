@@ -50,7 +50,7 @@
                     <Image Width="18"
                            Height="18"
                            VerticalAlignment="Center"
-                           Source="/Assets/Icons/board-icon-1024.png"
+                           Source="/Assets/Icons/Corkboard.png"
                            RenderOptions.BitmapInterpolationMode="HighQuality" />
 
                     <TextBlock Text="Corkboard"

@@ -5,11 +5,13 @@ using Avalonia.Markup.Xaml;
 using Corkboard.Core.Abstraction;
 using Corkboard.Core.Attributes;
 using Corkboard.Core.Icons;
-using Corkboard.ViewModels.SettingsPages;
+using Corkboard.ViewModels.SettingsPages.Board;
+using Corkboard.ViewModels.SettingsPages.Homework;
+using Corkboard.ViewModels.SettingsPages.RichText;
 
 namespace Corkboard.Views.SettingsPages.Board;
 
-[PageInfo("settings.board", FluentIcons.BoardFilled)]
+[PageInfo("settings.board", FluentIcons.BoardFilled, "settings.board.group")]
 public partial class BoardSettingsPage : UserControl
 {
     public BoardSettingsPage()
@@ -44,19 +46,19 @@ public partial class BoardSettingsPage : UserControl
     /// <summary>色板行的按钮：色块对象在行的 DataContext 上。</summary>
     private void OnMovePaletteColorUpClick(object? sender, RoutedEventArgs e)
     {
-        if (sender is Control { DataContext: BoardPaletteColorItem item })
+        if (sender is Control { DataContext: RichTextPaletteColorItem item })
             ViewModel?.MovePaletteColorUp(item);
     }
 
     private void OnMovePaletteColorDownClick(object? sender, RoutedEventArgs e)
     {
-        if (sender is Control { DataContext: BoardPaletteColorItem item })
+        if (sender is Control { DataContext: RichTextPaletteColorItem item })
             ViewModel?.MovePaletteColorDown(item);
     }
 
     private void OnDeletePaletteColorClick(object? sender, RoutedEventArgs e)
     {
-        if (sender is Control { DataContext: BoardPaletteColorItem item })
+        if (sender is Control { DataContext: RichTextPaletteColorItem item })
             ViewModel?.RemovePaletteColor(item);
     }
 

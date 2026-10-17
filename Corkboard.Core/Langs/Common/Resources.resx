@@ -765,4 +765,247 @@
   <data name="Settings_Cloud_UsageAvailable" xml:space="preserve">
     <value>剩余 {0}</value>
   </data>
+  <data name="Settings_Board_Group" xml:space="preserve">
+    <value>作业板</value>
+  </data>
+  <data name="Settings_Board_General_Title" xml:space="preserve">
+    <value>常规</value>
+  </data>
+  <data name="Settings_Board_Sections_Title" xml:space="preserve">
+    <value>科目与分类</value>
+  </data>
+  <data name="Settings_Board_Handwriting_Title" xml:space="preserve">
+    <value>手写</value>
+  </data>
+  <data name="Settings_Board_QuickTags_Title" xml:space="preserve">
+    <value>快捷标签</value>
+  </data>
+  <data name="Settings_Board_Cleanup_Title" xml:space="preserve">
+    <value>清理与备份</value>
+  </data>
+  <data name="Settings_Board_Dock_Title" xml:space="preserve">
+    <value>收纳</value>
+  </data>
+  <data name="Settings_Board_Sections_Categories" xml:space="preserve">
+    <value>二级分类</value>
+  </data>
+  <data name="Settings_Board_Sections_CategoriesDescription" xml:space="preserve">
+    <value>每个科目下面可以再分几个小标题，布置作业时按科目挑</value>
+  </data>
+  <data name="Settings_Board_Sections_AddCategory" xml:space="preserve">
+    <value>新建分类</value>
+  </data>
+  <data name="Settings_Board_Sections_NewCategoryPlaceholder" xml:space="preserve">
+    <value>分类名称</value>
+  </data>
+  <data name="Settings_Board_Sections_NoCategories" xml:space="preserve">
+    <value>这个科目还没有分类</value>
+  </data>
+  <data name="Settings_Board_Sections_DeleteCategory" xml:space="preserve">
+    <value>删除分类</value>
+  </data>
+  <data name="Settings_Board_Sections_RenameCategory" xml:space="preserve">
+    <value>重命名</value>
+  </data>
+  <data name="Settings_Board_Sections_DeleteConfirmTitle" xml:space="preserve">
+    <value>删除分类</value>
+  </data>
+  <data name="Settings_Board_Sections_DeleteConfirmMessage" xml:space="preserve">
+    <value>删掉后，这个分类里的作业会回到科目下面</value>
+  </data>
+  <data name="Settings_Board_Handwriting_PenWidth" xml:space="preserve">
+    <value>笔画粗细</value>
+  </data>
+  <data name="Settings_Board_Handwriting_PenWidthDescription" xml:space="preserve">
+    <value>默认笔头多粗，画的时候还能再调</value>
+  </data>
+  <data name="Settings_Board_Handwriting_EraserWidth" xml:space="preserve">
+    <value>橡皮粗细</value>
+  </data>
+  <data name="Settings_Board_Handwriting_EraserWidthDescription" xml:space="preserve">
+    <value>默认擦掉的范围，擦的时候还能再调</value>
+  </data>
+  <data name="Settings_Board_Handwriting_Colors" xml:space="preserve">
+    <value>笔迹颜色</value>
+  </data>
+  <data name="Settings_Board_Handwriting_ColorsDescription" xml:space="preserve">
+    <value>手写工具栏上那排常用色，最多放 5 个</value>
+  </data>
+  <data name="Settings_Board_Handwriting_FollowTheme" xml:space="preserve">
+    <value>默认颜色跟随主题</value>
+  </data>
+  <data name="Settings_Board_QuickTags_List" xml:space="preserve">
+    <value>标签列表</value>
+  </data>
+  <data name="Settings_Board_QuickTags_ListDescription" xml:space="preserve">
+    <value>布置作业时点一下，就把标签插到内容里</value>
+  </data>
+  <data name="Settings_Board_QuickTags_Add" xml:space="preserve">
+    <value>新增标签</value>
+  </data>
+  <data name="Settings_Board_QuickTags_Placeholder" xml:space="preserve">
+    <value>比如「已批改」</value>
+  </data>
+  <data name="Settings_Board_QuickTags_Delete" xml:space="preserve">
+    <value>删除标签</value>
+  </data>
+  <data name="Settings_Board_QuickTags_Empty" xml:space="preserve">
+    <value>还没有快捷标签</value>
+  </data>
+  <data name="Settings_Board_QuickTags_CountFormat" xml:space="preserve">
+    <value>已加 {0} 个，最多 {1} 个</value>
+  </data>
+  <data name="Settings_Board_ClearAll" xml:space="preserve">
+    <value>清空作业板</value>
+  </data>
+  <data name="Settings_Board_ClearAllDescription" xml:space="preserve">
+    <value>把板子上的作业全清掉，清之前会自动备份</value>
+  </data>
+  <data name="Settings_Board_ClearAllConfirmTitle" xml:space="preserve">
+    <value>清空作业板</value>
+  </data>
+  <data name="Settings_Board_ClearAllConfirmMessage" xml:space="preserve">
+    <value>板上的作业会全部清掉，清之前会自动备份一份</value>
+  </data>
+  <data name="Settings_Board_ClearAllDone" xml:space="preserve">
+    <value>已清空，备份留在 {0}</value>
+  </data>
+  <data name="Settings_Board_ClearAllFailed" xml:space="preserve">
+    <value>备份没成功，这次没有清空</value>
+  </data>
+  <data name="Settings_Board_Backups" xml:space="preserve">
+    <value>自动备份</value>
+  </data>
+  <data name="Settings_Board_BackupsDescription" xml:space="preserve">
+    <value>清空作业板之前会先存一份，留在这里</value>
+  </data>
+  <data name="Settings_Board_BackupsEmpty" xml:space="preserve">
+    <value>还没有备份</value>
+  </data>
+  <data name="Settings_Board_BackupItemFormat" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="Settings_Board_Dock_Enabled" xml:space="preserve">
+    <value>收纳作业板</value>
+  </data>
+  <data name="Settings_Board_Dock_EnabledDescription" xml:space="preserve">
+    <value>打开后标题栏有「收纳」，收起来只留一颗小按钮</value>
+  </data>
+  <data name="Settings_Board_Dock_Anchor" xml:space="preserve">
+    <value>按钮位置</value>
+  </data>
+  <data name="Settings_Board_Dock_AnchorDescription" xml:space="preserve">
+    <value>点示意图上的圆点，选按钮停在哪个位置</value>
+  </data>
+  <data name="Settings_Board_Dock_AnchorHint" xml:space="preserve">
+    <value>点圆点选位置</value>
+  </data>
+  <data name="Settings_Board_Dock_Offset" xml:space="preserve">
+    <value>离屏幕边的距离</value>
+  </data>
+  <data name="Settings_Board_Dock_OffsetDescription" xml:space="preserve">
+    <value>按钮停的地方离选中那条边有多远</value>
+  </data>
+  <data name="Settings_Board_Dock_OffsetX" xml:space="preserve">
+    <value>左右距离</value>
+  </data>
+  <data name="Settings_Board_Dock_OffsetY" xml:space="preserve">
+    <value>上下距离</value>
+  </data>
+  <data name="Settings_Board_Dock_Scale" xml:space="preserve">
+    <value>按钮大小</value>
+  </data>
+  <data name="Settings_Board_Dock_ScaleDescription" xml:space="preserve">
+    <value>屏幕上的按钮按这个比例放大或缩小</value>
+  </data>
+  <data name="Settings_Board_Dock_Reset" xml:space="preserve">
+    <value>恢复默认位置</value>
+  </data>
+  <data name="Board_ExportImage" xml:space="preserve">
+    <value>导出图片</value>
+  </data>
+  <data name="Board_ExportImageTip" xml:space="preserve">
+    <value>把板子上的作业导成一张图片</value>
+  </data>
+  <data name="Board_ExportSuccess" xml:space="preserve">
+    <value>图片已保存</value>
+  </data>
+  <data name="Board_ExportFailed" xml:space="preserve">
+    <value>导出失败，请稍后重试</value>
+  </data>
+  <data name="Board_ExportNoContent" xml:space="preserve">
+    <value>板上还没有作业</value>
+  </data>
+  <data name="Board_HandwritingTab" xml:space="preserve">
+    <value>手写</value>
+  </data>
+  <data name="Board_TextTab" xml:space="preserve">
+    <value>打字</value>
+  </data>
+  <data name="Board_HandwritingPen" xml:space="preserve">
+    <value>画笔</value>
+  </data>
+  <data name="Board_HandwritingEraser" xml:space="preserve">
+    <value>橡皮</value>
+  </data>
+  <data name="Board_HandwritingColor" xml:space="preserve">
+    <value>颜色</value>
+  </data>
+  <data name="Board_HandwritingWidth" xml:space="preserve">
+    <value>粗细</value>
+  </data>
+  <data name="Board_HandwritingEraserWidth" xml:space="preserve">
+    <value>橡皮粗细</value>
+  </data>
+  <data name="Board_HandwritingUndo" xml:space="preserve">
+    <value>撤销一笔</value>
+  </data>
+  <data name="Board_HandwritingClear" xml:space="preserve">
+    <value>清除</value>
+  </data>
+  <data name="Board_HandwritingHint" xml:space="preserve">
+    <value>在下面写，写错了可以撤销</value>
+  </data>
+  <data name="Board_HandwritingEmpty" xml:space="preserve">
+    <value>先写点什么再布置</value>
+  </data>
+  <data name="Board_Section" xml:space="preserve">
+    <value>二级分类</value>
+  </data>
+  <data name="Board_SectionNone" xml:space="preserve">
+    <value>不分类</value>
+  </data>
+  <data name="Board_SectionAdd" xml:space="preserve">
+    <value>新建分类</value>
+  </data>
+  <data name="Board_SectionAddPlaceholder" xml:space="preserve">
+    <value>分类名称</value>
+  </data>
+  <data name="Board_QuickTags" xml:space="preserve">
+    <value>快捷标签</value>
+  </data>
+  <data name="Settings_Appearance_UiFontSize" xml:space="preserve">
+    <value>界面字号</value>
+  </data>
+  <data name="Settings_Appearance_UiFontSizeDescription" xml:space="preserve">
+    <value>整个界面的字都按这个大小显示，看不清就调大</value>
+  </data>
+  <data name="Board_Dock_Expand" xml:space="preserve">
+    <value>展开作业板</value>
+  </data>
+  <data name="Board_Dock_Collapse" xml:space="preserve">
+    <value>把作业板收起来</value>
+  </data>
+  <data name="Settings_Board_SectionFontSize" xml:space="preserve">
+    <value>分类标题字号</value>
+  </data>
+  <data name="Settings_Board_SectionFontSizeDescription" xml:space="preserve">
+    <value>分类小标题的字号，调大后分层更清楚</value>
+  </data>
+  <data name="Common_Refresh" xml:space="preserve">
+    <value>刷新</value>
+  </data>
+  <data name="Settings_Board_Sections_DuplicateName" xml:space="preserve">
+    <value>已经有同名分类了，换一个名字</value>
+  </data>
 </root>

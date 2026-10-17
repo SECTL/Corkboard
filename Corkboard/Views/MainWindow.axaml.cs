@@ -158,13 +158,15 @@ public partial class MainWindow : FAAppWindow
         if (!_isMainScope)
             return;
 
-        if (IAppHost.TryGetService<MainConfigHandler>() is { } handler)
+        // 收纳会把主窗口 Hide 掉、之后还会 Show 回来，而 Opened 每次显示都会发一遍。
+        // 所以这几条订阅都要能重复执行而不重复挂：已经挂过就不再挂一次。
+        if (IAppHost.TryGetService<MainConfigHandler>() is { } handler && _watchedBasicSettings is null)
         {
             _watchedBasicSettings = handler.Data.Basic;
             _watchedBasicSettings.PropertyChanged += OnBasicSettingsChanged;
         }
 
-        if (IAppHost.TryGetService<PageOverlayService>() is { } overlay)
+        if (IAppHost.TryGetService<PageOverlayService>() is { } overlay && _watchedOverlay is null)
         {
             _watchedOverlay = overlay;
             _watchedOverlay.PropertyChanged += OnOverlayChanged;
@@ -178,7 +180,10 @@ public partial class MainWindow : FAAppWindow
         CaptureNormalPosition();
 
         // 锁定徽标是独立窗口，主窗口移动/缩放/最小化时它不会跟着动，得自己跟。
+        // 先退订再挂（置底/取消置底、收纳的隐藏/显示都会反复走 OnOpened），避免同一条处理器挂两遍。
+        PositionChanged -= OnWindowPositionChanged;
         PositionChanged += OnWindowPositionChanged;
+        ScalingChanged -= OnWindowScalingChanged;
         ScalingChanged += OnWindowScalingChanged;
     }
 
@@ -626,6 +631,58 @@ public partial class MainWindow : FAAppWindow
         SyncLockBadge();
     }
 
+    #region 收纳
+
+    /// <summary>
+    ///     「收纳」：把主窗口藏起来，交给 <see cref="BoardDockService" /> 的浮钮。
+    ///     <para>
+    ///         锁定徽标是本窗口的属主窗口，主窗口藏起来后它不该单独留在屏幕上，所以先收掉；
+    ///         展开时由 <see cref="ShowFromDock" /> 里那次 <see cref="SyncLockBadge" /> 再摆回来。
+    ///     </para>
+    ///     <para>
+    ///         位置不在这里动：<see cref="Window.Hide" /> 不改变 <see cref="Window.Position" />，
+    ///         原位置由窗口自己保留，展开后还是收起来之前的样子。
+    ///     </para>
+    /// </summary>
+    public void HideForDock()
+    {
+        if (!IsVisible)
+            return;
+
+        // 只是藏起来，不销毁：点浮钮展开时会接着用（与 SyncLockBadge 里隐藏徽标的做法一致）。
+        if (_lockWindow is { IsVisible: true } badge)
+            badge.Hide();
+
+        Hide();
+    }
+
+    /// <summary>
+    ///     从收纳状态展开：把主窗口显示回来，并重放置底 / 点击穿透 / 不透明度。
+    ///     <para>
+    ///         为什么要重放：Windows 在隐藏（以及最小化）时会把 <c>WS_EX_LAYERED</c> /
+    ///         <c>WS_EX_TRANSPARENT</c> 摘掉，置底窗口的 <c>WS_CHILD</c> 也会失效，这些样式不会自己回来。
+    ///         不重放就会出现「设置里写着穿透 / 半透明 / 置底，界面也这么显示，窗口实际全部失效」。
+    ///         重放是幂等的（与最小化还原那条路同一套，见 <see cref="OnWindowPropertyChanged" />）。
+    ///     </para>
+    /// </summary>
+    public void ShowFromDock()
+    {
+        if (!IsVisible)
+            Show();
+
+        if (WindowState == WindowState.Minimized)
+            WindowState = WindowState.Normal;
+
+        Activate();
+
+        ApplyPinToDesktop();
+        ApplyClickThrough();
+        ApplyWindowOpacity();
+        SyncLockBadge();
+    }
+
+    #endregion
+
     #region 锁定徽标
 
     /// <summary>
@@ -641,7 +698,12 @@ public partial class MainWindow : FAAppWindow
         if (!_isMainScope)
             return;
 
-        var shouldShow = _isLockBadgeRequested && _hasBeenShown && WindowState != WindowState.Minimized;
+        // 主窗口自己被收纳藏起来时（IsVisible=false）徽标也不能露头：它是本窗口的属主窗口，
+        // 主窗口不在屏幕上、徽标单独挂着就成了一颗点不回去的孤儿按钮。
+        var shouldShow = _isLockBadgeRequested
+                         && _hasBeenShown
+                         && IsVisible
+                         && WindowState != WindowState.Minimized;
 
         if (!shouldShow)
         {

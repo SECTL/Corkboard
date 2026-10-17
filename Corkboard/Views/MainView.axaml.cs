@@ -12,12 +12,13 @@ using Corkboard.Core;
 using Corkboard.Core.Abstraction;
 using Corkboard.Core.Attributes;
 using Corkboard.Core.Controls;
-using Corkboard.Core.Enums.Configs;
+using Corkboard.Core.Board;
 using Corkboard.Core.Services;
 using Corkboard.Helpers;
+using Corkboard.Services.Board;
 using Corkboard.Services.Ui;
 using Corkboard.ViewModels;
-using Corkboard.Views.MainPages;
+using Corkboard.Views.MainPages.Homework;
 
 namespace Corkboard.Views;
 
@@ -92,6 +93,12 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
 
     /// <summary>页面级弹层的宿主状态，绑定在壳的根 Panel 上。</summary>
     public PageOverlayService Overlay { get; } = IAppHost.GetService<PageOverlayService>();
+
+    /// <summary>
+    ///     收纳服务（单例）：「收纳」按钮把主窗口交给它藏起来、换一颗浮在屏幕上的小按钮。
+    ///     窗口显隐与浮钮的摆放都在服务里，壳只负责在按钮被点时把自己所在的窗口递过去。
+    /// </summary>
+    public BoardDockService Dock { get; } = IAppHost.GetService<BoardDockService>();
 
     /// <summary>
     ///     时空回放状态。标题栏的控制条直接绑它；主页面也从同一个单例读，
@@ -661,12 +668,22 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
         if (Replay.IsActive)
             return;
 
-        Overlay.Show(new BoardAssignmentForm());
+        Overlay.Show(new HomeworkAssignmentForm());
     }
 
     private void ReplayEnterButton_OnClick(object? sender, RoutedEventArgs e) => Replay.Enter();
 
     private void ReplayExitButton_OnClick(object? sender, RoutedEventArgs e) => Replay.Exit();
+
+    /// <summary>
+    ///     「收纳」：把主窗口收起来，屏幕上只留一颗展开浮钮（见 <see cref="BoardDockService" />）。
+    ///     <para>
+    ///         窗口的隐藏 / 恢复、浮钮的显隐与位置都在服务里：视图只把当前所在的窗口递过去，
+    ///         不直接碰 <c>Window.Hide</c>，也不管浮钮窗口长什么样。
+    ///     </para>
+    /// </summary>
+    private void DockButton_OnClick(object? sender, RoutedEventArgs e) =>
+        Dock.Collapse(TopLevel.GetTopLevel(this) as Window);
 
     /// <summary>
     ///     「锁定窗口」：开点击穿透。只写配置——窗口样式与显隐都由 <c>MainWindow</c> 订阅配置变化后处理，

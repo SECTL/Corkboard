@@ -22,7 +22,7 @@
                                    Description="{x:Static core:Resources.Settings_About_Description}"
                                    IsExpanded="True">
                 <fa:FASettingsExpander.IconSource>
-                    <fa:FAImageIconSource Source="/Assets/Icons/board-icon-1024.png" />
+                    <fa:FAImageIconSource Source="/Assets/Icons/Corkboard.png" />
                 </fa:FASettingsExpander.IconSource>
                 <fa:FASettingsExpander.Footer>
                     <TextBlock VerticalAlignment="Center"

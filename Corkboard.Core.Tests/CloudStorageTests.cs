@@ -1,6 +1,7 @@
 using System.IO.Compression;
-using Corkboard.Core.Models.Board;
 using Corkboard.Core.Services.Cloud;
+using Corkboard.Core.Homework;
+using Corkboard.Core.Notes;
 
 namespace Corkboard.Core.Tests;
 
@@ -423,7 +424,7 @@ public class CloudStorageTests
             Note(theirs, day.AddMinutes(5), day.AddMinutes(6), "另一台设备布置的")
         };
 
-        var merged = BoardNoteMerge.Merge(local, remote);
+        var merged = HomeworkNoteMerge.Merge(local, remote);
 
         Assert.Equal(3, merged.Notes.Count);
         Assert.Equal(1, merged.AddedFromRemote);
@@ -448,7 +449,7 @@ public class CloudStorageTests
         var localOnly = Guid.NewGuid();
         var shared = Guid.NewGuid();
 
-        var merged = BoardNoteMerge.Merge(
+        var merged = HomeworkNoteMerge.Merge(
             [Note(localOnly, day, day.AddMinutes(1), "本机的"), Note(shared, day, day.AddMinutes(1), "两边一样")],
             [Note(shared, day, day, "云端旧的那份")]);
 
@@ -466,7 +467,7 @@ public class CloudStorageTests
         var day = new DateTimeOffset(2026, 10, 11, 9, 0, 0, TimeSpan.FromHours(8));
         var id = Guid.NewGuid();
 
-        var merged = BoardNoteMerge.Merge(
+        var merged = HomeworkNoteMerge.Merge(
             [Note(id, day, day.AddMinutes(1), "做完了")],
             [Note(id, day, day.AddMinutes(20), "做完了", day.AddMinutes(20))]);
 
@@ -476,7 +477,7 @@ public class CloudStorageTests
 
     /// <summary>
     ///     同一侧自己带重复时并集不会把它复制出去：历史数据里同一个 Id 可能落在两个日期文件里
-    ///     （<c>BoardNoteStore.LoadAll</c> 按文件读、不按 Id 去重），这时每个 Id 只留更新的那一份。
+    ///     （<c>NoteStore.LoadAll</c> 按文件读、不按 Id 去重），这时每个 Id 只留更新的那一份。
     /// </summary>
     [Fact]
     public void Merge_DeduplicatesRepeatedIdsInsideOneSide()
@@ -484,14 +485,14 @@ public class CloudStorageTests
         var day = new DateTimeOffset(2026, 10, 11, 9, 0, 0, TimeSpan.FromHours(8));
         var id = Guid.NewGuid();
 
-        var fromLocal = BoardNoteMerge.Merge(
+        var fromLocal = HomeworkNoteMerge.Merge(
             [Note(id, day, day.AddMinutes(1), "本机旧的那份"), Note(id, day, day.AddMinutes(30), "本机新的那份")],
             []);
 
         Assert.Equal("本机新的那份", Assert.Single(fromLocal.Notes).Content);
         Assert.False(fromLocal.TookAnythingFromRemote);
 
-        var fromRemote = BoardNoteMerge.Merge(
+        var fromRemote = HomeworkNoteMerge.Merge(
             [],
             [Note(id, day, day.AddMinutes(1), "云端旧的那份"), Note(id, day, day.AddMinutes(20), "云端新的那份")]);
 
@@ -508,7 +509,7 @@ public class CloudStorageTests
         var day = new DateTimeOffset(2026, 10, 11, 9, 0, 0, TimeSpan.FromHours(8));
         var due = new DateOnly(2026, 10, 12);
 
-        var merged = BoardNoteMerge.Merge(
+        var merged = HomeworkNoteMerge.Merge(
             [Note(Guid.NewGuid(), day, day.AddMinutes(1), "<p>P12–15</p>", subject: "数学", dueDate: due)],
             [Note(Guid.NewGuid(), day, day.AddMinutes(40), "<p>P12–15</p>", subject: "数学", dueDate: due)]);
 
@@ -524,15 +525,15 @@ public class CloudStorageTests
         var day = new DateTimeOffset(2026, 10, 11, 9, 0, 0, TimeSpan.FromHours(8));
         var due = new DateOnly(2026, 10, 12);
 
-        var otherSubject = BoardNoteMerge.Merge(
+        var otherSubject = HomeworkNoteMerge.Merge(
             [Note(Guid.NewGuid(), day, day, "<p>P12–15</p>", subject: "数学", dueDate: due)],
             [Note(Guid.NewGuid(), day, day, "<p>P12–15</p>", subject: "物理", dueDate: due)]);
 
-        var otherDueDate = BoardNoteMerge.Merge(
+        var otherDueDate = HomeworkNoteMerge.Merge(
             [Note(Guid.NewGuid(), day, day, "<p>P12–15</p>", subject: "数学", dueDate: due)],
             [Note(Guid.NewGuid(), day, day, "<p>P12–15</p>", subject: "数学", dueDate: due.AddDays(1))]);
 
-        var otherDay = BoardNoteMerge.Merge(
+        var otherDay = HomeworkNoteMerge.Merge(
             [Note(Guid.NewGuid(), day, day, "<p>P12–15</p>", subject: "数学", dueDate: due)],
             [Note(Guid.NewGuid(), day.AddDays(1), day.AddDays(1), "<p>P12–15</p>", subject: "数学", dueDate: due)]);
 
@@ -542,7 +543,7 @@ public class CloudStorageTests
         Assert.Equal(0, otherSubject.RemovedDuplicates + otherDueDate.RemovedDuplicates + otherDay.RemovedDuplicates);
     }
 
-    private static BoardNote Note(Guid id, DateTimeOffset created, DateTimeOffset updated, string content,
+    private static Note Note(Guid id, DateTimeOffset created, DateTimeOffset updated, string content,
         DateTimeOffset? cleanedAt = null, string subject = "", DateOnly? dueDate = null)
         => new()
         {

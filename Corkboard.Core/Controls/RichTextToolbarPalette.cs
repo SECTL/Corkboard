@@ -1,6 +1,6 @@
 using Avalonia.Media;
 using AvaloniaRichEditor.Controls;
-using Corkboard.Core.Models.Board;
+using Corkboard.Core.RichText;
 
 namespace Corkboard.Core.Controls;
 
@@ -15,7 +15,7 @@ namespace Corkboard.Core.Controls;
 ///     <para>
 ///         库对数组有要求：<c>null</c> 与**空数组**会被直接拒绝（分别抛 <c>ArgumentNullException</c> /
 ///         <c>ArgumentException</c>），元素按 <c>Color.Parse</c> 解析、解析不了的画成黑色而不是报错。
-///         我们这边的颜色都过 <see cref="BoardPalette.Normalize" />（丢全透明、去重、截断、空则回退默认色），
+///         我们这边的颜色都过 <see cref="RichTextPalette.Normalize" />（丢全透明、去重、截断、空则回退默认色），
 ///         本来就不会空，这里再兜一层：真为空就原样留着库自带的 40 色色板。
 ///     </para>
 /// </summary>

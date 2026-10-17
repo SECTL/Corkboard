@@ -95,6 +95,29 @@
                     </ComboBox>
                 </fa:FASettingsExpander.Footer>
             </fa:FASettingsExpander>
+
+            <!--
+                界面字号：窗口、对话框与控件主题一起跟着变，改完立刻生效。
+                滑杆绑的是草稿属性 + 400ms 防抖提交（见 ViewModel），不要直接双向绑配置。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Appearance_UiFontSize}"
+                                   Description="{x:Static core:Resources.Settings_Appearance_UiFontSizeDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                        <Slider Width="220"
+                                VerticalAlignment="Center"
+                                Minimum="{Binding UiFontSizeMinimum}"
+                                Maximum="{Binding UiFontSizeMaximum}"
+                                TickFrequency="1"
+                                IsSnapToTickEnabled="True"
+                                Value="{Binding UiFontSizeDraft, Mode=TwoWay}" />
+                        <TextBlock MinWidth="28"
+                                   VerticalAlignment="Center"
+                                   TextAlignment="Right"
+                                   Text="{Binding UiFontSizeText}" />
+                    </StackPanel>
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

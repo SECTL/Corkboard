@@ -1,0 +1,126 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fa="using:FluentAvalonia.UI.Controls"
+             xmlns:icons="using:Corkboard.Core.Icons"
+             xmlns:vm="using:Corkboard.ViewModels.SettingsPages.Board"
+             xmlns:core="using:Corkboard.Core.Langs.Common"
+             mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="450"
+             x:Class="Corkboard.Views.SettingsPages.Board.BoardSectionsSettingsPage"
+             x:DataType="vm:BoardSectionsSettingsPageViewModel">
+    <ScrollViewer>
+        <!--
+            设置卡：Header 是设置项名称，Description 是简介，Footer 放控件；
+            内容多的（科目清单、分类列表）放在卡片内容区，见 Core/Styles/StylesBase.axaml。
+        -->
+        <StackPanel Classes="page-container">
+            <!-- 页标题画在 page-container 里：它才和设置卡同宽、同左边缘，并随卡片一起滚动。 -->
+            <TextBlock Margin="0 4 0 0"
+                       FontWeight="Normal"
+                       Text="{x:Static core:Resources.Settings_Board_Sections_Title}"
+                       Theme="{StaticResource TitleTextBlockStyle}" />
+
+            <!--
+                科目清单：逗号分隔的草稿，失焦 / 回车时提交并落盘（科目是业务数据，不走配置管道）。
+                不用按回车也能提交——离开页面时 Unloaded 会再提交一次。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_Subjects}"
+                                   Description="{x:Static core:Resources.Settings_Board_SubjectsDescription}">
+                <TextBox Margin="0 4 0 0"
+                         MinWidth="240"
+                         HorizontalAlignment="Stretch"
+                         Text="{Binding SubjectsDraft, Mode=TwoWay}"
+                         LostFocus="OnSubjectsLostFocus"
+                         KeyDown="OnSubjectsKeyDown"
+                         ToolTip.Tip="{x:Static core:Resources.Settings_Board_Subjects}" />
+            </fa:FASettingsExpander>
+
+            <!--
+                二级分类：每个科目一块，列出它下面已定义的分类（就地改名 / 删除），最后一行新建。
+                分类顺序就是显示顺序；删除只是把定义删掉，里面的作业会回到科目下面。
+                失败（重名之类）时卡片顶部出现一句提示，不用弹窗。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_Sections_Categories}"
+                                   Description="{x:Static core:Resources.Settings_Board_Sections_CategoriesDescription}">
+                <StackPanel Margin="0 4 0 0" Spacing="12">
+                    <TextBlock Classes="caption"
+                               IsVisible="{Binding HasSectionHint}"
+                               Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                               Text="{Binding SectionHint}" />
+
+                    <ItemsControl ItemsSource="{Binding SubjectItems}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:BoardSectionsSubjectItem">
+                                <StackPanel Margin="0 0 0 10" Spacing="6">
+                                    <TextBlock FontWeight="Bold"
+                                               TextWrapping="Wrap"
+                                               Text="{Binding DisplayName}" />
+                                    <TextBlock Classes="caption"
+                                               IsVisible="{Binding !HasCategories}"
+                                               Text="{x:Static core:Resources.Settings_Board_Sections_NoCategories}" />
+
+                                    <!-- 已定义的分类：一行一个，输入框直接改名（失焦 / 回车提交）。 -->
+                                    <ItemsControl ItemsSource="{Binding Categories}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:BoardSectionsCategoryItem">
+                                                <Grid Margin="0 0 0 4"
+                                                      ColumnDefinitions="*,Auto"
+                                                      ColumnSpacing="8">
+                                                    <TextBox Grid.Column="0"
+                                                             Text="{Binding NameDraft, Mode=TwoWay}"
+                                                             LostFocus="OnCategoryNameLostFocus"
+                                                             KeyDown="OnCategoryNameKeyDown"
+                                                             ToolTip.Tip="{x:Static core:Resources.Settings_Board_Sections_RenameCategory}" />
+                                                    <Button Grid.Column="1"
+                                                            Background="Transparent"
+                                                            BorderThickness="0"
+                                                            Padding="6"
+                                                            VerticalAlignment="Center"
+                                                            FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                                            Content="{x:Static icons:FluentIcons.DeleteFilled}"
+                                                            ToolTip.Tip="{x:Static core:Resources.Settings_Board_Sections_DeleteCategory}"
+                                                            Click="OnDeleteCategoryClick" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <!-- 新建分类：输入框里有字才能点按钮；回车也能建。 -->
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                        <TextBox Grid.Column="0"
+                                                 Text="{Binding NewCategoryDraft, Mode=TwoWay}"
+                                                 PlaceholderText="{x:Static core:Resources.Settings_Board_Sections_NewCategoryPlaceholder}"
+                                                 KeyDown="OnNewCategoryKeyDown" />
+                                        <Button Grid.Column="1"
+                                                VerticalAlignment="Center"
+                                                IsEnabled="{Binding CanAddCategory}"
+                                                Content="{x:Static core:Resources.Settings_Board_Sections_AddCategory}"
+                                                Click="OnAddCategoryClick" />
+                                    </Grid>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </fa:FASettingsExpander>
+
+            <!--
+                分类标题字号：只影响科目区块里那层小标题，牌面分层靠它区分。
+                绑草稿而不是配置：NumericUpDown 每动一下就会写一次 settings.json。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_SectionFontSize}"
+                                   Description="{x:Static core:Resources.Settings_Board_SectionFontSizeDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <NumericUpDown MinWidth="130"
+                                   Minimum="9"
+                                   Maximum="32"
+                                   Increment="1"
+                                   FormatString="0"
+                                   Value="{Binding SectionFontSizeDraft, Mode=TwoWay}"
+                                   LostFocus="OnSectionFontSizeLostFocus" />
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

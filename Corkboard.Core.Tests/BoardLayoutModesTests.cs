@@ -1,5 +1,6 @@
 using Corkboard.Core.Enums.Configs;
 
+using Corkboard.Core.Board;
 namespace Corkboard.Core.Tests;
 
 /// <summary>

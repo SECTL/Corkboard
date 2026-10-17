@@ -1,0 +1,500 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Corkboard.ViewModels.MainPages.Homework"
+             xmlns:core="using:Corkboard.Core.Langs.Common"
+             xmlns:controls="using:Corkboard.Core.Controls"
+             xmlns:icons="using:Corkboard.Core.Icons"
+             xmlns:rte="using:AvaloniaRichEditor.Controls"
+             mc:Ignorable="d" d:DesignWidth="620" d:DesignHeight="520"
+             x:Class="Corkboard.Views.MainPages.Homework.HomeworkAssignmentForm"
+             x:DataType="vm:HomeworkAssignmentFormViewModel">
+    <UserControl.Styles>
+        <!--
+            作业内容框：所见即所得编辑区 / 手写画布的外壳。
+            比卡片背景浅一档、带一圈描边，一眼看出这里可以点、点了能写字；
+            编辑控件与工具栏都不画底色，框的圆角、内边距由这层壳决定。
+        -->
+        <Style Selector="Border.content-box">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Padding" Value="8" />
+        </Style>
+
+        <!--
+            「打字 / 手写」分段切换：一颗外框把两颗 ToggleButton 包成一组，
+            选中的那颗由主题的 accent 底色 + 反白文字标出来（Fluent 的 ToggleButton 本来就是
+            「选中 = 强调色底」，这里把它的圆角/内边距收窄成段状）。
+        -->
+        <Style Selector="Border.mode-switch">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="2" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+        </Style>
+        <Style Selector="ToggleButton.mode-tab">
+            <Setter Property="MinWidth" Value="76" />
+            <Setter Property="Padding" Value="12 4" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        </Style>
+        <Style Selector="ToggleButton.mode-tab:checked">
+            <Setter Property="Foreground" Value="{DynamicResource TextOnAccentFillColorPrimaryBrush}" />
+            <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+        </Style>
+        <!-- 模板里那个 ContentPresenter 才是真正画底色的：现版本的 Button/ToggleButton 主题用 TemplateBinding，
+             但多写一条不亏（模板里没有这个名字时这页样式会被静默忽略，不会有运行时错误）。 -->
+        <Style Selector="ToggleButton.mode-tab:checked /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+        </Style>
+
+        <!-- 快捷标签 chip：矮矮一颗胶囊，点一下选中 / 取消选中（选中的贴到作业上，不写进正文）。 -->
+        <Style Selector="ToggleButton.chip">
+            <Setter Property="Padding" Value="10 2" />
+            <Setter Property="MinHeight" Value="26" />
+            <Setter Property="CornerRadius" Value="13" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        </Style>
+        <Style Selector="ToggleButton.chip:checked">
+            <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextOnAccentFillColorPrimaryBrush}" />
+        </Style>
+        <Style Selector="ToggleButton.chip:checked /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+        </Style>
+
+        <!-- 手写工具栏的常用色圆点：透明底按钮里放一颗纯色圆，选中的那颗外面套一圈文字色描边。 -->
+        <Style Selector="Button.color-dot">
+            <Setter Property="Width" Value="26" />
+            <Setter Property="Height" Value="26" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="13" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Border.dot">
+            <Setter Property="Width" Value="16" />
+            <Setter Property="Height" Value="16" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+        </Style>
+        <Style Selector="Border.dot.selected">
+            <Setter Property="BorderBrush" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+        </Style>
+
+        <!-- 新建分类的输入框出错（空名 / 写盘失败）时只把边框标红，不弹新东西。 -->
+        <Style Selector="TextBox.invalid">
+            <Setter Property="BorderBrush" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+    </UserControl.Styles>
+
+    <Panel>
+        <!--
+            卡片：宽度有下限也有上限；高度上限按「看得见的宿主」算——壳内弹层用窗口内容区、
+            独立窗口（SizeToContent）用屏幕工作区，都只占其 70%（见 code-behind 的 ApplySheetSizeLimits）。
+            内容比上限还高时卡片自己滚动，不会把窗口一直撑下去，也不会长成一条竖长的板子。
+            ⚠️ 整张卡片标 WindowDragGesture.Suppress：卡片的手势归表单自己，壳的整窗长按拖动让出去
+            （壳在弹层打开时本来就已让出，这里是显式声明，别删）。
+        -->
+        <Border Classes="sheet"
+                x:Name="Sheet"
+                MinWidth="380"
+                MaxWidth="720"
+                controls:WindowDragGesture.Suppress="True">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel x:Name="SheetBody" Spacing="12">
+                    <!--
+                        卡片没有标题栏：第一行就是表单标题（布置作业 / 编辑作业）。
+                        **整张卡片都是拖动面**——按住卡片上任何非输入控件的地方都能把它拖走，
+                        所以标题行不再放抓手图标：那是「只有这里能拖」的暗示，反而让人以为别处拖不动。
+                        光标与提示留在标题行上，作为「能动」的唯一提示（见 code-behind 的 OnSheetPressed）。
+                    -->
+                    <TextBlock Classes="h2"
+                               Background="Transparent"
+                               Cursor="SizeAll"
+                               ToolTip.Tip="{x:Static core:Resources.Board_MoveSheet}"
+                               Text="{Binding FormTitle}" />
+
+                    <!--
+                        内容形态切换：打字（富文本）/ 手写（画布）。
+                        两颗 ToggleButton 的 IsChecked 只做单向绑定（源是只读的 IsTextMode / IsHandwritingMode），
+                        点击走命令：这样点已经选中的那颗时它不会被自己取消勾选（命令里会再通知一遍，见 ViewModel 的 SetMode）。
+                    -->
+                    <Border Classes="mode-switch">
+                        <StackPanel Orientation="Horizontal" Spacing="2">
+                            <ToggleButton Classes="mode-tab"
+                                          IsChecked="{Binding IsTextMode, Mode=OneWay}"
+                                          Command="{Binding SwitchToTextCommand}"
+                                          Content="{x:Static core:Resources.Board_TextTab}" />
+                            <ToggleButton Classes="mode-tab"
+                                          IsChecked="{Binding IsHandwritingMode, Mode=OneWay}"
+                                          Command="{Binding SwitchToHandwritingCommand}"
+                                          Content="{x:Static core:Resources.Board_HandwritingTab}" />
+                        </StackPanel>
+                    </Border>
+
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                        <TextBlock Grid.Column="0" Classes="caption" VerticalAlignment="Center"
+                                   Text="{x:Static core:Resources.Board_SubjectLabel}" />
+                        <ComboBox Grid.Column="1"
+                                  HorizontalAlignment="Stretch"
+                                  ItemsSource="{Binding SubjectOptions}"
+                                  SelectedItem="{Binding DraftSubject, Mode=TwoWay}"
+                                  PlaceholderText="{x:Static core:Resources.Board_SubjectLabel}" />
+                    </Grid>
+
+                    <!--
+                        二级分类：选项 = 「不分类」+ 当前科目的分类（ViewModel 里按科目重建，见 RefreshSectionOptions）；
+                        右边那颗小按钮展开一行输入，新建的分类直接存进 board.json（IBoardService.AddSection）。
+                    -->
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                        <TextBlock Grid.Column="0" Classes="caption" VerticalAlignment="Center"
+                                   Text="{x:Static core:Resources.Board_Section}" />
+                        <ComboBox Grid.Column="1"
+                                  HorizontalAlignment="Stretch"
+                                  ItemsSource="{Binding SectionOptions}"
+                                  SelectedItem="{Binding SelectedSectionOption, Mode=TwoWay}"
+                                  PlaceholderText="{x:Static core:Resources.Board_SectionNone}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:HomeworkSectionOption">
+                                    <TextBlock Text="{Binding Display}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <Button Grid.Column="2"
+                                VerticalAlignment="Center"
+                                IsEnabled="{Binding CanAddSection}"
+                                Command="{Binding BeginAddSectionCommand}"
+                                ToolTip.Tip="{x:Static core:Resources.Board_SectionAdd}">
+                            <TextBlock Text="{x:Static icons:FluentIcons.AddFilled}"
+                                       FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                       VerticalAlignment="Center" />
+                        </Button>
+                    </Grid>
+
+                    <!-- 新建分类的输入行：默认收着，点上面那颗 + 才展开（回车 = 确定，Esc = 收起，见 code-behind）。 -->
+                    <Grid ColumnDefinitions="*,Auto,Auto"
+                          ColumnSpacing="8"
+                          IsVisible="{Binding IsAddingSection}">
+                        <TextBox Grid.Column="0"
+                                 Text="{Binding NewSectionName, Mode=TwoWay}"
+                                 PlaceholderText="{x:Static core:Resources.Board_SectionAddPlaceholder}"
+                                 Classes.invalid="{Binding HasSectionInputError}"
+                                 KeyDown="OnSectionNameKeyDown" />
+                        <Button Grid.Column="1"
+                                Command="{Binding ConfirmAddSectionCommand}"
+                                Content="{x:Static core:Resources.Board_SectionAdd}" />
+                        <Button Grid.Column="2"
+                                Command="{Binding CancelAddSectionCommand}"
+                                Content="{x:Static core:Resources.Common_Cancel}" />
+                    </Grid>
+
+                    <!--
+                        截止日期：默认填明天（见 ViewModel 构造期），可以改、也可以清掉。
+                        判过期只看这个日期，没填的作业永远不会被自动清理。
+                        用 Avalonia 自带的 CalendarDatePicker 点一下挑日历，省事，也不会再出现
+                        「2 月 31 日」这种要靠夹才能收场的非法输入。
+                        选择器自己没地方把已挑的日期退回空值（点日历只会换一天），
+                        所以「不设截止日期」这个状态得由旁边那个清除按钮给。
+                        ⚠️ 它是 TemplatedControl，不在「按住卡片拖动」的排除表里，必须自己加进去
+                        （见 code-behind 的 IsInteractiveSource），否则按在它身上会被当成拖卡片。
+                    -->
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                        <TextBlock Grid.Column="0"
+                                   Classes="caption"
+                                   VerticalAlignment="Center"
+                                   Text="{x:Static core:Resources.Settings_Board_DueDate}" />
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                            <CalendarDatePicker VerticalAlignment="Center"
+                                                HorizontalAlignment="Left"
+                                                PlaceholderText="{x:Static core:Resources.Settings_Board_DueDateNone}"
+                                                SelectedDate="{Binding DueDateDraft, Mode=TwoWay}"
+                                                ToolTip.Tip="{x:Static core:Resources.Settings_Board_DueDateDescription}" />
+                            <Button VerticalAlignment="Center"
+                                    IsVisible="{Binding HasDueDate}"
+                                    Command="{Binding ClearDueDateCommand}"
+                                    Content="{x:Static core:Resources.Settings_Board_DueDateClear}" />
+                        </StackPanel>
+                    </Grid>
+
+                    <!--
+                        作业内容：**一个框、两种形态**（打字 / 手写），两种形态共用这一块的高度。
+                        - 打字：库自带的格式工具栏常驻在编辑区正上方（Target 由 code-behind 指到 ContentEditor），
+                          加粗/斜体/字号/颜色这些点一下就对选中的文字生效；工具栏下面那排是快捷标签，
+                          只在设过标签时出现，点一下往正文追一个段落。
+                        - 手写：工具栏换成画笔/橡皮、常用色、笔粗、橡皮粗细（仅橡皮时可见）、撤销、清除，
+                          下面就是手写画布（Corkboard.Core.Controls.HandwritingCanvas）。
+                        两个尺寸都写死（而不是跟内容自适应），因为「能手动拉」这件事本身就要求尺寸是用户定的；
+                        能拉多大由 code-behind 的 ResolveContentSizeLimit 算，右下角手柄拉的是整个区块。
+                        Grid 跟着内容区走（HorizontalAlignment=Left），手柄才会贴在区块右下角而不是卡片右下角。
+                    -->
+                    <Grid x:Name="ContentArea"
+                          Width="540"
+                          Height="300"
+                          MinWidth="340"
+                          MinHeight="150"
+                          HorizontalAlignment="Left">
+                        <Border x:Name="ContentBoxChrome"
+                                Classes="content-box"
+                                ClipToBounds="True">
+                            <Grid RowDefinitions="Auto,*" RowSpacing="6">
+                                <!-- 打字形态的工具栏 + 快捷标签。 -->
+                                <StackPanel Grid.Row="0"
+                                            Spacing="6"
+                                            IsVisible="{Binding IsTextMode}">
+                                    <!--
+                                        工具栏常驻在编辑框上方。Target 在 code-behind 里指过去（工具栏不是编辑控件的
+                                        可视祖先，XAML 里绑不上）。文件菜单与页面/缩放控件都关掉：这是便签，不是打印稿；
+                                        它自带的文案只有英文/韩文，中文表也在 code-behind 里注册。
+                                    -->
+                                    <rte:RichEditorToolbar x:Name="EditorToolbar"
+                                                           ToolbarLevel="Normal"
+                                                           ShowFileActions="False"
+                                                           ShowPageControls="False"
+                                                           Focusable="False" />
+
+                                    <!-- 快捷标签 chips：整行在「手写模式」或「设置里没配标签」时隐藏（见 ShowQuickTags）。
+                                         标签最多 8 颗，卡片窄时会折行（外面用 Grid 的 * 列把可用宽度给到 WrapPanel）。 -->
+                                    <Grid ColumnDefinitions="Auto,*"
+                                          ColumnSpacing="6"
+                                          IsVisible="{Binding ShowQuickTags}">
+                                        <TextBlock Classes="caption"
+                                                   VerticalAlignment="Center"
+                                                   Text="{x:Static core:Resources.Board_QuickTags}" />
+                                        <ItemsControl Grid.Column="1"
+                                                      ItemsSource="{Binding QuickTagOptions}"
+                                                      VerticalAlignment="Center">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel Orientation="Horizontal" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:HomeworkQuickTagOption">
+                                                    <!-- 选中的高亮由 IsChecked 自己切（样式在上面的 ToggleButton.chip）。 -->
+                                                    <ToggleButton Classes="chip"
+                                                                  Margin="0 0 6 4"
+                                                                  Content="{Binding Text}"
+                                                                  IsChecked="{Binding IsSelected, Mode=TwoWay}" />
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </Grid>
+                                </StackPanel>
+
+                                <!--
+                                    手写形态的工具栏。一排 WrapPanel：窗口窄 / 卡片窄时自己折行，不会把按钮挤没。
+                                    画笔与橡皮是两颗互斥的 ToggleButton（IsChecked 单向绑 + 命令，理由同上面的模式切换）；
+                                    橡皮时多出一条橡皮粗细，提示文案垫在最后。
+                                -->
+                                <WrapPanel Grid.Row="0"
+                                           IsVisible="{Binding IsHandwritingMode}">
+                                    <ToggleButton Classes="mode-tab"
+                                                  Margin="0 0 6 4"
+                                                  MinWidth="0"
+                                                  IsChecked="{Binding IsPenMode, Mode=OneWay}"
+                                                  Command="{Binding SwitchToPenCommand}"
+                                                  Content="{x:Static core:Resources.Board_HandwritingPen}" />
+                                    <ToggleButton Classes="mode-tab"
+                                                  Margin="0 0 6 4"
+                                                  MinWidth="0"
+                                                  IsChecked="{Binding IsEraserMode, Mode=OneWay}"
+                                                  Command="{Binding SwitchToEraserCommand}"
+                                                  Content="{x:Static core:Resources.Board_HandwritingEraser}" />
+
+                                    <Button Margin="0 0 6 4"
+                                            x:Name="UndoStrokeButton"
+                                            IsEnabled="False"
+                                            Click="OnHandwritingUndoClick"
+                                            Content="{x:Static core:Resources.Board_HandwritingUndo}" />
+                                    <Button Margin="0 0 12 4"
+                                            Click="OnHandwritingClearClick"
+                                            Content="{x:Static core:Resources.Board_HandwritingClear}" />
+
+                                    <!-- 常用色：设置里配的那几个（HandwritingStyle 的默认 5 色打底）。 -->
+                                    <StackPanel Orientation="Horizontal"
+                                                VerticalAlignment="Center"
+                                                Margin="0 0 12 4">
+                                        <TextBlock Classes="caption"
+                                                   VerticalAlignment="Center"
+                                                   Margin="0 0 4 0"
+                                                   Text="{x:Static core:Resources.Board_HandwritingColor}" />
+                                        <ItemsControl ItemsSource="{Binding HandwritingColorOptions}"
+                                                      VerticalAlignment="Center">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Orientation="Horizontal" Spacing="2" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:HandwritingColorOption">
+                                                    <Button Classes="color-dot"
+                                                            ToolTip.Tip="{Binding ToolTip}"
+                                                            Command="{Binding Owner.SelectPenColorCommand}"
+                                                            CommandParameter="{Binding}">
+                                                        <Border Classes="dot"
+                                                                Classes.selected="{Binding IsSelected}"
+                                                                Background="{Binding Brush}" />
+                                                    </Button>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+
+                                    <!-- 笔粗：滑杆 + 数值（整数档，夹取规则见 HandwritingStyle）。 -->
+                                    <StackPanel Orientation="Horizontal"
+                                                VerticalAlignment="Center"
+                                                Margin="0 0 12 4">
+                                        <TextBlock Classes="caption"
+                                                   VerticalAlignment="Center"
+                                                   Margin="0 0 4 0"
+                                                   Text="{x:Static core:Resources.Board_HandwritingWidth}" />
+                                        <Slider Width="96"
+                                                VerticalAlignment="Center"
+                                                Minimum="{Binding PenWidthMinimum}"
+                                                Maximum="{Binding PenWidthMaximum}"
+                                                TickFrequency="1"
+                                                IsSnapToTickEnabled="True"
+                                                Value="{Binding PenWidth, Mode=TwoWay}" />
+                                        <TextBlock Classes="caption"
+                                                   VerticalAlignment="Center"
+                                                   MinWidth="20"
+                                                   Margin="4 0 0 0"
+                                                   Text="{Binding PenWidth, StringFormat='{}{0:0}'}" />
+                                    </StackPanel>
+
+                                    <!-- 橡皮粗细：只有拿着橡皮时才出现（用它是为了看清擦到哪了）。 -->
+                                    <StackPanel Orientation="Horizontal"
+                                                VerticalAlignment="Center"
+                                                Margin="0 0 12 4"
+                                                IsVisible="{Binding IsEraserMode}">
+                                        <TextBlock Classes="caption"
+                                                   VerticalAlignment="Center"
+                                                   Margin="0 0 4 0"
+                                                   Text="{x:Static core:Resources.Board_HandwritingEraserWidth}" />
+                                        <Slider Width="96"
+                                                VerticalAlignment="Center"
+                                                Minimum="{Binding EraserWidthMinimum}"
+                                                Maximum="{Binding EraserWidthMaximum}"
+                                                TickFrequency="1"
+                                                IsSnapToTickEnabled="True"
+                                                Value="{Binding EraserWidth, Mode=TwoWay}" />
+                                        <TextBlock Classes="caption"
+                                                   VerticalAlignment="Center"
+                                                   MinWidth="20"
+                                                   Margin="4 0 0 0"
+                                                   Text="{Binding EraserWidth, StringFormat='{}{0:0}'}" />
+                                    </StackPanel>
+
+                                    <TextBlock Classes="caption"
+                                               VerticalAlignment="Center"
+                                               Margin="0 0 0 4"
+                                               Text="{x:Static core:Resources.Board_HandwritingHint}" />
+                                </WrapPanel>
+
+                                <!-- 打字形态的编辑区。 -->
+                                <Grid Grid.Row="1" IsVisible="{Binding IsTextMode}">
+                                    <!--
+                                        编辑区。默认字号 / 默认颜色由控件在装载时补成行内样式（见 RichTextBlock），
+                                        回写进 DraftHtml 的是摘掉这层样式之后的干净 HTML，可以原样落盘。
+                                        标题栏与页面边框都关掉：这是便签，不是打印稿。
+                                        ⚠️ AllowTables="False"：作业内容不要表格。库的工具栏是看
+                                        Target.AllowTables 决定那个「插入表格」按钮显不显示的（RichEditorToolbar.cs:1876-1886），
+                                        关掉它同时也挡住 InsertTable / InsertInlineTable 与「粘贴制表符文本自动转表格」，
+                                        **但只是不让新建**——已经存在表格的旧作业照样正常显示（渲染路径不看这个开关）。
+                                        控件自己不滚动也不裁剪（它把整篇一次画出来），所以外面必须套一层滚动条，
+                                        否则内容一长就压到卡片其它地方去了；宽度也得有约束，默认按整张 A4 纸宽排。
+                                    -->
+                                    <ScrollViewer HorizontalScrollBarVisibility="Disabled"
+                                                  VerticalScrollBarVisibility="Auto"
+                                                  Cursor="IBeam">
+                                        <controls:RichTextBlock x:Name="ContentEditor"
+                                                                IsReadOnly="False"
+                                                                AllowTables="False"
+                                                                ShowFormattingMenu="False"
+                                                                ShowPageBoundaries="False"
+                                                                ShowPageNumbers="False"
+                                                                Html="{Binding DraftHtml, Mode=TwoWay}"
+                                                                DefaultContentFontSize="{Binding BaseFontSize}"
+                                                                DefaultContentColor="{Binding BaseColor}" />
+                                    </ScrollViewer>
+                                </Grid>
+
+                                <!-- 手写形态的画布。空着时中间盖一句提示（IsHitTestVisible=False，笔照样能落）。 -->
+                                <Grid Grid.Row="1" IsVisible="{Binding IsHandwritingMode}">
+                                    <controls:HandwritingCanvas x:Name="HandwritingSurface"
+                                                                StrokeColor="{Binding PenColor}"
+                                                                StrokeWidth="{Binding PenWidth}"
+                                                                EraserWidth="{Binding EraserWidth}"
+                                                                IsEraser="{Binding IsEraserMode}"
+                                                                Data="{Binding HandwritingData, Mode=TwoWay}" />
+                                    <TextBlock IsVisible="{Binding ShowHandwritingHint}"
+                                               IsHitTestVisible="False"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               Classes="caption"
+                                               Text="{x:Static core:Resources.Board_HandwritingEmpty}" />
+                                </Grid>
+                            </Grid>
+                        </Border>
+
+                        <Border x:Name="ResizeGrip"
+                                Width="18"
+                                Height="18"
+                                Margin="0 0 3 3"
+                                HorizontalAlignment="Right"
+                                VerticalAlignment="Bottom"
+                                Background="Transparent"
+                                Cursor="BottomRightCorner"
+                                ToolTip.Tip="{x:Static core:Resources.Board_ResizeContent}"
+                                PointerPressed="OnResizeGripPressed"
+                                PointerMoved="OnResizeGripMoved"
+                                PointerReleased="OnResizeGripReleased"
+                                PointerCaptureLost="OnResizeGripCaptureLost">
+                            <Path Data="M7,15 L15,7 M11,15 L15,11"
+                                  Stroke="#88909090"
+                                  StrokeThickness="1.2"
+                                  HorizontalAlignment="Right"
+                                  VerticalAlignment="Bottom" />
+                        </Border>
+                    </Grid>
+
+                    <!--
+                        底部动作行。它是「卡片高度上限」里必须留出来的那一块（见 ResolveContentSizeLimit）：
+                        算上限时逐个量这行与其它行的实际高度，不靠「整高减内容区」倒推。
+                    -->
+                    <StackPanel x:Name="FooterActions"
+                                Orientation="Horizontal"
+                                HorizontalAlignment="Right"
+                                Spacing="8">
+                        <Button Command="{Binding CancelCommand}"
+                                Content="{x:Static core:Resources.Common_Cancel}" />
+                        <Button Command="{Binding ConfirmCommand}"
+                                IsEnabled="{Binding CanConfirm}"
+                                Content="{Binding ConfirmText}" />
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+    </Panel>
+</UserControl>

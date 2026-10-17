@@ -1,13 +1,16 @@
 using System.Text.Json;
 using Corkboard.Core.Abstraction;
-using Corkboard.Core.Abstraction.Services;
 using Corkboard.Core.Enums;
 using Corkboard.Core.Models;
-using Corkboard.Core.Models.Board;
-using Corkboard.Core.Services.Board;
 using Corkboard.Shared.Abstraction;
 using Microsoft.Extensions.Logging.Abstractions;
 using CR = Corkboard.Core.Langs.Common.Resources;
+
+using Corkboard.Core.Board;
+using Corkboard.Core.Homework;
+using Corkboard.Core.Notes;
+using Corkboard.Core.Notes.Legacy;
+using Corkboard.Core.RichText;
 
 namespace Corkboard.Core.Tests;
 
@@ -15,7 +18,7 @@ namespace Corkboard.Core.Tests;
 ///     作业板领域服务：作业走增删改方法、按创建日期分文件落盘，类型与科目是「直接改集合 + Save」的用法。
 ///     这里用内存配置服务替换磁盘实现，验证每次变更都会落盘一次。
 ///     <para>
-///         种子科目（<see cref="BoardConfig.Subjects" />）是从本地化资源里取的，界面语言一变名字就变，
+///         种子科目（<see cref="HomeworkConfig.Subjects" />）是从本地化资源里取的，界面语言一变名字就变，
 ///         而 <see cref="BoardService.SetSubjectOrder" /> 会把「不在科目清单里」的条目清掉。
 ///         所以凡是拿种子科目当预期值的地方都写成 <c>CR.Board_Seed_Subject_*</c>，绝不写死中文：
 ///         CI 跑在 en-US 的机器上，写死「数学」只会被当成已删除的科目而被过滤干净。
@@ -49,29 +52,29 @@ public class BoardServiceTests
     }
 
     /// <summary>内存里的作业存储：记住每次落盘的快照，不碰磁盘。</summary>
-    private sealed class InMemoryNoteStore : IBoardNoteStore
+    private sealed class InMemoryNoteStore : INoteStore
     {
-        private List<BoardNote> _notes = [];
+        private List<Note> _notes = [];
 
-        public LegacyBoardFile? LegacyFile { get; set; }
+        public LegacyNoteFile? LegacyFile { get; set; }
 
         public int SaveCount { get; private set; }
 
         public int LegacyDeleteCount { get; private set; }
 
-        public IReadOnlyList<BoardNote> LoadAll() => [.. _notes];
+        public IReadOnlyList<Note> LoadAll() => [.. _notes];
 
-        public void SaveAll(IReadOnlyCollection<BoardNote> notes)
+        public void SaveAll(IReadOnlyCollection<Note> notes)
         {
             SaveCount++;
             _notes = [.. notes];
         }
 
-        public LegacyBoardFile? TryLoadLegacy() => LegacyFile;
+        public LegacyNoteFile? TryLoadLegacy() => LegacyFile;
 
         public void TryDeleteLegacy() => LegacyDeleteCount++;
 
-        public void Seed(IEnumerable<BoardNote> notes) => _notes = [.. notes];
+        public void Seed(IEnumerable<Note> notes) => _notes = [.. notes];
     }
 
     private static (BoardService Service, InMemoryConfigService Config, InMemoryNoteStore Store) CreateService(
@@ -80,7 +83,7 @@ public class BoardServiceTests
     {
         config ??= new InMemoryConfigService();
         store ??= new InMemoryNoteStore();
-        var service = new BoardService(config, store, NullLogger<BoardService>.Instance);
+        var service = new BoardService(store, new HomeworkSectionCatalog(config), NullLogger<BoardService>.Instance);
         return (service, config, store);
     }
 
@@ -91,7 +94,7 @@ public class BoardServiceTests
         var changed = 0;
         service.Changed += (_, _) => changed++;
 
-        var note = service.Add(new BoardNote { Content = "数学", Subject = "数学" });
+        var note = service.Add(new Note { Content = "数学", Subject = "数学" });
 
         Assert.Single(service.Notes);
         Assert.Equal("数学", note.Content);
@@ -105,8 +108,8 @@ public class BoardServiceTests
     {
         var (service, _, _) = CreateService();
 
-        var first = service.Add(new BoardNote { Content = "一" });
-        var second = service.Add(new BoardNote { Content = "二" });
+        var first = service.Add(new Note { Content = "一" });
+        var second = service.Add(new Note { Content = "二" });
 
         Assert.Equal(0, first.Order);
         Assert.Equal(1, second.Order);
@@ -126,7 +129,7 @@ public class BoardServiceTests
     public void Remove_ExistingNote_PersistsAndRaisesChanged()
     {
         var (service, config, _) = CreateService();
-        var note = service.Add(new BoardNote { Content = "数学" });
+        var note = service.Add(new Note { Content = "数学" });
         var changed = 0;
         service.Changed += (_, _) => changed++;
 
@@ -140,7 +143,7 @@ public class BoardServiceTests
     public void Update_OverwritesEditableFieldsAndRefreshesUpdatedAt()
     {
         var (service, config, store) = CreateService();
-        var note = service.Add(new BoardNote
+        var note = service.Add(new Note
         {
             Content = "旧内容",
             Subject = "语文",
@@ -152,7 +155,7 @@ public class BoardServiceTests
         service.Changed += (_, _) => changed++;
 
         // 编辑表单交上来的是一份新对象：只带 Id 与改后的值。
-        var edited = new BoardNote
+        var edited = new Note
         {
             Id = note.Id,
             Content = "新内容",
@@ -174,10 +177,10 @@ public class BoardServiceTests
     {
         var (service, _, store) = CreateService();
         var createdAt = new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
-        var note = service.Add(new BoardNote { Content = "一", CreatedAt = createdAt });
-        service.Add(new BoardNote { Content = "二" });
+        var note = service.Add(new Note { Content = "一", CreatedAt = createdAt });
+        service.Add(new Note { Content = "二" });
 
-        service.Update(new BoardNote { Id = note.Id, Content = "一改" });
+        service.Update(new Note { Id = note.Id, Content = "一改" });
 
         var stored = service.Notes.Single(candidate => candidate.Id == note.Id);
         // 创建时间决定作业归档在哪一天的目录里，编辑绝不能碰它；Order 决定区块内顺序，同理。
@@ -190,10 +193,10 @@ public class BoardServiceTests
     public void Update_UnknownId_ReturnsFalseWithoutSaving()
     {
         var (service, config, store) = CreateService();
-        service.Add(new BoardNote { Content = "一" });
+        service.Add(new Note { Content = "一" });
         var savesBefore = config.SaveCount;
 
-        Assert.False(service.Update(new BoardNote { Content = "谁也不认识我" }));
+        Assert.False(service.Update(new Note { Content = "谁也不认识我" }));
         Assert.Equal(savesBefore, config.SaveCount);
         Assert.Single(service.Notes);
         Assert.Single(store.LoadAll());
@@ -212,7 +215,7 @@ public class BoardServiceTests
         // 科目清单里没有的条目直接清掉，不留脏数据。
         Assert.Equal([CR.Board_Seed_Subject_Math, CR.Board_Seed_Subject_Chinese], service.SubjectOrder);
 
-        var stored = (BoardConfig)config.Saved[new BoardConfig().ConfigFilePath];
+        var stored = (HomeworkConfig)config.Saved[new HomeworkConfig().ConfigFilePath];
         Assert.Equal([CR.Board_Seed_Subject_Math, CR.Board_Seed_Subject_Chinese], stored.SubjectOrder);
     }
 
@@ -246,7 +249,7 @@ public class BoardServiceTests
         var (service, config, store) = CreateService();
         service.SetSubjectOrder([CR.Board_Seed_Subject_Chinese, CR.Board_Seed_Subject_Math]);
 
-        var reloaded = new BoardService(config, store, NullLogger<BoardService>.Instance);
+        var reloaded = new BoardService(store, new HomeworkSectionCatalog(config), NullLogger<BoardService>.Instance);
 
         Assert.Equal([CR.Board_Seed_Subject_Chinese, CR.Board_Seed_Subject_Math], reloaded.SubjectOrder);
     }
@@ -270,7 +273,7 @@ public class BoardServiceTests
     {
         // 作业的定义（科目）与作业本身是两份存储：作业只认归档目录。
         var store = new InMemoryNoteStore();
-        var note = new BoardNote();
+        var note = new Note();
         note.SetHtmlContent("<p>来自归档目录</p>");
         store.Seed([note]);
 
@@ -278,11 +281,11 @@ public class BoardServiceTests
 
         Assert.Single(service.Notes);
         Assert.Equal("<p>来自归档目录</p>", service.Notes[0].Content);
-        Assert.Equal(BoardContentKind.Html, service.Notes[0].ContentKind);
+        Assert.Equal(RichTextContentKind.Html, service.Notes[0].ContentKind);
 
         // 落盘后配置对象上只有定义，不含作业。
         service.Save();
-        var stored = (BoardConfig)config.Saved[new BoardConfig().ConfigFilePath];
+        var stored = (HomeworkConfig)config.Saved[new HomeworkConfig().ConfigFilePath];
         var json = JsonSerializer.Serialize(stored, ConfigServiceBase.JsonOptions);
         Assert.Contains("\"subjects\"", json);
         Assert.DoesNotContain("\"notes\"", json);
@@ -292,16 +295,16 @@ public class BoardServiceTests
     public void Reload_ReadsBackWhatWasPersisted()
     {
         var (service, config, store) = CreateService();
-        var draft = new BoardNote();
+        var draft = new Note();
         draft.SetHtmlContent("<p>数学</p>");
         service.Add(draft);
         service.Save();
 
-        var reloaded = new BoardService(config, store, NullLogger<BoardService>.Instance);
+        var reloaded = new BoardService(store, new HomeworkSectionCatalog(config), NullLogger<BoardService>.Instance);
 
         Assert.Single(reloaded.Notes);
         Assert.Equal("<p>数学</p>", reloaded.Notes[0].Content);
-        Assert.Equal(BoardContentKind.Html, reloaded.Notes[0].ContentKind);
+        Assert.Equal(RichTextContentKind.Html, reloaded.Notes[0].ContentKind);
     }
 
     [Fact]
@@ -317,8 +320,8 @@ public class BoardServiceTests
     public void LegacyNotes_AreMigratedIntoDatedStorageWhenArchiveIsEmpty()
     {
         // 旧版作业全在 data/config/board.json：归档目录还空着时必须读进来并摊到新的日期目录下。
-        var legacy = new LegacyBoardFile();
-        legacy.Notes.Add(new BoardNote { Content = "旧作业", Subject = "数学" });
+        var legacy = new LegacyNoteFile();
+        legacy.Notes.Add(new Note { Content = "旧作业", Subject = "数学" });
         var store = new InMemoryNoteStore { LegacyFile = legacy };
 
         var (service, _, _) = CreateService(store: store);
@@ -326,7 +329,7 @@ public class BoardServiceTests
         Assert.Single(service.Notes);
         // 旧内容是 Markdown 原文，读进来时会一次性转成富文本片段。
         Assert.Equal("<p>旧作业</p>", service.Notes[0].Content);
-        Assert.Equal(BoardContentKind.Html, service.Notes[0].ContentKind);
+        Assert.Equal(RichTextContentKind.Html, service.Notes[0].ContentKind);
         // 搬迁会把读到的旧作业写进归档存储，并删掉旧文件。
         Assert.Equal(1, store.SaveCount);
         Assert.Equal(1, store.LegacyDeleteCount);
@@ -336,8 +339,8 @@ public class BoardServiceTests
     public void LegacyDefinition_IsTakenOverWhenNoDefinitionFileExistedYet()
     {
         // 全新安装的第一次迁移：定义文件还没建过，旧文件里的科目就是用户原来那份，应当接管。
-        var legacy = new LegacyBoardFile();
-        legacy.Notes.Add(new BoardNote { Content = "旧作业" });
+        var legacy = new LegacyNoteFile();
+        legacy.Notes.Add(new Note { Content = "旧作业" });
         legacy.Subjects.Clear();
         legacy.Subjects.Add("旧科目");
         var store = new InMemoryNoteStore { LegacyFile = legacy };
@@ -351,13 +354,13 @@ public class BoardServiceTests
     public void LegacyDefinition_IsNotTakenOverWhenCurrentDefinitionExists()
     {
         // 定义文件已经存在（用户管过自己的科目，哪怕清空了）：旧文件里的定义不该回灌，只搬作业。
-        var legacy = new LegacyBoardFile();
-        legacy.Notes.Add(new BoardNote { Content = "旧作业" });
+        var legacy = new LegacyNoteFile();
+        legacy.Notes.Add(new Note { Content = "旧作业" });
         legacy.Subjects.Add("旧科目");
         var store = new InMemoryNoteStore { LegacyFile = legacy };
 
         var config = new InMemoryConfigService();
-        config.Saved[new BoardConfig().ConfigFilePath] = new BoardConfig();
+        config.Saved[new HomeworkConfig().ConfigFilePath] = new HomeworkConfig();
 
         var (service, _, _) = CreateService(config, store);
 
@@ -369,10 +372,10 @@ public class BoardServiceTests
     [Fact]
     public void LegacyNotes_AreIgnoredWhenArchiveAlreadyHasNotes()
     {
-        var legacy = new LegacyBoardFile();
-        legacy.Notes.Add(new BoardNote { Content = "旧作业" });
+        var legacy = new LegacyNoteFile();
+        legacy.Notes.Add(new Note { Content = "旧作业" });
         var store = new InMemoryNoteStore { LegacyFile = legacy };
-        var archived = new BoardNote();
+        var archived = new Note();
         archived.SetHtmlContent("<p>新作业</p>");
         store.Seed([archived]);
 
@@ -389,7 +392,7 @@ public class BoardServiceTests
     public void BoardDefinition_IsStoredApartFromTheSettingsFile()
     {
         // 作业数据必须单独一份，不和 settings.json 挤在同一个目录里。
-        var boardPath = new BoardConfig().ConfigFilePath;
+        var boardPath = new HomeworkConfig().ConfigFilePath;
 
         Assert.EndsWith(Path.Combine("board", "board.json"), boardPath);
         Assert.NotEqual(new MainConfigModel().ConfigFilePath, boardPath);
@@ -401,20 +404,20 @@ public class BoardServiceTests
 /// <summary>
 ///     按年/月/日归档的作业存储：真正跑一遍磁盘，验证目录形状、合并与清理。
 /// </summary>
-public class BoardNoteStoreTests : IDisposable
+public class NoteStoreTests : IDisposable
 {
     private readonly string _root = Path.Combine(
         Path.GetTempPath(), "corkboard-tests", Guid.NewGuid().ToString("N"));
 
-    private BoardNoteStore CreateStore() => new(NullLogger<BoardNoteStore>.Instance, _root, LegacyPath);
+    private NoteStore CreateStore() => new(NullLogger<NoteStore>.Instance, _root, LegacyPath);
 
     private string LegacyPath => Path.Combine(_root, "..", "legacy-board.json");
 
-    private static BoardNote Note(string content, int year, int month, int day)
+    private static Note Note(string content, int year, int month, int day)
     {
         // 归档按本地时区的日历日分层，所以用本地偏移构造，避免在别的时区跑测试时偏日。
         var local = new DateTime(year, month, day, 10, 0, 0, DateTimeKind.Unspecified);
-        return new BoardNote
+        return new Note
         {
             Content = content,
             Subject = "数学",
@@ -428,7 +431,7 @@ public class BoardNoteStoreTests : IDisposable
         var store = CreateStore();
         store.SaveAll([Note("一", 2026, 3, 4)]);
 
-        var file = Path.Combine(_root, "2026", "03", "04", BoardNoteStore.NotesFileName);
+        var file = Path.Combine(_root, "2026", "03", "04", NoteStore.NotesFileName);
 
         Assert.True(File.Exists(file));
     }
@@ -439,8 +442,8 @@ public class BoardNoteStoreTests : IDisposable
         var store = CreateStore();
         store.SaveAll([Note("一", 2026, 3, 4), Note("二", 2026, 3, 4), Note("三", 2026, 3, 5)]);
 
-        Assert.True(File.Exists(Path.Combine(_root, "2026", "03", "04", BoardNoteStore.NotesFileName)));
-        Assert.True(File.Exists(Path.Combine(_root, "2026", "03", "05", BoardNoteStore.NotesFileName)));
+        Assert.True(File.Exists(Path.Combine(_root, "2026", "03", "04", NoteStore.NotesFileName)));
+        Assert.True(File.Exists(Path.Combine(_root, "2026", "03", "05", NoteStore.NotesFileName)));
 
         // 同一天的两条合进一个文件，另一天单独一个文件。
         Assert.Equal(3, store.LoadAll().Count);
@@ -468,7 +471,7 @@ public class BoardNoteStoreTests : IDisposable
 
         store.SaveAll([kept]);
 
-        Assert.True(File.Exists(Path.Combine(_root, "2026", "03", "04", BoardNoteStore.NotesFileName)));
+        Assert.True(File.Exists(Path.Combine(_root, "2026", "03", "04", NoteStore.NotesFileName)));
         // 空掉的日期目录也要一起回收，不留空壳。
         Assert.False(Directory.Exists(Path.Combine(_root, "2026", "03", "05")));
     }
@@ -488,7 +491,7 @@ public class BoardNoteStoreTests : IDisposable
 
         var brokenDirectory = Path.Combine(_root, "2026", "03", "05");
         Directory.CreateDirectory(brokenDirectory);
-        File.WriteAllText(Path.Combine(brokenDirectory, BoardNoteStore.NotesFileName), "{ 不是 JSON");
+        File.WriteAllText(Path.Combine(brokenDirectory, NoteStore.NotesFileName), "{ 不是 JSON");
 
         var loaded = CreateStore().LoadAll();
 
@@ -502,8 +505,8 @@ public class BoardNoteStoreTests : IDisposable
         var local = new DateTime(2025, 12, 7, 8, 0, 0, DateTimeKind.Unspecified);
         var createdAt = new DateTimeOffset(local, TimeZoneInfo.Local.GetUtcOffset(local));
 
-        Assert.Equal(["2025", "12", "07"], BoardNoteStore.GetDateSegments(createdAt));
-        Assert.EndsWith(Path.Combine("2025", "12", "07"), BoardNoteStore.GetNoteDirectory(new BoardNote
+        Assert.Equal(["2025", "12", "07"], NoteStore.GetDateSegments(createdAt));
+        Assert.EndsWith(Path.Combine("2025", "12", "07"), NoteStore.GetNoteDirectory(new Note
         {
             CreatedAt = createdAt
         }));

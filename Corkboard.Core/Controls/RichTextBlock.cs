@@ -10,8 +10,7 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using AvaloniaRichEditor.Controls;
 using AvaloniaRichEditor.Documents;
-using Corkboard.Core.Models.Board;
-using Corkboard.Core.Services.Board;
+using Corkboard.Core.RichText;
 
 namespace Corkboard.Core.Controls;
 
@@ -24,7 +23,7 @@ namespace Corkboard.Core.Controls;
 ///     </para>
 ///     <para>
 ///         默认字号 / 默认颜色（设置 → 作业板 → 内容默认样式）在加载时逐段补成行内样式
-///         （见 <see cref="BoardHtmlStyling" />），编辑时补进去的那层在回写前摘掉；
+///         （见 <see cref="RichTextHtmlStyling" />），编辑时补进去的那层在回写前摘掉；
 ///         <see cref="DefaultContentColor" /> 留空表示跟随主题前景色，跟随的那一份在
 ///         <see cref="OnAttachedToVisualTree" /> 之后（拿得到主题资源时）解析，
 ///         主题一变就重新解析并重载——所以内容里的颜色不会被烘死。
@@ -56,7 +55,7 @@ public class RichTextBlock : RichEditor
     /// <summary>内容的默认字号（DIP），对应「设置 → 作业板 → 内容默认样式」。</summary>
     public static readonly StyledProperty<double> DefaultContentFontSizeProperty =
         AvaloniaProperty.Register<RichTextBlock, double>(
-            nameof(DefaultContentFontSize), BoardContentStyle.DefaultFontSize);
+            nameof(DefaultContentFontSize), RichTextStyle.DefaultFontSize);
 
     /// <summary>内容的默认颜色；为空表示跟随主题前景色。</summary>
     public static readonly StyledProperty<Color?> DefaultContentColorProperty =
@@ -157,13 +156,13 @@ public class RichTextBlock : RichEditor
         _isLoading = true;
         try
         {
-            var fontSize = BoardContentStyle.ClampFontSize(DefaultContentFontSize);
-            _appliedFontSizeCss = BoardHtmlStyling.BuildFontSizeCss(fontSize);
-            _appliedColorCss = BoardHtmlStyling.BuildColorCss(ResolveTextColor());
+            var fontSize = RichTextStyle.ClampFontSize(DefaultContentFontSize);
+            _appliedFontSizeCss = RichTextHtmlStyling.BuildFontSizeCss(fontSize);
+            _appliedColorCss = RichTextHtmlStyling.BuildColorCss(ResolveTextColor());
 
             // 这个属性名字骗人：它只决定段落行高，**不改字形大小**（离屏抓像素实测），字形大小只能靠
             // 上面注入的 font-size。这里同步过去只是让行距跟着默认字号走，免得大字号的行挤在一起。
-            DefaultFontSize = BoardHtmlStyling.ToPoints(fontSize);
+            DefaultFontSize = RichTextHtmlStyling.ToPoints(fontSize);
             ApplyAppFontFamily();
 
             // 光标也是库写死的黑色（反编译里 CaretBrush 默认 Brushes.Black），暗色主题下根本看不见：
@@ -171,13 +170,13 @@ public class RichTextBlock : RichEditor
             CaretBrush = new SolidColorBrush(ResolveTextColor());
 
             // 空内容也垫一个带默认色的零宽 run：空文档里一个 run 都没有，输入法预编辑串会退回库写死的黑色
-            // （见 BoardHtmlStyling.SeedChar），垫上之后「还没按回车」的那些字也是默认色。
+            // （见 RichTextHtmlStyling.SeedChar），垫上之后「还没按回车」的那些字也是默认色。
             // ⚠️ 判空不能只数文字：只有一张图片 / 一张表格时纯文本也是空的，那样会被种子段落顶掉整篇内容。
-            var source = !IsReadOnly && !BoardHtmlStyling.HasMeaningfulContent(Html)
-                ? "<p>" + BoardHtmlStyling.SeedChar + "</p>"
+            var source = !IsReadOnly && !RichTextHtmlStyling.HasMeaningfulContent(Html)
+                ? "<p>" + RichTextHtmlStyling.SeedChar + "</p>"
                 : Html;
 
-            LoadHtml(BoardHtmlStyling.Apply(source, _appliedFontSizeCss, _appliedColorCss));
+            LoadHtml(RichTextHtmlStyling.Apply(source, _appliedFontSizeCss, _appliedColorCss));
 
             // 新文档里的图片尺寸又是 HTML 里写死的那一份，重新按当前宽度缩一遍。
             _fittedImageWidth = double.NaN;
@@ -189,7 +188,7 @@ public class RichTextBlock : RichEditor
 
         // 换 Document 会把待用格式清掉（ResetInteractionState，RichEditor.cs:2958/3015），装完补一发：
         // 空文档里一个 run 都没有、没得继承，这样打开表单直接打字也能是第一时间的默认色（不闪一下黑）。
-        if (!IsReadOnly && !BoardHtmlStyling.HasVisibleContent(GetPlainText()))
+        if (!IsReadOnly && !RichTextHtmlStyling.HasVisibleContent(GetPlainText()))
             EnsureTypingColor();
     }
 
@@ -311,7 +310,7 @@ public class RichTextBlock : RichEditor
         // 用户把内容删光时种子（零宽空格）也一起被删掉了，文档又变回「一个 run 都没有」；
         // 补一次装填把种子放回去，不然下次输入法预编辑又是黑的。种子在位时光标处有颜色，不会来回装填。
         // 判空看的是整篇内容（图片 / 表格也算内容），不然一张图片会被反复重装、闪个不停。
-        if (!BoardHtmlStyling.HasMeaningfulContent(Html) && GetCaretFormat().Foreground is null)
+        if (!RichTextHtmlStyling.HasMeaningfulContent(Html) && GetCaretFormat().Foreground is null)
         {
             ReloadDocument();
             return;
@@ -426,9 +425,9 @@ public class RichTextBlock : RichEditor
             // 那既会让「有没有内容」的判断失真，也会把空段落落进文件）。
             // ⚠️ 判空用 HasMeaningfulContent，不看 GetPlainText()：只有一张图片 / 一张表格时纯文本是空的，
             // 早先那样写会把整篇内容清成空串 —— 表现就是「单独放一张图片上去存不住、按钮一直灰着」。
-            var cleaned = BoardHtmlStyling.StripSeeds(
-                BoardHtmlStyling.Strip(ToHtml(), _appliedFontSizeCss, _appliedColorCss));
-            var html = BoardHtmlStyling.HasMeaningfulContent(cleaned) ? cleaned : string.Empty;
+            var cleaned = RichTextHtmlStyling.StripSeeds(
+                RichTextHtmlStyling.Strip(ToHtml(), _appliedFontSizeCss, _appliedColorCss));
+            var html = RichTextHtmlStyling.HasMeaningfulContent(cleaned) ? cleaned : string.Empty;
 
             if (!string.Equals(html, Html, StringComparison.Ordinal))
                 SetCurrentValue(HtmlProperty, html);

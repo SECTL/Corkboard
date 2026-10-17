@@ -11,7 +11,7 @@
         SizeToContent="WidthAndHeight"
         WindowStartupLocation="CenterScreen">
     <!--
-        弹层内容的容器。内容自己带 Border.sheet 外观（见 BoardAssignmentForm），
+        弹层内容的容器。内容自己带 Border.sheet 外观（见 HomeworkAssignmentForm），
         这里不要再套一层卡片，否则两张卡片叠在一起。
 
         窗口刻意不做透明（不设 TransparencyLevelHint、不设透明 Background）：

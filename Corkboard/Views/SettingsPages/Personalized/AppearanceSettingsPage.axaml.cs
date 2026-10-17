@@ -28,8 +28,9 @@ public partial class AppearanceSettingsPage : UserControl
         {
             _viewModel.Config.Appearance.PropertyChanged -= OnAppearanceChanged;
 
-            // 取色器的最后一次选择可能还压在防抖里，离开页面前补一次。
+            // 取色器与界面字号滑杆的最后一次选择可能还压在防抖里，离开页面前各补一次。
             _viewModel.FlushThemeColorDraft();
+            _viewModel.FlushUiFontSizeDraft();
         };
     }
 

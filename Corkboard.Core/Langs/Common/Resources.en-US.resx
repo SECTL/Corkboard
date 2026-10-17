@@ -760,4 +760,247 @@
   <data name="Settings_Cloud_UsageAvailable" xml:space="preserve">
     <value>{0} left</value>
   </data>
+  <data name="Settings_Board_Group" xml:space="preserve">
+    <value>Homework board</value>
+  </data>
+  <data name="Settings_Board_General_Title" xml:space="preserve">
+    <value>General</value>
+  </data>
+  <data name="Settings_Board_Sections_Title" xml:space="preserve">
+    <value>Subjects and categories</value>
+  </data>
+  <data name="Settings_Board_Handwriting_Title" xml:space="preserve">
+    <value>Handwriting</value>
+  </data>
+  <data name="Settings_Board_QuickTags_Title" xml:space="preserve">
+    <value>Quick tags</value>
+  </data>
+  <data name="Settings_Board_Cleanup_Title" xml:space="preserve">
+    <value>Cleanup and backup</value>
+  </data>
+  <data name="Settings_Board_Dock_Title" xml:space="preserve">
+    <value>Collapse</value>
+  </data>
+  <data name="Settings_Board_Sections_Categories" xml:space="preserve">
+    <value>Categories</value>
+  </data>
+  <data name="Settings_Board_Sections_CategoriesDescription" xml:space="preserve">
+    <value>Add sub-headings under a subject and pick them when assigning</value>
+  </data>
+  <data name="Settings_Board_Sections_AddCategory" xml:space="preserve">
+    <value>Add category</value>
+  </data>
+  <data name="Settings_Board_Sections_NewCategoryPlaceholder" xml:space="preserve">
+    <value>Category name</value>
+  </data>
+  <data name="Settings_Board_Sections_NoCategories" xml:space="preserve">
+    <value>No categories for this subject yet</value>
+  </data>
+  <data name="Settings_Board_Sections_DeleteCategory" xml:space="preserve">
+    <value>Delete category</value>
+  </data>
+  <data name="Settings_Board_Sections_RenameCategory" xml:space="preserve">
+    <value>Rename</value>
+  </data>
+  <data name="Settings_Board_Sections_DeleteConfirmTitle" xml:space="preserve">
+    <value>Delete category</value>
+  </data>
+  <data name="Settings_Board_Sections_DeleteConfirmMessage" xml:space="preserve">
+    <value>Notes in this category move back to the subject</value>
+  </data>
+  <data name="Settings_Board_Handwriting_PenWidth" xml:space="preserve">
+    <value>Pen width</value>
+  </data>
+  <data name="Settings_Board_Handwriting_PenWidthDescription" xml:space="preserve">
+    <value>Default pen width, adjustable while drawing</value>
+  </data>
+  <data name="Settings_Board_Handwriting_EraserWidth" xml:space="preserve">
+    <value>Eraser width</value>
+  </data>
+  <data name="Settings_Board_Handwriting_EraserWidthDescription" xml:space="preserve">
+    <value>Default eraser size, adjustable while erasing</value>
+  </data>
+  <data name="Settings_Board_Handwriting_Colors" xml:space="preserve">
+    <value>Pen colors</value>
+  </data>
+  <data name="Settings_Board_Handwriting_ColorsDescription" xml:space="preserve">
+    <value>Colors on the handwriting toolbar, up to five</value>
+  </data>
+  <data name="Settings_Board_Handwriting_FollowTheme" xml:space="preserve">
+    <value>Follow theme color</value>
+  </data>
+  <data name="Settings_Board_QuickTags_List" xml:space="preserve">
+    <value>Tags</value>
+  </data>
+  <data name="Settings_Board_QuickTags_ListDescription" xml:space="preserve">
+    <value>Click a tag while assigning to insert it into the content</value>
+  </data>
+  <data name="Settings_Board_QuickTags_Add" xml:space="preserve">
+    <value>Add tag</value>
+  </data>
+  <data name="Settings_Board_QuickTags_Placeholder" xml:space="preserve">
+    <value>e.g. Marked</value>
+  </data>
+  <data name="Settings_Board_QuickTags_Delete" xml:space="preserve">
+    <value>Delete tag</value>
+  </data>
+  <data name="Settings_Board_QuickTags_Empty" xml:space="preserve">
+    <value>No quick tags yet</value>
+  </data>
+  <data name="Settings_Board_QuickTags_CountFormat" xml:space="preserve">
+    <value>{0} added, up to {1}</value>
+  </data>
+  <data name="Settings_Board_ClearAll" xml:space="preserve">
+    <value>Clear the board</value>
+  </data>
+  <data name="Settings_Board_ClearAllDescription" xml:space="preserve">
+    <value>Remove every note, backing up first</value>
+  </data>
+  <data name="Settings_Board_ClearAllConfirmTitle" xml:space="preserve">
+    <value>Clear the board</value>
+  </data>
+  <data name="Settings_Board_ClearAllConfirmMessage" xml:space="preserve">
+    <value>All notes will be removed after a backup is saved</value>
+  </data>
+  <data name="Settings_Board_ClearAllDone" xml:space="preserve">
+    <value>Cleared, backup kept at {0}</value>
+  </data>
+  <data name="Settings_Board_ClearAllFailed" xml:space="preserve">
+    <value>Backup failed, nothing was cleared</value>
+  </data>
+  <data name="Settings_Board_Backups" xml:space="preserve">
+    <value>Automatic backups</value>
+  </data>
+  <data name="Settings_Board_BackupsDescription" xml:space="preserve">
+    <value>A copy is saved here before the board is cleared</value>
+  </data>
+  <data name="Settings_Board_BackupsEmpty" xml:space="preserve">
+    <value>No backups yet</value>
+  </data>
+  <data name="Settings_Board_BackupItemFormat" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="Settings_Board_Dock_Enabled" xml:space="preserve">
+    <value>Collapse the board</value>
+  </data>
+  <data name="Settings_Board_Dock_EnabledDescription" xml:space="preserve">
+    <value>Adds a collapse button that shrinks the board to a small button</value>
+  </data>
+  <data name="Settings_Board_Dock_Anchor" xml:space="preserve">
+    <value>Button position</value>
+  </data>
+  <data name="Settings_Board_Dock_AnchorDescription" xml:space="preserve">
+    <value>Click a dot on the map to pick where the button sits</value>
+  </data>
+  <data name="Settings_Board_Dock_AnchorHint" xml:space="preserve">
+    <value>Click a dot</value>
+  </data>
+  <data name="Settings_Board_Dock_Offset" xml:space="preserve">
+    <value>Distance from edge</value>
+  </data>
+  <data name="Settings_Board_Dock_OffsetDescription" xml:space="preserve">
+    <value>How far the button sits from the chosen edge</value>
+  </data>
+  <data name="Settings_Board_Dock_OffsetX" xml:space="preserve">
+    <value>Left / right distance</value>
+  </data>
+  <data name="Settings_Board_Dock_OffsetY" xml:space="preserve">
+    <value>Top / bottom distance</value>
+  </data>
+  <data name="Settings_Board_Dock_Scale" xml:space="preserve">
+    <value>Button size</value>
+  </data>
+  <data name="Settings_Board_Dock_ScaleDescription" xml:space="preserve">
+    <value>Scale of the floating button</value>
+  </data>
+  <data name="Settings_Board_Dock_Reset" xml:space="preserve">
+    <value>Reset position</value>
+  </data>
+  <data name="Board_ExportImage" xml:space="preserve">
+    <value>Export image</value>
+  </data>
+  <data name="Board_ExportImageTip" xml:space="preserve">
+    <value>Save the notes on the board as an image</value>
+  </data>
+  <data name="Board_ExportSuccess" xml:space="preserve">
+    <value>Image saved</value>
+  </data>
+  <data name="Board_ExportFailed" xml:space="preserve">
+    <value>Export failed, try again later</value>
+  </data>
+  <data name="Board_ExportNoContent" xml:space="preserve">
+    <value>Nothing on the board yet</value>
+  </data>
+  <data name="Board_HandwritingTab" xml:space="preserve">
+    <value>Handwriting</value>
+  </data>
+  <data name="Board_TextTab" xml:space="preserve">
+    <value>Typing</value>
+  </data>
+  <data name="Board_HandwritingPen" xml:space="preserve">
+    <value>Pen</value>
+  </data>
+  <data name="Board_HandwritingEraser" xml:space="preserve">
+    <value>Eraser</value>
+  </data>
+  <data name="Board_HandwritingColor" xml:space="preserve">
+    <value>Color</value>
+  </data>
+  <data name="Board_HandwritingWidth" xml:space="preserve">
+    <value>Width</value>
+  </data>
+  <data name="Board_HandwritingEraserWidth" xml:space="preserve">
+    <value>Eraser size</value>
+  </data>
+  <data name="Board_HandwritingUndo" xml:space="preserve">
+    <value>Undo</value>
+  </data>
+  <data name="Board_HandwritingClear" xml:space="preserve">
+    <value>Clear</value>
+  </data>
+  <data name="Board_HandwritingHint" xml:space="preserve">
+    <value>Write below, undo if needed</value>
+  </data>
+  <data name="Board_HandwritingEmpty" xml:space="preserve">
+    <value>Draw something first</value>
+  </data>
+  <data name="Board_Section" xml:space="preserve">
+    <value>Category</value>
+  </data>
+  <data name="Board_SectionNone" xml:space="preserve">
+    <value>No category</value>
+  </data>
+  <data name="Board_SectionAdd" xml:space="preserve">
+    <value>New category</value>
+  </data>
+  <data name="Board_SectionAddPlaceholder" xml:space="preserve">
+    <value>Category name</value>
+  </data>
+  <data name="Board_QuickTags" xml:space="preserve">
+    <value>Quick tags</value>
+  </data>
+  <data name="Settings_Appearance_UiFontSize" xml:space="preserve">
+    <value>Interface font size</value>
+  </data>
+  <data name="Settings_Appearance_UiFontSizeDescription" xml:space="preserve">
+    <value>Size of text across the app, raise it if hard to read</value>
+  </data>
+  <data name="Board_Dock_Expand" xml:space="preserve">
+    <value>Expand board</value>
+  </data>
+  <data name="Board_Dock_Collapse" xml:space="preserve">
+    <value>Hide the board</value>
+  </data>
+  <data name="Settings_Board_SectionFontSize" xml:space="preserve">
+    <value>Category heading size</value>
+  </data>
+  <data name="Settings_Board_SectionFontSizeDescription" xml:space="preserve">
+    <value>Size of category headings, bigger means clearer layers</value>
+  </data>
+  <data name="Common_Refresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="Settings_Board_Sections_DuplicateName" xml:space="preserve">
+    <value>A category with this name already exists</value>
+  </data>
 </root>

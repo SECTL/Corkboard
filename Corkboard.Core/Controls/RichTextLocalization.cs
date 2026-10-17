@@ -14,7 +14,7 @@ namespace Corkboard.Core.Controls;
 ///     </para>
 ///     <para>
 ///         我们只用库自带的工具栏（<see cref="RichEditorToolbar" />，常驻在编辑区上方，见
-///         <c>BoardAssignmentForm</c>），不引它自带的整页视图；这张表覆盖库的全部键，
+///         <c>HomeworkAssignmentForm</c>），不引它自带的整页视图；这张表覆盖库的全部键，
 ///         因为工具栏上的字号/字体/段落样式/对齐/颜色这些控件与它们的提示文字都走这里。
 ///     </para>
 /// </summary>

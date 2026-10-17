@@ -10,7 +10,7 @@ namespace Corkboard.Core.Controls;
 ///     </para>
 ///     <para>
 ///         拖动时夹还不够：卡片被拉大、宿主被缩小都会让原来的位移越界，
-///         所以 <c>BoardAssignmentForm</c> 在卡片尺寸或宿主尺寸一变时会拿它再夹一次。
+///         所以 <c>HomeworkAssignmentForm</c> 在卡片尺寸或宿主尺寸一变时会拿它再夹一次。
 ///     </para>
 ///     <para>纯计算、不碰 UI，有单测（见 <c>SheetDragLimitsTests</c>）。</para>
 /// </summary>

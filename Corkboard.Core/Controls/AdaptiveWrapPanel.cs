@@ -22,13 +22,13 @@ public class AdaptiveWrapPanel : Panel
     /// <summary>单个区块的宽度下限：窗口够宽时一排能排下几列由它决定。</summary>
     public static readonly StyledProperty<double> MinItemWidthProperty =
         AvaloniaProperty.Register<AdaptiveWrapPanel, double>(
-            nameof(MinItemWidth), Models.Board.BoardBlockStyle.DefaultMinItemWidth);
+            nameof(MinItemWidth), AdaptiveCardDefaults.DefaultItemWidth);
 
     /// <summary>单个区块的宽度上限：窗口很宽、区块又少时，别把余量全给一块。</summary>
     public static readonly StyledProperty<double> MaxItemWidthProperty =
         AvaloniaProperty.Register<AdaptiveWrapPanel, double>(
-            nameof(MaxItemWidth), Models.Board.BoardBlockStyle.DefaultMinItemWidth
-                                  * Models.Board.BoardBlockStyle.MaxItemWidthRatio);
+            nameof(MaxItemWidth), AdaptiveCardDefaults.DefaultItemWidth
+                                  * AdaptiveCardDefaults.MaxWidthRatio);
 
     /// <summary>同一排里相邻两块之间的间距。</summary>
     public static readonly StyledProperty<double> SpacingProperty =
@@ -44,7 +44,7 @@ public class AdaptiveWrapPanel : Panel
     /// </summary>
     private int _columns;
 
-    private double _itemWidth = Models.Board.BoardBlockStyle.DefaultMinItemWidth;
+    private double _itemWidth = AdaptiveCardDefaults.DefaultItemWidth;
 
     /// <summary>每一块落在哪一列、纵向起点是多少（测量时算好，排布时照用）。</summary>
     private (int Column, double Y)[] _placements = [];

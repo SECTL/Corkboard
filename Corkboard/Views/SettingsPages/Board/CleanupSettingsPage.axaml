@@ -1,0 +1,141 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fa="using:FluentAvalonia.UI.Controls"
+             xmlns:vm="using:Corkboard.ViewModels.SettingsPages.Board"
+             xmlns:hm="using:Corkboard.ViewModels.SettingsPages.Homework"
+             xmlns:core="using:Corkboard.Core.Langs.Common"
+             mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="450"
+             x:Class="Corkboard.Views.SettingsPages.Board.CleanupSettingsPage"
+             x:DataType="vm:CleanupSettingsPageViewModel">
+    <ScrollViewer>
+        <!--
+            设置卡：Header 是设置项名称，Description 是简介，Footer 放动作按钮。
+            一个卡里有多项时用 fa:FASettingsExpanderItem 分行——名称与简介在左，控件在右。
+        -->
+        <StackPanel Classes="page-container">
+            <!-- 页标题画在 page-container 里：它才和设置卡同宽、同左边缘，并随卡片一起滚动。 -->
+            <TextBlock Margin="0 4 0 0"
+                       FontWeight="Normal"
+                       Text="{x:Static core:Resources.Settings_Board_Cleanup_Title}"
+                       Theme="{StaticResource TitleTextBlockStyle}" />
+
+            <!--
+                自动清理：到点只给过了截止日期的作业打「已清理」标记，数据还在。
+                「立即清理」不看开关也不看时刻，点一下当场清；它放在卡头的 Footer 上，
+                因为它作用于整张卡的设置，而不是某一行。
+                时刻是草稿式的：选择器失焦 / 离开页面才提交（见 code-behind 的 OnEditorLostFocus）。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_Cleanup}"
+                                   Description="{x:Static core:Resources.Settings_Board_CleanupDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <Button Classes="accent"
+                            VerticalAlignment="Center"
+                            Content="{x:Static core:Resources.Settings_Board_CleanupRunNow}"
+                            Command="{Binding RunCleanupNowCommand}" />
+                </fa:FASettingsExpander.Footer>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_CleanupEnabled}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ToggleSwitch IsChecked="{Binding Settings.CleanupEnabled, Mode=TwoWay}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_CleanupFrequency}"
+                                           Description="{x:Static core:Resources.Settings_Board_CleanupFrequencyDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ComboBox MinWidth="160"
+                                  ItemsSource="{Binding CleanupFrequencyOptions}"
+                                  SelectedItem="{Binding SelectedCleanupFrequencyOption, Mode=TwoWay}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="hm:HomeworkCleanupFrequencyOption">
+                                    <TextBlock Text="{Binding DisplayName}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <!-- 「星期几」只在按周清理时露出来，不留一个点不动的控件。 -->
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_CleanupWeekday}"
+                                           IsVisible="{Binding IsWeeklyCleanup}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ComboBox MinWidth="160"
+                                  ItemsSource="{Binding CleanupWeekdayOptions}"
+                                  SelectedItem="{Binding SelectedCleanupWeekdayOption, Mode=TwoWay}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="hm:HomeworkCleanupWeekdayOption">
+                                    <TextBlock Text="{Binding DisplayName}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_CleanupTime}"
+                                           Description="{x:Static core:Resources.Settings_Board_CleanupTimeDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <TimePicker ClockIdentifier="24HourClock"
+                                    UseSeconds="False"
+                                    MinuteIncrement="1"
+                                    SelectedTime="{Binding CleanupTimeDraft, Mode=TwoWay}"
+                                    LostFocus="OnEditorLostFocus" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_CleanupLastResult}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <TextBlock VerticalAlignment="Center"
+                                   MaxWidth="320"
+                                   TextAlignment="Right"
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Text="{Binding CleanupLastResultText}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+            </fa:FASettingsExpander>
+
+            <!--
+                清空作业板：会先自动备份，备份失败时一条作业都不动。
+                确认框在 code-behind 里弹（见 OnClearAllClick）。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_ClearAll}"
+                                   Description="{x:Static core:Resources.Settings_Board_ClearAllDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <Button VerticalAlignment="Center"
+                            Content="{x:Static core:Resources.Settings_Board_ClearAll}"
+                            Click="OnClearAllClick" />
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <!--
+                备份清单：只读列表，新的在前。备份目录用户能从资源管理器直接改，
+                所以给一个手动重读的刷新按钮。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_Backups}"
+                                   Description="{x:Static core:Resources.Settings_Board_BackupsDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <Button VerticalAlignment="Center"
+                            Content="{x:Static core:Resources.Common_Refresh}"
+                            Command="{Binding RefreshBackupListCommand}" />
+                </fa:FASettingsExpander.Footer>
+
+                <StackPanel Spacing="4" Margin="0 4 0 0">
+                    <TextBlock IsVisible="{Binding !HasBackups}"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Text="{x:Static core:Resources.Settings_Board_BackupsEmpty}" />
+
+                    <ItemsControl IsVisible="{Binding HasBackups}"
+                                  ItemsSource="{Binding BackupItems}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:BoardBackupListItem">
+                                <TextBlock Margin="0 2" Text="{Binding DisplayName}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </fa:FASettingsExpander>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

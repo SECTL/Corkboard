@@ -5,8 +5,8 @@
              xmlns:fa="using:FluentAvalonia.UI.Controls"
              xmlns:icons="using:Corkboard.Core.Icons"
              xmlns:core="using:Corkboard.Core.Langs.Common"
-             xmlns:ui="using:Corkboard.Services.Ui"
-             xmlns:enums="using:Corkboard.Core.Enums.Configs"
+             xmlns:ui="using:Corkboard.Services.Board"
+             xmlns:enums="using:Corkboard.Core.Board"
              xmlns:views="using:Corkboard.Views"
              mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="600"
              x:Class="Corkboard.Views.MainView"
@@ -43,12 +43,12 @@
 
                         <!--
                             软件图标放在软件名左边：和窗口图标、托盘图标同一个母版
-                            （Assets/Icons 里那份 1024 的母图），只做展示，不标 User——按下跟着标题栏拖窗口。
+                            （Assets/Icons 里那份 Corkboard.png 母图），只做展示，不标 User——按下跟着标题栏拖窗口。
                         -->
                         <Image Width="18"
                                Height="18"
                                VerticalAlignment="Center"
-                               Source="/Assets/Icons/board-icon-1024.png"
+                               Source="/Assets/Icons/Corkboard.png"
                                RenderOptions.BitmapInterpolationMode="HighQuality" />
 
                         <TextBlock Text="Corkboard"
@@ -191,6 +191,24 @@
                                 </StackPanel>
                             </Button>
                         </StackPanel>
+
+                        <!--
+                            收纳：把主窗口收起来，屏幕上只留一颗展开按钮（位置 / 大小在
+                            「设置 → 作业板 → 收纳」里调）。
+                            它必须放在最右那颗「锁窗口」的左边：锁定后这一排整体隐藏，由独立的
+                            ClickThroughLockWindow 在标题栏最右上角接着显示「开锁」，
+                            那颗锁必须仍然是最右一个，两态位置才对得上、不会跳。
+                            开关关掉时整颗不显示（DockEnabled）。
+                        -->
+                        <Button VerticalAlignment="Center"
+                                IsVisible="{Binding ViewModel.Config.BoardSettings.DockEnabled}"
+                                ToolTip.Tip="{x:Static core:Resources.Board_Dock_Collapse}"
+                                WindowDecorationProperties.ElementRole="User"
+                                Click="DockButton_OnClick">
+                            <TextBlock Text="{x:Static icons:FluentIcons.ArrowExitFilled}"
+                                       FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                       VerticalAlignment="Center" />
+                        </Button>
 
                         <!--
                             锁定窗口：点一下开点击穿透，主窗口就不再收鼠标。

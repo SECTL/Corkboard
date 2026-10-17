@@ -14,7 +14,7 @@ namespace Corkboard.Services.Desktop;
 /// </summary>
 /// <remarks>
 ///     <para>
-///         图标用随包分发的多尺寸 <c>Assets/Icons/board-icon.ico</c>，与窗口图标、exe 图标同一份：
+///         图标用随包分发的多尺寸 <c>Assets/Icons/Corkboard.ico</c>，与窗口图标、exe 图标同一份：
 ///         平台图标装载器会自己挑合适的那一档，不用手画位图、也不会在缩放比变化时糊掉。
 ///     </para>
 ///     <para>
@@ -24,7 +24,7 @@ namespace Corkboard.Services.Desktop;
 public sealed class TaskBarIconService : IDisposable
 {
     /// <summary>图标资源：Corkboard 程序集里的多尺寸 ICO。</summary>
-    private static readonly Uri IconAsset = new("avares://Corkboard/Assets/Icons/board-icon.ico");
+    private static readonly Uri IconAsset = new("avares://Corkboard/Assets/Icons/Corkboard.ico");
 
     private readonly PlatformCapabilities _capabilities;
     private readonly ILogger<TaskBarIconService> _logger;

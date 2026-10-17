@@ -3,7 +3,9 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:fa="using:FluentAvalonia.UI.Controls"
-             xmlns:vm="using:Corkboard.ViewModels.SettingsPages"
+             xmlns:vm="using:Corkboard.ViewModels.SettingsPages.Board"
+             xmlns:hm="using:Corkboard.ViewModels.SettingsPages.Homework"
+             xmlns:rt="using:Corkboard.ViewModels.SettingsPages.RichText"
              xmlns:core="using:Corkboard.Core.Langs.Common"
              mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="450"
              x:Class="Corkboard.Views.SettingsPages.Board.BoardSettingsPage"
@@ -19,7 +21,7 @@
             <!-- 页标题画在 page-container 里：它才和设置卡同宽、同左边缘，并随卡片一起滚动。 -->
             <TextBlock Margin="0 4 0 0"
                        FontWeight="Normal"
-                       Text="{x:Static core:Resources.Settings_Board_Title}"
+                       Text="{x:Static core:Resources.Settings_Board_General_Title}"
                        Theme="{StaticResource TitleTextBlockStyle}" />
 
             <!--
@@ -82,97 +84,21 @@
                 </fa:FASettingsExpanderItem>
             </fa:FASettingsExpander>
 
-            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_Subjects}"
-                                   Description="{x:Static core:Resources.Settings_Board_SubjectsDescription}">
+            <!--
+                右下角布置作业浮标：开着时主窗口右下角浮一颗加号，顺手就能布置作业。
+                原来是基础设置里的项，按「基础设置不放作业板专属项」的要求搬到这里。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Basic_CornerAssignButton}"
+                                   Description="{x:Static core:Resources.Settings_Basic_CornerAssignButtonDescription}">
                 <fa:FASettingsExpander.Footer>
-                    <TextBox MinWidth="240"
-                             Text="{Binding SubjectsDraft, Mode=TwoWay}"
-                             LostFocus="OnEditorLostFocus" />
+                    <ToggleSwitch IsChecked="{Binding Config.Basic.ShowCornerAssignButton, Mode=TwoWay}" />
                 </fa:FASettingsExpander.Footer>
             </fa:FASettingsExpander>
-
-            <TextBlock Classes="section-title"
-                       Text="{x:Static core:Resources.Settings_Section_DeleteAndCleanup}" />
 
             <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_ConfirmBeforeDelete}">
                 <fa:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding Board.ConfirmBeforeDelete}" />
                 </fa:FASettingsExpander.Footer>
-            </fa:FASettingsExpander>
-
-            <!--
-                自动清理：到点把过了截止日期的作业从板子上清掉（只打「已清理」标记，数据原地不动）。
-                时刻用草稿 + LostFocus 提交：直接双向绑配置的话，控件每动一下就落一次盘。
-                判定与打标记都在 Core 的 BoardCleanupService 里，这里只管设置。
-                规则一条一行（FASettingsExpanderItem）：左名称+简介，右控件；「立即清理」挂在卡头。
-                时刻用 Avalonia 自带的 TimePicker（它没有占位文案属性，也不用占位）。
-            -->
-            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_Cleanup}"
-                                   Description="{x:Static core:Resources.Settings_Board_CleanupDescription}">
-                <fa:FASettingsExpander.Footer>
-                    <Button Command="{Binding RunCleanupNowCommand}"
-                            Content="{x:Static core:Resources.Settings_Board_CleanupRunNow}" />
-                </fa:FASettingsExpander.Footer>
-
-                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_CleanupEnabled}">
-                    <fa:FASettingsExpanderItem.Footer>
-                        <ToggleSwitch IsChecked="{Binding Board.CleanupEnabled, Mode=TwoWay}" />
-                    </fa:FASettingsExpanderItem.Footer>
-                </fa:FASettingsExpanderItem>
-
-                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_CleanupFrequency}"
-                                           Description="{x:Static core:Resources.Settings_Board_CleanupFrequencyDescription}">
-                    <fa:FASettingsExpanderItem.Footer>
-                        <ComboBox MinWidth="130"
-                                  ItemsSource="{Binding CleanupFrequencyOptions}"
-                                  SelectedItem="{Binding SelectedCleanupFrequencyOption, Mode=TwoWay}">
-                            <ComboBox.ItemTemplate>
-                                <DataTemplate x:DataType="vm:BoardCleanupFrequencyOption">
-                                    <TextBlock Text="{Binding DisplayName}" />
-                                </DataTemplate>
-                            </ComboBox.ItemTemplate>
-                        </ComboBox>
-                    </fa:FASettingsExpanderItem.Footer>
-                </fa:FASettingsExpanderItem>
-
-                <!-- 「星期几」只在按周清理时整行露出来。 -->
-                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_CleanupWeekday}"
-                                           IsVisible="{Binding IsWeeklyCleanup}">
-                    <fa:FASettingsExpanderItem.Footer>
-                        <ComboBox MinWidth="130"
-                                  ItemsSource="{Binding CleanupWeekdayOptions}"
-                                  SelectedItem="{Binding SelectedCleanupWeekdayOption, Mode=TwoWay}">
-                            <ComboBox.ItemTemplate>
-                                <DataTemplate x:DataType="vm:BoardCleanupWeekdayOption">
-                                    <TextBlock Text="{Binding DisplayName}" />
-                                </DataTemplate>
-                            </ComboBox.ItemTemplate>
-                        </ComboBox>
-                    </fa:FASettingsExpanderItem.Footer>
-                </fa:FASettingsExpanderItem>
-
-                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_CleanupTime}"
-                                           Description="{x:Static core:Resources.Settings_Board_CleanupTimeDescription}">
-                    <fa:FASettingsExpanderItem.Footer>
-                        <TimePicker VerticalAlignment="Center"
-                                    ClockIdentifier="24HourClock"
-                                    UseSeconds="False"
-                                    MinuteIncrement="1"
-                                    SelectedTime="{Binding CleanupTimeDraft, Mode=TwoWay}"
-                                    LostFocus="OnEditorLostFocus" />
-                    </fa:FASettingsExpanderItem.Footer>
-                </fa:FASettingsExpanderItem>
-
-                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_CleanupLastResult}">
-                    <fa:FASettingsExpanderItem.Footer>
-                        <TextBlock MinWidth="200"
-                                   MaxWidth="320"
-                                   VerticalAlignment="Center"
-                                   TextAlignment="Right"
-                                   TextWrapping="Wrap"
-                                   Text="{Binding CleanupLastResultText}" />
-                    </fa:FASettingsExpanderItem.Footer>
-                </fa:FASettingsExpanderItem>
             </fa:FASettingsExpander>
 
             <TextBlock Classes="section-title"
@@ -255,7 +181,7 @@
 
             <!--
                 工具浮窗的预设色板：选中文字后弹出来的工具条上那排色块。
-                最多 BoardPalette.MaxColors 个（到顶就把「新增」禁掉），可改色、可调序、可删。
+                最多 RichTextPalette.MaxColors 个（到顶就把「新增」禁掉），可改色、可调序、可删。
                 取色器绑的是「色块下标 + 颜色」的一对命令参数——集合元素是 Color 结构体，
                 改它不会发通知，只能回调 ViewModel 按位替换。
             -->
@@ -264,7 +190,7 @@
                 <StackPanel Spacing="12" Margin="0 4 0 0">
                     <ItemsControl ItemsSource="{Binding PaletteColors}">
                         <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="vm:BoardPaletteColorItem">
+                            <DataTemplate x:DataType="rt:RichTextPaletteColorItem">
                                 <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto"
                                       ColumnSpacing="8"
                                       Margin="0 0 0 6">

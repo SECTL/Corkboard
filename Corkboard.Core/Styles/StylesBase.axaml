@@ -51,11 +51,13 @@
     <Style Selector=":is(Window)">
         <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}" />
         <Setter Property="FontWeight" Value="{DynamicResource AppFontWeight}" />
+        <Setter Property="FontSize" Value="{DynamicResource AppFontSize}" />
     </Style>
 
     <Style Selector="fa|FAContentDialog">
         <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}" />
         <Setter Property="FontWeight" Value="{DynamicResource AppFontWeight}" />
+        <Setter Property="FontSize" Value="{DynamicResource AppFontSize}" />
     </Style>
 
     <Style Selector="TextBlock.h1">

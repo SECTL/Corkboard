@@ -17,4 +17,24 @@ public partial class AppearanceSettingsConfig : ObservableObject
 
     [ObservableProperty] private FontWeightMode _fontWeight = FontWeightMode.Normal;
     [ObservableProperty] private bool _enableAnimations = true;
+
+    /// <summary>
+    ///     界面字号：整窗的默认字号（按钮、列表、提示都跟着它走）。
+    ///     作业内容与科目标题另有自己的字号设置，不受这一项影响。
+    ///     读的时候过一遍 <see cref="ClampUiFontSize" />。
+    /// </summary>
+    [ObservableProperty] private double _uiFontSize = DefaultUiFontSize;
+
+    /// <summary>没设过时的界面字号。</summary>
+    public const double DefaultUiFontSize = 14;
+
+    public const double MinUiFontSize = 10;
+
+    public const double MaxUiFontSize = 24;
+
+    /// <summary>把界面字号夹进合法区间；坏值退回默认值。</summary>
+    public static double ClampUiFontSize(double size)
+    {
+        return double.IsFinite(size) ? Math.Clamp(size, MinUiFontSize, MaxUiFontSize) : DefaultUiFontSize;
+    }
 }

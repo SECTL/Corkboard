@@ -4,10 +4,11 @@ using System.Text.Json;
 using Avalonia.Threading;
 using Corkboard.Core;
 using Corkboard.Core.Abstraction;
-using Corkboard.Core.Abstraction.Services;
+using Corkboard.Core.Board;
+using Corkboard.Core.Homework;
 using Corkboard.Core.Models;
 using Corkboard.Core.Models.SubConfigs.Cloud;
-using Corkboard.Core.Services.Board;
+using Corkboard.Core.Notes;
 using Corkboard.Core.Services.Cloud;
 using Corkboard.Core.Services.Config;
 using Corkboard.Services.Auth;
@@ -22,7 +23,7 @@ namespace Corkboard.Services.Cloud;
 /// </summary>
 /// <remarks>
 ///     <para>
-///         本机没动过就整体拉取；两边都动过就**并集融合**（<c>BoardNoteMerge</c>）：作业按 Id 合到一起、
+///         本机没动过就整体拉取；两边都动过就**并集融合**（<c>HomeworkNoteMerge</c>）：作业按 Id 合到一起、
 ///         同一条取更新的那份，合完把结果传回云端让两边收敛。绝不整体覆盖用户刚写的作业——作业是
 ///         自由文本 + 富文本，逐字段拼出来的是谁也不认识的一条，所以只按整条取新。
 ///     </para>
@@ -593,9 +594,9 @@ public sealed class CloudSyncService : ICloudSyncService, IDisposable
                 }
                 else
                 {
-                    var remoteNotes = new BoardNoteStore(NullLogger<BoardNoteStore>.Instance, staging).LoadAll();
+                    var remoteNotes = new NoteStore(NullLogger<NoteStore>.Instance, staging).LoadAll();
                     var localNotes = _board.Notes.ToList();
-                    var merged = BoardNoteMerge.Merge(localNotes, remoteNotes);
+                    var merged = HomeworkNoteMerge.Merge(localNotes, remoteNotes);
 
                     _logger?.LogInformation(
                         "云端和本机都有改动，已按并集融合：本机 {Local} 条 + 云端 {Remote} 条 → 共 {Total} 条" +
@@ -611,7 +612,7 @@ public sealed class CloudSyncService : ICloudSyncService, IDisposable
                         {
                             // 就地写回本机的日期文件，**不能**整体换目录：那样会连 board.json
                             // （科目表与手动排序）一起抹掉，而它不在并集的管辖范围里。
-                            new BoardNoteStore(NullLogger<BoardNoteStore>.Instance, BoardDirectory)
+                            new NoteStore(NullLogger<NoteStore>.Instance, BoardDirectory)
                                 .SaveAll(merged.Notes);
 
                             CopyBoardFiles(staging, BoardDirectory, overwrite: false);
@@ -790,12 +791,12 @@ public sealed class CloudSyncService : ICloudSyncService, IDisposable
             return BoardDirectory;
 
         var directory = Path.Combine(work, "upload-board");
-        var notes = new BoardNoteStore(NullLogger<BoardNoteStore>.Instance, BoardDirectory)
+        var notes = new NoteStore(NullLogger<NoteStore>.Instance, BoardDirectory)
             .LoadAll()
             .Where(note => note.CreatedAt >= cutoff)
             .ToList();
 
-        new BoardNoteStore(NullLogger<BoardNoteStore>.Instance, directory).SaveAll(notes);
+        new NoteStore(NullLogger<NoteStore>.Instance, directory).SaveAll(notes);
         CopyBoardFiles(BoardDirectory, directory, overwrite: false);
 
         _logger?.LogInformation("只同步最近 {Days} 天的作业：这次传 {Count} 条，窗口外的都留在本机。",
@@ -1005,14 +1006,14 @@ public sealed class CloudSyncService : ICloudSyncService, IDisposable
     /// </remarks>
     private static void RestoreBoardWithinWindow(string staging, DateTimeOffset cutoff)
     {
-        var local = new BoardNoteStore(NullLogger<BoardNoteStore>.Instance, BoardDirectory)
+        var local = new NoteStore(NullLogger<NoteStore>.Instance, BoardDirectory)
             .LoadAll()
             .Where(note => note.CreatedAt < cutoff)
             .ToList();
-        var remote = new BoardNoteStore(NullLogger<BoardNoteStore>.Instance, staging).LoadAll();
-        var merged = BoardNoteMerge.Merge(local, remote);
+        var remote = new NoteStore(NullLogger<NoteStore>.Instance, staging).LoadAll();
+        var merged = HomeworkNoteMerge.Merge(local, remote);
 
-        new BoardNoteStore(NullLogger<BoardNoteStore>.Instance, BoardDirectory).SaveAll(merged.Notes);
+        new NoteStore(NullLogger<NoteStore>.Instance, BoardDirectory).SaveAll(merged.Notes);
         CopyBoardFiles(staging, BoardDirectory, overwrite: true);
     }
 
@@ -1527,7 +1528,7 @@ public sealed class CloudSyncService : ICloudSyncService, IDisposable
         foreach (var file in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories))
         {
             var relative = Path.GetRelativePath(source, file);
-            if (string.Equals(Path.GetFileName(relative), BoardNoteStore.NotesFileName,
+            if (string.Equals(Path.GetFileName(relative), NoteStore.NotesFileName,
                     StringComparison.OrdinalIgnoreCase))
             {
                 continue;
