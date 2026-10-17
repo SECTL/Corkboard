@@ -73,13 +73,29 @@ public interface IBoardService
     void SetSubjectOrder(IEnumerable<string> subjects);
 
     /// <summary>
-    ///     清空整块作业板：所有作业从集合里摘掉、落盘一次、通知一次。
+    ///     清空整块作业板：把现在看得见的作业**全部收起来**（逐条打上「已清理」标记）、落盘一次、
+    ///     通知一次。作业不从集合里摘掉、文件也不删，所以之后能在时空回放里按那一刻的快照还原。
     ///     <para>
     ///         科目与二级分类这些**定义**保留（用户清的是板子上的内容，不是自己的科目表）。
-    ///         清之前该先备份（见 <c>BoardBackupService</c>），那是调用方的事。
     ///         </para>
     /// </summary>
     void ClearAll();
+
+    /// <summary>
+    ///     把指定作业从「已清理」状态放回板子（清掉 <see cref="Note.CleanedAt" />），
+    ///     只落盘一次、只通知一次。返回真正放回来的条数；一条都没命中的不落盘。
+    /// </summary>
+    int RestoreMany(IEnumerable<Guid> ids);
+
+    /// <summary>
+    ///     把板子上看得见的作业整份换成给定的一组（时空回放的「还原到此刻」）：
+    ///     这一组里没有的收起来，有但板子上没了的**重新插回来**（连 Id 与创建时间一起，归档回原来那天），
+    ///     内容不同的按给定内容覆盖。只落盘一次、通知一次，返回真正动过的条数。
+    ///     <para>
+    ///         与 <see cref="RestoreMany" /> 不同：这里认的是历史快照，所以被整条删掉的作业也能放回来。
+    ///     </para>
+    /// </summary>
+    int RestoreSnapshot(IReadOnlyList<Note> notes);
 
     /// <summary>把当前内存状态整份写回 <c>board.json</c>，并通知 <see cref="Changed" />。</summary>
     void Save();

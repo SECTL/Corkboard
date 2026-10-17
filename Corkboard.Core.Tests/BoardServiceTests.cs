@@ -18,10 +18,11 @@ namespace Corkboard.Core.Tests;
 ///     作业板领域服务：作业走增删改方法、按创建日期分文件落盘，类型与科目是「直接改集合 + Save」的用法。
 ///     这里用内存配置服务替换磁盘实现，验证每次变更都会落盘一次。
 ///     <para>
-///         种子科目（<see cref="HomeworkConfig.Subjects" />）是从本地化资源里取的，界面语言一变名字就变，
+///         <see cref="HomeworkConfig.Subjects" /> 现在默认是空的（不再预置科目），
 ///         而 <see cref="BoardService.SetSubjectOrder" /> 会把「不在科目清单里」的条目清掉。
-///         所以凡是拿种子科目当预期值的地方都写成 <c>CR.Board_Seed_Subject_*</c>，绝不写死中文：
-///         CI 跑在 en-US 的机器上，写死「数学」只会被当成已删除的科目而被过滤干净。
+///         所以需要科目存在的用例要先用 <see cref="SeedSubjects" /> 自己加。
+///         科目名一律写 <c>CR.Board_Seed_Subject_*</c>，绝不写死中文：CI 跑在 en-US 的机器上，
+///         资源里取出来的名字跟着界面语言走。
 ///     </para>
 /// </summary>
 public class BoardServiceTests
@@ -75,6 +76,14 @@ public class BoardServiceTests
         public void TryDeleteLegacy() => LegacyDeleteCount++;
 
         public void Seed(IEnumerable<Note> notes) => _notes = [.. notes];
+    }
+
+    /// <summary>手动排序要能保留的科目：默认科目表是空的，这些用例自己先建几个。</summary>
+    private static void SeedSubjects(BoardService service)
+    {
+        service.Subjects.Add(CR.Board_Seed_Subject_Math);
+        service.Subjects.Add(CR.Board_Seed_Subject_Chinese);
+        service.Subjects.Add(CR.Board_Seed_Subject_English);
     }
 
     private static (BoardService Service, InMemoryConfigService Config, InMemoryNoteStore Store) CreateService(
@@ -229,6 +238,7 @@ public class BoardServiceTests
     public void SetSubjectOrder_PersistsOrderAndDropsSubjectsThatNoLongerExist()
     {
         var (service, config, _) = CreateService();
+        SeedSubjects(service);
         var savesBefore = config.SaveCount;
 
         service.SetSubjectOrder([CR.Board_Seed_Subject_Math, CR.Board_Seed_Subject_Chinese, "已经删掉的科目"]);
@@ -246,6 +256,7 @@ public class BoardServiceTests
     public void SetSubjectOrder_TrimsAndDeduplicatesKeepingTheFirstOccurrence()
     {
         var (service, _, _) = CreateService();
+        SeedSubjects(service);
 
         service.SetSubjectOrder(
         [
@@ -260,6 +271,7 @@ public class BoardServiceTests
     public void SetSubjectOrder_KeepsUncategorizedInThePositionItWasDropped()
     {
         var (service, _, _) = CreateService();
+        SeedSubjects(service);
 
         service.SetSubjectOrder(["", CR.Board_Seed_Subject_Math]);
 
@@ -270,6 +282,7 @@ public class BoardServiceTests
     public void SubjectOrder_RoundTripsThroughReload()
     {
         var (service, config, store) = CreateService();
+        SeedSubjects(service);
         service.SetSubjectOrder([CR.Board_Seed_Subject_Chinese, CR.Board_Seed_Subject_Math]);
 
         var reloaded = new BoardService(store, new HomeworkSectionCatalog(config), NullLogger<BoardService>.Instance);
@@ -331,12 +344,12 @@ public class BoardServiceTests
     }
 
     [Fact]
-    public void FreshConfig_ComesWithSeedSubjects()
+    public void FreshConfig_StartsWithNoSubjects()
     {
-        // 首次运行（没有任何作业文件）时不应该是一张白纸：科目得先有几个常见的。
+        // 首次运行不再预置科目：板子的科目表从空开始，由用户自己建。
         var (service, _, _) = CreateService();
 
-        Assert.NotEmpty(service.Subjects);
+        Assert.Empty(service.Subjects);
     }
 
     [Fact]
@@ -409,6 +422,75 @@ public class BoardServiceTests
         // 已经有归档数据就不再搬迁，更不该覆盖。
         Assert.Equal(0, store.SaveCount);
         Assert.Equal(0, store.LegacyDeleteCount);
+    }
+
+    [Fact]
+    public void ClearAll_TucksNotesAwayWithoutRemovingThem()
+    {
+        var (service, config, store) = CreateService();
+        var first = service.Add(new Note { Content = "一" });
+        var second = service.Add(new Note { Content = "二" });
+        var savesBefore = config.SaveCount;
+        var changed = 0;
+        service.Changed += (_, _) => changed++;
+
+        service.ClearAll();
+
+        // 「清空」只是把作业从当前页面收起来：集合里还在、也照旧整份落盘，只是打了「已清理」标记。
+        Assert.Equal(2, service.Notes.Count);
+        Assert.All(service.Notes, note => Assert.NotNull(note.CleanedAt));
+        Assert.All(service.Notes, note => Assert.False(note.IsOnBoard));
+        Assert.Contains(store.LoadAll(), note => note.Id == first.Id);
+        Assert.Contains(store.LoadAll(), note => note.Id == second.Id);
+        Assert.Equal(savesBefore + 1, config.SaveCount);
+        Assert.Equal(1, changed);
+    }
+
+    [Fact]
+    public void ClearAll_IsNoOpWhenNothingIsOnTheBoard()
+    {
+        var (service, config, store) = CreateService();
+
+        service.ClearAll();
+
+        Assert.Equal(0, config.SaveCount);
+        Assert.Equal(0, store.SaveCount);
+    }
+
+    [Fact]
+    public void RestoreMany_PutsCleanedNotesBackOnTheBoard()
+    {
+        var (service, config, _) = CreateService();
+        var first = service.Add(new Note { Content = "一" });
+        var second = service.Add(new Note { Content = "二" });
+        service.ClearAll();
+        var savesBefore = config.SaveCount;
+        var changed = 0;
+        service.Changed += (_, _) => changed++;
+
+        var restored = service.RestoreMany([first.Id]);
+
+        Assert.Equal(1, restored);
+        Assert.Null(first.CleanedAt);
+        Assert.True(first.IsOnBoard);
+        // 没点到的作业继续躺着，等用户自己决定要不要还原。
+        Assert.NotNull(second.CleanedAt);
+        Assert.Equal(savesBefore + 1, config.SaveCount);
+        Assert.Equal(1, changed);
+    }
+
+    [Fact]
+    public void RestoreMany_UnknownId_ChangesNothingAndDoesNotSave()
+    {
+        var (service, config, store) = CreateService();
+        service.Add(new Note { Content = "一" });
+
+        var savesBefore = config.SaveCount;
+        var storeSavesBefore = store.SaveCount;
+
+        Assert.Equal(0, service.RestoreMany([Guid.NewGuid()]));
+        Assert.Equal(savesBefore, config.SaveCount);
+        Assert.Equal(storeSavesBefore, store.SaveCount);
     }
 
     [Fact]

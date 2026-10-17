@@ -1,0 +1,187 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:core="using:Corkboard.Core.Langs.Common"
+             mc:Ignorable="d" d:DesignWidth="250" d:DesignHeight="386"
+             x:Class="Corkboard.Views.ReplayCalendarView">
+    <UserControl.Styles>
+        <!--
+            浮层卡片：实体底 + 一圈描边，不做半透明——它盖在主窗口内容上，Fluent 的
+            CardBackgroundFillColorDefaultBrush 是半透明色，底下的字会隐隐透上来
+            （与 Core 的 Border.sheet 同一个理由，见 StylesBase.axaml）。
+        -->
+        <Style Selector="Border.calendar-sheet">
+            <Setter Property="Background" Value="{DynamicResource SolidBackgroundFillColorQuarternaryBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="12" />
+        </Style>
+
+        <!-- 上下月按钮：透明底、方形，指上去才浅浅显一下，别在月历上多出两个按钮块。 -->
+        <Style Selector="Button.cal-nav">
+            <Setter Property="Width" Value="26" />
+            <Setter Property="Height" Value="26" />
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.cal-nav:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+        </Style>
+
+        <!--
+            日期格：透明底、固定 30×28（7 列正好塞进卡片内宽 224）。
+            不在当月的日子由代码加 .outside 并置 IsEnabled=false；有停靠点的那天才可点。
+        -->
+        <Style Selector="Button.day">
+            <Setter Property="Width" Value="30" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <!--
+             禁用的日期格（不在当月 / 没有停靠点）：把主题的「禁用按钮」底色也压掉，
+             否则整块月历会变成一堆灰底小方块。
+        -->
+        <Style Selector="Button.day:disabled /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+        </Style>
+        <Style Selector="Button.day.outside">
+            <Setter Property="Opacity" Value="0.35" />
+        </Style>
+
+        <!-- 有停靠点的日期：浅底 + 一圈描边 + 强调色数字，一眼看出哪天能点。 -->
+        <Style Selector="Button.day.has-stops">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="Button.day.has-stops:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
+        </Style>
+
+        <!--
+            选中的那天：强调色实底 + 反白文字。这条必须写在 .has-stops 后面，
+            同一条样式集合里后定义的规则覆盖前面定的同名属性。
+        -->
+        <Style Selector="Button.day.selected">
+            <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextOnAccentFillColorPrimaryBrush}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="Button.day.selected:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+        </Style>
+
+        <!-- 当天时刻的胶囊：一颗 = 一个停靠点（HH:mm:ss）。 -->
+        <Style Selector="Button.stop">
+            <Setter Property="Padding" Value="10 2" />
+            <Setter Property="MinHeight" Value="26" />
+            <Setter Property="Margin" Value="0 0 6 6" />
+            <Setter Property="CornerRadius" Value="13" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        </Style>
+        <Style Selector="Button.stop:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
+        </Style>
+
+        <!-- 当前正在看的那个时刻（= Replay.SelectedStop）：强调色底 + 反白文字。 -->
+        <Style Selector="Button.stop.current">
+            <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextOnAccentFillColorPrimaryBrush}" />
+        </Style>
+        <Style Selector="Button.stop.current:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+        </Style>
+    </UserControl.Styles>
+
+    <Border Classes="calendar-sheet" Width="250">
+        <StackPanel Spacing="8">
+            <!-- 月份行：上个月 / 年·月 / 下个月。 -->
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <Button Grid.Column="0"
+                        Classes="cal-nav"
+                        Click="PrevMonthButton_OnClick"
+                        ToolTip.Tip="{x:Static core:Resources.Board_ReplayPrevMonth}">
+                    <!-- Assets/FluentSystemIcons-Resizable.json 里的 ic_fluent_chevron_left_20_filled（U+E44B）。 -->
+                    <TextBlock Text="&#xE44B;"
+                               FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                               FontSize="10"
+                               VerticalAlignment="Center" />
+                </Button>
+
+                <TextBlock x:Name="MonthText"
+                           Grid.Column="1"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           FontSize="12"
+                           FontWeight="SemiBold" />
+
+                <Button Grid.Column="2"
+                        Classes="cal-nav"
+                        Click="NextMonthButton_OnClick"
+                        ToolTip.Tip="{x:Static core:Resources.Board_ReplayNextMonth}">
+                    <!-- ic_fluent_chevron_right_20_filled（U+E44D）。 -->
+                    <TextBlock Text="&#xE44D;"
+                               FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                               FontSize="10"
+                               VerticalAlignment="Center" />
+                </Button>
+            </Grid>
+
+            <!-- 星期头（周一为首列）：文案与格子都在构造函数里代码生成，见 ReplayCalendarView.axaml.cs。 -->
+            <UniformGrid x:Name="WeekdayHeader" Columns="7" />
+
+            <!--
+                6 行 × 7 列日期格：42 颗按钮由代码生成并在每次刷新时重写文字 / 样式 / 可点状态，
+                XAML 里只留这个空面板。
+            -->
+            <UniformGrid x:Name="DayGrid" Columns="7" Rows="6" />
+
+            <!--
+                当天的时刻：选中日期之后才显示。停靠点可能很多，所以外面套一层滚动，
+                最多长到 96 高，浮层不会顶掉半块屏幕。
+            -->
+            <StackPanel x:Name="DayStopsPanel" Spacing="6" IsVisible="False">
+                <TextBlock Classes="caption" Text="{x:Static core:Resources.Board_ReplayDayStops}" />
+                <ScrollViewer MaxHeight="96"
+                              HorizontalScrollBarVisibility="Disabled"
+                              VerticalScrollBarVisibility="Auto">
+                    <WrapPanel x:Name="DayStopsHost" Orientation="Horizontal" />
+                </ScrollViewer>
+            </StackPanel>
+
+            <!-- 还没选日期时的提示：没有它，浮层打开时下半截是空的，用户不知道该点哪。 -->
+            <TextBlock x:Name="PickDayHint"
+                       Classes="caption"
+                       TextWrapping="Wrap"
+                       Text="{x:Static core:Resources.Board_ReplayPickDay}" />
+        </StackPanel>
+    </Border>
+</UserControl>

@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using Microsoft.Extensions.Logging;
+using Corkboard.Core.Board.History;
 using Corkboard.Core.Homework;
 using Corkboard.Core.Notes;
 using Corkboard.Core.Notes.Legacy;
@@ -14,19 +15,35 @@ namespace Corkboard.Core.Board;
 ///         **作业本身按创建日期分文件**，落在 <c>&lt;年&gt;/&lt;月&gt;/&lt;日&gt;/&lt;Id&gt;.cbnote</c>，
 ///         由 <see cref="INoteStore" /> 负责。
 ///     </para>
+///     <para>
+///         每次变更还会往历史日志里记一条（<see cref="INoteHistoryStore" />，在 <c>data/history/board/</c>）：
+///         那是时空回放的数据源。历史只记录「什么时候对哪条作业做了什么」，当前文件才是事实本身；
+///         删掉的作业当前文件会没，但历史里的整份快照还在，所以回放与「还原到此刻」都能把它找回来。
+///     </para>
 /// </summary>
 public class BoardService : IBoardService
 {
     private readonly INoteStore _noteStore;
     private readonly HomeworkSectionCatalog _sections;
     private readonly ILogger<BoardService> _logger;
+    private readonly INoteHistoryStore? _history;
     private readonly ObservableCollection<Note> _notes;
 
-    public BoardService(INoteStore noteStore, HomeworkSectionCatalog sections, ILogger<BoardService> logger)
+    // 连续保存合并用：上一条 Update 事件针对谁、发生在什么时候。别的作业一插进来就自动断开。
+    private Guid _lastUpdateNote = Guid.Empty;
+    private DateTimeOffset _lastUpdateAt;
+
+    /// <param name="history">
+    ///     历史日志。为 <c>null</c> 表示纯内存里跑（Core 的单测一直这么构造），此时不记任何历史。
+    ///     DI 里永远给得上（<see cref="Core.Services.CoreRuntimeServiceCollectionExtensions" /> 注册了它）。
+    /// </param>
+    public BoardService(INoteStore noteStore, HomeworkSectionCatalog sections, ILogger<BoardService> logger,
+        INoteHistoryStore? history = null)
     {
         _noteStore = noteStore;
         _sections = sections;
         _logger = logger;
+        _history = history;
 
         var notes = _noteStore.LoadAll();
         if (notes.Count == 0 && _noteStore.TryLoadLegacy() is { } legacy)
@@ -59,6 +76,8 @@ public class BoardService : IBoardService
 
         _notes = new ObservableCollection<Note>(notes);
         Notes = new ReadOnlyObservableCollection<Note>(_notes);
+
+        SeedHistory();
     }
 
     public ReadOnlyObservableCollection<Note> Notes { get; }
@@ -135,6 +154,10 @@ public class BoardService : IBoardService
 
         note.Order = _notes.Count == 0 ? 0 : _notes.Max(existing => existing.Order) + 1;
         _notes.Add(note);
+
+        // 新增事件记在作业自己的创建时刻上：回放里它「从那一刻起就在板子上」。
+        RecordCreate(note, note.CreatedAt);
+
         Persist();
         return note;
     }
@@ -174,6 +197,8 @@ public class BoardService : IBoardService
         // CreatedAt 决定作业归档在哪个日期文件里、Order 决定区块内顺序，两者都不参与编辑。
         target.UpdatedAt = DateTimeOffset.Now;
 
+        RecordUpdate(target);
+
         Persist();
         return true;
     }
@@ -183,6 +208,9 @@ public class BoardService : IBoardService
         var index = IndexOf(id);
         if (index < 0)
             return false;
+
+        // 先留一份完整快照再摘：删掉之后当前文件就没了，回放里要按这一份把它画回来。
+        RecordDelete(_notes[index]);
 
         _notes.RemoveAt(index);
         Persist();
@@ -208,6 +236,7 @@ public class BoardService : IBoardService
                 continue;
 
             note.CleanedAt = cleanedAt;
+            RecordClean(note, cleanedAt);
             cleaned++;
         }
 
@@ -257,6 +286,7 @@ public class BoardService : IBoardService
                 continue;
 
             note.CleanedAt = null;
+            RecordRestore(note);
             restored++;
         }
 
@@ -265,6 +295,71 @@ public class BoardService : IBoardService
 
         Persist();
         return restored;
+    }
+
+    /// <summary>
+    ///     把板子上的「看得见的作业」整份换成 <paramref name="notes" />（时空回放的「还原到此刻」走这里）：
+    ///     快照里有、板子上没有的**重新插回来**（连 <see cref="Note.CreatedAt" /> 一起，归档回它原来那天）；
+    ///     快照里没有、板子上还看得见的**收起来**；内容不一样的按快照覆盖。
+    ///     <para>
+    ///         与 <see cref="RestoreMany" /> 的区别：那条只会把「已经收起来的作业」放出来，
+    ///     被真正删掉的作业它救不回来；这里认的是历史快照，所以逐条删掉的也能放回板子。
+    ///     </para>
+    /// </summary>
+    public int RestoreSnapshot(IReadOnlyList<Note> notes)
+    {
+        ArgumentNullException.ThrowIfNull(notes);
+
+        var wanted = new Dictionary<Guid, Note>();
+        foreach (var note in notes)
+            wanted[note.Id] = note;
+
+        var changed = 0;
+        var now = DateTimeOffset.Now;
+
+        // 1) 快照里没有、当前还看得见的：收起来（作业与历史都还在，只是不在这一刻的板面上）。
+        foreach (var current in _notes.Where(note => note.CleanedAt is null && !wanted.ContainsKey(note.Id)).ToList())
+        {
+            current.CleanedAt = now;
+            RecordClean(current, now);
+            changed++;
+        }
+
+        // 2) 快照里有的：该插的插、该改的改、该放出来的放出来。
+        foreach (var wantedNote in notes)
+        {
+            var current = _notes.FirstOrDefault(note => note.Id == wantedNote.Id);
+            if (current is null)
+            {
+                var inserted = CopyForRestore(wantedNote);
+                inserted.Order = _notes.Count == 0 ? 0 : _notes.Max(note => note.Order) + 1;
+                _notes.Add(inserted);
+                RecordCreate(inserted, now);
+                changed++;
+                continue;
+            }
+
+            var contentChanged = CopyForRestore(wantedNote, current);
+            if (contentChanged)
+            {
+                current.CleanedAt = null;
+                current.UpdatedAt = now;
+                RecordUpdate(current);
+                changed++;
+            }
+            else if (current.CleanedAt is not null)
+            {
+                current.CleanedAt = null;
+                RecordRestore(current);
+                changed++;
+            }
+        }
+
+        if (changed == 0)
+            return 0;
+
+        Persist();
+        return changed;
     }
 
     public void SetSubjectOrder(IEnumerable<string> subjects)
@@ -288,6 +383,10 @@ public class BoardService : IBoardService
         foreach (var note in notes)
             _notes.Add(note);
 
+        // 云同步恢复会整份换掉内存里的作业：历史里没有的（从别的设备新带进来的）要补一条基线，
+        // 内容被换过的要补一条修改，否则回放重放出来的还是恢复之前的板面。
+        SeedHistory();
+
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
@@ -303,6 +402,169 @@ public class BoardService : IBoardService
             _logger.LogInformation("Converted {Count} legacy notes to rich text", converted);
 
         return converted;
+    }
+
+    /// <summary>
+    ///     给历史补基线：第一次跑这套历史（日志还是空的）时，把现有作业按创建时刻各记一条「新增」；
+    ///     之后只在内存里的作业跟历史对不上时补——云同步整份恢复会带进历史里没有的作业、也会换掉某几条的内容，
+    ///     不补的话回放重放出来的还是恢复之前的板面。更早的增删改没有记录，回放不出来
+    ///     ——用户已确认「历史从本版开始」。
+    /// </summary>
+    private void SeedHistory()
+    {
+        if (_history is null || _notes.Count == 0)
+            return;
+
+        try
+        {
+            var entries = _history.LoadAll();
+            if (entries.Count == 0)
+            {
+                foreach (var note in _notes.OrderBy(note => note.CreatedAt))
+                    RecordCreate(note, note.CreatedAt);
+
+                _logger.LogInformation("Seeded note history with {Count} baseline entries", _notes.Count);
+                return;
+            }
+
+            var knownIds = entries.Select(entry => entry.NoteId).ToHashSet();
+            var visible = BoardHistory
+                .StateAt(entries, DateTimeOffset.Now, _history.LoadSnapshot)
+                .ToDictionary(note => note.Id);
+
+            var seeded = 0;
+            foreach (var note in _notes.OrderBy(note => note.CreatedAt))
+            {
+                if (!knownIds.Contains(note.Id))
+                {
+                    RecordCreate(note, note.CreatedAt);
+                    seeded++;
+                }
+                else if (visible.TryGetValue(note.Id, out var current) && !HasSameContent(note, current))
+                {
+                    RecordUpdate(note, DateTimeOffset.Now);
+                    seeded++;
+                }
+            }
+
+            if (seeded > 0)
+                _logger.LogInformation("Seeded note history with {Count} missing entries", seeded);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _logger.LogWarning(ex, "Could not seed the note history");
+        }
+    }
+
+    /// <summary>
+    ///     判断两条作业的内容是否一致（不比 <see cref="Note.UpdatedAt" /> / <see cref="Note.Order" /> 这类簿记字段）。
+    ///     历史播种与云同步恢复之后靠它决定「要不要补一条修改」。
+    /// </summary>
+    private static bool HasSameContent(Note left, Note right)
+    {
+        return left.ContentKind == right.ContentKind
+            && string.Equals(left.Content, right.Content, StringComparison.Ordinal)
+            && string.Equals(left.Handwriting, right.Handwriting, StringComparison.Ordinal)
+            && string.Equals(left.Subject, right.Subject, StringComparison.Ordinal)
+            && string.Equals(left.Section, right.Section, StringComparison.Ordinal)
+            && left.DueDate == right.DueDate
+            && left.CleanedAt == right.CleanedAt
+            && left.ContentFontSize == right.ContentFontSize
+            && SameTags(left.Tags, right.Tags);
+    }
+
+    /// <summary>记一条「新增」。事件时刻用作业自己的创建时刻，回放里它从那一刻起就看得见。</summary>
+    private void RecordCreate(Note note, DateTimeOffset at)
+    {
+        if (_history is not { } history)
+            return;
+
+        history.Append(new NoteHistoryEntry(at, note.Id, NoteHistoryAction.Create, history.SaveSnapshot(note)));
+    }
+
+    /// <summary>
+    ///     记一条「修改」。同一条作业连续保存（间隔不超过设置的合并窗口）只留最后一版：
+    ///     先把上一行追回去改掉，改不动（中间夹了别的作业的变更）才老实追加一条。
+    /// </summary>
+    private void RecordUpdate(Note note, DateTimeOffset? at = null)
+    {
+        if (_history is not { } history)
+            return;
+
+        var moment = at ?? DateTimeOffset.Now;
+        var entry = new NoteHistoryEntry(moment, note.Id, NoteHistoryAction.Update, history.SaveSnapshot(note));
+
+        var merged = _lastUpdateNote == note.Id
+                     && moment - _lastUpdateAt <= history.CoalesceWindow
+                     && moment - _lastUpdateAt >= TimeSpan.Zero
+                     && history.ReplaceLast(entry);
+
+        if (!merged)
+            history.Append(entry);
+
+        _lastUpdateNote = note.Id;
+        _lastUpdateAt = moment;
+    }
+
+    /// <summary>记一条「删除」：删之前快照必须已经存好，否则回放时这条作业只剩一个 Id。</summary>
+    private void RecordDelete(Note note)
+    {
+        if (_history is not { } history)
+            return;
+
+        history.Append(new NoteHistoryEntry(DateTimeOffset.Now, note.Id, NoteHistoryAction.Delete,
+            history.SaveSnapshot(note)));
+    }
+
+    private void RecordClean(Note note, DateTimeOffset at)
+    {
+        _history?.Append(new NoteHistoryEntry(at, note.Id, NoteHistoryAction.Clean));
+    }
+
+    private void RecordRestore(Note note, DateTimeOffset? at = null)
+    {
+        _history?.Append(new NoteHistoryEntry(at ?? DateTimeOffset.Now, note.Id, NoteHistoryAction.Restore));
+    }
+
+    /// <summary>按快照插一条作业回来（新对象，连 Id 与 CreatedAt 都照抄，归档回它原来那天）。</summary>
+    private static Note CopyForRestore(Note source)
+    {
+        var target = new Note { Id = source.Id, CreatedAt = source.CreatedAt };
+        CopyForRestore(source, target);
+        return target;
+    }
+
+    /// <summary>把快照的内容盖到现有作业上，返回内容有没有真的变（只有变了才值得记一条修改）。</summary>
+    private static bool CopyForRestore(Note source, Note target)
+    {
+        var changed = target.ContentKind != source.ContentKind
+                      || !string.Equals(target.Content, source.Content, StringComparison.Ordinal)
+                      || !string.Equals(target.Handwriting, source.Handwriting, StringComparison.Ordinal)
+                      || !string.Equals(target.Subject, source.Subject, StringComparison.Ordinal)
+                      || !string.Equals(target.Section, source.Section, StringComparison.Ordinal)
+                      || target.DueDate != source.DueDate
+                      || !SameTags(target.Tags, source.Tags)
+                      || target.ContentFontSize != source.ContentFontSize;
+
+        target.ContentKind = source.ContentKind;
+        target.Content = source.Content;
+        target.Handwriting = source.Handwriting;
+        target.Subject = source.Subject;
+        target.Section = source.Section;
+        target.DueDate = source.DueDate;
+        target.Tags = Note.NormalizeTags(source.Tags);
+        target.CleanedAt = source.CleanedAt;
+        target.ContentFontSize = source.ContentFontSize;
+
+        return changed;
+    }
+
+    private static bool SameTags(IReadOnlyList<string>? left, IReadOnlyList<string>? right)
+    {
+        if (left is null || right is null)
+            return left is null && right is null;
+
+        return left.SequenceEqual(right, StringComparer.Ordinal);
     }
 
     private void Persist()

@@ -1,0 +1,129 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fa="using:FluentAvalonia.UI.Controls"
+             xmlns:vm="using:Corkboard.ViewModels.SettingsPages.Board"
+             xmlns:core="using:Corkboard.Core.Langs.Common"
+             mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="450"
+             x:Class="Corkboard.Views.SettingsPages.Board.HistorySettingsPage"
+             x:DataType="vm:HistorySettingsPageViewModel">
+    <ScrollViewer>
+        <!--
+            设置卡：Header 是设置项名称，Description 是简介，Footer 放控件。
+            一个卡里有多项时用 fa:FASettingsExpanderItem 分行——名称与简介在左，控件在右。
+        -->
+        <StackPanel Classes="page-container">
+            <!-- 页标题画在 page-container 里：它才和设置卡同宽、同左边缘，并随卡片一起滚动。 -->
+            <TextBlock Margin="0 4 0 0"
+                       FontWeight="Normal"
+                       Text="{x:Static core:Resources.Settings_Board_History_Title}"
+                       Theme="{StaticResource TitleTextBlockStyle}" />
+
+            <!--
+                保存粒度：同一条作业在窗口内连着改，只留最后一版。
+                数值框全绑草稿，失焦 / 离开页面才提交（见 code-behind 的 OnEditorLostFocus）——
+                直接双向绑配置会每动一格写一遍 settings.json。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_History_Coalesce}"
+                                   Description="{x:Static core:Resources.Settings_Board_History_CoalesceDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <NumericUpDown MinWidth="130"
+                                       Minimum="{Binding MinCoalesceMinutes}"
+                                       Maximum="{Binding MaxCoalesceMinutes}"
+                                       Increment="1"
+                                       FormatString="0"
+                                       Value="{Binding CoalesceMinutesDraft, Mode=TwoWay}"
+                                       LostFocus="OnEditorLostFocus" />
+                        <TextBlock VerticalAlignment="Center"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Text="{x:Static core:Resources.Settings_Board_History_CoalesceUnit}" />
+                    </StackPanel>
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <!-- 保留天数：超过这么多天的历史文件在清理时删掉。 -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_History_Retention}"
+                                   Description="{x:Static core:Resources.Settings_Board_History_RetentionDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <NumericUpDown MinWidth="130"
+                                       Minimum="{Binding MinRetentionDays}"
+                                       Maximum="{Binding MaxRetentionDays}"
+                                       Increment="1"
+                                       FormatString="0"
+                                       Value="{Binding RetentionDaysDraft, Mode=TwoWay}"
+                                       LostFocus="OnEditorLostFocus" />
+                        <TextBlock VerticalAlignment="Center"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Text="{x:Static core:Resources.Settings_Board_History_RetentionUnit}" />
+                    </StackPanel>
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <!-- 容量上限：历史占满这么多就从最老的那几天开始删，今天那份永远留着。 -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_History_MaxSize}"
+                                   Description="{x:Static core:Resources.Settings_Board_History_MaxSizeDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                        <NumericUpDown MinWidth="130"
+                                       Minimum="{Binding MinMaxSizeMb}"
+                                       Maximum="{Binding MaxMaxSizeMb}"
+                                       Increment="10"
+                                       FormatString="0"
+                                       Value="{Binding MaxSizeMbDraft, Mode=TwoWay}"
+                                       LostFocus="OnEditorLostFocus" />
+                        <TextBlock VerticalAlignment="Center"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Text="{x:Static core:Resources.Settings_Board_History_MaxSizeUnit}" />
+                    </StackPanel>
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <!--
+                历史占用：只读统计 + 「立即清理历史」。
+                按钮放在卡头 Footer 上，因为它作用于整张卡；统计行是「名称在左、数字在右」的 FASettingsExpanderItem。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_History_Usage}"
+                                   Description="{x:Static core:Resources.Settings_Board_History_UsageDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <Button Classes="accent"
+                            VerticalAlignment="Center"
+                            Content="{x:Static core:Resources.Settings_Board_History_PruneNow}"
+                            Command="{Binding PruneHistoryCommand}" />
+                </fa:FASettingsExpander.Footer>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_History_StatEntries}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <TextBlock VerticalAlignment="Center" Text="{Binding EntryCountText}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_History_StatSnapshots}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <TextBlock VerticalAlignment="Center" Text="{Binding SnapshotCountText}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_History_StatSize}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <TextBlock VerticalAlignment="Center" Text="{Binding SizeText}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <!-- 点过清理之后才显示结果，没点过不留一行空文字。 -->
+                <fa:FASettingsExpanderItem IsVisible="{Binding HasPruneResult}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <TextBlock VerticalAlignment="Center"
+                                   MaxWidth="320"
+                                   TextAlignment="Right"
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Text="{Binding PruneResultText}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+            </fa:FASettingsExpander>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
