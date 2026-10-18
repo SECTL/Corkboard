@@ -15,6 +15,8 @@ using Corkboard.Core.Controls;
 using Corkboard.Core.Export;
 using Corkboard.Core.Icons;
 using Corkboard.Core.Services.Config;
+using Corkboard.Core.Services.Stats;
+using Corkboard.Services.Stats;
 using Corkboard.Services.Ui;
 using Corkboard.Services.Ui.Export;
 using Corkboard.ViewModels.Export;
@@ -57,6 +59,9 @@ public partial class BoardPage : UserControl
     /// <summary>导出图片的落盘服务（选路径、渲染、写文件都在它里面）。</summary>
     private readonly BoardExportService _boardExport;
 
+    /// <summary>使用量统计：导出成功时记一次 <c>export</c>（失败/取消不计）。</summary>
+    private readonly PlatformUsageReportService _usageReport;
+
     /// <summary>
     ///     导出图片时交给服务的「板子内容容器」：就是 ScrollViewer 里那块装所有科目区块的 StackPanel，
     ///     不是视口、更不是整窗——窗口外面没显示出来的部分也要完整导出来。
@@ -92,6 +97,7 @@ public partial class BoardPage : UserControl
         DataContext = IAppHost.GetService<BoardPageViewModel>();
         _overlay = IAppHost.GetService<PageOverlayService>();
         _boardExport = IAppHost.GetService<BoardExportService>();
+        _usageReport = IAppHost.GetService<PlatformUsageReportService>();
         _singleColumnList = this.FindControl<ItemsControl>("SingleColumnList");
         _boardContent = this.FindControl<StackPanel>("BoardContent");
 
@@ -302,12 +308,16 @@ public partial class BoardPage : UserControl
         {
             using var bitmap = await _boardExport.RenderContentBitmapAsync(_boardContent!, topLevel);
             await _boardExport.CopyImageToClipboardAsync(bitmap, topLevel);
+            _usageReport.Record(UsageMetricNames.Export);
             viewModel.ShowExportHint(CR.Export_SuccessCopied);
             return;
         }
 
         if (await _boardExport.ExportImageAsync(_boardContent!, topLevel, fileName))
+        {
+            _usageReport.Record(UsageMetricNames.Export);
             viewModel.ShowExportHint(CR.Export_SuccessImage);
+        }
     }
 
     /// <summary>
@@ -355,7 +365,10 @@ public partial class BoardPage : UserControl
         var fileName = ExportFileNameBuilder.Build(DateTime.Now, "pdf");
         if (await _boardExport.ExportPdfAsync(
                 pages, topLevel, fileName, viewModel.Config.BoardSettings.BoardName))
+        {
+            _usageReport.Record(UsageMetricNames.Export);
             viewModel.ShowExportHint(CR.Export_SuccessPdf);
+        }
 
         return false;
     }

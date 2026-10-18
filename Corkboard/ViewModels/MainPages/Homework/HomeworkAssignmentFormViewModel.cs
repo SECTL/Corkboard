@@ -11,6 +11,8 @@ using Corkboard.Core.Models.SubConfigs.Board;
 using Corkboard.Core.Notes;
 using Corkboard.Core.RichText;
 using Corkboard.Core.Services.Config;
+using Corkboard.Core.Services.Stats;
+using Corkboard.Services.Stats;
 using Corkboard.Services.Ui;
 using CR = Corkboard.Core.Langs.Common.Resources;
 
@@ -46,6 +48,7 @@ public partial class HomeworkAssignmentFormViewModel : ObservableObject
     private readonly IBoardService _boardService;
     private readonly PageOverlayService _overlay;
     private readonly BoardSettingsConfig _settings;
+    private readonly PlatformUsageReportService _usageReport;
 
     /// <summary>正在编辑的作业 Id；为 <c>null</c> 表示这是「布置作业」。</summary>
     private Guid? _editingNoteId;
@@ -60,11 +63,15 @@ public partial class HomeworkAssignmentFormViewModel : ObservableObject
     private HomeworkComposeMode _mode = HomeworkComposeMode.Text;
 
     public HomeworkAssignmentFormViewModel(
-        IBoardService boardService, PageOverlayService overlay, MainConfigHandler configHandler)
+        IBoardService boardService,
+        PageOverlayService overlay,
+        MainConfigHandler configHandler,
+        PlatformUsageReportService usageReport)
     {
         _boardService = boardService;
         _overlay = overlay;
         _settings = configHandler.Data.BoardSettings;
+        _usageReport = usageReport;
 
         BaseFontSize = RichTextStyle.ClampFontSize(_settings.DefaultContentFontSize);
         BaseColor = _settings.DefaultContentColor;
@@ -371,6 +378,8 @@ public partial class HomeworkAssignmentFormViewModel : ObservableObject
         }
 
         _boardService.Add(note);
+        // 使用量统计：只有「新增」算 note_add，编辑已有作业不算。
+        _usageReport.Record(UsageMetricNames.NoteAdd);
         _overlay.Close();
     }
 

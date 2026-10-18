@@ -487,5 +487,12 @@ public static class Resources
     public static string Export_Sort_UpdatedDescending => ResourceManager.GetString(nameof(Export_Sort_UpdatedDescending), Culture)!;
     public static string Export_Sort_Subject => ResourceManager.GetString(nameof(Export_Sort_Subject), Culture)!;
     public static string Export_Sort_Fixed => ResourceManager.GetString(nameof(Export_Sort_Fixed), Culture)!;
+    public static string Settings_Section_Privacy => ResourceManager.GetString(nameof(Settings_Section_Privacy), Culture)!;
+    public static string Settings_Basic_OnlineStatus => ResourceManager.GetString(nameof(Settings_Basic_OnlineStatus), Culture)!;
+    public static string Settings_Basic_OnlineStatusDescription => ResourceManager.GetString(nameof(Settings_Basic_OnlineStatusDescription), Culture)!;
+    public static string Settings_Basic_OnlineStatus_Full => ResourceManager.GetString(nameof(Settings_Basic_OnlineStatus_Full), Culture)!;
+    public static string Settings_Basic_OnlineStatus_Anonymous => ResourceManager.GetString(nameof(Settings_Basic_OnlineStatus_Anonymous), Culture)!;
+    public static string Settings_Basic_OnlineStatus_Off => ResourceManager.GetString(nameof(Settings_Basic_OnlineStatus_Off), Culture)!;
+    public static string Settings_About_OnlineUsers => ResourceManager.GetString(nameof(Settings_About_OnlineUsers), Culture)!;
 
 }

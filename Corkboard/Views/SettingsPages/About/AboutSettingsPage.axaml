@@ -101,7 +101,7 @@
                                    IsExpanded="True">
                 <Grid Margin="0 4 0 0"
                       ColumnDefinitions="Auto,*"
-                      RowDefinitions="Auto,Auto,Auto,Auto"
+                      RowDefinitions="Auto,Auto,Auto,Auto,Auto"
                       ColumnSpacing="12" RowSpacing="4">
                     <TextBlock Grid.Row="0" Grid.Column="0" Text="{x:Static core:Resources.Settings_About_Version}" />
                     <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Version}" TextWrapping="Wrap" />
@@ -114,6 +114,9 @@
 
                     <TextBlock Grid.Row="3" Grid.Column="0" Text="{x:Static core:Resources.Settings_About_Runtime}" />
                     <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Runtime}" TextWrapping="Wrap" />
+
+                    <TextBlock Grid.Row="4" Grid.Column="0" Text="{x:Static core:Resources.Settings_About_OnlineUsers}" />
+                    <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding OnlineUsersCount}" TextWrapping="Wrap" />
                 </Grid>
             </fa:FASettingsExpander>
         </StackPanel>

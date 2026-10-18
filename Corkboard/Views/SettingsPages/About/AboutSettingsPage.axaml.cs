@@ -19,6 +19,31 @@ public partial class AboutSettingsPage : UserControl
     {
         InitializeComponent();
         DataContext = IAppHost.GetService<AboutSettingsPageViewModel>();
+
+        // 页面是 transient 的：打开时查一次在线人数，离开时断开对单例服务的订阅。
+        Loaded += OnLoaded;
+        Unloaded += OnUnloaded;
+    }
+
+    private async void OnLoaded(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not AboutSettingsPageViewModel viewModel)
+            return;
+
+        try
+        {
+            await viewModel.RefreshOnlineStatusAsync();
+        }
+        catch (Exception)
+        {
+            // 在线人数只是展示：查不到就保留占位符，不打扰用户。
+        }
+    }
+
+    private void OnUnloaded(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is AboutSettingsPageViewModel viewModel)
+            viewModel.Detach();
     }
 
     /// <summary>

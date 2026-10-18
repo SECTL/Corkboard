@@ -41,6 +41,7 @@ public partial class MainConfigModel : ConfigBase
         BoardSettings.NormalizeHistory();
         ExportSettings.Normalize();
         UpdateSettings.Normalize();
+        General.PrivacySettings.Normalize();
     }
 
     [JsonIgnore]

@@ -72,10 +72,10 @@ public class VersionUsageReportPayloadTests
     }
 
     [Fact]
-    public void PlatformIdAndOAuthClientId_AreDistinct()
+    public void PlatformIdIsTheSectPlatformLoginId()
     {
-        // 上游两者同值，本项目是两个不同的值：混用会让统计维度与 OAuth 客户端互相污染。
-        Assert.StartsWith("platform_", GlobalConstants.PlatformId);
-        Assert.NotEqual(GlobalConstants.PlatformId, "6ac3d35400241eff9fbe");
+        // SECTL 平台记录的主键同时用于 OAuth 与统计（在线状态、使用量、版本上报）。
+        // 改这个值要同步改服务端；App 层的 SectlAuthEndpoints.ClientId 直接取这里，别写第二份。
+        Assert.Equal("6ac3d35400241eff9fbe", GlobalConstants.PlatformId);
     }
 }

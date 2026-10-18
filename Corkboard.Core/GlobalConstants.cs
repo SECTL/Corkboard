@@ -66,10 +66,11 @@ public static class GlobalConstants
     ///     SECTL 平台标识（<c>platform_id</c>）：服务端按它归并本应用的统计与版本上报。
     /// </summary>
     /// <remarks>
-    ///     与 OAuth 客户端 ID（<c>Corkboard.Services.Auth.SectlAuthEndpoints.ClientId</c>）是两个不同的值，
-    ///     上游 SecRandom 恰好同值，本项目不是。改这里只影响统计维度，不影响登录。
+    ///     **与 OAuth 客户端 ID 是同一个值**：SECTL 侧平台记录的主键就是它，OAuth 与统计共用。
+    ///     <c>Corkboard.Services.Auth.SectlAuthEndpoints.ClientId</c> 从这里取值，别写第二份；
+    ///     上游 SecRandom 也是这个结构。改平台要同步改服务端注册。
     /// </remarks>
-    public const string PlatformId = "platform_29648fc4ac3ba07d";
+    public const string PlatformId = "6ac3d35400241eff9fbe";
 
     /// <summary>自定义 URL 协议 scheme。</summary>
     public const string UrlProtocolScheme = "corkboard";

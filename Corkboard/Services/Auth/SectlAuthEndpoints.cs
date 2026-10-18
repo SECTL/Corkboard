@@ -1,3 +1,5 @@
+using Corkboard.Core;
+
 namespace Corkboard.Services.Auth;
 
 /// <summary>
@@ -10,16 +12,16 @@ namespace Corkboard.Services.Auth;
 public static class SectlAuthEndpoints
 {
     /// <summary>
-    ///     桌面端 OAuth 客户端 ID（SECTL 侧已注册）。
+    ///     桌面端 OAuth 客户端 ID（SECTL 侧已注册），也就是平台标识
+    ///     <see cref="GlobalConstants.PlatformId" />。
     /// </summary>
     /// <remarks>
-    ///     与平台标识 <see cref="Corkboard.Core.GlobalConstants.PlatformId" /> 是**两个不同的值**：
-    ///     这个 ID 只用于 OAuth 授权/换令牌，平台标识用于服务端统计（见 PlatformVersionReportService）。
-    ///     上游 SecRandom 两者恰好同值，本项目不是，改动其一不影响另一个。
+    ///     SECTL 侧平台记录的主键同时用于 OAuth 与统计（在线状态、使用量、版本上报），
+    ///     所以这里直接取 <see cref="GlobalConstants.PlatformId" />，**不要写第二份字面量**。
     ///     客户端注册时需登记桌面端的 loopback 重定向地址
     ///     （<c>http://localhost:&lt;动态端口&gt;/callback</c>）。
     /// </remarks>
-    public const string ClientId = "6ac3d35400241eff9fbe";
+    public const string ClientId = GlobalConstants.PlatformId;
 
     /// <summary>SECTL API 基址，同时是允许下载头像的唯一来源。</summary>
     public const string ApiBaseUrl = "https://appwrite.sectl.cn";
@@ -64,6 +66,18 @@ public static class SectlAuthEndpoints
 
     /// <summary>云存储：换临时下载地址（<c>GET</c>，返回体里的 <c>download_url</c> 才带文件内容）。</summary>
     public static string CloudFileDownloadUrl(string fileId) => $"{CloudFileUrl(fileId)}/download";
+
+    // ---------------------------------------------------------------- 平台统计（在线状态 / 使用量）
+
+    /// <summary>在线状态上报地址（<c>POST</c>，载荷 <c>platform_id</c> / <c>device_uuid</c> / <c>device_type</c>）。</summary>
+    public const string OnlineReportUrl = $"{ApiBaseUrl}/api/stats/online";
+
+    /// <summary>在线人数查询地址（<c>GET</c>，返回 <c>success</c> / <c>online_count</c> / <c>error</c>）。</summary>
+    public static string OnlineStatsUrl(string platformId) =>
+        $"{ApiBaseUrl}/api/stats/platform/{Uri.EscapeDataString(platformId)}";
+
+    /// <summary>使用量增量上报地址（<c>POST</c>，载荷 <c>platform_id</c> / <c>field_key</c> / <c>delta</c>）。</summary>
+    public const string UsageIncrementUrl = $"{ApiBaseUrl}/api/stats/usage/increment";
 
     /// <summary>令牌文件在数据根下的相对路径段。</summary>
     public static readonly string[] TokenFileSegments = ["config", "sectl-auth.json"];

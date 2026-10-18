@@ -6,4 +6,7 @@ namespace Corkboard.Core.Models.SubConfigs.General;
 public partial class GeneralSettingsConfig : ObservableObject
 {
     [ObservableProperty] private BasicSettingsConfig _basic = new();
+
+    /// <summary>隐私设置（在线状态上报）。单独一份子配置，不往基础设置里堆统计开关。</summary>
+    [ObservableProperty] private PrivacySettingsConfig _privacySettings = new();
 }

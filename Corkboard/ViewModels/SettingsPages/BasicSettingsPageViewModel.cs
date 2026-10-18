@@ -40,6 +40,31 @@ public partial class BasicSettingsPageViewModel(
     /// <summary>语言改动后由页面请求重启（由 <c>SettingsView.RequestRestartApp</c> 在标题栏亮出提示）。</summary>
     public event EventHandler? LanguageChangeRequested;
 
+    /// <summary>隐私设置子树（在线状态上报）。统计开关放这里，不往基础设置里塞。</summary>
+    public PrivacySettingsConfig PrivacySettings => Config.General.PrivacySettings;
+
+    /// <summary>在线状态三档：正常 / 匿名 / 停止（客户端上报的字段相同，位置由服务端统计）。</summary>
+    public IReadOnlyList<OnlineStatusOption> OnlineStatusOptions { get; } =
+    [
+        new(OnlineStatusMode.Full, CR.Settings_Basic_OnlineStatus_Full),
+        new(OnlineStatusMode.Anonymous, CR.Settings_Basic_OnlineStatus_Anonymous),
+        new(OnlineStatusMode.Off, CR.Settings_Basic_OnlineStatus_Off)
+    ];
+
+    /// <summary>在线状态下拉选中项；配置里是未定义值时退回第一项「正常上报」。</summary>
+    public OnlineStatusOption SelectedOnlineStatus
+    {
+        get => OnlineStatusOptions.FirstOrDefault(option => option.Mode == PrivacySettings.OnlineStatusMode)
+               ?? OnlineStatusOptions[0];
+        set
+        {
+            if (value is null || value.Mode == PrivacySettings.OnlineStatusMode)
+                return;
+
+            PrivacySettings.OnlineStatusMode = value.Mode;
+        }
+    }
+
     /// <summary>
     ///     当前平台是否真的能置底到桌面。骨架里只有 Windows 实现了这个能力，
     ///     其余平台把开关禁用掉，而不是让用户改一个不生效的配置。

@@ -1526,4 +1526,25 @@
   <data name="Export_Sort_Fixed" xml:space="preserve">
     <value>Keep fixed order</value>
   </data>
+  <data name="Settings_Section_Privacy" xml:space="preserve">
+    <value>Privacy</value>
+  </data>
+  <data name="Settings_Basic_OnlineStatus" xml:space="preserve">
+    <value>Online status</value>
+  </data>
+  <data name="Settings_Basic_OnlineStatusDescription" xml:space="preserve">
+    <value>Only the device id and type are sent; the server derives location from the request address</value>
+  </data>
+  <data name="Settings_Basic_OnlineStatus_Full" xml:space="preserve">
+    <value>Report normally</value>
+  </data>
+  <data name="Settings_Basic_OnlineStatus_Anonymous" xml:space="preserve">
+    <value>Report anonymously</value>
+  </data>
+  <data name="Settings_Basic_OnlineStatus_Off" xml:space="preserve">
+    <value>Stop reporting</value>
+  </data>
+  <data name="Settings_About_OnlineUsers" xml:space="preserve">
+    <value>Online users</value>
+  </data>
 </root>

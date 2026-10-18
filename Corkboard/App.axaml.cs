@@ -35,6 +35,7 @@ using Corkboard.Services.Auth;
 using Corkboard.Services.Cloud;
 using Corkboard.Services.Desktop;
 using Corkboard.Services.Ipc;
+using Corkboard.Services.Stats;
 using Corkboard.Services.Board;
 using Corkboard.Services.Homework;
 using Corkboard.Services.Ui;
@@ -164,6 +165,13 @@ public partial class App : Application
         services.AddHostedService<SectlHeartbeatService>();
         // 版本使用人数上报：每次启动一次，尽力而为，失败只写日志（平台标识见 GlobalConstants.PlatformId）。
         services.AddHostedService<PlatformVersionReportService>();
+
+        // 平台统计：在线状态（受隐私设置三态控制）与使用量增量。两者都要「后台跑 + 页面读缓存」，
+        // 所以先注册单例、再把这个实例挂成托管服务，避免 DI 里出现两个互不相干的实例。
+        services.AddSingleton<OnlineStatusService>();
+        services.AddHostedService(serviceProvider => serviceProvider.GetRequiredService<OnlineStatusService>());
+        services.AddSingleton<PlatformUsageReportService>();
+        services.AddHostedService(serviceProvider => serviceProvider.GetRequiredService<PlatformUsageReportService>());
 
         // 云同步：把作业板与设置备份到思拓创联云存储。构造期就挂上配置与作业板的变化监听，
         // 所以启动时必须解析一次（见 StartHostAsync 的 InitializeCloudSyncAsync）。
