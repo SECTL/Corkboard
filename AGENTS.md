@@ -900,11 +900,27 @@ dotnet run --project Corkboard.Desktop\Corkboard.Desktop.csproj
 - **置底到桌面**只走 `WindowFeatures.DesktopBottom`（`Corkboard/Views/MainWindow.axaml.cs` +
   `Corkboard.Platforms.Windows/WindowsDesktopBottom.cs`）：Windows 嵌进 Progman/WorkerW，
   拿不到宿主时退化为 Z 序最底。
-- **托盘图标是常驻入口**（`Corkboard/Services/Desktop/TaskBarIconService.cs`）：**左键点图标 = 把作业板叫回来**
-  （收纳状态下就是「展开作业板」：收起浮钮 + 显示主窗口），**右键才出菜单**——显示主窗口 / 打开设置 /
-  重启 / 退出。左键与菜单第一项走同一个入口 `App.ShowMainWindow()`：先看 `BoardDockService.IsDocked` 决定是否
-  `Expand()`，再走 `MainWindow.ShowFromDock()` 重放置底 / 点击穿透 / 不透明度（隐藏会摘掉这些平台样式，
-  光 `Window.Show()` 补不回来）。**不要**在托盘那边另写一套「显示窗口」。
+- **托盘图标是常驻入口**（`Corkboard/Services/Desktop/TaskBarIconService.cs`）：**左右键都弹菜单**——
+  右键走平台原生菜单（`TrayIcon.Menu` = `NativeMenu`），左键走应用自己画的
+  `Corkboard/Views/TrayMenuWindow.axaml(.cs)`（贴着鼠标弹出、条目与右键那份完全一致）。
+  条目只有一张表 `TrayMenuItem`（`Services/Desktop/`），两份菜单都从它映射，**不要**在托盘那边另写一套。
+  - 为什么左键要自己画：Avalonia 的 Win32 托盘只在右键时弹 `NativeMenu`（`WM_TRAYMOUSE` 的 lParam
+    514 → `Clicked`、517 → 弹菜单），左键只报一次点击。判据是 `PlatformCapabilities.SupportsTrayMenuOnLeftClick`：
+    Windows 为 `false`（自己画），macOS 的 NSStatusItem 与 Linux 的 SNI/AppIndicator 为 `true`
+    （**那两边不要再挂 `Clicked`，否则会同时弹出两个菜单**）。
+  - 左键菜单必须是**独立顶层窗口**（透明、无边框、不进任务栏、置顶）：主窗口可能根本看不见
+    （收纳成浮钮、或「启动时显示主窗口」关着），挂在主窗口视觉树里的 Popup 会跟着一起没掉。
+    卡片样式交给 `MenuFlyoutPresenter` 自己的模板——右键那份原生菜单也是它画的，两边长得一样。
+    位置从鼠标右下方展开、越界往左上翻、最后夹进 `Screen.WorkingArea`；点任意一项 / Esc /
+    失焦时自己关（`CloseMenu()` 幂等）。
+  - 鼠标位置只能问平台（Avalonia 的 `MouseDevice` 只给「某个 TopLevel 里的本地坐标」，窗口没被划过
+    就是旧值）：走 `IPointerLocator`（`Corkboard.Platforms.Abstractions`，Windows 用 `GetCursorPos`，
+    其它平台 `UnsupportedPointerLocator`），拿不到时退回主屏右下角——**不要**因此把菜单藏起来。
+  - ⚠️ `x:Name` 生成的字段在**自己写了 `InitializeComponent()`** 的窗口里恒为 null（生成的那条赋值语句
+    不会跑），取命名控件一律 `this.FindControl<T>("名字")`（`TrayMenuWindow` 的 `MenuPresenter` 就是这么写的）。
+  - 菜单里第一项「显示主窗口」走 `App.ShowMainWindow()`：先看 `BoardDockService.IsDocked` 决定是否
+    `Expand()`，再走 `MainWindow.ShowFromDock()` 重放置底 / 点击穿透 / 不透明度（隐藏会摘掉这些平台样式，
+    光 `Window.Show()` 补不回来）。**不要**在托盘那边另写一套「显示窗口」。
   菜单文案复用 Core 的 `Menu_*` 键；平台能力看 `PlatformCapabilities.SupportsTrayIcon`。
 - **窗口图标与托盘图标一律用 PNG**（`Corkboard/Services/Desktop/AppIcon.cs`，母图
   `Corkboard/Assets/Icons/Corkboard.png`）：`MainWindow` 构造里 `Icon = AppIcon.LoadBitmap()`、托盘用

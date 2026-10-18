@@ -18,6 +18,8 @@ public sealed class PlatformServiceRootStub : IPlatformServiceRoot, IWindowFeatu
 
     public IAutostartService Autostart => UnsupportedAutostartService.Instance;
 
+    public IPointerLocator Pointer => UnsupportedPointerLocator.Instance;
+
     public global::Corkboard.Platforms.Abstractions.WindowFeatures SupportedFeatures =>
         global::Corkboard.Platforms.Abstractions.WindowFeatures.None;
 

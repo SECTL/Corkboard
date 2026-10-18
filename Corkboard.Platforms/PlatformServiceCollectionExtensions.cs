@@ -16,6 +16,7 @@ public static class PlatformServiceCollectionExtensions
         services.AddSingleton(root.Capabilities);
         services.AddSingleton<IWindowFeatureService>(root.WindowFeatures);
         services.AddSingleton<IAutostartService>(root.Autostart);
+        services.AddSingleton<IPointerLocator>(root.Pointer);
         return services;
     }
 }

@@ -1,0 +1,28 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        x:Class="Corkboard.Views.TrayMenuWindow"
+        Title="Corkboard"
+        WindowDecorations="None"
+        WindowStartupLocation="Manual"
+        SizeToContent="WidthAndHeight"
+        CanResize="False"
+        ShowInTaskbar="False"
+        Topmost="True"
+        Background="Transparent">
+    <!--
+        托盘菜单（左键用）。为什么是「独立窗口 + 自绘菜单」而不是别的写法：
+
+        1) Windows 的原生托盘只把左键当一次 Clicked，菜单只给右键（Avalonia 的 Win32 实现里
+           WM_TRAYMOUSE 的 lParam 514 → Clicked、517 → 弹菜单）。所以左键要出菜单，只能自己画。
+        2) 画的菜单必须能盖在任何东西上面、且在应用窗口藏起来（收纳 / 启动时不显示主窗口）时也能弹，
+           所以它不能挂在主窗口的视觉树里（那里是 Popup，主窗口一隐藏就跟着没了），得是独立顶层窗口。
+        3) 内容直接用 MenuFlyoutPresenter：右键那份原生菜单也是它画的，这样左右键的菜单长得一模一样；
+           窗口本身必须透明，否则无边框窗口的方块底色会在菜单圆角外面露出来。
+
+        条目由 code-behind 按 TrayMenuItem 列表铺进去（见 TrayMenuWindow.ShowMenu）。
+    -->
+    <MenuFlyoutPresenter x:Name="MenuHost" MinWidth="180" />
+</Window>

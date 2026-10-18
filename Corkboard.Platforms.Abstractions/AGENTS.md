@@ -11,3 +11,4 @@ This project defines app-internal, platform-neutral contracts. It is intentional
 - New capabilities must first be expressed here, then implemented only in the matching `Corkboard.Platforms.<OS>` project. Do not claim support in a platform root before the implementation exists.
 - Platform projects that invoke system commands must use a bounded output reader/timeout and terminate timed-out child processes; do not call synchronous `ReadToEnd()` before waiting for process exit.
 - `TopmostMode.UiAccess` remains a desktop process-token startup concern and must not be represented as a generic window feature.
+- Queries that are not about one window (e.g. "where is the pointer on screen" — `IPointerLocator` / `ScreenPoint`) get their own small interface here plus a matching implementation in each `Corkboard.Platforms.<OS>` project, and an `Unsupported*` null object in `Corkboard.Platforms` for the rest. Do not stretch `WindowFeatureRequest` to cover them.

@@ -14,6 +14,7 @@ public sealed class WindowsPlatformServiceRoot : IPlatformServiceRoot
     {
         WindowFeatures = new WindowsWindowFeatureService();
         Autostart = new WindowsAutostartService();
+        Pointer = new WindowsPointerLocator();
     }
 
     public PlatformKind Kind => PlatformKind.Windows;
@@ -29,6 +30,9 @@ public sealed class WindowsPlatformServiceRoot : IPlatformServiceRoot
         SupportsClickThrough: true,
         SupportsCaptureExclusion: OperatingSystem.IsWindowsVersionAtLeast(10, 0, 19041),
         SupportsTrayIcon: true,
+
+        // Windows 的托盘只把左键当一次 Clicked（菜单只给右键），左键菜单要应用自己画。
+        SupportsTrayMenuOnLeftClick: false,
         SupportsGlobalShortcuts: true,
         SupportsUrlSchemeRegistration: true,
         SupportsUiAccess: true,
@@ -37,4 +41,6 @@ public sealed class WindowsPlatformServiceRoot : IPlatformServiceRoot
     public IWindowFeatureService WindowFeatures { get; }
 
     public IAutostartService Autostart { get; }
+
+    public IPointerLocator Pointer { get; }
 }
