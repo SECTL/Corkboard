@@ -14,6 +14,10 @@ namespace Corkboard.Services.Desktop;
 /// </summary>
 /// <remarks>
 ///     <para>
+///         左键点图标就是把作业板叫回来（收纳状态下等于「展开作业板」，见 <see cref="App.ShowMainWindow" />），
+///         右键才出菜单——与 Windows 上绝大多数常驻程序的习惯一致。
+///     </para>
+///     <para>
 ///         图标与窗口图标是同一份 PNG 母图（<see cref="AppIcon" />），平台按托盘需要的尺寸自己缩放；
 ///         不再用 ICO——那份多尺寸容器只在 exe 文件图标里还需要。
 ///     </para>
@@ -109,6 +113,10 @@ public sealed class TaskBarIconService : IDisposable
         }
     }
 
+    /// <summary>
+    ///     托盘左键：把作业板叫回来——收纳状态下就是「展开作业板」（收起浮钮、显示主窗口），
+    ///     与菜单里第一项「显示主窗口」走同一条路（<see cref="App.ShowMainWindow" />）。
+    /// </summary>
     private void OnTrayIconClicked(object? sender, EventArgs e) => App.ShowMainWindow();
 
     private static NativeMenu CreateMenu()

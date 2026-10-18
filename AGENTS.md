@@ -892,8 +892,12 @@ dotnet run --project Corkboard.Desktop\Corkboard.Desktop.csproj
 - **置底到桌面**只走 `WindowFeatures.DesktopBottom`（`Corkboard/Views/MainWindow.axaml.cs` +
   `Corkboard.Platforms.Windows/WindowsDesktopBottom.cs`）：Windows 嵌进 Progman/WorkerW，
   拿不到宿主时退化为 Z 序最底。
-- **托盘图标是常驻入口**（`Corkboard/Services/Desktop/TaskBarIconService.cs`）：显示主窗口 / 打开设置 /
-  重启 / 退出。菜单文案复用 Core 的 `Menu_*` 键；平台能力看 `PlatformCapabilities.SupportsTrayIcon`。
+- **托盘图标是常驻入口**（`Corkboard/Services/Desktop/TaskBarIconService.cs`）：**左键点图标 = 把作业板叫回来**
+  （收纳状态下就是「展开作业板」：收起浮钮 + 显示主窗口），**右键才出菜单**——显示主窗口 / 打开设置 /
+  重启 / 退出。左键与菜单第一项走同一个入口 `App.ShowMainWindow()`：先看 `BoardDockService.IsDocked` 决定是否
+  `Expand()`，再走 `MainWindow.ShowFromDock()` 重放置底 / 点击穿透 / 不透明度（隐藏会摘掉这些平台样式，
+  光 `Window.Show()` 补不回来）。**不要**在托盘那边另写一套「显示窗口」。
+  菜单文案复用 Core 的 `Menu_*` 键；平台能力看 `PlatformCapabilities.SupportsTrayIcon`。
 - **窗口图标与托盘图标一律用 PNG**（`Corkboard/Services/Desktop/AppIcon.cs`，母图
   `Corkboard/Assets/Icons/Corkboard.png`）：`MainWindow` 构造里 `Icon = AppIcon.LoadBitmap()`、托盘用
   `AppIcon.LoadWindowIcon()`——**不要再挂 ICO**。⚠️ `FAAppWindow.Icon` 的声明类型是 `IImage`（它把基类
