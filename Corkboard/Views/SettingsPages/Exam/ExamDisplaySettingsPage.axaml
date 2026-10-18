@@ -1,0 +1,132 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fa="using:FluentAvalonia.UI.Controls"
+             xmlns:vm="using:Corkboard.ViewModels.SettingsPages.Exam"
+             xmlns:core="using:Corkboard.Core.Langs.Common"
+             mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="700"
+             x:Class="Corkboard.Views.SettingsPages.Exam.ExamDisplaySettingsPage"
+             x:DataType="vm:ExamDisplaySettingsPageViewModel">
+    <ScrollViewer>
+        <StackPanel Classes="page-container">
+            <TextBlock Margin="0 4 0 0"
+                       FontWeight="Normal"
+                       Text="{x:Static core:Resources.Settings_Exam_Display_Title}"
+                       Theme="{StaticResource TitleTextBlockStyle}" />
+
+            <!--
+                主标题：看板左上角的大字。留空回退到默认名（「考试看板」），
+                所以升级界面语言后默认标题会跟着变。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Exam_Display_TitleLabel}"
+                                   Description="{x:Static core:Resources.Settings_Exam_Display_TitleDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <TextBox MinWidth="260"
+                             VerticalAlignment="Center"
+                             PlaceholderText="{x:Static core:Resources.Settings_Exam_Display_TitlePlaceholder}"
+                             Text="{Binding TitleDraft, Mode=TwoWay}"
+                             LostFocus="OnEditorLostFocus"
+                             KeyDown="OnEditorKeyDown" />
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <!--
+                副标题：主标题下面那一行，默认字号更小、颜色更淡（跟随主题的次要文字色）。
+                用户想自己配色就关掉「跟随主题」，露出取色器。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Exam_Display_SubtitleLabel}"
+                                   Description="{x:Static core:Resources.Settings_Exam_Display_SubtitleDescription}">
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Exam_Display_SubtitleLabel}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <TextBox MinWidth="260"
+                                 VerticalAlignment="Center"
+                                 PlaceholderText="{x:Static core:Resources.Settings_Exam_Display_SubtitlePlaceholder}"
+                                 Text="{Binding SubtitleDraft, Mode=TwoWay}"
+                                 LostFocus="OnEditorLostFocus"
+                                 KeyDown="OnEditorKeyDown" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Exam_Display_SubtitleColor}"
+                                           Description="{x:Static core:Resources.Settings_Exam_Display_SubtitleColorDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="12"
+                                    VerticalAlignment="Center">
+                            <!-- 「跟随主题」时把取色器整块藏起来，而不是留一个点不动的控件。 -->
+                            <ColorPicker VerticalAlignment="Center"
+                                         IsAlphaEnabled="False"
+                                         IsVisible="{Binding !FollowSubtitleThemeColor}"
+                                         Color="{Binding SubtitleColorDraft, Mode=TwoWay}" />
+                            <StackPanel Orientation="Horizontal"
+                                        Spacing="8"
+                                        VerticalAlignment="Center">
+                                <ToggleSwitch IsChecked="{Binding FollowSubtitleThemeColor, Mode=TwoWay}" />
+                                <TextBlock VerticalAlignment="Center"
+                                           Text="{x:Static core:Resources.Settings_Exam_Display_SubtitleColorDefault}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+            </fa:FASettingsExpander>
+
+            <!--
+                三档状态的分界：开考前 N 分钟之内算「即将开始」，之前是「未开始」，
+                开考之后到收卷是「进行中」。默认 30 分钟。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Exam_Display_Threshold}"
+                                   Description="{x:Static core:Resources.Settings_Exam_Display_ThresholdDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <StackPanel Orientation="Horizontal"
+                                VerticalAlignment="Center"
+                                Spacing="8">
+                        <NumericUpDown MinWidth="130"
+                                       Minimum="1"
+                                       Maximum="1440"
+                                       Increment="5"
+                                       FormatString="0"
+                                       Value="{Binding ThresholdDraft, Mode=TwoWay}"
+                                       LostFocus="OnEditorLostFocus" />
+                        <TextBlock VerticalAlignment="Center" Text="{x:Static core:Resources.Common_Minutes}" />
+                    </StackPanel>
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <!-- 时钟与考试列表谁在左边。 -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Exam_Display_ClockSide}"
+                                   Description="{x:Static core:Resources.Settings_Exam_Display_ClockSideDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <ComboBox MinWidth="160"
+                              ItemsSource="{Binding ClockSideOptions}"
+                              SelectedItem="{Binding SelectedClockSideOption, Mode=TwoWay}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ExamClockSideOption">
+                                <TextBlock Text="{Binding DisplayName}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <!--
+                两种形态的取舍：
+                「即将开始」默认把整张表收起来，只留下一场（科目 + 时间 + 状态）；
+                「进行中」默认只留一个大时钟，想看卷面信息再把开关打开。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Exam_Display_HideListUpcoming}"
+                                   Description="{x:Static core:Resources.Settings_Exam_Display_HideListUpcomingDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding Settings.HideExamListWhenUpcoming, Mode=TwoWay}" />
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Exam_Display_ShowListInProgress}"
+                                   Description="{x:Static core:Resources.Settings_Exam_Display_ShowListInProgressDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding Settings.ShowExamListInProgress, Mode=TwoWay}" />
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

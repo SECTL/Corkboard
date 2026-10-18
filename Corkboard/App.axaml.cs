@@ -36,24 +36,29 @@ using Corkboard.Services.Cloud;
 using Corkboard.Services.Desktop;
 using Corkboard.Services.Ipc;
 using Corkboard.Services.Stats;
+using Corkboard.Services.Time;
 using Corkboard.Services.Board;
 using Corkboard.Services.Homework;
 using Corkboard.Services.Ui;
 using Corkboard.Services.Updates;
 using Corkboard.Shared;
 using Corkboard.ViewModels;
+using Corkboard.ViewModels.ExamBoard;
 using Corkboard.ViewModels.MainPages.Board;
 using Corkboard.ViewModels.MainPages.Homework;
 using Corkboard.ViewModels.SettingsPages;
 using Corkboard.ViewModels.SettingsPages.Board;
+using Corkboard.ViewModels.SettingsPages.Exam;
 using Corkboard.ViewModels.SettingsPages.Export;
 using Corkboard.Views;
+using Corkboard.Views.ExamBoard;
 using Corkboard.Views.MainPages.Board;
 using Corkboard.Views.MainPages.Homework;
 using Corkboard.Views.SettingsPages.About;
 using Corkboard.Views.SettingsPages.Account;
 using Corkboard.Views.SettingsPages.Board;
 using Corkboard.Views.SettingsPages.Cloud;
+using Corkboard.Views.SettingsPages.Exam;
 using Corkboard.Views.SettingsPages.Export;
 using Corkboard.Views.SettingsPages.General;
 using Corkboard.Views.SettingsPages.Personalized;
@@ -73,6 +78,7 @@ public partial class App : Application
 {
     private static MainWindow? _mainWindow;
     private static MainWindow? _settingsWindow;
+    private static ExamBoardWindow? _examBoardWindow;
     private static IClassicDesktopStyleApplicationLifetime? _desktopLifetime;
     private static Task? _hostStartupTask;
     private MainConfigModel _startupSettings = new();
@@ -215,6 +221,9 @@ public partial class App : Application
         // 作业历史：把「历史与回放」的三项设置同步给存储层，并每小时按保留天数与容量上限清一次旧历史。
         services.AddHostedService<BoardHistoryHostedService>();
 
+        // NTP 校时：按「设置 → 考试看板 → 时间同步」的间隔在后台对齐标准时间，看板时钟读它。
+        services.AddHostedService<NtpSyncHostedService>();
+
         // ViewModel 与页面。AddMainPage/AddSettingsPage 同时写导航注册表和键控 DI，两者必须成对。
         services.AddTransient<MainViewModel>();
         services.AddTransient<SettingsViewModel>();
@@ -234,6 +243,10 @@ public partial class App : Application
         services.AddTransient<HistorySettingsPageViewModel>();
         services.AddTransient<DockSettingsPageViewModel>();
         services.AddTransient<ExportSettingsPageViewModel>();
+        services.AddTransient<ExamBoardViewModel>();
+        services.AddTransient<ExamScheduleSettingsPageViewModel>();
+        services.AddTransient<ExamDisplaySettingsPageViewModel>();
+        services.AddTransient<ExamTimeSettingsPageViewModel>();
 
         // 主页面标题的默认文案；用户可以在作业板设置里改成别的名字。
         services.AddMainPage<BoardPage>(CR.Board_Title);
@@ -255,6 +268,12 @@ public partial class App : Application
         services.AddSettingsPage<DockSettingsPage>(CR.Settings_Board_Dock_Title);
         // 「导出」在作业板分组里：导出的就是作业板，放顶层会让人找不着。
         services.AddSettingsPage<ExportSettingsPage>(CR.Settings_Export_Title);
+
+        // 「考试看板」是第二个可折叠分组，排在「作业板」下面：考试安排、看板显示、时间同步。
+        services.AddGroup(new PageGroupInfo(CR.Settings_Exam_Group, "settings.exam.group", FluentIcons.CalendarFilled));
+        services.AddSettingsPage<ExamScheduleSettingsPage>(CR.Settings_Exam_Schedule_Title);
+        services.AddSettingsPage<ExamDisplaySettingsPage>(CR.Settings_Exam_Display_Title);
+        services.AddSettingsPage<ExamTimeSettingsPage>(CR.Settings_Exam_Time_Title);
 
         // 「账号」「云同步」暂不开放入口：两个页面的 PageInfo 上标了 isHide: true，不进侧边栏。
         // 注册保留（键控 DI 仍按 Id 可取到），以后开放时去掉 PageInfo 上的 isHide 即可。
@@ -580,6 +599,29 @@ public partial class App : Application
     public static void ShowSettingsWindow()
     {
         var window = _settingsWindow ??= CreateMainWindow(AppConsts.SettingsWindowScope);
+        ShowAndActivate(window);
+    }
+
+    /// <summary>
+    ///     打开全屏考试看板。看板是独立窗口（不进任务栏、无边框、整屏），
+    ///     关掉之后再把字段清空，下次点入口重新建一个（里面挂着每秒的心跳与订阅）。
+    /// </summary>
+    public static void ShowExamBoardWindow()
+    {
+        if (_examBoardWindow is { } existing)
+        {
+            ShowAndActivate(existing);
+            return;
+        }
+
+        var window = new ExamBoardWindow();
+        _examBoardWindow = window;
+        window.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(_examBoardWindow, window))
+                _examBoardWindow = null;
+        };
+
         ShowAndActivate(window);
     }
 

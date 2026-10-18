@@ -69,4 +69,19 @@ public static class FluentIcons
 
     /// <summary>设置里的云同步页。码位来自上游图标映射表 <c>cloud_20_filled</c>。</summary>
     public const string CloudFilled = "\uE4DB";
+
+    /// <summary>「考试看板」分组与考试安排页。码位来自上游图标映射表 <c>calendar_ltr_20_filled</c>。</summary>
+    public const string CalendarFilled = "\uE32F";
+
+    /// <summary>考试看板上的时钟与「看板显示」页。码位来自上游图标映射表 <c>clock_20_filled</c>。</summary>
+    public const string ClockFilled = "\uE4C3";
+
+    /// <summary>「时间同步」页的立即同步按钮。码位来自上游图标映射表 <c>timer_20_filled</c>。</summary>
+    public const string TimerFilled = "\uF360";
+
+    /// <summary>「时间同步」页的服务器列表。码位来自上游图标映射表 <c>globe_20_filled</c>。</summary>
+    public const string GlobeFilled = "\uE904";
+
+    /// <summary>「打开考试看板」入口。码位来自上游图标映射表 <c>full_screen_maximize_20_filled</c>。</summary>
+    public const string FullScreenMaximizeFilled = "\uE8D0";
 }

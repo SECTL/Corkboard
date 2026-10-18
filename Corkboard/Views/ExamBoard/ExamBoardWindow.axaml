@@ -1,0 +1,245 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:Corkboard.ViewModels.ExamBoard"
+        xmlns:core="using:Corkboard.Core.Langs.Common"
+        mc:Ignorable="d" d:DesignWidth="1600" d:DesignHeight="900"
+        x:Class="Corkboard.Views.ExamBoard.ExamBoardWindow"
+        x:DataType="vm:ExamBoardViewModel"
+        Title="{x:Static core:Resources.Exam_Board_DefaultTitle}"
+        WindowDecorations="None"
+        WindowState="FullScreen"
+        ShowInTaskbar="False"
+        Background="{DynamicResource SolidBackgroundFillColorBaseBrush}">
+    <!--
+        全屏考试看板。
+
+        为什么是一个独立的全屏窗口、而不是主窗口里的一层遮罩：
+        1) 看板要占满整块屏幕、盖住任务栏，只有 WindowState=FullScreen 能做到；
+        2) 主窗口可能是「置底到桌面」的挂件形态，遮罩根本铺不满屏幕；
+        3) 长按退出只关这一个窗口，主窗口的置底 / 穿透状态一点都不用碰。
+
+        版式：左上角标题 + 副标题，正文是「时钟 + 考试表格」两列（谁在左边由设置决定），
+        左下角一块长按退出的热区。表格刻意做得淡（无边框、只有极浅的分隔线、表头用小字），
+        内容（科目、时间）才是视觉重点。
+    -->
+    <Window.Styles>
+        <!-- 表格：内容突出、框线退到几乎看不见。 -->
+        <Style Selector="TextBlock.col-head">
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+        </Style>
+        <Style Selector="TextBlock.cell">
+            <Setter Property="FontSize" Value="26" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        </Style>
+        <Style Selector="TextBlock.cell.subject">
+            <Setter Property="FontSize" Value="30" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+        </Style>
+        <Style Selector="Border.row-separator">
+            <Setter Property="Height" Value="1" />
+            <Setter Property="Background" Value="{DynamicResource DividerStrokeColorDefaultBrush}" />
+            <Setter Property="Opacity" Value="0.45" />
+        </Style>
+
+        <!-- 状态：未开始最淡，即将开始 / 进行中亮起来，考完再压下去。 -->
+        <Style Selector="TextBlock.cell.status">
+            <Setter Property="FontSize" Value="24" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        </Style>
+        <Style Selector="TextBlock.cell.status.upcoming">
+            <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCautionBrush}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="TextBlock.cell.status.progress">
+            <Setter Property="Foreground" Value="{DynamicResource SystemFillColorSuccessBrush}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="TextBlock.cell.status.finished">
+            <Setter Property="Opacity" Value="0.5" />
+        </Style>
+
+        <!-- 「下一场」那一行整行提亮。 -->
+        <Style Selector="Border.exam-row.next">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+            <Setter Property="CornerRadius" Value="10" />
+        </Style>
+
+        <!-- 左下角的长按热区。 -->
+        <Style Selector="Border.exit-hint">
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="18,10" />
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorTransparentBrush}" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Border.exit-hint:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+        </Style>
+        <Style Selector="Border.exit-hint.holding">
+            <Setter Property="Background" Value="{DynamicResource SystemFillColorCriticalBackgroundBrush}" />
+        </Style>
+        <Style Selector="Border.exit-hint TextBlock">
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+        </Style>
+    </Window.Styles>
+
+    <Grid Margin="64,48,64,36" RowDefinitions="Auto,*,Auto">
+
+        <!-- 左上角：主标题 + 副标题（副标题更小更淡，颜色可在设置里改）。 -->
+        <StackPanel Grid.Row="0" Spacing="6">
+            <TextBlock Text="{Binding Title}"
+                       FontSize="34"
+                       FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+            <TextBlock Text="{Binding Subtitle}"
+                       IsVisible="{Binding HasSubtitle}"
+                       FontSize="22"
+                       TextWrapping="Wrap"
+                       Foreground="{Binding SubtitleBrush}" />
+        </StackPanel>
+
+        <!-- 正文：时钟 + 考试信息，两列，谁在左由「时钟位置」决定。 -->
+        <Grid Grid.Row="1" ColumnDefinitions="*,*" Margin="0,28,0,20">
+
+            <!-- 时钟（只剩时钟时横跨两列、居中放大）。 -->
+            <StackPanel Grid.Column="{Binding ClockColumn}"
+                        Grid.ColumnSpan="{Binding ClockColumnSpan}"
+                        VerticalAlignment="Center"
+                        HorizontalAlignment="Center"
+                        Spacing="10">
+                <TextBlock Text="{Binding ClockTime}"
+                           FontSize="{Binding ClockFontSize}"
+                           FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextFillColorPrimaryBrush}"
+                           HorizontalAlignment="Center" />
+                <StackPanel Orientation="Horizontal" Spacing="14" HorizontalAlignment="Center">
+                    <TextBlock Text="{Binding ClockDate}"
+                               FontSize="22"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    <TextBlock Text="{Binding ClockSource}"
+                               FontSize="16"
+                               VerticalAlignment="Bottom"
+                               Margin="0,0,0,3"
+                               Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                </StackPanel>
+            </StackPanel>
+
+            <!-- 全部考试：表头 + 每场一行。 -->
+            <Grid Grid.Column="{Binding ListColumn}"
+                  IsVisible="{Binding ShowList}"
+                  VerticalAlignment="Center"
+                  RowDefinitions="Auto,Auto,*">
+                <Grid Grid.Row="0" ColumnDefinitions="170,*,250,260" Margin="18,0,18,10">
+                    <TextBlock Grid.Column="0" Classes="col-head"
+                               Text="{x:Static core:Resources.Exam_Board_Table_Date}" />
+                    <TextBlock Grid.Column="1" Classes="col-head"
+                               Text="{x:Static core:Resources.Exam_Board_Table_Subject}" />
+                    <TextBlock Grid.Column="2" Classes="col-head"
+                               Text="{x:Static core:Resources.Exam_Board_Table_Time}" />
+                    <TextBlock Grid.Column="3" Classes="col-head"
+                               Text="{x:Static core:Resources.Exam_Board_Table_Status}" />
+                </Grid>
+                <Border Grid.Row="1" Classes="row-separator" Margin="18,0" />
+
+                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <ItemsControl ItemsSource="{Binding Rows}" Margin="0,6,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ExamRowItem">
+                                <StackPanel>
+                                    <Border Classes="exam-row"
+                                            Classes.next="{Binding IsNext}"
+                                            Padding="18,12">
+                                        <Grid ColumnDefinitions="170,*,250,260">
+                                            <TextBlock Grid.Column="0" Classes="cell" Text="{Binding DateText}" />
+                                            <StackPanel Grid.Column="1" Spacing="2">
+                                                <TextBlock Classes="cell subject" Text="{Binding Subject}" />
+                                                <TextBlock Classes="cell"
+                                                           FontSize="17"
+                                                           Text="{Binding PaperInfo}"
+                                                           IsVisible="{Binding HasPaperInfo}"
+                                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="2" Classes="cell" Text="{Binding TimeText}" />
+                                            <TextBlock Grid.Column="3" Classes="cell status"
+                                                       Classes.upcoming="{Binding IsUpcoming}"
+                                                       Classes.progress="{Binding IsInProgress}"
+                                                       Classes.finished="{Binding IsFinished}"
+                                                       Text="{Binding StatusText}"
+                                                       VerticalAlignment="Center" />
+                                        </Grid>
+                                    </Border>
+                                    <Border Classes="row-separator" Margin="18,0" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+
+                <!-- 一场都没排：说清楚去哪儿加，别让用户对着空屏幕发呆。 -->
+                <StackPanel Grid.Row="2" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10"
+                            IsVisible="{Binding !HasExams}">
+                    <TextBlock Text="{x:Static core:Resources.Exam_Board_NoExam}"
+                               FontSize="26"
+                               HorizontalAlignment="Center"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    <TextBlock Text="{x:Static core:Resources.Exam_Board_NoExamHint}"
+                               FontSize="17"
+                               HorizontalAlignment="Center"
+                               Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                </StackPanel>
+            </Grid>
+
+            <!-- 即将开始且收起了列表：只留下一场这一张卡。 -->
+            <Border Grid.Column="{Binding ListColumn}"
+                    IsVisible="{Binding ShowNextCard}"
+                    VerticalAlignment="Center"
+                    Background="{DynamicResource SubtleFillColorSecondaryBrush}"
+                    CornerRadius="18"
+                    Padding="40,32">
+                <StackPanel Spacing="14">
+                    <TextBlock Text="{x:Static core:Resources.Exam_Board_NextExam}"
+                               FontSize="18"
+                               Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                    <TextBlock Text="{Binding NextSubject}"
+                               FontSize="58"
+                               FontWeight="SemiBold"
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                    <StackPanel Orientation="Horizontal" Spacing="18">
+                        <TextBlock Text="{Binding NextDate}" FontSize="24"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        <TextBlock Text="{Binding NextTime}" FontSize="24"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding NextStatus}"
+                               FontSize="30"
+                               FontWeight="SemiBold"
+                               Classes="cell status"
+                               Classes.upcoming="{Binding NextIsUpcoming}"
+                               Classes.progress="{Binding NextIsInProgress}" />
+                    <TextBlock Text="{Binding NextPaperInfo}"
+                               IsVisible="{Binding NextHasPaperInfo}"
+                               FontSize="20"
+                               Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- 左下角：长按退出（按住 2 秒，中途松手就取消——避免误触把看板关掉）。 -->
+        <Border x:Name="ExitHint"
+                Grid.Row="2"
+                Classes="exit-hint"
+                HorizontalAlignment="Left"
+                ToolTip.Tip="{x:Static core:Resources.Exam_Board_ExitToolTip}"
+                PointerPressed="OnExitHintPointerPressed"
+                PointerReleased="OnExitHintPointerReleased"
+                PointerCaptureLost="OnExitHintCaptureLost">
+            <TextBlock x:Name="ExitHintText" Text="{x:Static core:Resources.Exam_Board_ExitHint}" />
+        </Border>
+    </Grid>
+</Window>

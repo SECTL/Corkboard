@@ -1,0 +1,280 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fa="using:FluentAvalonia.UI.Controls"
+             xmlns:vm="using:Corkboard.ViewModels.SettingsPages.Exam"
+             xmlns:core="using:Corkboard.Core.Langs.Common"
+             xmlns:icons="using:Corkboard.Core.Icons"
+             mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="700"
+             x:Class="Corkboard.Views.SettingsPages.Exam.ExamScheduleSettingsPage"
+             x:DataType="vm:ExamScheduleSettingsPageViewModel">
+    <UserControl.Styles>
+        <!-- 清单是一张「很淡的表」：没有竖线、只有极浅的行分隔，重点全落在科目与状态上。 -->
+        <Style Selector="TextBlock.exam-head">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="TextBlock.exam-cell">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        </Style>
+        <Style Selector="TextBlock.exam-cell.subject">
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="TextBlock.exam-status">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        </Style>
+        <Style Selector="TextBlock.exam-status.upcoming">
+            <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCautionBrush}" />
+        </Style>
+        <Style Selector="TextBlock.exam-status.progress">
+            <Setter Property="Foreground" Value="{DynamicResource SystemFillColorSuccessBrush}" />
+        </Style>
+        <Style Selector="TextBlock.exam-status.finished">
+            <Setter Property="Opacity" Value="0.55" />
+        </Style>
+    </UserControl.Styles>
+
+    <ScrollViewer>
+        <StackPanel Classes="page-container">
+            <!-- 页标题画在 page-container 里：它才和设置卡同宽、同左边缘，并随卡片一起滚动。 -->
+            <TextBlock Margin="0 4 0 0"
+                       FontWeight="Normal"
+                       Text="{x:Static core:Resources.Settings_Exam_Schedule_Title}"
+                       Theme="{StaticResource TitleTextBlockStyle}" />
+
+            <!-- 全屏看板入口：设置页里也能直接切到看板上确认效果。 -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Exam_Schedule_OpenBoard}"
+                                   Description="{x:Static core:Resources.Settings_Exam_Schedule_OpenBoardDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <Button VerticalAlignment="Center" Click="OnOpenBoardClick">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock VerticalAlignment="Center"
+                                       FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                       Text="{x:Static icons:FluentIcons.FullScreenMaximizeFilled}" />
+                            <TextBlock VerticalAlignment="Center"
+                                       Text="{x:Static core:Resources.Settings_Exam_Schedule_OpenBoard}" />
+                        </StackPanel>
+                    </Button>
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <!--
+                表单：新增与编辑共用同一张卡（编辑时标题变「编辑考试」，多一颗「取消」）。
+                每个字段都是草稿，点「保存」才写进考试服务——一张考试要一次性凑齐科目 / 日期 / 起止时刻，
+                逐字段落盘只会留下半截数据。
+            -->
+            <fa:FASettingsExpander Header="{Binding FormTitle}" IsExpanded="True">
+                <StackPanel Spacing="12">
+                    <Grid ColumnDefinitions="Auto,*"
+                          RowDefinitions="Auto,Auto,Auto,Auto,Auto"
+                          ColumnSpacing="14"
+                          RowSpacing="10">
+                        <TextBlock Grid.Row="0"
+                                   Grid.Column="0"
+                                   VerticalAlignment="Center"
+                                   Text="{x:Static core:Resources.Settings_Exam_Schedule_Subject}" />
+                        <TextBox Grid.Row="0"
+                                 Grid.Column="1"
+                                 PlaceholderText="{x:Static core:Resources.Settings_Exam_Schedule_SubjectPlaceholder}"
+                                 Text="{Binding SubjectDraft, Mode=TwoWay}"
+                                 KeyDown="OnFormKeyDown" />
+
+                        <TextBlock Grid.Row="1"
+                                   Grid.Column="0"
+                                   VerticalAlignment="Center"
+                                   Text="{x:Static core:Resources.Settings_Exam_Schedule_Date}" />
+                        <CalendarDatePicker Grid.Row="1"
+                                            Grid.Column="1"
+                                            HorizontalAlignment="Left"
+                                            SelectedDate="{Binding DateDraft, Mode=TwoWay}" />
+
+                        <TextBlock Grid.Row="2"
+                                   Grid.Column="0"
+                                   VerticalAlignment="Center"
+                                   Text="{x:Static core:Resources.Settings_Exam_Schedule_Start}" />
+                        <StackPanel Grid.Row="2"
+                                    Grid.Column="1"
+                                    Orientation="Horizontal"
+                                    Spacing="8">
+                            <TimePicker ClockIdentifier="24HourClock" SelectedTime="{Binding StartDraft, Mode=TwoWay}" />
+                            <TextBlock VerticalAlignment="Center" Text="–" />
+                            <TimePicker ClockIdentifier="24HourClock" SelectedTime="{Binding EndDraft, Mode=TwoWay}" />
+                            <TextBlock VerticalAlignment="Center"
+                                       Classes="caption"
+                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                       Text="{x:Static core:Resources.Settings_Exam_Schedule_End}" />
+                        </StackPanel>
+
+                        <TextBlock Grid.Row="3"
+                                   Grid.Column="0"
+                                   VerticalAlignment="Center"
+                                   Text="{x:Static core:Resources.Settings_Exam_Schedule_PaperCount}" />
+                        <StackPanel Grid.Row="3"
+                                    Grid.Column="1"
+                                    Spacing="4">
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <NumericUpDown Width="110"
+                                               Minimum="0"
+                                               Maximum="999"
+                                               Increment="1"
+                                               FormatString="0"
+                                               Value="{Binding PaperCountDraft, Mode=TwoWay}" />
+                                <TextBlock VerticalAlignment="Center"
+                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                           Text="{x:Static core:Resources.Settings_Exam_Schedule_PaperCount}" />
+                                <NumericUpDown Width="110"
+                                               Minimum="0"
+                                               Maximum="999"
+                                               Increment="1"
+                                               FormatString="0"
+                                               Value="{Binding PageCountDraft, Mode=TwoWay}" />
+                                <TextBlock VerticalAlignment="Center"
+                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                           Text="{x:Static core:Resources.Settings_Exam_Schedule_PageCount}" />
+                                <NumericUpDown Width="110"
+                                               Minimum="0"
+                                               Maximum="999"
+                                               Increment="1"
+                                               FormatString="0"
+                                               Value="{Binding QuestionCountDraft, Mode=TwoWay}" />
+                                <TextBlock VerticalAlignment="Center"
+                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                           Text="{x:Static core:Resources.Settings_Exam_Schedule_QuestionCount}" />
+                            </StackPanel>
+                            <TextBlock FontSize="12"
+                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                       Text="{x:Static core:Resources.Settings_Exam_Schedule_PaperInfoHint}" />
+                        </StackPanel>
+
+                        <TextBlock Grid.Row="4"
+                                   Grid.Column="0"
+                                   VerticalAlignment="Center"
+                                   Text="{x:Static core:Resources.Settings_Exam_Schedule_Note}" />
+                        <TextBox Grid.Row="4"
+                                 Grid.Column="1"
+                                 PlaceholderText="{x:Static core:Resources.Settings_Exam_Schedule_NotePlaceholder}"
+                                 Text="{Binding NoteDraft, Mode=TwoWay}"
+                                 KeyDown="OnFormKeyDown" />
+                    </Grid>
+
+                    <!-- 校验失败时只在这里出一行红字，不弹对话框（表单还没提交，弹框打断太吵）。 -->
+                    <TextBlock FontSize="12"
+                               Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                               IsVisible="{Binding HasFormError}"
+                               Text="{Binding FormError}"
+                               TextWrapping="Wrap" />
+
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Classes="accent"
+                                Content="{x:Static core:Resources.Settings_Exam_Schedule_Save}"
+                                Command="{Binding SubmitCommand}" />
+                        <Button Content="{x:Static core:Resources.Settings_Exam_Schedule_Cancel}"
+                                IsVisible="{Binding IsEditing}"
+                                Click="OnCancelEditClick" />
+                    </StackPanel>
+                </StackPanel>
+            </fa:FASettingsExpander>
+
+            <!-- 考试清单：日期 | 科目 | 时间 | 状态，每行右侧是编辑与删除。 -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Exam_Schedule_Title}"
+                                   IsExpanded="True">
+                <fa:FASettingsExpander.Footer>
+                    <TextBlock VerticalAlignment="Center"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Text="{Binding CountText}" />
+                </fa:FASettingsExpander.Footer>
+
+                <StackPanel Spacing="6" Margin="0 4 0 0">
+                    <TextBlock Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               IsVisible="{Binding IsEmpty}"
+                               Text="{x:Static core:Resources.Settings_Exam_Schedule_Empty}" />
+                    <TextBlock FontSize="12"
+                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                               IsVisible="{Binding IsEmpty}"
+                               Text="{x:Static core:Resources.Settings_Exam_Schedule_EmptyHint}" />
+
+                    <Grid ColumnDefinitions="130,*,180,190,Auto"
+                          ColumnSpacing="12"
+                          IsVisible="{Binding !IsEmpty}"
+                          Margin="0 0 0 4">
+                        <TextBlock Grid.Column="0"
+                                   Classes="exam-head"
+                                   Text="{x:Static core:Resources.Exam_Board_Table_Date}" />
+                        <TextBlock Grid.Column="1"
+                                   Classes="exam-head"
+                                   Text="{x:Static core:Resources.Exam_Board_Table_Subject}" />
+                        <TextBlock Grid.Column="2"
+                                   Classes="exam-head"
+                                   Text="{x:Static core:Resources.Exam_Board_Table_Time}" />
+                        <TextBlock Grid.Column="3"
+                                   Classes="exam-head"
+                                   Text="{x:Static core:Resources.Exam_Board_Table_Status}" />
+                    </Grid>
+
+                    <ItemsControl ItemsSource="{Binding Items}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ExamScheduleItem">
+                                <Border BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
+                                        BorderThickness="0,0,0,1"
+                                        Padding="0 8">
+                                    <Grid ColumnDefinitions="130,*,180,190,Auto" ColumnSpacing="12">
+                                        <TextBlock Grid.Column="0"
+                                                   Classes="exam-cell"
+                                                   Opacity="0.75"
+                                                   Text="{Binding DateText}" />
+                                        <StackPanel Grid.Column="1" Spacing="2">
+                                            <TextBlock Classes="exam-cell subject" Text="{Binding Subject}" />
+                                            <TextBlock FontSize="12"
+                                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                       IsVisible="{Binding HasPaperInfo}"
+                                                       Text="{Binding PaperInfo}" />
+                                            <TextBlock FontSize="12"
+                                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                                       IsVisible="{Binding HasNote}"
+                                                       Text="{Binding Note}" />
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="2"
+                                                   Classes="exam-cell"
+                                                   Opacity="0.75"
+                                                   Text="{Binding TimeText}" />
+                                        <TextBlock Grid.Column="3"
+                                                   Classes="exam-status"
+                                                   Classes.upcoming="{Binding IsUpcoming}"
+                                                   Classes.progress="{Binding IsInProgress}"
+                                                   Classes.finished="{Binding IsFinished}"
+                                                   Text="{Binding StatusText}" />
+                                        <StackPanel Grid.Column="4"
+                                                    Orientation="Horizontal"
+                                                    Spacing="2"
+                                                    VerticalAlignment="Center">
+                                            <Button Background="Transparent"
+                                                    BorderThickness="0"
+                                                    Padding="6"
+                                                    FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                                    Content="{x:Static icons:FluentIcons.EditFilled}"
+                                                    ToolTip.Tip="{x:Static core:Resources.Settings_Exam_Schedule_Edit}"
+                                                    Click="OnEditExamClick" />
+                                            <Button Background="Transparent"
+                                                    BorderThickness="0"
+                                                    Padding="6"
+                                                    FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                                    Content="{x:Static icons:FluentIcons.DeleteFilled}"
+                                                    ToolTip.Tip="{x:Static core:Resources.Settings_Exam_Schedule_Delete}"
+                                                    Click="OnDeleteExamClick" />
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </fa:FASettingsExpander>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

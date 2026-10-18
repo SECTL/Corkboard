@@ -45,13 +45,17 @@ Corkboard/
 ├── Corkboard/                  # 应用层：App 宿主、视图/ViewModel、应用服务、Langs、Assets
 │   ├── Views/MainPages/        #   子目录 Board/、Homework/
 │   ├── ViewModels/MainPages/   #   子目录 Board/、Homework/
-│   ├── Views/SettingsPages/    #   子目录 Board/、Homework/
-│   └── Services/               #   Ui/、Board/、Homework/、Cloud/、Auth/、Desktop/、Ipc/
+│   ├── Views/SettingsPages/    #   子目录 Board/、Exam/
+│   ├── Views/ExamBoard/        #   全屏考试看板窗口
+│   ├── ViewModels/ExamBoard/   #   全屏考试看板的 ViewModel
+│   └── Services/               #   Ui/、Board/、Homework/、Time/、Cloud/、Auth/、Desktop/、Ipc/
 ├── Corkboard.Core/             # 核心：契约、配置/日志、领域服务、可复用控件与样式、Langs/Common
 │   ├── Notes/                  #   Note、NoteStore、NoteDayFile、INoteStore、Legacy/（旧数据迁移）
 │   ├── RichText/               #   RichTextStyle/Palette/HtmlStyling/ContentKind
 │   ├── Board/                  #   板子框架：BoardService、NoteGrouping、排布排序枚举、回放
 │   ├── Homework/               #   作业专属：HomeworkConfig、SectionCatalog、截止日期、清理、合并
+│   ├── Exam/                   #   考试专属：ExamEntry、三档状态判定、时间格式化、ExamService
+│   ├── Time/                   #   NTP 校时：报文/客户端/国内源目录 + NtpTimeService（应用唯一时间来源）
 │   └── Controls|Styles|...     #   可复用控件与主题
 ├── Corkboard.Shared/           # 跨工程契约：ConfigBase、Utils（数据根/路径）。禁止 UI 依赖
 ├── Corkboard.Desktop/          # 入口：Program.cs 选择平台根并启动 Avalonia 桌面生命周期
@@ -254,10 +258,12 @@ public partial class BoardSettingsConfig : ObservableObject
   `MainView.SelectNavigationItemById(id)` 程序化切换，用户可见入口只有托盘菜单。
 - **设置界面才有侧边导航栏**：`SettingsView` 里是 `FANavigationView`（`PaneDisplayMode="Left"`）
   + `MenuItemsSource` / `FooterMenuItemsSource`，内容区是 `FAFrame`。
-  设置项是「顶层页 + 一个可展开分组」：顶层按注册顺序排「基础设置 → 外观」，之后是 **「作业板」这个唯一的
-  `groupId = "settings.board"` 分组**（`App.axaml.cs` 里 `AddGroup(new PageGroupInfo(CR.Settings_Board_Group,
+  设置项是「顶层页 + 可展开分组」：顶层按注册顺序排「基础设置 → 外观」，之后是**两个分组**——
+  **「作业板」**（`groupId = "settings.board.group"`，`App.axaml.cs` 里 `AddGroup(new PageGroupInfo(CR.Settings_Board_Group,
   "settings.board.group", FluentIcons.BoardFilled))` 后接一串带 `groupId` 的页面），点它才展开常规／科目与分类／
-  手写／快捷标签／清理／历史与回放／收纳七个子页。**作业板专属的设置项一律进这组，基础设置里不许再放**。
+  手写／快捷标签／清理／历史与回放／收纳七个子页 + 「导出」；**紧接着是「考试看板」**
+  （`groupId = "settings.exam.group"`，`FluentIcons.CalendarFilled`），子页是考试安排／看板显示／时间同步三页。
+  **作业板专属的设置项一律进作业板组、考试专属的进考试看板组，基础设置里不许再放**。
   底部的「更新」「关于」由 `PageInfo.Location = Bottom` 沉到页脚，与注册顺序无关。
   **「账号」「云同步」两页当前入口隐藏**（页面 `PageInfo` 上 `isHide: true`，`PageItemsExtensions.ToNavigationViewItems`
   会过滤掉它们；注册与键控 DI 保留，以后开放时去掉该参数即可），侧边栏看不到它们。

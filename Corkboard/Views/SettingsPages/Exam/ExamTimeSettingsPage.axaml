@@ -1,0 +1,144 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fa="using:FluentAvalonia.UI.Controls"
+             xmlns:vm="using:Corkboard.ViewModels.SettingsPages.Exam"
+             xmlns:core="using:Corkboard.Core.Langs.Common"
+             xmlns:icons="using:Corkboard.Core.Icons"
+             mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="700"
+             x:Class="Corkboard.Views.SettingsPages.Exam.ExamTimeSettingsPage"
+             x:DataType="vm:ExamTimeSettingsPageViewModel">
+    <ScrollViewer>
+        <StackPanel Classes="page-container">
+            <TextBlock Margin="0 4 0 0"
+                       FontWeight="Normal"
+                       Text="{x:Static core:Resources.Settings_Exam_Time_Title}"
+                       Theme="{StaticResource TitleTextBlockStyle}" />
+
+            <!--
+                校时总开关：「立即同步」放在同一张卡的 Footer 上，因为它作用于整张卡。
+                状态行说明现在用的是什么时间（NTP 校过的 / 本机时间）以及偏差多少。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Exam_Time_Enabled}"
+                                   Description="{x:Static core:Resources.Settings_Exam_Time_EnabledDescription}"
+                                   IsExpanded="True">
+                <fa:FASettingsExpander.Footer>
+                    <StackPanel Orientation="Horizontal"
+                                VerticalAlignment="Center"
+                                Spacing="12">
+                        <Button VerticalAlignment="Center"
+                                Command="{Binding SyncNowCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <TextBlock VerticalAlignment="Center"
+                                           FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                           Text="{x:Static icons:FluentIcons.SyncFilled}" />
+                                <TextBlock VerticalAlignment="Center"
+                                           Text="{x:Static core:Resources.Settings_Exam_Time_SyncNow}" />
+                            </StackPanel>
+                        </Button>
+                        <ToggleSwitch IsChecked="{Binding Settings.Enabled, Mode=TwoWay}" />
+                    </StackPanel>
+                </fa:FASettingsExpander.Footer>
+
+                <StackPanel Spacing="4" Margin="0 4 0 0">
+                    <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" />
+                    <TextBlock FontSize="12"
+                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                               IsVisible="{Binding HasOffset}"
+                               Text="{Binding OffsetText}" />
+                    <TextBlock FontSize="12"
+                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                               IsVisible="{Binding HasLastSync}"
+                               Text="{Binding LastSyncText}" />
+                </StackPanel>
+            </fa:FASettingsExpander>
+
+            <!--
+                同步源：按顺序尝试，第一个连上的生效。默认是国内几个公共 NTP 服务，
+                删光了会自动落回默认源（不然永远同步不上）。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Exam_Time_Servers}"
+                                   Description="{x:Static core:Resources.Settings_Exam_Time_ServersDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBox MinWidth="200"
+                                 VerticalAlignment="Center"
+                                 PlaceholderText="{x:Static core:Resources.Settings_Exam_Time_ServerPlaceholder}"
+                                 Text="{Binding ServerDraft, Mode=TwoWay}"
+                                 KeyDown="OnServerDraftKeyDown" />
+                        <Button VerticalAlignment="Center"
+                                Command="{Binding AddServerCommand}"
+                                IsEnabled="{Binding CanAddServer}"
+                                Content="{x:Static core:Resources.Settings_Exam_Time_AddServer}" />
+                    </StackPanel>
+                </fa:FASettingsExpander.Footer>
+
+                <StackPanel Spacing="8" Margin="0 4 0 0">
+                    <ItemsControl ItemsSource="{Binding ServerItems}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:NtpServerItem">
+                                <Border BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
+                                        BorderThickness="0,0,0,1"
+                                        Padding="0 6">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock VerticalAlignment="Center" Text="{Binding DisplayName}" />
+                                        <Button Grid.Column="1"
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                Padding="6"
+                                                FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                                Content="{x:Static icons:FluentIcons.DeleteFilled}"
+                                                ToolTip.Tip="{x:Static core:Resources.Settings_Exam_Schedule_Delete}"
+                                                Click="OnDeleteServerClick" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <Button HorizontalAlignment="Left"
+                            Content="{x:Static core:Resources.Settings_Exam_Time_ResetServers}"
+                            Click="OnResetServersClick" />
+                </StackPanel>
+            </fa:FASettingsExpander>
+
+            <!-- 同步间隔与单源超时：都是草稿，失焦 / 离开页面才提交。 -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Exam_Time_Interval}"
+                                   Description="{x:Static core:Resources.Settings_Exam_Time_IntervalDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <StackPanel Orientation="Horizontal"
+                                VerticalAlignment="Center"
+                                Spacing="8">
+                        <NumericUpDown MinWidth="130"
+                                       Minimum="1"
+                                       Maximum="1440"
+                                       Increment="10"
+                                       FormatString="0"
+                                       Value="{Binding IntervalDraft, Mode=TwoWay}"
+                                       LostFocus="OnEditorLostFocus" />
+                        <TextBlock VerticalAlignment="Center" Text="{x:Static core:Resources.Common_Minutes}" />
+                    </StackPanel>
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Exam_Time_Timeout}"
+                                   Description="{x:Static core:Resources.Settings_Exam_Time_TimeoutDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <StackPanel Orientation="Horizontal"
+                                VerticalAlignment="Center"
+                                Spacing="8">
+                        <NumericUpDown MinWidth="130"
+                                       Minimum="500"
+                                       Maximum="15000"
+                                       Increment="500"
+                                       FormatString="0"
+                                       Value="{Binding TimeoutDraft, Mode=TwoWay}"
+                                       LostFocus="OnEditorLostFocus" />
+                        <TextBlock VerticalAlignment="Center" Text="{x:Static core:Resources.Common_Milliseconds}" />
+                    </StackPanel>
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
