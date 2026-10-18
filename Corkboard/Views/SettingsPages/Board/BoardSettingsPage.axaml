@@ -106,6 +106,13 @@
                 </fa:FASettingsExpander.Footer>
             </fa:FASettingsExpander>
 
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Basic_AllowAddNoteWhenLocked}"
+                                   Description="{x:Static core:Resources.Settings_Basic_AllowAddNoteWhenLockedDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding Config.Basic.AllowAddNoteWhenLocked, Mode=TwoWay}" />
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
             <!--
                 标题栏右上角那排动作按钮的显隐：嫌哪颗多余就关掉哪颗（用户要求）。
                 直接双向绑配置：开关本身就是布尔、点了就落一次盘，不存在「一路动一路写」的问题。

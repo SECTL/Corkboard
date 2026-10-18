@@ -1,0 +1,36 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:core="using:Corkboard.Core.Langs.Common"
+        xmlns:icons="using:Corkboard.Core.Icons"
+        mc:Ignorable="d" d:DesignWidth="56" d:DesignHeight="56"
+        x:Class="Corkboard.Views.CornerAssignFloatingWindow"
+        Title="Corkboard"
+        WindowDecorations="None"
+        CanResize="False"
+        ShowInTaskbar="False"
+        ShowActivated="False"
+        Width="56" Height="56"
+        Background="Transparent">
+    <!--
+        锁定态下的右下角「布置作业」浮动按钮。主窗口开着点击穿透时整窗收不到鼠标，
+        右下角那颗点不动，所以用本窗口承载（与 ClickThroughLockWindow 同一个套路）。
+
+        窗口必须透明：按钮自己有圆角，不透明背景会在四角露出方块底色。
+        尺寸 / 样式与主窗口右下角那颗保持一致（56×56、圆角 16、accent 强调色），
+        切换锁定态时两态按钮无缝衔接、不会跳。
+    -->
+    <Button Width="56" Height="56"
+            Padding="0"
+            CornerRadius="16"
+            Classes="accent"
+            ToolTip.Tip="{x:Static core:Resources.Board_AddNote}"
+            Click="AssignButton_OnClick">
+        <TextBlock Text="{x:Static icons:FluentIcons.AddFilled}"
+                   FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                   FontSize="22"
+                   VerticalAlignment="Center"
+                   HorizontalAlignment="Center" />
+    </Button>
+</Window>

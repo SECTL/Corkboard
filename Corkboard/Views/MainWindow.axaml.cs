@@ -92,6 +92,13 @@ public partial class MainWindow : FAAppWindow
     /// <summary>配置里是否要求显示锁定徽标（= 点击穿透开着）。实际显隐还要看窗口在不在、是不是最小化。</summary>
     private bool _isLockBadgeRequested;
 
+    /// <summary>
+    ///     右下角布置作业浮动按钮：点击穿透状态下右下角那颗大号加号按钮。
+    ///     与锁定徽标同理：主窗口穿透时按钮点不动，得用独立窗口承载。
+    ///     仅当「右下角布置作业按钮」+「锁定时也能添加作业」+「点击穿透」三者都开着时才显示。
+    /// </summary>
+    private CornerAssignFloatingWindow? _cornerAssignWindow;
+
     public MainWindow() : this(AppConsts.MainWindowScope)
     {
     }
@@ -152,6 +159,7 @@ public partial class MainWindow : FAAppWindow
         // 启动时就开着点击穿透的话，徽标要在窗口显示出来之后才摆得下（Load/Opened 的先后顺序
         // 不保证，两处都同步一次，谁后到谁把位置定下来）。
         SyncLockBadge();
+        SyncCornerAssignButton();
     }
 
     /// <summary>
@@ -201,6 +209,13 @@ public partial class MainWindow : FAAppWindow
 
         if (e.PropertyName is null or nameof(BasicSettingsConfig.ClickThrough))
             ApplyClickThrough();
+
+        if (e.PropertyName is null or nameof(BasicSettingsConfig.AllowAddNoteWhenLocked)
+            or nameof(BasicSettingsConfig.ShowCornerAssignButton))
+        {
+            UpdateLockBadgeAssignButton();
+            SyncCornerAssignButton();
+        }
 
         if (e.PropertyName is null or nameof(BasicSettingsConfig.MainWindowOpacity))
             ApplyWindowOpacity();
@@ -300,6 +315,7 @@ public partial class MainWindow : FAAppWindow
 
             // 缩放会让「最右上角」跟着挪（右端按内容区宽度算），徽标要重摆。
             SyncLockBadge();
+            SyncCornerAssignButton();
 
             // 圆角区域是贴在窗口上的像素矩形：尺寸一变就得重裁，否则四角会被拉成弧线。
             ApplyWindowCorners();
@@ -315,6 +331,7 @@ public partial class MainWindow : FAAppWindow
 
         // 最小化 / 还原都会让主窗口从屏幕上挪开或挪回来，徽标得跟着收放。
         SyncLockBadge();
+        SyncCornerAssignButton();
 
         // 最小化时 Windows 会把窗口的分层扩展样式（WS_EX_LAYERED / WS_EX_TRANSPARENT）摘掉，
         // 还原后它们不会自己回来。结果是：配置里仍写着「开启点击穿透 + 不透明度」、锁定徽标也照旧
@@ -612,6 +629,7 @@ public partial class MainWindow : FAAppWindow
 
         // 锁定徽标同样是独立窗口：主窗口没了它就没人管了，必须一起收掉。
         CloseLockBadge();
+        CloseCornerAssignButton();
 
         ReleaseDesktopBottom();
         ReleaseBasicSettingsWatcher();
@@ -647,6 +665,7 @@ public partial class MainWindow : FAAppWindow
         // 点击穿透开着时窗口里没有可点的东西了，锁定徽标就是唯一的「解锁」入口。
         _isLockBadgeRequested = handler.Data.Basic.ClickThrough;
         SyncLockBadge();
+        SyncCornerAssignButton();
     }
 
     #region 收纳
@@ -670,6 +689,9 @@ public partial class MainWindow : FAAppWindow
         // 只是藏起来，不销毁：点浮钮展开时会接着用（与 SyncLockBadge 里隐藏徽标的做法一致）。
         if (_lockWindow is { IsVisible: true } badge)
             badge.Hide();
+
+        if (_cornerAssignWindow is { IsVisible: true } cornerBtn)
+            cornerBtn.Hide();
 
         Hide();
     }
@@ -697,6 +719,7 @@ public partial class MainWindow : FAAppWindow
         ApplyClickThrough();
         ApplyWindowOpacity();
         SyncLockBadge();
+        SyncCornerAssignButton();
     }
 
     #endregion
@@ -737,8 +760,12 @@ public partial class MainWindow : FAAppWindow
         {
             _lockWindow = new ClickThroughLockWindow();
             _lockWindow.UnlockRequested += OnLockBadgeUnlockRequested;
+            _lockWindow.AssignRequested += OnLockBadgeAssignRequested;
             _lockWindow.Closed += OnLockBadgeClosed;
         }
+
+        // 同步「锁定时也能添加作业」按钮的显隐
+        UpdateLockBadgeAssignButton(syncPosition: false);
 
         // 用 Show(this) 建立属主关系：主窗口最小化/关闭时徽标跟着一起收，
         // 也不会在任务栏多出一个条目（徽标自己 ShowInTaskbar=false）。
@@ -757,10 +784,36 @@ public partial class MainWindow : FAAppWindow
         handler.Data.Basic.ClickThrough = false;
     }
 
+    /// <summary>
+    ///     点了锁徽标上的「布置作业」：走统一的锁定态布置作业流程。
+    /// </summary>
+    private void OnLockBadgeAssignRequested(object? sender, EventArgs e) =>
+        OpenAssignFormFromLockedState();
+
+    /// <summary>
+    ///     同步锁定徽标上「布置作业」按钮的显隐。开了「锁定时也能添加作业」就显示，
+    ///     否则不显示。默认同步位置（按钮数量变了窗口宽度会变，位置要重新摆）。
+    /// </summary>
+    private void UpdateLockBadgeAssignButton(bool syncPosition = true)
+    {
+        if (_lockWindow is null)
+            return;
+        if (IAppHost.TryGetService<MainConfigHandler>() is not { } handler)
+            return;
+
+        _lockWindow.ShowAssignButton = handler.Data.Basic.AllowAddNoteWhenLocked;
+
+        if (syncPosition && _lockWindow.IsVisible)
+            _lockWindow.PlaceAtTitleBarCorner(this);
+    }
+
     private void OnLockBadgeClosed(object? sender, EventArgs e)
     {
         if (_lockWindow is { } window)
+        {
             window.UnlockRequested -= OnLockBadgeUnlockRequested;
+            window.AssignRequested -= OnLockBadgeAssignRequested;
+        }
 
         _lockWindow = null;
     }
@@ -772,11 +825,101 @@ public partial class MainWindow : FAAppWindow
             return;
 
         window.UnlockRequested -= OnLockBadgeUnlockRequested;
+        window.AssignRequested -= OnLockBadgeAssignRequested;
         window.Closed -= OnLockBadgeClosed;
         _lockWindow = null;
 
         // 主窗口正在关，徽标是它的子窗口，正常会跟着一起关；
         // 这里显式关一次，覆盖「徽标不是通过 Show(owner) 建出来的」那种极端情况。
+        window.Close();
+    }
+
+    /// <summary>
+    ///     同步右下角布置作业浮动按钮的显隐与位置。
+    ///     显示条件：点击穿透开着 + 右下角布置作业按钮开着 + 锁定时也能添加作业开着 + 窗口在屏幕上。
+    /// </summary>
+    private void SyncCornerAssignButton()
+    {
+        if (!_isMainScope || IAppHost.TryGetService<MainConfigHandler>() is not { } handler)
+            return;
+
+        var shouldShow = handler.Data.Basic.ClickThrough
+                         && handler.Data.Basic.ShowCornerAssignButton
+                         && handler.Data.Basic.AllowAddNoteWhenLocked
+                         && _hasBeenShown
+                         && IsVisible
+                         && WindowState != WindowState.Minimized;
+
+        if (!shouldShow)
+        {
+            if (_cornerAssignWindow is { IsVisible: true } hidden)
+                hidden.Hide();
+            return;
+        }
+
+        if (_cornerAssignWindow is null)
+        {
+            _cornerAssignWindow = new CornerAssignFloatingWindow();
+            _cornerAssignWindow.AssignRequested += OnCornerAssignRequested;
+            _cornerAssignWindow.Closed += OnCornerAssignClosed;
+        }
+
+        if (!_cornerAssignWindow.IsVisible)
+            _cornerAssignWindow.Show(this);
+
+        _cornerAssignWindow.PlaceAtBottomRightCorner(this);
+    }
+
+    /// <summary>
+    ///     点了右下角浮动的布置作业：走统一的锁定态布置作业流程。
+    /// </summary>
+    private void OnCornerAssignRequested(object? sender, EventArgs e) =>
+        OpenAssignFormFromLockedState();
+
+    /// <summary>
+    ///     从锁定态打开布置作业表单：强制表单走独立窗口模式，主窗口保持点击穿透不动。
+    ///     弹层画在主窗口里的话，主窗口穿透时弹层也点不动，所以必须用独立窗口承载。
+    ///     表单关闭后把 UseSeparateWindow 改回原值。
+    /// </summary>
+    private void OpenAssignFormFromLockedState()
+    {
+        if (IAppHost.TryGetService<PageOverlayService>() is not { } overlay)
+            return;
+
+        var prevUseSeparate = overlay.UseSeparateWindow;
+        overlay.UseSeparateWindow = true;
+
+        // 表单关掉后恢复原来的 UseSeparateWindow 设置
+        void OnClosed(object? s, EventArgs e)
+        {
+            overlay.Closed -= OnClosed;
+            overlay.UseSeparateWindow = prevUseSeparate;
+        }
+
+        overlay.Closed += OnClosed;
+
+        if (Content is MainView mainView)
+            mainView.OpenAddAssignmentForm();
+    }
+
+    private void OnCornerAssignClosed(object? sender, EventArgs e)
+    {
+        if (_cornerAssignWindow is { } window)
+            window.AssignRequested -= OnCornerAssignRequested;
+
+        _cornerAssignWindow = null;
+    }
+
+    /// <summary>关窗时收掉右下角浮动按钮。</summary>
+    private void CloseCornerAssignButton()
+    {
+        if (_cornerAssignWindow is not { } window)
+            return;
+
+        window.AssignRequested -= OnCornerAssignRequested;
+        window.Closed -= OnCornerAssignClosed;
+        _cornerAssignWindow = null;
+
         window.Close();
     }
 
@@ -791,6 +934,7 @@ public partial class MainWindow : FAAppWindow
     private void OnWindowPositionChanged(object? sender, PixelPointEventArgs e)
     {
         SyncLockBadge();
+        SyncCornerAssignButton();
 
         if (!_hasBeenShown || WindowState != WindowState.Normal)
             return;
@@ -810,6 +954,7 @@ public partial class MainWindow : FAAppWindow
     private void OnWindowScalingChanged(object? sender, EventArgs e)
     {
         SyncLockBadge();
+        SyncCornerAssignButton();
 
         // 圆角半径按 DPI 折算成物理像素，换到另一块不同缩放的屏幕上要按新 DPI 重裁。
         ApplyWindowCorners();
