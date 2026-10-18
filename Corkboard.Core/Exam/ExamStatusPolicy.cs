@@ -35,6 +35,10 @@ public static class ExamStatusPolicy
     /// <summary>同上，直接给起止时刻（表单预览、单测用）。</summary>
     public static ExamStatus Resolve(DateTime start, DateTime end, DateTime now, int upcomingMinutes)
     {
+        // 结束早于开始（手填 / 手改 exams.json）当成「开考即结束」，别把那一场永远判成进行中。
+        if (end < start)
+            end = start;
+
         if (now >= end)
             return ExamStatus.Finished;
 
