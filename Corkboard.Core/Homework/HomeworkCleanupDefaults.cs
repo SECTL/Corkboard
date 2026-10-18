@@ -12,8 +12,8 @@ namespace Corkboard.Core.Homework;
 /// </summary>
 public static class HomeworkCleanupDefaults
 {
-    /// <summary>默认在凌晨 4 点动手：那会儿基本没人正看着板子。</summary>
-    public const int DefaultHour = 4;
+    /// <summary>默认每天 8 点动手：早上一开始，板子上就只剩还没过截止日期的作业。</summary>
+    public const int DefaultHour = 8;
 
     public const int DefaultMinute = 0;
 

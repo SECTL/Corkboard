@@ -102,8 +102,12 @@ public partial class MainWindow : FAAppWindow
         _isMainScope = scope != AppConsts.SettingsWindowScope;
         InitializeComponent();
 
-        // 窗口图标（标题栏 / 任务栏 / 切换器）统一用 PNG 母图，不走 ICO。
-        Icon = AppIcon.LoadBitmap();
+        // 临时实验：直接喂 ICO 流给基类 Window.Icon，验证 Avalonia 会按 DPI 取帧。
+        using (var icoStream = Avalonia.Platform.AssetLoader.Open(
+                   new Uri("avares://Corkboard/Assets/Icons/Corkboard.ico")))
+        {
+            ((Window)this).Icon = new WindowIcon(icoStream);
+        }
 
         TitleBar.Height = 48;
         TitleBar.ExtendsContentIntoTitleBar = true;

@@ -141,6 +141,22 @@ public class HomeworkCleanupTests : IDisposable
         Assert.True(harness.Config.Data.BoardSettings.CleanupEnabled);
     }
 
+    /// <summary>
+    ///     自动清理默认每天 8:00 动手（用户指定的默认值）：早上一开始，板子上就只剩还没过截止日期的作业。
+    ///     这里用没被 <see cref="CreateHarness" /> 改过的配置，钉住「出厂默认」本身。
+    /// </summary>
+    [Fact]
+    public void AutomaticCleanup_DefaultTimeIsEightOClockEveryDay()
+    {
+        var config = new MainConfigHandler(
+            NullLogger<MainConfigHandler>.Instance, new SandboxConfigService(SettingsPath));
+        var settings = config.Data.BoardSettings;
+
+        Assert.Equal(HomeworkCleanupFrequency.Daily, settings.CleanupFrequency);
+        Assert.Equal(8, settings.CleanupHour);
+        Assert.Equal(0, settings.CleanupMinute);
+    }
+
     // ── 到点判定 ────────────────────────────────────────────────────────────
 
     [Fact]
