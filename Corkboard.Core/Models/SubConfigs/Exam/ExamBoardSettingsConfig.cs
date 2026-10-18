@@ -9,22 +9,24 @@ namespace Corkboard.Core.Models.SubConfigs.Exam;
 /// <summary>
 ///     考试看板的**显示偏好**（<c>settings.json</c> 的 <c>exam_board</c> 段）。
 ///     <para>
-///         考试安排本身不在这里：那是业务数据，落在 <c>data/exam/exams.json</c>
-///         （见 <see cref="ExamScheduleConfig" />）。这里只有「怎么看」。
+///         这里只有「怎么看」：阈值、时钟摆哪边、两种形态收不收列表。
+///         标题、副标题与考试安排都跟着**看板文件**走（<see cref="Exam.ExamBoardDocument" />），
+///         因为用户可能同时维护好几块看板，换看板就该整套内容一起换。
 ///     </para>
 /// </summary>
 public partial class ExamBoardSettingsConfig : ObservableObject
 {
-    /// <summary>看板主标题。留空表示用本地化资源里的默认名，升级界面语言后跟着变。</summary>
+    /// <summary>
+    ///     ⚠️ 遗留字段：标题已经搬进看板文件（<see cref="Exam.ExamBoardDocument.Title" />）。
+    ///     留着只为读老版本写在 <c>settings.json</c> 里的值，由 <see cref="Exam.ExamService" />
+    ///     在建第一块看板时搬走并清空。界面不要再绑它。
+    /// </summary>
     [ObservableProperty] private string _title = string.Empty;
 
-    /// <summary>副标题（比如「距离高考还有 200 天」）。留空则不显示这一行。</summary>
+    /// <summary>⚠️ 遗留字段，同 <see cref="Title" />。</summary>
     [ObservableProperty] private string _subtitle = string.Empty;
 
-    /// <summary>
-    ///     副标题颜色。为空表示跟随主题的次要文字色（比标题淡一档，深浅色主题都看得清）；
-    ///     用户挑了颜色就用他的。
-    /// </summary>
+    /// <summary>⚠️ 遗留字段，同 <see cref="Title" />。</summary>
     [ObservableProperty] private Color? _subtitleColor;
 
     /// <summary>
@@ -48,14 +50,7 @@ public partial class ExamBoardSettingsConfig : ObservableObject
     /// </summary>
     [ObservableProperty] private bool _showExamListInProgress;
 
-    /// <summary>看板主标题实际显示的文字：用户填了就用用户的，没填回退到资源里的默认名。</summary>
-    public string ResolveTitle() =>
-        string.IsNullOrWhiteSpace(Title) ? Langs.Common.Resources.Exam_Board_DefaultTitle : Title.Trim();
-
-    /// <summary>副标题实际显示的文字（空白表示不显示）。</summary>
-    public string ResolveSubtitle() => Subtitle?.Trim() ?? string.Empty;
-
-    /// <summary>读盘后收拾一遍：阈值夹进合法区间、标题与副标题去首尾空白（手改的脏数据不进界面）。</summary>
+    /// <summary>读盘后收拾一遍：阈值夹进合法区间、遗留的标题与副标题去首尾空白（手改的脏数据不进界面）。</summary>
     public void Normalize()
     {
         UpcomingThresholdMinutes = ExamStatusPolicy.ClampUpcomingMinutes(UpcomingThresholdMinutes);

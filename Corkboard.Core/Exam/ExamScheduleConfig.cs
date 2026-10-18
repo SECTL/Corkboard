@@ -6,11 +6,13 @@ using Corkboard.Shared.Abstraction;
 namespace Corkboard.Core.Exam;
 
 /// <summary>
-///     考试看板的**业务数据**：<c>data/exam/exams.json</c>，只放考试安排本身。
+///     ⚠️ **遗留的单份考试安排**：老版本只有一块看板时，考试就存在 <c>data/exam/exams.json</c> 里。
+///     现在考试安排跟着看板文件走（<see cref="ExamBoardDocument" />，每块一个文件），
+///     这个类型只为读老数据保留：<see cref="ExamService" /> 在建第一块看板时把它整份搬进去，
+///     之后不再写它。
 ///     <para>
 ///         与作业板同一个规矩：业务数据不进 <c>settings.json</c>（那是应用偏好）。
-///         看板标题、状态阈值这类**显示偏好**在 <c>settings.json</c> 的 <c>exam_board</c> 段里，
-///         考试安排这种「用户录进去的东西」在这里。
+///         状态阈值、时钟位置这类**显示偏好**才在 <c>settings.json</c> 的 <c>exam_board</c> 段里。
 ///     </para>
 /// </summary>
 public partial class ExamScheduleConfig : ConfigBase

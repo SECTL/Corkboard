@@ -560,6 +560,16 @@ public static class Resources
     public static string Settings_Exam_Schedule_Delete => ResourceManager.GetString(nameof(Settings_Exam_Schedule_Delete), Culture)!;
     public static string Settings_Exam_Schedule_Edit => ResourceManager.GetString(nameof(Settings_Exam_Schedule_Edit), Culture)!;
     public static string Settings_Exam_Schedule_Count => ResourceManager.GetString(nameof(Settings_Exam_Schedule_Count), Culture)!;
+    public static string Settings_Exam_Schedule_Board => ResourceManager.GetString(nameof(Settings_Exam_Schedule_Board), Culture)!;
+    public static string Settings_Exam_Schedule_BoardDescription => ResourceManager.GetString(nameof(Settings_Exam_Schedule_BoardDescription), Culture)!;
+    public static string Settings_Exam_Schedule_BoardNew => ResourceManager.GetString(nameof(Settings_Exam_Schedule_BoardNew), Culture)!;
+    public static string Settings_Exam_Schedule_BoardNewTitle => ResourceManager.GetString(nameof(Settings_Exam_Schedule_BoardNewTitle), Culture)!;
+    public static string Settings_Exam_Schedule_BoardDelete => ResourceManager.GetString(nameof(Settings_Exam_Schedule_BoardDelete), Culture)!;
+    public static string Settings_Exam_Schedule_BoardDeleteTitle => ResourceManager.GetString(nameof(Settings_Exam_Schedule_BoardDeleteTitle), Culture)!;
+    public static string Settings_Exam_Schedule_BoardDeleteBody => ResourceManager.GetString(nameof(Settings_Exam_Schedule_BoardDeleteBody), Culture)!;
+    public static string Settings_Exam_Schedule_TitleBlock => ResourceManager.GetString(nameof(Settings_Exam_Schedule_TitleBlock), Culture)!;
+    public static string Settings_Exam_Schedule_TitleBlockDescription => ResourceManager.GetString(nameof(Settings_Exam_Schedule_TitleBlockDescription), Culture)!;
+    public static string Settings_Exam_Schedule_PaperInfo => ResourceManager.GetString(nameof(Settings_Exam_Schedule_PaperInfo), Culture)!;
     public static string Settings_Exam_Display_Title => ResourceManager.GetString(nameof(Settings_Exam_Display_Title), Culture)!;
     public static string Settings_Exam_Display_TitleLabel => ResourceManager.GetString(nameof(Settings_Exam_Display_TitleLabel), Culture)!;
     public static string Settings_Exam_Display_TitleDescription => ResourceManager.GetString(nameof(Settings_Exam_Display_TitleDescription), Culture)!;

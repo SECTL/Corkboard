@@ -275,8 +275,10 @@ public partial class ExamBoardViewModel : ViewModelBase
     /// <summary>标题 / 副标题 / 颜色这类「只有配置变了才动」的东西。</summary>
     private void RefreshStatic()
     {
-        Title = Settings.ResolveTitle();
-        Subtitle = Settings.ResolveSubtitle();
+        // 标题与副标题跟着**当前看板**走（每块看板一个文件），不是全局配置。
+        var board = Exams.ActiveBoard;
+        Title = board.ResolveTitle();
+        Subtitle = board.ResolveSubtitle();
         HasSubtitle = !string.IsNullOrWhiteSpace(Subtitle);
         SubtitleBrush = ResolveSubtitleBrush();
 
@@ -391,7 +393,7 @@ public partial class ExamBoardViewModel : ViewModelBase
     /// </summary>
     private IBrush ResolveSubtitleBrush()
     {
-        if (Settings.SubtitleColor is { } color)
+        if (Exams.ActiveBoard.SubtitleColor is { } color)
             return new SolidColorBrush(color);
 
         if (Application.Current is { } app
@@ -402,18 +404,19 @@ public partial class ExamBoardViewModel : ViewModelBase
         return Brushes.Gray;
     }
 
-    private void OnExamsChanged(object? sender, EventArgs e) => RebuildRows();
+    /// <summary>考试增删改 / 切看板 / 改标题副标题都会走这里（服务只在落盘后发一次通知）。</summary>
+    private void OnExamsChanged(object? sender, EventArgs e)
+    {
+        RebuildRows();
+        RefreshStatic();
+    }
 
     private void OnSettingsChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is null or nameof(ExamBoardSettingsConfig.Title)
-            or nameof(ExamBoardSettingsConfig.Subtitle) or nameof(ExamBoardSettingsConfig.SubtitleColor))
-            RefreshStatic();
-
+        // 时钟摆哪边、以及（通过 RefreshNow 重算的）阈值与两个开关。
         if (e.PropertyName is null or nameof(ExamBoardSettingsConfig.ClockSide))
             RefreshStatic();
 
-        // 阈值 / 两个开关：这一刻该显示什么，立刻重算一遍。
         RefreshNow();
     }
 

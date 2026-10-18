@@ -1745,6 +1745,36 @@
   <data name="Settings_Exam_Schedule_Count" xml:space="preserve">
     <value>{0} exams</value>
   </data>
+  <data name="Settings_Exam_Schedule_Board" xml:space="preserve">
+    <value>Board</value>
+  </data>
+  <data name="Settings_Exam_Schedule_BoardDescription" xml:space="preserve">
+    <value>One file per board, holding its title and exam schedule</value>
+  </data>
+  <data name="Settings_Exam_Schedule_BoardNew" xml:space="preserve">
+    <value>New board</value>
+  </data>
+  <data name="Settings_Exam_Schedule_BoardNewTitle" xml:space="preserve">
+    <value>Exam board {0}</value>
+  </data>
+  <data name="Settings_Exam_Schedule_BoardDelete" xml:space="preserve">
+    <value>Delete board</value>
+  </data>
+  <data name="Settings_Exam_Schedule_BoardDeleteTitle" xml:space="preserve">
+    <value>Delete board</value>
+  </data>
+  <data name="Settings_Exam_Schedule_BoardDeleteBody" xml:space="preserve">
+    <value>Delete board &quot;{0}&quot; and all its exams?</value>
+  </data>
+  <data name="Settings_Exam_Schedule_TitleBlock" xml:space="preserve">
+    <value>Title and subtitle</value>
+  </data>
+  <data name="Settings_Exam_Schedule_TitleBlockDescription" xml:space="preserve">
+    <value>The two lines at the board top left, per board</value>
+  </data>
+  <data name="Settings_Exam_Schedule_PaperInfo" xml:space="preserve">
+    <value>Paper info</value>
+  </data>
   <data name="Settings_Exam_Display_Title" xml:space="preserve">
     <value>Display</value>
   </data>

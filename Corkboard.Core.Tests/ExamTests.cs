@@ -2,6 +2,9 @@ using System.Globalization;
 using System.Text.Json;
 using Corkboard.Core.Abstraction;
 using Corkboard.Core.Exam;
+using Corkboard.Core.Models;
+using Corkboard.Core.Services.Config;
+using Corkboard.Shared.Abstraction;
 using Microsoft.Extensions.Logging.Abstractions;
 using CR = Corkboard.Core.Langs.Common.Resources;
 
@@ -591,10 +594,11 @@ public class ExamTimeFormatterTests
 }
 
 /// <summary>
-///     考试安排服务：加 / 改 / 删都要落盘并通知界面，从磁盘重读要能把脏数据收拾干净。
+///     考试看板服务：一块看板 = 一个文件（标题、副标题、考试安排都在里面），
+///     加 / 改 / 删都要落盘并通知界面，从磁盘重读要能把脏数据收拾干净。
 ///     <para>
-///     配置文件全部指向临时沙箱（<c>SandboxConfigService</c> 直接读写指定路径），
-///     绝不碰开发机上的真实数据根。
+///     配置文件全部指向临时沙箱（<c>SandboxConfigService</c> 只按文件名映射到沙箱目录，
+///     不认 <c>Utils</c> 解析出的真实路径），绝不碰开发机上的真实数据根。
 ///     </para>
 /// </summary>
 public class ExamServiceTests : IDisposable
@@ -602,44 +606,85 @@ public class ExamServiceTests : IDisposable
     private readonly string _sandbox = Path.Combine(
         Path.GetTempPath(), "corkboard-exam", Guid.NewGuid().ToString("N"));
 
-    private string ConfigPath => Path.Combine(_sandbox, "exam", "exams.json");
+    private string IndexPath => Path.Combine(_sandbox, ExamBoardIndexConfig.StorageFileName);
 
-    private ExamService CreateService() =>
-        new(new SandboxConfigService(ConfigPath), NullLogger<ExamService>.Instance);
+    private string LegacyPath => Path.Combine(_sandbox, "exams.json");
 
-    /// <summary>把配置写到沙箱里的 JSON 文件：真实序列化，但不碰 <c>Utils</c> 解析出的真实路径。</summary>
-    private sealed class SandboxConfigService(string filePath) : ConfigServiceBase
+    private string SettingsPath => Path.Combine(_sandbox, "settings.json");
+
+    private string BoardPath(Guid id) => Path.Combine(_sandbox, id.ToString("N") + ".json");
+
+    private ExamService CreateService() => new(new SandboxConfigService(_sandbox), CreateHandler());
+
+    private MainConfigHandler CreateHandler() =>
+        new(NullLogger<MainConfigHandler>.Instance, new SandboxConfigService(_sandbox));
+
+    /// <summary>
+    ///     把配置写到沙箱里的 JSON 文件：真实序列化，但不碰 <c>Utils</c> 解析出的真实路径。
+    ///     看板、索引、老版考试安排都只靠文件名区分，拍平到同一个目录里不会撞名。
+    /// </summary>
+    private sealed class SandboxConfigService(string root) : ConfigServiceBase
     {
-        public override bool IsConfigExists<T>(T fallback) => File.Exists(filePath);
+        private string Resolve(object config) =>
+            Path.Combine(root, Path.GetFileName(((ConfigBase)config).ConfigFilePath));
+
+        public override bool IsConfigExists<T>(T fallback) => File.Exists(Resolve(fallback!));
 
         public override T LoadConfig<T>(T fallback)
         {
-            if (!File.Exists(filePath))
+            var path = Resolve(fallback!);
+            if (!File.Exists(path))
                 return fallback;
 
-            var json = File.ReadAllText(filePath);
+            var json = File.ReadAllText(path);
             return JsonSerializer.Deserialize<T>(json, JsonOptions) ?? fallback;
         }
 
         public override void SaveConfig<T>(T config)
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
-            File.WriteAllText(filePath, JsonSerializer.Serialize(config, JsonOptions));
+            var path = Resolve(config!);
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllText(path, JsonSerializer.Serialize(config, JsonOptions));
         }
 
         public override void DeleteConfig<T>(T config)
         {
-            if (File.Exists(filePath))
-                File.Delete(filePath);
+            var path = Resolve(config!);
+            if (File.Exists(path))
+                File.Delete(path);
         }
     }
 
-    /// <summary>直接往沙箱里写一份 <c>exams.json</c>，模拟手改过 / 老版本留下的文件。</summary>
-    private void WriteSchedule(params ExamEntry[] exams)
+    /// <summary>写一份老版本的单份考试安排（<c>data/exam/exams.json</c>），模拟升级前留下的数据。</summary>
+    private void WriteLegacySchedule(params ExamEntry[] exams)
     {
+        Directory.CreateDirectory(_sandbox);
         var config = new ExamScheduleConfig { Exams = [.. exams] };
-        Directory.CreateDirectory(Path.GetDirectoryName(ConfigPath)!);
-        File.WriteAllText(ConfigPath, JsonSerializer.Serialize(config, ConfigServiceBase.JsonOptions));
+        File.WriteAllText(LegacyPath, JsonSerializer.Serialize(config, ConfigServiceBase.JsonOptions));
+    }
+
+    /// <summary>直接往沙箱里写一份看板文件，模拟手改过 / 云同步拉回来的文件。</summary>
+    private void WriteBoard(ExamBoardDocument board)
+    {
+        Directory.CreateDirectory(_sandbox);
+        File.WriteAllText(BoardPath(board.Id), JsonSerializer.Serialize(board, ConfigServiceBase.JsonOptions));
+    }
+
+    /// <summary>写一份看板索引（有哪些看板、当前是哪一块）。</summary>
+    private void WriteIndex(Guid[] boardIds, Guid activeBoardId)
+    {
+        Directory.CreateDirectory(_sandbox);
+        var index = new ExamBoardIndexConfig { BoardIds = [.. boardIds], ActiveBoardId = activeBoardId };
+        File.WriteAllText(IndexPath, JsonSerializer.Serialize(index, ConfigServiceBase.JsonOptions));
+    }
+
+    /// <summary>写一份 <c>settings.json</c>，用来模拟老版本把标题写在全局配置里的情况。</summary>
+    private void WriteSettings(Action<MainConfigModel> mutate)
+    {
+        Directory.CreateDirectory(_sandbox);
+        var model = new MainConfigModel();
+        mutate(model);
+        File.WriteAllText(SettingsPath, JsonSerializer.Serialize(model, ConfigServiceBase.JsonOptions));
     }
 
     private static ExamEntry MathExam() => new()
@@ -794,13 +839,121 @@ public class ExamServiceTests : IDisposable
     }
 
     /// <summary>
+    ///     第一次启动：没有索引、只有老版本单份的 <c>exams.json</c> 与全局的标题 / 副标题时，
+    ///     这些要一起搬进第一块看板，搬完把全局那三个字段清空（否则下次读盘又把旧标题盖回来）。
+    /// </summary>
+    [Fact]
+    public void FirstLoad_MigratesTheLegacyScheduleIntoTheFirstBoard()
+    {
+        WriteSettings(model =>
+        {
+            model.ExamBoard.Title = "期中考试";
+            model.ExamBoard.Subtitle = "距离期末还有 20 天";
+        });
+        WriteLegacySchedule(MathExam(), new ExamEntry { Subject = "语文" });
+
+        var handler = CreateHandler();
+        var service = new ExamService(new SandboxConfigService(_sandbox), handler);
+
+        var board = Assert.Single(service.Boards);
+        Assert.Same(board, service.ActiveBoard);
+        Assert.Equal("期中考试", board.ResolveTitle());
+        Assert.Equal("距离期末还有 20 天", board.ResolveSubtitle());
+        Assert.Equal(["数学", "语文"], service.Exams.Select(exam => exam.Subject));
+
+        Assert.Equal(string.Empty, handler.Data.ExamBoard.Title);
+        Assert.Equal(string.Empty, handler.Data.ExamBoard.Subtitle);
+
+        // 搬进来的内容要真落盘：换个服务实例读同一份看板，内容一样。
+        var reopened = new ExamService(new SandboxConfigService(_sandbox), CreateHandler());
+        Assert.Equal(board.Id, reopened.ActiveBoard.Id);
+        Assert.Equal("期中考试", reopened.ActiveBoard.ResolveTitle());
+        Assert.Equal(2, reopened.Exams.Count);
+    }
+
+    /// <summary>
+    ///     新建看板：加一块空的、切过去，原来那块连同它的考试原封不动；
+    ///     切回去还能看到原来的考试（说明每块的考试是各自独立的）。
+    /// </summary>
+    [Fact]
+    public void CreateBoard_AddsAnEmptyBoardAndSwitchesToIt()
+    {
+        var service = CreateService();
+        var first = service.ActiveBoard;
+        service.Add(MathExam());
+
+        var second = service.CreateBoard("期末考试");
+
+        Assert.Equal(2, service.Boards.Count);
+        Assert.Same(second, service.ActiveBoard);
+        Assert.Equal("期末考试", second.ResolveTitle());
+        Assert.Empty(service.Exams); // 新看板里没有考试
+        Assert.Single(first.Exams);  // 原来那块原封不动
+
+        Assert.True(service.SelectBoard(first.Id));
+        Assert.Equal(["数学"], service.Exams.Select(exam => exam.Subject));
+    }
+
+    /// <summary>切看板：右侧那列考试整批换掉，「当前是哪一块」也要落盘（重开回到上次那块）。</summary>
+    [Fact]
+    public void SelectBoard_SwitchesTheVisibleExamsAndPersistsTheChoice()
+    {
+        var service = CreateService();
+        service.Add(new ExamEntry { Subject = "数学" });
+        var firstId = service.ActiveBoard.Id;
+
+        service.CreateBoard("期末考试");
+        service.Add(new ExamEntry { Subject = "物理" });
+        Assert.Equal(["物理"], service.Exams.Select(exam => exam.Subject));
+
+        Assert.True(service.SelectBoard(firstId));
+        Assert.Equal(["数学"], service.Exams.Select(exam => exam.Subject));
+
+        var reopened = new ExamService(new SandboxConfigService(_sandbox), CreateHandler());
+        Assert.Equal(firstId, reopened.ActiveBoard.Id);
+        Assert.Equal(["数学"], reopened.Exams.Select(exam => exam.Subject));
+    }
+
+    /// <summary>删看板：文件一起删掉、当前退回第一块；**最后一块删不掉**（界面上永远要有可看的看板）。</summary>
+    [Fact]
+    public void DeleteBoard_RemovesItsFileAndKeepsTheLastOne()
+    {
+        var service = CreateService();
+        var first = service.ActiveBoard;
+        var second = service.CreateBoard("期末考试");
+        Assert.True(File.Exists(BoardPath(second.Id)));
+
+        Assert.True(service.DeleteBoard(second.Id));
+        Assert.Single(service.Boards);
+        Assert.Same(first, service.ActiveBoard);
+        Assert.False(File.Exists(BoardPath(second.Id)));
+
+        Assert.False(service.DeleteBoard(first.Id));
+        Assert.Single(service.Boards);
+    }
+
+    /// <summary>标题与副标题跟着看板文件走，不是全局配置。</summary>
+    [Fact]
+    public void TitleAndSubtitle_TravelWithTheBoardFile()
+    {
+        var service = CreateService();
+        service.ActiveBoard.Title = "期中考试";
+        service.ActiveBoard.Subtitle = "还有 20 天";
+        service.Save();
+
+        var reopened = new ExamService(new SandboxConfigService(_sandbox), CreateHandler());
+        Assert.Equal("期中考试", reopened.ActiveBoard.ResolveTitle());
+        Assert.Equal("还有 20 天", reopened.ActiveBoard.ResolveSubtitle());
+    }
+
+    /// <summary>
     ///     读盘时丢掉<b>空科目</b>的条目（看板上没法显示，多半是手改 JSON 或旧数据留下的），
     ///     顺手把有科目的那条收拾干净：去首尾空白、卷面数字夹取、空 Id 补上。
     /// </summary>
     [Fact]
     public void Load_DropsEntriesWithoutSubjectAndNormalizesTheRest()
     {
-        WriteSchedule(
+        WriteLegacySchedule(
             new ExamEntry { Subject = "  数学  ", PaperCount = 0, PageCount = 5000, Note = "  " },
             new ExamEntry { Subject = string.Empty },
             new ExamEntry { Subject = "   " },
@@ -820,15 +973,40 @@ public class ExamServiceTests : IDisposable
         Assert.Equal(2, service.Exams.Select(exam => exam.Id).Distinct().Count());
     }
 
-    /// <summary>配置文件不存在时从空表起步（第一次开应用就是这样），不抛异常。</summary>
+    /// <summary>
+    ///     索引里有、文件却没了的看板直接丢掉（用户手工删过文件），当前那块没了就退回第一块；
+    ///     看板文件里的 <c>id</c> 与文件名不一致时**以索引为准**（否则会算出一条指向别处的看板）。
+    /// </summary>
+    [Fact]
+    public void Load_DropsBoardsWhoseFileIsMissingAndTrustsTheIndexId()
+    {
+        var kept = Guid.NewGuid();
+        var lost = Guid.NewGuid();
+
+        // 文件写在 kept 那个名字上，但内容里的 id 是另一个——读盘要以索引为准。
+        var raw = new ExamBoardDocument { Id = Guid.NewGuid(), Title = "期中" };
+        Directory.CreateDirectory(_sandbox);
+        File.WriteAllText(BoardPath(kept), JsonSerializer.Serialize(raw, ConfigServiceBase.JsonOptions));
+        WriteIndex([kept, lost], lost);
+
+        var service = CreateService();
+
+        var board = Assert.Single(service.Boards);
+        Assert.Equal(kept, board.Id);
+        Assert.Same(board, service.ActiveBoard);
+        Assert.Equal("期中", board.ResolveTitle());
+    }
+
+    /// <summary>配置文件不存在时从一块空看板起步（第一次开应用就是这样），不抛异常。</summary>
     [Fact]
     public void Load_StartsEmptyWhenTheFileIsMissing()
     {
-        Assert.False(File.Exists(ConfigPath));
+        Assert.False(File.Exists(IndexPath));
 
         var service = CreateService();
 
         Assert.Empty(service.Exams);
+        Assert.Single(service.Boards);
     }
 
     public void Dispose()
