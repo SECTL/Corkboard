@@ -1552,4 +1552,331 @@
   <data name="Settings_About_OnlineUsers" xml:space="preserve">
     <value>在线人数</value>
   </data>
+  <data name="Exam_Board_DefaultTitle" xml:space="preserve">
+    <value>考试看板</value>
+  </data>
+  <data name="Exam_Board_ExitHint" xml:space="preserve">
+    <value>长按退出</value>
+  </data>
+  <data name="Exam_Board_ExitHintActive" xml:space="preserve">
+    <value>松开取消</value>
+  </data>
+  <data name="Exam_Board_ExitToolTip" xml:space="preserve">
+    <value>按住 2 秒退出全屏</value>
+  </data>
+  <data name="Exam_Board_NoExam" xml:space="preserve">
+    <value>还没有考试安排</value>
+  </data>
+  <data name="Exam_Board_NoExamHint" xml:space="preserve">
+    <value>去「设置 → 考试看板 → 考试安排」里加一场</value>
+  </data>
+  <data name="Exam_Board_NextExam" xml:space="preserve">
+    <value>下一场</value>
+  </data>
+  <data name="Exam_Board_Table_Date" xml:space="preserve">
+    <value>日期</value>
+  </data>
+  <data name="Exam_Board_Table_Subject" xml:space="preserve">
+    <value>科目</value>
+  </data>
+  <data name="Exam_Board_Table_Time" xml:space="preserve">
+    <value>时间</value>
+  </data>
+  <data name="Exam_Board_Table_Status" xml:space="preserve">
+    <value>状态</value>
+  </data>
+  <data name="Exam_Board_ClockLocal" xml:space="preserve">
+    <value>本机时间</value>
+  </data>
+  <data name="Exam_Board_ClockSynced" xml:space="preserve">
+    <value>已校时</value>
+  </data>
+  <data name="Exam_Status_NotStarted" xml:space="preserve">
+    <value>未开始</value>
+  </data>
+  <data name="Exam_Status_Upcoming" xml:space="preserve">
+    <value>即将开始</value>
+  </data>
+  <data name="Exam_Status_InProgress" xml:space="preserve">
+    <value>进行中</value>
+  </data>
+  <data name="Exam_Status_Finished" xml:space="preserve">
+    <value>已结束</value>
+  </data>
+  <data name="Exam_Status_Remaining" xml:space="preserve">
+    <value>还剩 {0}</value>
+  </data>
+  <data name="Exam_Date_Today" xml:space="preserve">
+    <value>今天</value>
+  </data>
+  <data name="Exam_Date_Tomorrow" xml:space="preserve">
+    <value>明天</value>
+  </data>
+  <data name="Exam_Date_DayAfterTomorrow" xml:space="preserve">
+    <value>后天</value>
+  </data>
+  <data name="Exam_Date_Format" xml:space="preserve">
+    <value>{0}月{1}日 {2}</value>
+  </data>
+  <data name="Exam_Date_FormatWithYear" xml:space="preserve">
+    <value>{0}年{1}月{2}日 {3}</value>
+  </data>
+  <data name="Exam_Duration_LessThanMinute" xml:space="preserve">
+    <value>不到 1 分钟</value>
+  </data>
+  <data name="Exam_Duration_Minutes" xml:space="preserve">
+    <value>{0} 分钟</value>
+  </data>
+  <data name="Exam_Duration_Hours" xml:space="preserve">
+    <value>{0} 小时</value>
+  </data>
+  <data name="Exam_Duration_HoursMinutes" xml:space="preserve">
+    <value>{0} 小时 {1} 分</value>
+  </data>
+  <data name="Exam_Countdown_Days" xml:space="preserve">
+    <value>还有 {0} 天</value>
+  </data>
+  <data name="Exam_Countdown_Remaining" xml:space="preserve">
+    <value>还有 {0}</value>
+  </data>
+  <data name="Exam_PaperCount" xml:space="preserve">
+    <value>{0} 张</value>
+  </data>
+  <data name="Exam_PageCount" xml:space="preserve">
+    <value>{0} 页</value>
+  </data>
+  <data name="Exam_QuestionCount" xml:space="preserve">
+    <value>{0} 大题</value>
+  </data>
+  <data name="Exam_PaperInfoSeparator" xml:space="preserve">
+    <value> · </value>
+  </data>
+  <data name="Menu_OpenExamBoard" xml:space="preserve">
+    <value>考试看板</value>
+  </data>
+  <data name="Common_Minutes" xml:space="preserve">
+    <value>分钟</value>
+  </data>
+  <data name="Common_Seconds" xml:space="preserve">
+    <value>秒</value>
+  </data>
+  <data name="Common_Milliseconds" xml:space="preserve">
+    <value>毫秒</value>
+  </data>
+  <data name="Settings_Exam_Group" xml:space="preserve">
+    <value>考试看板</value>
+  </data>
+  <data name="Settings_Exam_Schedule_Title" xml:space="preserve">
+    <value>考试安排</value>
+  </data>
+  <data name="Settings_Exam_Schedule_OpenBoard" xml:space="preserve">
+    <value>全屏看板</value>
+  </data>
+  <data name="Settings_Exam_Schedule_OpenBoardDescription" xml:space="preserve">
+    <value>在一整块屏幕上显示时钟与考试安排</value>
+  </data>
+  <data name="Settings_Exam_Schedule_Form" xml:space="preserve">
+    <value>添加考试</value>
+  </data>
+  <data name="Settings_Exam_Schedule_FormEdit" xml:space="preserve">
+    <value>编辑考试</value>
+  </data>
+  <data name="Settings_Exam_Schedule_Subject" xml:space="preserve">
+    <value>科目</value>
+  </data>
+  <data name="Settings_Exam_Schedule_SubjectPlaceholder" xml:space="preserve">
+    <value>例如：语文</value>
+  </data>
+  <data name="Settings_Exam_Schedule_Date" xml:space="preserve">
+    <value>考试日期</value>
+  </data>
+  <data name="Settings_Exam_Schedule_Start" xml:space="preserve">
+    <value>开考时间</value>
+  </data>
+  <data name="Settings_Exam_Schedule_End" xml:space="preserve">
+    <value>结束时间</value>
+  </data>
+  <data name="Settings_Exam_Schedule_PaperCount" xml:space="preserve">
+    <value>试卷张数</value>
+  </data>
+  <data name="Settings_Exam_Schedule_PageCount" xml:space="preserve">
+    <value>页数</value>
+  </data>
+  <data name="Settings_Exam_Schedule_QuestionCount" xml:space="preserve">
+    <value>大题数</value>
+  </data>
+  <data name="Settings_Exam_Schedule_PaperInfoHint" xml:space="preserve">
+    <value>不填就不显示</value>
+  </data>
+  <data name="Settings_Exam_Schedule_Note" xml:space="preserve">
+    <value>备注</value>
+  </data>
+  <data name="Settings_Exam_Schedule_NotePlaceholder" xml:space="preserve">
+    <value>例如：考场 3 楼</value>
+  </data>
+  <data name="Settings_Exam_Schedule_Save" xml:space="preserve">
+    <value>保存</value>
+  </data>
+  <data name="Settings_Exam_Schedule_Cancel" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="Settings_Exam_Schedule_Empty" xml:space="preserve">
+    <value>还没有考试安排</value>
+  </data>
+  <data name="Settings_Exam_Schedule_EmptyHint" xml:space="preserve">
+    <value>在上面填一场，点「添加」</value>
+  </data>
+  <data name="Settings_Exam_Schedule_InvalidSubject" xml:space="preserve">
+    <value>先填一下科目</value>
+  </data>
+  <data name="Settings_Exam_Schedule_InvalidTime" xml:space="preserve">
+    <value>结束时间要晚于开考时间</value>
+  </data>
+  <data name="Settings_Exam_Schedule_Overlap" xml:space="preserve">
+    <value>这段时间和另一场考试重叠了</value>
+  </data>
+  <data name="Settings_Exam_Schedule_DeleteTitle" xml:space="preserve">
+    <value>删除这场考试</value>
+  </data>
+  <data name="Settings_Exam_Schedule_DeleteBody" xml:space="preserve">
+    <value>「{0}」会从考试安排里移除</value>
+  </data>
+  <data name="Settings_Exam_Schedule_Delete" xml:space="preserve">
+    <value>删除</value>
+  </data>
+  <data name="Settings_Exam_Schedule_Edit" xml:space="preserve">
+    <value>编辑</value>
+  </data>
+  <data name="Settings_Exam_Schedule_Count" xml:space="preserve">
+    <value>共 {0} 场</value>
+  </data>
+  <data name="Settings_Exam_Display_Title" xml:space="preserve">
+    <value>看板显示</value>
+  </data>
+  <data name="Settings_Exam_Display_TitleLabel" xml:space="preserve">
+    <value>主标题</value>
+  </data>
+  <data name="Settings_Exam_Display_TitleDescription" xml:space="preserve">
+    <value>看板左上角的大字，留空用默认名</value>
+  </data>
+  <data name="Settings_Exam_Display_TitlePlaceholder" xml:space="preserve">
+    <value>例如：期末考试</value>
+  </data>
+  <data name="Settings_Exam_Display_SubtitleLabel" xml:space="preserve">
+    <value>副标题</value>
+  </data>
+  <data name="Settings_Exam_Display_SubtitleDescription" xml:space="preserve">
+    <value>显示在主标题下面，字更小更淡</value>
+  </data>
+  <data name="Settings_Exam_Display_SubtitlePlaceholder" xml:space="preserve">
+    <value>例如：距离期末还有 12 天</value>
+  </data>
+  <data name="Settings_Exam_Display_SubtitleColor" xml:space="preserve">
+    <value>副标题颜色</value>
+  </data>
+  <data name="Settings_Exam_Display_SubtitleColorDescription" xml:space="preserve">
+    <value>不选就跟随主题的次要文字色</value>
+  </data>
+  <data name="Settings_Exam_Display_SubtitleColorDefault" xml:space="preserve">
+    <value>跟随主题</value>
+  </data>
+  <data name="Settings_Exam_Display_Threshold" xml:space="preserve">
+    <value>即将开始阈值</value>
+  </data>
+  <data name="Settings_Exam_Display_ThresholdDescription" xml:space="preserve">
+    <value>开考前多少分钟之内算即将开始</value>
+  </data>
+  <data name="Settings_Exam_Display_ClockSide" xml:space="preserve">
+    <value>时钟位置</value>
+  </data>
+  <data name="Settings_Exam_Display_ClockSideDescription" xml:space="preserve">
+    <value>时钟和考试列表谁在左边</value>
+  </data>
+  <data name="Settings_Exam_Display_ClockSide_Left" xml:space="preserve">
+    <value>时钟在左</value>
+  </data>
+  <data name="Settings_Exam_Display_ClockSide_Right" xml:space="preserve">
+    <value>时钟在右</value>
+  </data>
+  <data name="Settings_Exam_Display_HideListUpcoming" xml:space="preserve">
+    <value>即将开始时收起列表</value>
+  </data>
+  <data name="Settings_Exam_Display_HideListUpcomingDescription" xml:space="preserve">
+    <value>只留下一场考试，考前更专注</value>
+  </data>
+  <data name="Settings_Exam_Display_ShowListInProgress" xml:space="preserve">
+    <value>考试中显示考试信息</value>
+  </data>
+  <data name="Settings_Exam_Display_ShowListInProgressDescription" xml:space="preserve">
+    <value>默认考试中只留一个时钟</value>
+  </data>
+  <data name="Settings_Exam_Time_Title" xml:space="preserve">
+    <value>时间同步</value>
+  </data>
+  <data name="Settings_Exam_Time_Enabled" xml:space="preserve">
+    <value>用 NTP 校时</value>
+  </data>
+  <data name="Settings_Exam_Time_EnabledDescription" xml:space="preserve">
+    <value>关掉就用本机时间</value>
+  </data>
+  <data name="Settings_Exam_Time_Servers" xml:space="preserve">
+    <value>同步源</value>
+  </data>
+  <data name="Settings_Exam_Time_ServersDescription" xml:space="preserve">
+    <value>按顺序尝试，第一个连上的生效</value>
+  </data>
+  <data name="Settings_Exam_Time_ServerPlaceholder" xml:space="preserve">
+    <value>例如：ntp.aliyun.com</value>
+  </data>
+  <data name="Settings_Exam_Time_AddServer" xml:space="preserve">
+    <value>添加</value>
+  </data>
+  <data name="Settings_Exam_Time_InvalidServer" xml:space="preserve">
+    <value>这个地址看起来不对</value>
+  </data>
+  <data name="Settings_Exam_Time_ResetServers" xml:space="preserve">
+    <value>恢复默认源</value>
+  </data>
+  <data name="Settings_Exam_Time_Interval" xml:space="preserve">
+    <value>同步间隔</value>
+  </data>
+  <data name="Settings_Exam_Time_IntervalDescription" xml:space="preserve">
+    <value>每隔多少分钟同步一次</value>
+  </data>
+  <data name="Settings_Exam_Time_Timeout" xml:space="preserve">
+    <value>单源超时</value>
+  </data>
+  <data name="Settings_Exam_Time_TimeoutDescription" xml:space="preserve">
+    <value>一个源多久没回应就换下一个</value>
+  </data>
+  <data name="Settings_Exam_Time_SyncNow" xml:space="preserve">
+    <value>立即同步</value>
+  </data>
+  <data name="Settings_Exam_Time_Syncing" xml:space="preserve">
+    <value>正在同步…</value>
+  </data>
+  <data name="Settings_Exam_Time_Status_Idle" xml:space="preserve">
+    <value>还没同步过</value>
+  </data>
+  <data name="Settings_Exam_Time_Status_Success" xml:space="preserve">
+    <value>已通过 {0} 校时，偏差 {1} 毫秒</value>
+  </data>
+  <data name="Settings_Exam_Time_Status_Failed" xml:space="preserve">
+    <value>同步失败：{0}</value>
+  </data>
+  <data name="Settings_Exam_Time_Status_Disabled" xml:space="preserve">
+    <value>校时关着，现在用的是本机时间</value>
+  </data>
+  <data name="Settings_Exam_Time_Status_LastSync" xml:space="preserve">
+    <value>上次同步 {0}</value>
+  </data>
+  <data name="Settings_Exam_Time_Offset_Slow" xml:space="preserve">
+    <value>本机慢 {0}</value>
+  </data>
+  <data name="Settings_Exam_Time_Offset_Fast" xml:space="preserve">
+    <value>本机快 {0}</value>
+  </data>
+  <data name="Settings_Exam_Time_Offset_Same" xml:space="preserve">
+    <value>与本机时间一致</value>
+  </data>
 </root>

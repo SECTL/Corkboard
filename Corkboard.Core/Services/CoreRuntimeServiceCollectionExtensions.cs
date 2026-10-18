@@ -5,8 +5,10 @@ using Corkboard.Core.Services.Config;
 using Corkboard.Core.Services.Logging;
 using Corkboard.Core.Board;
 using Corkboard.Core.Board.History;
+using Corkboard.Core.Exam;
 using Corkboard.Core.Homework;
 using Corkboard.Core.Notes;
+using Corkboard.Core.Time;
 
 namespace Corkboard.Core.Services;
 
@@ -27,6 +29,11 @@ public static class CoreRuntimeServiceCollectionExtensions
         services.AddSingleton<INoteHistoryStore, NoteHistoryStore>();
         services.AddSingleton<IBoardService, BoardService>();
         services.AddSingleton<HomeworkCleanupService>();
+
+        // 考试看板：考试安排（业务数据在 data/exam/）与 NTP 校时（看板时钟的时间源）。
+        services.AddSingleton<IExamService, ExamService>();
+        services.AddSingleton<NtpClient>();
+        services.AddSingleton<NtpTimeService>();
         return services;
     }
 

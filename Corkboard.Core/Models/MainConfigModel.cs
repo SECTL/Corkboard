@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Corkboard.Core.Models.SubConfigs.Board;
 using Corkboard.Core.Models.SubConfigs.Cloud;
+using Corkboard.Core.Models.SubConfigs.Exam;
 using Corkboard.Core.Models.SubConfigs.Export;
 using Corkboard.Core.Models.SubConfigs.General;
 using Corkboard.Core.Models.SubConfigs.Personalized;
@@ -27,6 +28,12 @@ public partial class MainConfigModel : ConfigBase
     [ObservableProperty] private UpdateSettingsConfig _updateSettings = new();
     [ObservableProperty] private ExportSettingsConfig _exportSettings = new();
 
+    /// <summary>考试看板的显示偏好（标题、阈值、时钟位置……）。考试安排本身在 <c>data/exam/</c>。</summary>
+    [ObservableProperty] private ExamBoardSettingsConfig _examBoard = new();
+
+    /// <summary>NTP 校时设置。看板时钟用它，其它界面不受影响。</summary>
+    [ObservableProperty] private NtpSettingsConfig _ntp = new();
+
     [JsonIgnore] public override string ConfigFilePath => Utils.GetFilePath("config", "settings.json");
 
     /// <summary>
@@ -42,6 +49,8 @@ public partial class MainConfigModel : ConfigBase
         ExportSettings.Normalize();
         UpdateSettings.Normalize();
         General.PrivacySettings.Normalize();
+        ExamBoard.Normalize();
+        Ntp.Normalize();
     }
 
     [JsonIgnore]

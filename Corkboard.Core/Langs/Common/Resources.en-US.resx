@@ -1547,4 +1547,331 @@
   <data name="Settings_About_OnlineUsers" xml:space="preserve">
     <value>Online users</value>
   </data>
+  <data name="Exam_Board_DefaultTitle" xml:space="preserve">
+    <value>Exam board</value>
+  </data>
+  <data name="Exam_Board_ExitHint" xml:space="preserve">
+    <value>Hold to exit</value>
+  </data>
+  <data name="Exam_Board_ExitHintActive" xml:space="preserve">
+    <value>Release to cancel</value>
+  </data>
+  <data name="Exam_Board_ExitToolTip" xml:space="preserve">
+    <value>Hold for 2 seconds to leave full screen</value>
+  </data>
+  <data name="Exam_Board_NoExam" xml:space="preserve">
+    <value>No exams yet</value>
+  </data>
+  <data name="Exam_Board_NoExamHint" xml:space="preserve">
+    <value>Add one in Settings → Exam board → Schedule</value>
+  </data>
+  <data name="Exam_Board_NextExam" xml:space="preserve">
+    <value>Next up</value>
+  </data>
+  <data name="Exam_Board_Table_Date" xml:space="preserve">
+    <value>Date</value>
+  </data>
+  <data name="Exam_Board_Table_Subject" xml:space="preserve">
+    <value>Subject</value>
+  </data>
+  <data name="Exam_Board_Table_Time" xml:space="preserve">
+    <value>Time</value>
+  </data>
+  <data name="Exam_Board_Table_Status" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="Exam_Board_ClockLocal" xml:space="preserve">
+    <value>System clock</value>
+  </data>
+  <data name="Exam_Board_ClockSynced" xml:space="preserve">
+    <value>Time synced</value>
+  </data>
+  <data name="Exam_Status_NotStarted" xml:space="preserve">
+    <value>Not started</value>
+  </data>
+  <data name="Exam_Status_Upcoming" xml:space="preserve">
+    <value>Starting soon</value>
+  </data>
+  <data name="Exam_Status_InProgress" xml:space="preserve">
+    <value>In progress</value>
+  </data>
+  <data name="Exam_Status_Finished" xml:space="preserve">
+    <value>Finished</value>
+  </data>
+  <data name="Exam_Status_Remaining" xml:space="preserve">
+    <value>{0} left</value>
+  </data>
+  <data name="Exam_Date_Today" xml:space="preserve">
+    <value>Today</value>
+  </data>
+  <data name="Exam_Date_Tomorrow" xml:space="preserve">
+    <value>Tomorrow</value>
+  </data>
+  <data name="Exam_Date_DayAfterTomorrow" xml:space="preserve">
+    <value>In 2 days</value>
+  </data>
+  <data name="Exam_Date_Format" xml:space="preserve">
+    <value>{0}/{1} {2}</value>
+  </data>
+  <data name="Exam_Date_FormatWithYear" xml:space="preserve">
+    <value>{0}/{1}/{2} {3}</value>
+  </data>
+  <data name="Exam_Duration_LessThanMinute" xml:space="preserve">
+    <value>less than a minute</value>
+  </data>
+  <data name="Exam_Duration_Minutes" xml:space="preserve">
+    <value>{0} min</value>
+  </data>
+  <data name="Exam_Duration_Hours" xml:space="preserve">
+    <value>{0} h</value>
+  </data>
+  <data name="Exam_Duration_HoursMinutes" xml:space="preserve">
+    <value>{0} h {1} min</value>
+  </data>
+  <data name="Exam_Countdown_Days" xml:space="preserve">
+    <value>in {0} days</value>
+  </data>
+  <data name="Exam_Countdown_Remaining" xml:space="preserve">
+    <value>in {0}</value>
+  </data>
+  <data name="Exam_PaperCount" xml:space="preserve">
+    <value>{0} papers</value>
+  </data>
+  <data name="Exam_PageCount" xml:space="preserve">
+    <value>{0} pages</value>
+  </data>
+  <data name="Exam_QuestionCount" xml:space="preserve">
+    <value>{0} sections</value>
+  </data>
+  <data name="Exam_PaperInfoSeparator" xml:space="preserve">
+    <value> · </value>
+  </data>
+  <data name="Menu_OpenExamBoard" xml:space="preserve">
+    <value>Exam board</value>
+  </data>
+  <data name="Common_Minutes" xml:space="preserve">
+    <value>min</value>
+  </data>
+  <data name="Common_Seconds" xml:space="preserve">
+    <value>s</value>
+  </data>
+  <data name="Common_Milliseconds" xml:space="preserve">
+    <value>ms</value>
+  </data>
+  <data name="Settings_Exam_Group" xml:space="preserve">
+    <value>Exam board</value>
+  </data>
+  <data name="Settings_Exam_Schedule_Title" xml:space="preserve">
+    <value>Schedule</value>
+  </data>
+  <data name="Settings_Exam_Schedule_OpenBoard" xml:space="preserve">
+    <value>Full screen</value>
+  </data>
+  <data name="Settings_Exam_Schedule_OpenBoardDescription" xml:space="preserve">
+    <value>Shows the clock and the schedule on a full screen</value>
+  </data>
+  <data name="Settings_Exam_Schedule_Form" xml:space="preserve">
+    <value>Add an exam</value>
+  </data>
+  <data name="Settings_Exam_Schedule_FormEdit" xml:space="preserve">
+    <value>Edit the exam</value>
+  </data>
+  <data name="Settings_Exam_Schedule_Subject" xml:space="preserve">
+    <value>Subject</value>
+  </data>
+  <data name="Settings_Exam_Schedule_SubjectPlaceholder" xml:space="preserve">
+    <value>e.g. Chinese</value>
+  </data>
+  <data name="Settings_Exam_Schedule_Date" xml:space="preserve">
+    <value>Date</value>
+  </data>
+  <data name="Settings_Exam_Schedule_Start" xml:space="preserve">
+    <value>Starts</value>
+  </data>
+  <data name="Settings_Exam_Schedule_End" xml:space="preserve">
+    <value>Ends</value>
+  </data>
+  <data name="Settings_Exam_Schedule_PaperCount" xml:space="preserve">
+    <value>Papers</value>
+  </data>
+  <data name="Settings_Exam_Schedule_PageCount" xml:space="preserve">
+    <value>Pages</value>
+  </data>
+  <data name="Settings_Exam_Schedule_QuestionCount" xml:space="preserve">
+    <value>Sections</value>
+  </data>
+  <data name="Settings_Exam_Schedule_PaperInfoHint" xml:space="preserve">
+    <value>Leave empty to hide</value>
+  </data>
+  <data name="Settings_Exam_Schedule_Note" xml:space="preserve">
+    <value>Note</value>
+  </data>
+  <data name="Settings_Exam_Schedule_NotePlaceholder" xml:space="preserve">
+    <value>e.g. Room 301</value>
+  </data>
+  <data name="Settings_Exam_Schedule_Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Settings_Exam_Schedule_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Settings_Exam_Schedule_Empty" xml:space="preserve">
+    <value>No exams yet</value>
+  </data>
+  <data name="Settings_Exam_Schedule_EmptyHint" xml:space="preserve">
+    <value>Fill in the form above and press Add</value>
+  </data>
+  <data name="Settings_Exam_Schedule_InvalidSubject" xml:space="preserve">
+    <value>Enter a subject first</value>
+  </data>
+  <data name="Settings_Exam_Schedule_InvalidTime" xml:space="preserve">
+    <value>The end time must be after the start time</value>
+  </data>
+  <data name="Settings_Exam_Schedule_Overlap" xml:space="preserve">
+    <value>This overlaps another exam</value>
+  </data>
+  <data name="Settings_Exam_Schedule_DeleteTitle" xml:space="preserve">
+    <value>Delete this exam</value>
+  </data>
+  <data name="Settings_Exam_Schedule_DeleteBody" xml:space="preserve">
+    <value>\u201C{0}\u201D will be removed from the schedule</value>
+  </data>
+  <data name="Settings_Exam_Schedule_Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="Settings_Exam_Schedule_Edit" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="Settings_Exam_Schedule_Count" xml:space="preserve">
+    <value>{0} exams</value>
+  </data>
+  <data name="Settings_Exam_Display_Title" xml:space="preserve">
+    <value>Display</value>
+  </data>
+  <data name="Settings_Exam_Display_TitleLabel" xml:space="preserve">
+    <value>Title</value>
+  </data>
+  <data name="Settings_Exam_Display_TitleDescription" xml:space="preserve">
+    <value>The large text at the top left; empty uses the default</value>
+  </data>
+  <data name="Settings_Exam_Display_TitlePlaceholder" xml:space="preserve">
+    <value>e.g. Final exams</value>
+  </data>
+  <data name="Settings_Exam_Display_SubtitleLabel" xml:space="preserve">
+    <value>Subtitle</value>
+  </data>
+  <data name="Settings_Exam_Display_SubtitleDescription" xml:space="preserve">
+    <value>Sits under the title, smaller and lighter</value>
+  </data>
+  <data name="Settings_Exam_Display_SubtitlePlaceholder" xml:space="preserve">
+    <value>e.g. 12 days to go</value>
+  </data>
+  <data name="Settings_Exam_Display_SubtitleColor" xml:space="preserve">
+    <value>Subtitle colour</value>
+  </data>
+  <data name="Settings_Exam_Display_SubtitleColorDescription" xml:space="preserve">
+    <value>Unset follows the theme's secondary text colour</value>
+  </data>
+  <data name="Settings_Exam_Display_SubtitleColorDefault" xml:space="preserve">
+    <value>Follow theme</value>
+  </data>
+  <data name="Settings_Exam_Display_Threshold" xml:space="preserve">
+    <value>Starting soon window</value>
+  </data>
+  <data name="Settings_Exam_Display_ThresholdDescription" xml:space="preserve">
+    <value>How many minutes before a start counts as starting soon</value>
+  </data>
+  <data name="Settings_Exam_Display_ClockSide" xml:space="preserve">
+    <value>Clock side</value>
+  </data>
+  <data name="Settings_Exam_Display_ClockSideDescription" xml:space="preserve">
+    <value>Which side the clock sits on</value>
+  </data>
+  <data name="Settings_Exam_Display_ClockSide_Left" xml:space="preserve">
+    <value>Clock on the left</value>
+  </data>
+  <data name="Settings_Exam_Display_ClockSide_Right" xml:space="preserve">
+    <value>Clock on the right</value>
+  </data>
+  <data name="Settings_Exam_Display_HideListUpcoming" xml:space="preserve">
+    <value>Collapse the list when starting soon</value>
+  </data>
+  <data name="Settings_Exam_Display_HideListUpcomingDescription" xml:space="preserve">
+    <value>Show only the next exam so the board stays calm</value>
+  </data>
+  <data name="Settings_Exam_Display_ShowListInProgress" xml:space="preserve">
+    <value>Show exam info while in progress</value>
+  </data>
+  <data name="Settings_Exam_Display_ShowListInProgressDescription" xml:space="preserve">
+    <value>By default only the clock shows during an exam</value>
+  </data>
+  <data name="Settings_Exam_Time_Title" xml:space="preserve">
+    <value>Time sync</value>
+  </data>
+  <data name="Settings_Exam_Time_Enabled" xml:space="preserve">
+    <value>Sync the clock with NTP</value>
+  </data>
+  <data name="Settings_Exam_Time_EnabledDescription" xml:space="preserve">
+    <value>Turn off to use the system clock</value>
+  </data>
+  <data name="Settings_Exam_Time_Servers" xml:space="preserve">
+    <value>Time servers</value>
+  </data>
+  <data name="Settings_Exam_Time_ServersDescription" xml:space="preserve">
+    <value>Tried in order; the first to answer wins</value>
+  </data>
+  <data name="Settings_Exam_Time_ServerPlaceholder" xml:space="preserve">
+    <value>e.g. ntp.aliyun.com</value>
+  </data>
+  <data name="Settings_Exam_Time_AddServer" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="Settings_Exam_Time_InvalidServer" xml:space="preserve">
+    <value>That does not look like a valid host</value>
+  </data>
+  <data name="Settings_Exam_Time_ResetServers" xml:space="preserve">
+    <value>Restore defaults</value>
+  </data>
+  <data name="Settings_Exam_Time_Interval" xml:space="preserve">
+    <value>Sync interval</value>
+  </data>
+  <data name="Settings_Exam_Time_IntervalDescription" xml:space="preserve">
+    <value>How often to sync</value>
+  </data>
+  <data name="Settings_Exam_Time_Timeout" xml:space="preserve">
+    <value>Per-server timeout</value>
+  </data>
+  <data name="Settings_Exam_Time_TimeoutDescription" xml:space="preserve">
+    <value>How long to wait before trying the next one</value>
+  </data>
+  <data name="Settings_Exam_Time_SyncNow" xml:space="preserve">
+    <value>Sync now</value>
+  </data>
+  <data name="Settings_Exam_Time_Syncing" xml:space="preserve">
+    <value>Syncing…</value>
+  </data>
+  <data name="Settings_Exam_Time_Status_Idle" xml:space="preserve">
+    <value>Not synced yet</value>
+  </data>
+  <data name="Settings_Exam_Time_Status_Success" xml:space="preserve">
+    <value>Synced via {0}, offset {1} ms</value>
+  </data>
+  <data name="Settings_Exam_Time_Status_Failed" xml:space="preserve">
+    <value>Sync failed: {0}</value>
+  </data>
+  <data name="Settings_Exam_Time_Status_Disabled" xml:space="preserve">
+    <value>Sync is off, so the system clock is used</value>
+  </data>
+  <data name="Settings_Exam_Time_Status_LastSync" xml:space="preserve">
+    <value>Last synced {0}</value>
+  </data>
+  <data name="Settings_Exam_Time_Offset_Slow" xml:space="preserve">
+    <value>system clock is {0} behind</value>
+  </data>
+  <data name="Settings_Exam_Time_Offset_Fast" xml:space="preserve">
+    <value>system clock is {0} ahead</value>
+  </data>
+  <data name="Settings_Exam_Time_Offset_Same" xml:space="preserve">
+    <value>matches the system clock</value>
+  </data>
 </root>
