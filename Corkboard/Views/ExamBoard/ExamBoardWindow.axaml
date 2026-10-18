@@ -4,6 +4,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="using:Corkboard.ViewModels.ExamBoard"
         xmlns:core="using:Corkboard.Core.Langs.Common"
+        xmlns:icons="using:Corkboard.Core.Icons"
         mc:Ignorable="d" d:DesignWidth="1600" d:DesignHeight="900"
         x:Class="Corkboard.Views.ExamBoard.ExamBoardWindow"
         x:DataType="vm:ExamBoardViewModel"
@@ -69,10 +70,11 @@
             <Setter Property="CornerRadius" Value="10" />
         </Style>
 
-        <!-- 左下角的长按热区。 -->
+        <!-- 左下角的长按热区：等边正方形，里面只有一颗图标；按住时长出进度圈。 -->
         <Style Selector="Border.exit-hint">
-            <Setter Property="CornerRadius" Value="10" />
-            <Setter Property="Padding" Value="18,10" />
+            <Setter Property="Width" Value="64" />
+            <Setter Property="Height" Value="64" />
+            <Setter Property="CornerRadius" Value="32" />
             <Setter Property="Background" Value="{DynamicResource SubtleFillColorTransparentBrush}" />
             <Setter Property="Cursor" Value="Hand" />
         </Style>
@@ -80,11 +82,14 @@
             <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
         </Style>
         <Style Selector="Border.exit-hint.holding">
-            <Setter Property="Background" Value="{DynamicResource SystemFillColorCriticalBackgroundBrush}" />
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
         </Style>
-        <Style Selector="Border.exit-hint TextBlock">
-            <Setter Property="FontSize" Value="16" />
+        <Style Selector="Border.exit-hint TextBlock.icon">
+            <Setter Property="FontSize" Value="24" />
             <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+        </Style>
+        <Style Selector="Border.exit-hint:pointerover TextBlock.icon">
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
         </Style>
     </Window.Styles>
 
@@ -230,16 +235,43 @@
             </Border>
         </Grid>
 
-        <!-- 左下角：长按退出（按住 2 秒，中途松手就取消——避免误触把看板关掉）。 -->
-        <Border x:Name="ExitHint"
-                Grid.Row="2"
+        <!--
+            左下角：长按退出（按住 2 秒，中途松手就取消——避免误触把看板关掉）。
+            平时就是一颗等边正方形里的图标，按住时图标周围长出一圈进度：
+            从正上方顺时针走满一圈，颜色随进度由蓝渐变到红，满了才关窗。
+        -->
+        <Border Grid.Row="2"
                 Classes="exit-hint"
+                Classes.holding="{Binding IsHolding}"
                 HorizontalAlignment="Left"
                 ToolTip.Tip="{x:Static core:Resources.Exam_Board_ExitToolTip}"
                 PointerPressed="OnExitHintPointerPressed"
                 PointerReleased="OnExitHintPointerReleased"
                 PointerCaptureLost="OnExitHintCaptureLost">
-            <TextBlock x:Name="ExitHintText" Text="{x:Static core:Resources.Exam_Board_ExitHint}" />
+            <Grid Width="64" Height="64">
+                <!-- 轨道：只在按住时出现，平时屏幕上只有那颗图标。 -->
+                <Ellipse Width="52" Height="52"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center"
+                         IsVisible="{Binding IsHolding}"
+                         Stroke="{DynamicResource ControlStrokeColorDefaultBrush}"
+                         StrokeThickness="3" />
+                <!-- 进度圈：从正上方顺时针长满，颜色随进度由蓝转红。 -->
+                <Arc Width="52" Height="52"
+                     HorizontalAlignment="Center"
+                     VerticalAlignment="Center"
+                     StartAngle="-90"
+                     SweepAngle="{Binding HoldSweepAngle}"
+                     IsVisible="{Binding IsHolding}"
+                     Stroke="{Binding HoldRingBrush}"
+                     StrokeThickness="3"
+                     StrokeLineCap="Round" />
+                <TextBlock Classes="icon"
+                           Text="{x:Static icons:FluentIcons.ArrowExitFilled}"
+                           FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center" />
+            </Grid>
         </Border>
     </Grid>
 </Window>

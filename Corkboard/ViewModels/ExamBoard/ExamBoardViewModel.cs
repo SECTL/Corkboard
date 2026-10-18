@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Globalization;
 using Avalonia;
 using Avalonia.Media;
@@ -39,9 +40,26 @@ public partial class ExamBoardViewModel : ViewModelBase
     /// <summary>只剩时钟时把它放大到屏幕级别（进行中就是整块屏幕上只有时间）。</summary>
     private const double ClockFontSizeAlone = 220;
 
+    /// <summary>长按退出的判定时长：进度圈走满一圈才真的关掉看板。</summary>
+    private static readonly TimeSpan HoldToExitDuration = TimeSpan.FromSeconds(2);
+
+    /// <summary>进度圈的重绘间隔：约 60 fps，两秒 120 帧，顺滑又不费。</summary>
+    private static readonly TimeSpan HoldFrameInterval = TimeSpan.FromMilliseconds(16);
+
+    /// <summary>进度圈起点色（蓝）：刚按下，还没什么危险。</summary>
+    private static readonly Color HoldRingStartColor = Color.Parse("#0078D4");
+
+    /// <summary>进度圈终点色（红）：走满了就要退了，颜色得先提醒到。</summary>
+    private static readonly Color HoldRingEndColor = Color.Parse("#E81123");
+
     private readonly MainConfigHandler _configHandler;
     private readonly NtpTimeService _time;
     private readonly DispatcherTimer _timer;
+    private readonly DispatcherTimer _holdTimer;
+    private readonly Stopwatch _holdWatch = new();
+
+    /// <summary>进度圈的颜色笔刷：一个实例反复改 <see cref="SolidColorBrush.Color" />，不每帧新建对象。</summary>
+    private readonly SolidColorBrush _holdRingBrush = new(HoldRingStartColor);
 
     private bool _isAttached;
     private DateOnly _today;
@@ -55,6 +73,9 @@ public partial class ExamBoardViewModel : ViewModelBase
 
         _timer = new DispatcherTimer { Interval = TickInterval };
         _timer.Tick += (_, _) => Tick();
+
+        _holdTimer = new DispatcherTimer { Interval = HoldFrameInterval };
+        _holdTimer.Tick += (_, _) => OnHoldTick();
 
         RefreshStatic();
         RefreshNow();
@@ -147,6 +168,70 @@ public partial class ExamBoardViewModel : ViewModelBase
     [ObservableProperty]
     private bool _nextIsInProgress;
 
+    /// <summary>正在长按退出：进度圈与轨道这时才画出来，平时只有一颗干净的图标。</summary>
+    [ObservableProperty]
+    private bool _isHolding;
+
+    /// <summary>进度圈的扫过角度（0–360），由按住时长线性推进。</summary>
+    [ObservableProperty]
+    private double _holdSweepAngle;
+
+    /// <summary>进度圈的颜色：随进度由蓝渐变到红（见 <see cref="HoldRingStartColor" />）。</summary>
+    public IBrush HoldRingBrush => _holdRingBrush;
+
+    /// <summary>长按走满一圈：窗口该关了（code-behind 收到就 <c>Close()</c>）。</summary>
+    public event EventHandler? ExitRequested;
+
+    /// <summary>按下左下角那颗图标：进度圈从零开始长，满 2 秒发 <see cref="ExitRequested" />。</summary>
+    public void BeginHold()
+    {
+        _holdTimer.Stop();
+        _holdWatch.Restart();
+
+        IsHolding = true;
+        HoldSweepAngle = 0;
+        _holdRingBrush.Color = HoldRingStartColor;
+
+        _holdTimer.Start();
+    }
+
+    /// <summary>松手 / 失去指针捕获：进度归零，什么都不发生（误触不能关掉看板）。</summary>
+    public void CancelHold()
+    {
+        _holdTimer.Stop();
+        _holdWatch.Reset();
+
+        IsHolding = false;
+        HoldSweepAngle = 0;
+        _holdRingBrush.Color = HoldRingStartColor;
+    }
+
+    /// <summary>每帧推进进度圈；走到 360 度就收尾并发退出请求。</summary>
+    private void OnHoldTick()
+    {
+        var progress = Math.Clamp(_holdWatch.Elapsed / HoldToExitDuration, 0d, 1d);
+
+        HoldSweepAngle = progress * 360;
+        _holdRingBrush.Color = LerpColor(HoldRingStartColor, HoldRingEndColor, progress);
+
+        if (progress < 1)
+            return;
+
+        CancelHold();
+        ExitRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>两色之间线性插值（含透明度），<paramref name="t" /> 夹在 0–1。</summary>
+    private static Color LerpColor(Color from, Color to, double t)
+    {
+        var ratio = Math.Clamp(t, 0d, 1d);
+        return Color.FromArgb(
+            (byte)Math.Round(from.A + (to.A - from.A) * ratio),
+            (byte)Math.Round(from.R + (to.R - from.R) * ratio),
+            (byte)Math.Round(from.G + (to.G - from.G) * ratio),
+            (byte)Math.Round(from.B + (to.B - from.B) * ratio));
+    }
+
     /// <summary>挂上订阅并开始走钟（窗口打开时调）。重复调用不会重复挂。</summary>
     public void Attach()
     {
@@ -171,6 +256,7 @@ public partial class ExamBoardViewModel : ViewModelBase
 
         _isAttached = false;
         _timer.Stop();
+        CancelHold();
         Exams.Changed -= OnExamsChanged;
         Settings.PropertyChanged -= OnSettingsChanged;
         _time.StatusChanged -= OnTimeStatusChanged;
