@@ -4,17 +4,21 @@ using Corkboard.Core.Export;
 namespace Corkboard.Core.Models.SubConfigs.Export;
 
 /// <summary>
-///     导出设置：图片 / PDF 的格式选择、纸张与版式。
+///     导出设置：导图片还是导表格，以及表格怎么排。
 ///     <para>
 ///         JSON 键由 <c>ConfigServiceBase.JsonOptions</c> 的 snake_case 规则生成
-///         （<c>export_settings.ask_for_format</c> / <c>export_settings.pdf_page_size</c> 等），
+///         （<c>export_settings.ask_for_format</c> / <c>export_settings.table_group_by_subject</c> 等），
 ///         枚举按数字落盘，所以只能在末尾追加枚举成员。
+///     </para>
+///     <para>
+///         旧的 <c>pdf_*</c> 键已随「导出 PDF」一起删掉；读盘时它们不会被认，
+///         留在文件里也只会被下一次落盘清掉（配置模型里没有对应属性）。
 ///     </para>
 /// </summary>
 public partial class ExportSettingsConfig : ObservableObject
 {
     /// <summary>
-    ///     点「导出」时先问一句导图片还是导 PDF。
+    ///     点「导出」时先问一句导图片还是导表格。
     ///     默认开：两种格式用途差得远，不问一句很容易导错。
     /// </summary>
     [ObservableProperty] private bool _askForFormat = true;
@@ -25,49 +29,30 @@ public partial class ExportSettingsConfig : ObservableObject
     /// </summary>
     [ObservableProperty] private ExportFormat _defaultFormat = ExportFormat.Image;
 
-    /// <summary>PDF 纸张大小。枚举按数字落盘。</summary>
-    [ObservableProperty] private PdfPageSize _pdfPageSize = PdfPageSize.A4;
-
     /// <summary>
-    ///     PDF 方向。默认自动：板子比窗口宽就横向，否则竖向——省得用户每次都要根据板子形状改。
+    ///     表格是否按科目分块：每个科目先来一行组标题，再排这个科目的作业。
+    ///     默认开——分块之后一眼能看出「哪个科目的还欠着」，比一条条混排好读。
     /// </summary>
-    [ObservableProperty] private PdfOrientation _pdfOrientation = PdfOrientation.Auto;
-
-    /// <summary>PDF 的列数（1..4）。读盘后由 <see cref="Normalize" /> 夹取。</summary>
-    [ObservableProperty] private int _pdfColumns = PdfOptions.DefaultColumns;
-
-    /// <summary>PDF 页边距档位。枚举按数字落盘。</summary>
-    [ObservableProperty] private PdfMargin _pdfMargin = PdfMargin.Normal;
-
-    /// <summary>PDF 里作业的排序方式。默认跟随板子当前的顺序。</summary>
-    [ObservableProperty] private PdfSortMode _pdfSortMode = PdfSortMode.FollowBoard;
+    [ObservableProperty] private bool _tableGroupBySubject = true;
 
     /// <summary>
-    ///     PDF 里每个科目标题是否另起一页。默认关：默认按列紧凑排，页数更少；
-    ///     想要「一科一页」的人再打开。
+    ///     表格里要不要连已清理（收起来的）作业一起写。
+    ///     默认关：导出的是「现在板上还剩什么」，翻旧账的人再打开。
     /// </summary>
-    [ObservableProperty] private bool _pdfSubjectPageBreak;
+    [ObservableProperty] private bool _tableIncludeCleaned;
 
-    /// <summary>PDF 每页是否带页眉页脚（页码 / 作业板名称）。默认开。</summary>
-    [ObservableProperty] private bool _pdfHeaderFooter = true;
+    /// <summary>表格里作业的排序方式。默认跟随板子当前的顺序。</summary>
+    [ObservableProperty] private ExportSortMode _tableSortMode = ExportSortMode.FollowBoard;
 
     /// <summary>
-    ///     读盘后收拾一遍：列数夹进 1..4，手改坏了的枚举值（越界数字）回落成默认值。
+    ///     读盘后收拾一遍：手改坏了的枚举值（越界数字）回落成默认值。
     ///     由 <c>MainConfigModel.NormalizeLoaded</c> 调用，导出之前配置就已经是干净的；不抛异常。
     /// </summary>
     public void Normalize()
     {
-        PdfColumns = PdfOptions.GetColumnCount(PdfColumns);
-
         if (!Enum.IsDefined(DefaultFormat))
             DefaultFormat = ExportFormat.Image;
-        if (!Enum.IsDefined(PdfPageSize))
-            PdfPageSize = PdfPageSize.A4;
-        if (!Enum.IsDefined(PdfOrientation))
-            PdfOrientation = PdfOrientation.Auto;
-        if (!Enum.IsDefined(PdfMargin))
-            PdfMargin = PdfMargin.Normal;
-        if (!Enum.IsDefined(PdfSortMode))
-            PdfSortMode = PdfSortMode.FollowBoard;
+        if (!Enum.IsDefined(TableSortMode))
+            TableSortMode = ExportSortMode.FollowBoard;
     }
 }

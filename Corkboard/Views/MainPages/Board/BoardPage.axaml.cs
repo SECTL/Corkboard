@@ -11,14 +11,16 @@ using Avalonia.VisualTree;
 using FluentAvalonia.UI.Controls;
 using Corkboard.Core.Abstraction;
 using Corkboard.Core.Attributes;
+using Corkboard.Core.Board;
 using Corkboard.Core.Controls;
 using Corkboard.Core.Export;
 using Corkboard.Core.Icons;
+using Corkboard.Core.Notes;
 using Corkboard.Core.Services.Config;
 using Corkboard.Core.Services.Stats;
+using Corkboard.Services.Board;
 using Corkboard.Services.Stats;
 using Corkboard.Services.Ui;
-using Corkboard.Services.Ui.Export;
 using Corkboard.ViewModels.Export;
 using Corkboard.ViewModels.MainPages.Board;
 using Corkboard.ViewModels.MainPages.Homework;
@@ -62,6 +64,12 @@ public partial class BoardPage : UserControl
     /// <summary>使用量统计：导出成功时记一次 <c>export</c>（失败/取消不计）。</summary>
     private readonly PlatformUsageReportService _usageReport;
 
+    /// <summary>板上的全部作业（含已清理的，要不要写由设置决定），表格导出用。</summary>
+    private readonly IBoardService _boardService;
+
+    /// <summary>时空回放：回放中导表格要导「当前看到的那一份」。</summary>
+    private readonly BoardReplayService _replay;
+
     /// <summary>
     ///     导出图片时交给服务的「板子内容容器」：就是 ScrollViewer 里那块装所有科目区块的 StackPanel，
     ///     不是视口、更不是整窗——窗口外面没显示出来的部分也要完整导出来。
@@ -98,6 +106,8 @@ public partial class BoardPage : UserControl
         _overlay = IAppHost.GetService<PageOverlayService>();
         _boardExport = IAppHost.GetService<BoardExportService>();
         _usageReport = IAppHost.GetService<PlatformUsageReportService>();
+        _boardService = IAppHost.GetService<IBoardService>();
+        _replay = IAppHost.GetService<BoardReplayService>();
         _singleColumnList = this.FindControl<ItemsControl>("SingleColumnList");
         _boardContent = this.FindControl<StackPanel>("BoardContent");
 
@@ -201,8 +211,8 @@ public partial class BoardPage : UserControl
     /// <summary>
     ///     导出当前板子（入口在主窗口标题栏，见 <c>MainView.ExportImageButton_OnClick</c>）。
     ///     <para>
-    ///         流程：问格式与范围（设置里关掉「询问导出格式」就不问）→ 图片直接保存 / 复制，
-    ///         PDF 先排版出预览、确认后再保存。回放里也允许导出（导的是当前看到的历史快照）；
+    ///         流程：问格式（设置里关掉「询问导出格式」就不问）→ 图片直接保存 / 复制，
+    ///         表格直接写成 xlsx。回放里也允许导出（导的是当前看到的历史快照）；
     ///         点击穿透时按钮整颗隐藏，这里只做兜底。
     ///     </para>
     ///     <para>
@@ -225,26 +235,13 @@ public partial class BoardPage : UserControl
         try
         {
             var choice = await AskExportChoiceAsync(viewModel);
-            while (choice is not null)
-            {
-                if (choice.Format == ExportFormat.Pdf)
-                {
-                    // 预览里点「返回修改」会回到这里重选；图片这条路不会回来。
-                    if (!await ExportPdfChoiceAsync(choice, viewModel, topLevel))
-                        return;
+            if (choice is null)
+                return;
 
-                    // 预览是独立模态窗口。它刚关掉时主窗口可能还没恢复交互，
-                    // 立刻弹对话框会让用户觉得「返回不回去」——先让出一轮消息循环。
-                    await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
-                }
-                else
-                {
-                    await ExportImageChoiceAsync(choice, viewModel, topLevel);
-                    return;
-                }
-
-                choice = await AskExportChoiceAsync(viewModel);
-            }
+            if (choice.Format == ExportFormat.Table)
+                await ExportTableChoiceAsync(viewModel, topLevel);
+            else
+                await ExportImageChoiceAsync(choice, viewModel, topLevel);
         }
         catch (OperationCanceledException)
         {
@@ -263,7 +260,7 @@ public partial class BoardPage : UserControl
     }
 
     /// <summary>
-    ///     问用户导图片还是 PDF、导出全部还是只导一部分。
+    ///     问用户导图片还是表格。
     ///     设置里关掉「询问导出格式」时直接返回记住的默认格式（范围全部）。
     /// </summary>
     private async Task<ExportDialogResult?> AskExportChoiceAsync(BoardPageViewModel viewModel)
@@ -321,90 +318,30 @@ public partial class BoardPage : UserControl
     }
 
     /// <summary>
-    ///     PDF 导出：先排版、把每一页画出来给用户预览；用户确认后才弹保存对话框写文件。
+    ///     表格导出：把板上的作业写成一张 xlsx（范围固定全部作业）。
     ///     <para>
-    ///         预览里点「返回修改」时返回 <c>true</c> 让调用方重新问格式 / 范围，
-    ///         其它情况（导出完成 / 取消 / 关窗）返回 <c>false</c>。
+    ///         按不按科目分块、带不带已清理的作业、怎么排序，都在「设置 → 作业板 → 导出」里定，
+    ///         这里只负责把「当前板上的作业」（回放中就取停在那一刻的那一份）与板名交给服务。
     ///     </para>
     /// </summary>
-    private async Task<bool> ExportPdfChoiceAsync(
-        ExportDialogResult choice,
-        BoardPageViewModel viewModel,
-        TopLevel topLevel)
+    private async Task ExportTableChoiceAsync(BoardPageViewModel viewModel, TopLevel topLevel)
     {
-        using var session = BuildPdfSession(choice.NoteIds, viewModel);
-        if (session is null || session.PageCount == 0)
+        var notes = _replay.Filter(_boardService.Notes);
+        if (notes.Count == 0)
         {
             viewModel.ShowExportHint(CR.Export_NoContent);
-            return false;
+            return;
         }
 
-        var previews = session.RenderPreview();
-        ExportPreviewChoice previewChoice;
-        try
-        {
-            previewChoice = topLevel is Window owner && owner.IsVisible
-                ? await new ExportPreviewWindow(previews, viewModel.Config.BoardSettings.BoardName).ShowDialog(owner)
-                : ExportPreviewChoice.Export;
-        }
-        finally
-        {
-            foreach (var preview in previews)
-                preview.Dispose();
-        }
-
-        switch (previewChoice)
-        {
-            case ExportPreviewChoice.Cancel:
-                return false;
-            case ExportPreviewChoice.Back:
-                return true;
-        }
-
-        var pages = session.EncodePages();
-        var fileName = ExportFileNameBuilder.Build(DateTime.Now, "pdf");
-        if (await _boardExport.ExportPdfAsync(
-                pages, topLevel, fileName, viewModel.Config.BoardSettings.BoardName))
+        if (await _boardExport.ExportTableAsync(
+                notes,
+                viewModel.Config.BoardSettings.BoardName,
+                topLevel,
+                ExportFileNameBuilder.Build(DateTime.Now, "xlsx")))
         {
             _usageReport.Record(UsageMetricNames.Export);
-            viewModel.ShowExportHint(CR.Export_SuccessPdf);
+            viewModel.ShowExportHint(CR.Export_SuccessTable);
         }
-
-        return false;
-    }
-
-    /// <summary>建 PDF 排版会话；页面的卡片模板拿不到时返回 <c>null</c>。</summary>
-    private BoardPdfRenderSession? BuildPdfSession(
-        IReadOnlyList<Guid>? noteIds,
-        BoardPageViewModel viewModel)
-    {
-        if (Content is not Panel host || !TryGetCardTemplate(out var template))
-            return null;
-
-        var isWide = _boardContent is { } content && content.Bounds.Width > content.Bounds.Height;
-        return BoardPdfRenderSession.Build(
-            host,
-            template,
-            viewModel.SubjectGroups,
-            noteIds,
-            viewModel.Config.ExportSettings,
-            viewModel.Config.BoardSettings.BoardName,
-            isWide,
-            DateTime.Now);
-    }
-
-
-    /// <summary>取页面资源里的作业卡片模板（导出的卡片与板子上看到的是同一个模板）。</summary>
-    private bool TryGetCardTemplate(out IDataTemplate template)
-    {
-        if (this.TryFindResource("BoardNoteTemplate", out var resource) && resource is IDataTemplate found)
-        {
-            template = found;
-            return true;
-        }
-
-        template = null!;
-        return false;
     }
 
     #region 排布

@@ -212,9 +212,6 @@
   <data name="Settings_Section_DeleteAndCleanup" xml:space="preserve">
     <value>Deleting and cleanup</value>
   </data>
-  <data name="Settings_Section_StyleAndPalette" xml:space="preserve">
-    <value>Style and palette</value>
-  </data>
   <data name="Settings_Section_Theme" xml:space="preserve">
     <value>Theme and color</value>
   </data>
@@ -302,12 +299,6 @@
   </data>
   <data name="Settings_Board_NamePlaceholder" xml:space="preserve">
     <value>Leave empty to use the default name</value>
-  </data>
-  <data name="Settings_Board_TitleBarButtons" xml:space="preserve">
-    <value>Top bar buttons</value>
-  </data>
-  <data name="Settings_Board_TitleBarButtonsDescription" xml:space="preserve">
-    <value>Pick which buttons stay in the top-right corner</value>
   </data>
   <data name="Settings_Board_TitleBarSettings" xml:space="preserve">
     <value>Settings button</value>
@@ -865,9 +856,6 @@
   <data name="Settings_Board_Handwriting_Title" xml:space="preserve">
     <value>Handwriting</value>
   </data>
-  <data name="Settings_Board_QuickTags_Title" xml:space="preserve">
-    <value>Quick tags</value>
-  </data>
   <data name="Settings_Board_Cleanup_Title" xml:space="preserve">
     <value>Cleanup</value>
   </data>
@@ -1370,27 +1358,6 @@
   <data name="Export_FormatImageDescription" xml:space="preserve">
     <value>One long image of the whole board</value>
   </data>
-  <data name="Export_FormatPdf" xml:space="preserve">
-    <value>PDF</value>
-  </data>
-  <data name="Export_FormatPdfDescription" xml:space="preserve">
-    <value>Repaginated for printing, one PDF file</value>
-  </data>
-  <data name="Export_ScopeLabel" xml:space="preserve">
-    <value>Scope</value>
-  </data>
-  <data name="Export_ScopeAll" xml:space="preserve">
-    <value>All notes</value>
-  </data>
-  <data name="Export_ScopePartial" xml:space="preserve">
-    <value>Selected notes</value>
-  </data>
-  <data name="Export_SelectAll" xml:space="preserve">
-    <value>Select all</value>
-  </data>
-  <data name="Export_SelectedCount" xml:space="preserve">
-    <value>{0} of {1} selected</value>
-  </data>
   <data name="Export_RememberChoice" xml:space="preserve">
     <value>Always use this format</value>
   </data>
@@ -1403,26 +1370,8 @@
   <data name="Export_Next" xml:space="preserve">
     <value>Next</value>
   </data>
-  <data name="Export_Save" xml:space="preserve">
-    <value>Save</value>
-  </data>
-  <data name="Export_PreviewTitle" xml:space="preserve">
-    <value>Export preview</value>
-  </data>
-  <data name="Export_PreviewPageCount" xml:space="preserve">
-    <value>{0} page(s)</value>
-  </data>
-  <data name="Export_PreviewBack" xml:space="preserve">
-    <value>Back</value>
-  </data>
-  <data name="Export_PreviewExport" xml:space="preserve">
-    <value>Export PDF</value>
-  </data>
   <data name="Export_SuccessImage" xml:space="preserve">
     <value>Image saved</value>
-  </data>
-  <data name="Export_SuccessPdf" xml:space="preserve">
-    <value>PDF saved</value>
   </data>
   <data name="Export_SuccessCopied" xml:space="preserve">
     <value>Image copied to clipboard</value>
@@ -1448,65 +1397,11 @@
   <data name="Settings_Export_DefaultFormat" xml:space="preserve">
     <value>Default format</value>
   </data>
-  <data name="Settings_Export_PdfLayout" xml:space="preserve">
-    <value>PDF layout</value>
-  </data>
-  <data name="Settings_Export_PdfLayoutDescription" xml:space="preserve">
-    <value>Paper, pagination and header/footer</value>
-  </data>
-  <data name="Settings_Export_PageSize" xml:space="preserve">
-    <value>Paper size</value>
-  </data>
-  <data name="Settings_Export_Orientation" xml:space="preserve">
-    <value>Orientation</value>
-  </data>
-  <data name="Settings_Export_OrientationDescription" xml:space="preserve">
-    <value>Auto matches a wide board</value>
-  </data>
-  <data name="Settings_Export_Margin" xml:space="preserve">
-    <value>Margins</value>
-  </data>
-  <data name="Settings_Export_Columns" xml:space="preserve">
-    <value>Columns</value>
-  </data>
-  <data name="Settings_Export_ColumnsDescription" xml:space="preserve">
-    <value>More columns fit more notes per page</value>
-  </data>
   <data name="Settings_Export_Sort" xml:space="preserve">
     <value>Sort order</value>
   </data>
   <data name="Settings_Export_SortDescription" xml:space="preserve">
     <value>Follow the board or reorder by date</value>
-  </data>
-  <data name="Settings_Export_SubjectPageBreak" xml:space="preserve">
-    <value>New page per subject</value>
-  </data>
-  <data name="Settings_Export_SubjectPageBreakDescription" xml:space="preserve">
-    <value>Each subject starts on a new page</value>
-  </data>
-  <data name="Settings_Export_HeaderFooter" xml:space="preserve">
-    <value>Header and footer</value>
-  </data>
-  <data name="Settings_Export_HeaderFooterDescription" xml:space="preserve">
-    <value>Board name on top, page numbers below</value>
-  </data>
-  <data name="Export_Orientation_Auto" xml:space="preserve">
-    <value>Auto</value>
-  </data>
-  <data name="Export_Orientation_Portrait" xml:space="preserve">
-    <value>Portrait</value>
-  </data>
-  <data name="Export_Orientation_Landscape" xml:space="preserve">
-    <value>Landscape</value>
-  </data>
-  <data name="Export_Margin_Narrow" xml:space="preserve">
-    <value>Narrow</value>
-  </data>
-  <data name="Export_Margin_Normal" xml:space="preserve">
-    <value>Normal</value>
-  </data>
-  <data name="Export_Margin_Wide" xml:space="preserve">
-    <value>Wide</value>
   </data>
   <data name="Export_Sort_FollowBoard" xml:space="preserve">
     <value>Follow board</value>
@@ -1924,5 +1819,116 @@
   </data>
   <data name="Settings_Exam_Schedule_Next" xml:space="preserve">
     <value>Next {0} · {1} {2}</value>
+  </data>
+  <data name="Settings_Board_Content_Title" xml:space="preserve">
+    <value>Content &amp; style</value>
+  </data>
+  <data name="Settings_Board_Automation_Title" xml:space="preserve">
+    <value>Automation &amp; data</value>
+  </data>
+  <data name="Settings_Board_Window_Title" xml:space="preserve">
+    <value>Window &amp; dock</value>
+  </data>
+  <data name="Settings_Section_Text" xml:space="preserve">
+    <value>Text</value>
+  </data>
+  <data name="Settings_Section_Maintenance" xml:space="preserve">
+    <value>Data</value>
+  </data>
+  <data name="Settings_Board_Entries" xml:space="preserve">
+    <value>Interface entries</value>
+  </data>
+  <data name="Settings_Board_EntriesDescription" xml:space="preserve">
+    <value>Which buttons the main window shows</value>
+  </data>
+  <data name="Settings_Board_Handwriting_DefaultColor" xml:space="preserve">
+    <value>Default pen color</value>
+  </data>
+  <data name="Settings_Board_Handwriting_DefaultColorDescription" xml:space="preserve">
+    <value>Color of new strokes</value>
+  </data>
+  <data name="Export_FormatTable" xml:space="preserve">
+    <value>Spreadsheet</value>
+  </data>
+  <data name="Export_FormatTableDescription" xml:space="preserve">
+    <value>One row per note, opens in Excel</value>
+  </data>
+  <data name="Export_SuccessTable" xml:space="preserve">
+    <value>Spreadsheet saved</value>
+  </data>
+  <data name="Settings_Export_Table" xml:space="preserve">
+    <value>Spreadsheet style</value>
+  </data>
+  <data name="Settings_Export_TableDescription" xml:space="preserve">
+    <value>How the exported sheet looks</value>
+  </data>
+  <data name="Settings_Export_TableGroupBySubject" xml:space="preserve">
+    <value>Group by subject</value>
+  </data>
+  <data name="Settings_Export_TableGroupBySubjectDescription" xml:space="preserve">
+    <value>Each subject gets its own section</value>
+  </data>
+  <data name="Settings_Export_TableIncludeCleaned" xml:space="preserve">
+    <value>Include cleaned notes</value>
+  </data>
+  <data name="Settings_Export_TableIncludeCleanedDescription" xml:space="preserve">
+    <value>Overdue notes taken off the board too</value>
+  </data>
+  <data name="Export_Table_HeaderIndex" xml:space="preserve">
+    <value>No.</value>
+  </data>
+  <data name="Export_Table_HeaderSubject" xml:space="preserve">
+    <value>Subject</value>
+  </data>
+  <data name="Export_Table_HeaderSection" xml:space="preserve">
+    <value>Category</value>
+  </data>
+  <data name="Export_Table_HeaderDueDate" xml:space="preserve">
+    <value>Due date</value>
+  </data>
+  <data name="Export_Table_HeaderStatus" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="Export_Table_HeaderContent" xml:space="preserve">
+    <value>Content</value>
+  </data>
+  <data name="Export_Table_HeaderTags" xml:space="preserve">
+    <value>Tags</value>
+  </data>
+  <data name="Export_Table_HeaderCreated" xml:space="preserve">
+    <value>Created</value>
+  </data>
+  <data name="Export_Table_NoSubject" xml:space="preserve">
+    <value>Uncategorized</value>
+  </data>
+  <data name="Export_Table_NoDueDate" xml:space="preserve">
+    <value>No due date</value>
+  </data>
+  <data name="Export_Table_DueToday" xml:space="preserve">
+    <value>Due today</value>
+  </data>
+  <data name="Export_Table_DueTomorrow" xml:space="preserve">
+    <value>Due tomorrow</value>
+  </data>
+  <data name="Export_Table_DueRemaining" xml:space="preserve">
+    <value>{0} days left</value>
+  </data>
+  <data name="Export_Table_DueOverdue" xml:space="preserve">
+    <value>{0} days overdue</value>
+  </data>
+  <data name="Export_Table_Cleaned" xml:space="preserve">
+    <value>Cleaned</value>
+  </data>
+  <data name="Export_Table_Handwriting" xml:space="preserve">
+    <value>(handwritten)</value>
+  </data>
+  <data name="Export_Table_Summary" xml:space="preserve">
+    <value>{0} notes · exported {1}</value>
+  </data>
+  <data name="Export_Table_GroupTitle" xml:space="preserve">
+    <value>{0} · {1} notes</value>
+  </data>
+  <data name="Export_Table_SheetName" xml:space="preserve">
+    <value>Board</value>
   </data>
 </root>

@@ -7,7 +7,7 @@ using Corkboard.ViewModels.Export;
 namespace Corkboard.Views.Export;
 
 /// <summary>
-///     「导出作业板」对话框（自绘弹层内容）：选图片还是 PDF、导出全部还是只导一部分。
+///     「导出作业板」对话框（自绘弹层内容）：选图片还是表格（范围固定全部作业）。
 ///     <para>
 ///         只是弹层里的内容，不自己开窗口：由作业板页面交给 <c>PageOverlayService</c>
 ///         挂到壳的遮罩上（遮罩要盖住自绘标题栏，必须挂在壳那一层）。

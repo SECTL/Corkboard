@@ -84,4 +84,10 @@ public static class FluentIcons
 
     /// <summary>「打开考试看板」入口。码位来自上游图标映射表 <c>full_screen_maximize_20_filled</c>。</summary>
     public const string FullScreenMaximizeFilled = "\uE8D0";
+
+    /// <summary>设置里的「内容与样式」页。码位来自上游图标映射表 <c>text_font_20_filled</c>。</summary>
+    public const string TextFontFilled = "\uF26E";
+
+    /// <summary>设置里的「窗口与收纳」页。码位来自上游图标映射表 <c>window_20_filled</c>。</summary>
+    public const string WindowFilled = "\uF482";
 }

@@ -25,16 +25,26 @@ public partial class BoardSectionsSettingsPageViewModel : ViewModelBase
     private readonly IBoardService _boardService;
 
     /// <summary>页面订阅的是单例服务，离开可视树时必须断开（见 <see cref="Detach" />）。</summary>
-    public BoardSectionsSettingsPageViewModel(MainConfigHandler configHandler, IBoardService boardService)
+    public BoardSectionsSettingsPageViewModel(
+        MainConfigHandler configHandler,
+        IBoardService boardService,
+        QuickTagsSettingsPageViewModel tags)
         : base(configHandler)
     {
         _boardService = boardService;
+        Tags = tags;
 
         _boardService.Changed += OnBoardChanged;
         ReloadSubjectItems();
     }
 
     public BoardSettingsConfig Settings => Config.BoardSettings;
+
+    /// <summary>
+    ///     快捷标签的子 VM：标签列表这一页里也编辑它（页面绑定加 <c>Tags.</c> 前缀），
+    ///     逻辑仍在 <see cref="QuickTagsSettingsPageViewModel" /> 里，不在这页重写。
+    /// </summary>
+    public QuickTagsSettingsPageViewModel Tags { get; }
 
     /// <summary>科目列表：左边当导航用，右上角下拉框也绑同一份（两处选中态联动）。</summary>
     public ObservableCollection<BoardSectionsSubjectItem> SubjectItems { get; } = [];

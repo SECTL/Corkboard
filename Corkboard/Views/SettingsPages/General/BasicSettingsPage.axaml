@@ -60,69 +60,6 @@
             </fa:FASettingsExpander>
 
             <TextBlock Classes="section-title"
-                       Text="{x:Static core:Resources.Settings_Section_Window}" />
-
-            <!-- 平台不支持的能力整张卡隐藏，而不是留一个点不动的控件。 -->
-            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Basic_MainWindowOpacity}"
-                                   Description="{x:Static core:Resources.Settings_Basic_MainWindowOpacityDescription}"
-                                   IsVisible="{Binding IsWindowOpacitySupported}">
-                <fa:FASettingsExpander.Footer>
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <!--
-                            绑草稿而不是配置：拖滑杆时每帧都在变，直接写配置会连发落盘（见 ViewModel）。
-                            拖完停手 400ms 落到配置上，主窗口立刻跟着变。
-                        -->
-                        <Slider MinWidth="180"
-                                Minimum="{Binding OpacityPercentMinimum}"
-                                Maximum="{Binding OpacityPercentMaximum}"
-                                TickFrequency="1"
-                                IsSnapToTickEnabled="True"
-                                VerticalAlignment="Center"
-                                Value="{Binding OpacityPercent, Mode=TwoWay}" />
-
-                        <TextBlock MinWidth="44"
-                                   VerticalAlignment="Center"
-                                   TextAlignment="Right"
-                                   Text="{Binding OpacityDisplayText}" />
-                    </StackPanel>
-                </fa:FASettingsExpander.Footer>
-            </fa:FASettingsExpander>
-
-            <!-- 平台不支持的能力整张卡隐藏，而不是留一个点不动的开关。 -->
-            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Basic_PinToDesktop}"
-                                   Description="{x:Static core:Resources.Settings_Basic_PinToDesktopDescription}"
-                                   IsVisible="{Binding IsPinToDesktopSupported}">
-                <fa:FASettingsExpander.Footer>
-                    <ToggleSwitch IsChecked="{Binding Basic.PinToDesktop}" />
-                </fa:FASettingsExpander.Footer>
-            </fa:FASettingsExpander>
-
-            <!-- 平台不支持的能力整张卡隐藏，而不是留一个点不动的开关。 -->
-            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Basic_WindowCorners}"
-                                   Description="{x:Static core:Resources.Settings_Basic_WindowCornersDescription}"
-                                   IsVisible="{Binding IsWindowCornersSupported}">
-                <fa:FASettingsExpander.Footer>
-                    <ToggleSwitch IsChecked="{Binding Basic.MainWindowRoundedCorners}" />
-                </fa:FASettingsExpander.Footer>
-            </fa:FASettingsExpander>
-
-            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Basic_HoldToDragWindow}"
-                                   Description="{x:Static core:Resources.Settings_Basic_HoldToDragWindowDescription}">
-                <fa:FASettingsExpander.Footer>
-                    <ToggleSwitch IsChecked="{Binding Basic.HoldToDragWindow}" />
-                </fa:FASettingsExpander.Footer>
-            </fa:FASettingsExpander>
-
-            <!-- 平台不支持的能力整张卡隐藏，而不是留一个点不动的开关。 -->
-            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Basic_ClickThrough}"
-                                   Description="{x:Static core:Resources.Settings_Basic_ClickThroughDescription}"
-                                   IsVisible="{Binding IsClickThroughSupported}">
-                <fa:FASettingsExpander.Footer>
-                    <ToggleSwitch IsChecked="{Binding Basic.ClickThrough}" />
-                </fa:FASettingsExpander.Footer>
-            </fa:FASettingsExpander>
-
-            <TextBlock Classes="section-title"
                        Text="{x:Static core:Resources.Settings_Section_Privacy}" />
 
             <!-- 只上报设备标识与设备类型；位置由服务端按访问地址统计，不发 IP。 -->

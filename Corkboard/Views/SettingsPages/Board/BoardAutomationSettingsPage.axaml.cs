@@ -11,23 +11,40 @@ using CR = Corkboard.Core.Langs.Common.Resources;
 
 namespace Corkboard.Views.SettingsPages.Board;
 
-/// <summary>「清理」设置页：到期清理、立即清理与清空作业板。</summary>
-[PageInfo("settings.board.cleanup", FluentIcons.DeleteFilled, "settings.board.group")]
-public partial class CleanupSettingsPage : UserControl
+/// <summary>
+///     「自动化与数据」设置页：自动清理、历史与回放、数据维护（清空作业板与立即清理）。
+///     <para>
+///         事件处理都是从原来的「清理」与「历史与回放」两页搬过来的，只是转发给对应的子 VM
+///         （<c>Cleanup</c> / <c>History</c>），逻辑本身没有重写。
+///     </para>
+/// </summary>
+[PageInfo("settings.board.automation", FluentIcons.HistoryFilled, "settings.board.group")]
+public partial class BoardAutomationSettingsPage : UserControl
 {
-    public CleanupSettingsPage()
+    public BoardAutomationSettingsPage()
     {
         InitializeComponent();
-        DataContext = IAppHost.GetService<CleanupSettingsPageViewModel>();
+        DataContext = IAppHost.GetService<BoardAutomationSettingsPageViewModel>();
 
-        // 清理时刻是草稿式的：用户可能没让选择器失焦就关了页面，离开时补交一次。
-        Unloaded += (_, _) => ViewModel?.CommitCleanup();
+        // 历史占用统计在页面出现时现读一次，别拿上一次留下的数字糊弄人。
+        Loaded += (_, _) => ViewModel?.History.RefreshStatistics();
+
+        // 时刻与三个数值框都是草稿式的：用户可能没让控件失焦就关了页面，离开时补交一次。
+        Unloaded += (_, _) =>
+        {
+            ViewModel?.Cleanup.CommitCleanup();
+            ViewModel?.History.CommitAll();
+        };
     }
 
-    private CleanupSettingsPageViewModel? ViewModel => DataContext as CleanupSettingsPageViewModel;
+    private BoardAutomationSettingsPageViewModel? ViewModel => DataContext as BoardAutomationSettingsPageViewModel;
 
-    /// <summary>时刻选择器失焦就把草稿提交掉（理由同其它设置页的输入框）。</summary>
-    private void OnEditorLostFocus(object? sender, RoutedEventArgs e) => ViewModel?.CommitCleanup();
+    /// <summary>时刻选择器 / 数值框失焦就把草稿提交掉（理由同其它设置页的输入框）。</summary>
+    private void OnEditorLostFocus(object? sender, RoutedEventArgs e)
+    {
+        ViewModel?.Cleanup.CommitCleanup();
+        ViewModel?.History.CommitAll();
+    }
 
     /// <summary>
     ///     清空作业板：先确认，再把作业从板子上收起来。收起来只是打「已清理」标记，
@@ -55,7 +72,7 @@ public partial class CleanupSettingsPage : UserControl
         string message;
         try
         {
-            viewModel.ClearBoard();
+            viewModel.Cleanup.ClearBoard();
             // 说清「只是收起来、数据还在」：不然用户会以为作业被删了。
             message = CR.Settings_Board_ClearAllDone;
         }

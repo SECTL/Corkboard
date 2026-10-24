@@ -20,7 +20,7 @@ public static class ExportFileNameBuilder
     /// </summary>
     /// <param name="now">要写进文件名的时间（调用方给，测试才不依赖本机时钟）。</param>
     /// <param name="extension">
-    ///     扩展名，<c>"png"</c> 与 <c>".pdf"</c> 都可以：前后的空白与点会被归一，最终只有一个小写扩展名。
+    ///     扩展名，<c>"png"</c> 与 <c>".xlsx"</c> 都可以：前后的空白与点会被归一，最终只有一个小写扩展名。
     ///     给空串时只返回时间戳（不带结尾的点）。
     /// </param>
     public static string Build(DateTime now, string extension)
@@ -35,7 +35,7 @@ public static class ExportFileNameBuilder
     ///     已经带目标扩展名时（大小写不敏感）原样返回，不会把 <c>a.PNG</c> 改成 <c>a.png</c>。
     /// </summary>
     /// <param name="fileName">用户填的文件名，可以带目录。</param>
-    /// <param name="extension">目标扩展名，<c>"png"</c> / <c>".pdf"</c> 均可。</param>
+    /// <param name="extension">目标扩展名，<c>"png"</c> / <c>".xlsx"</c> 均可。</param>
     public static string EnsureExtension(string fileName, string extension)
     {
         var name = fileName ?? string.Empty;

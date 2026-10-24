@@ -121,7 +121,7 @@ public partial class BoardPageViewModel : ViewModelBase
 
     /// <summary>
     ///     是不是正在导出。导出期间整块板子要「干净」：作业卡片上的编辑 / 删除两颗按钮、
-    ///     科目标题左侧的拖动按钮都不能出现在导出的图片和 PDF 里（它们本来只是鼠标悬停才冒出来的界面元素，
+    ///     科目标题左侧的拖动按钮都不能出现在导出的图片里（它们本来只是鼠标悬停才冒出来的界面元素，
     ///     而导出图片直接渲染的是屏幕上这块板子）。改动后重建列表，因为这两个开关记在列表项上。
     /// </summary>
     [ObservableProperty] private bool _isExporting;

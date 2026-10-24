@@ -135,4 +135,29 @@ public partial class BoardSectionsSettingsPage : UserControl
     {
         AvaloniaXamlLoader.Load(this);
     }
+
+    #region 快捷标签
+
+    /// <summary>回车等于点「新增」，连着录标签更顺手。</summary>
+    private void OnTagDraftKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key is not (Key.Enter or Key.Return) || ViewModel?.Tags is not { } tags)
+            return;
+
+        e.Handled = true;
+        if (tags.AddTagCommand.CanExecute(null))
+            tags.AddTagCommand.Execute(null);
+    }
+
+    /// <summary>
+    ///     删掉某一行标签。集合元素是纯字符串，按行对象回传，同色板那套做法
+    ///     （<c>BoardPage.OnDeletePaletteColorClick</c>）。
+    /// </summary>
+    private void OnDeleteTagClick(object? sender, RoutedEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is QuickTagItem item)
+            ViewModel?.Tags.RemoveTag(item);
+    }
+
+    #endregion
 }

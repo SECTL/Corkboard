@@ -214,6 +214,71 @@
                 </StackPanel>
             </fa:FASettingsExpander>
 
+            <!--
+                快捷标签：布置作业时点一下就能把标签插进内容里，省得每次手打。
+                标签存在配置里（settings.json），增删之后由子 VM 显式落盘；
+                输入框绑的是草稿属性，不是双向绑配置——配置每变一次就写一遍盘。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_QuickTags_List}"
+                                   Description="{x:Static core:Resources.Settings_Board_QuickTags_ListDescription}"
+                                   IsExpanded="True">
+                <fa:FASettingsExpander.Footer>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBox MinWidth="200"
+                                 VerticalAlignment="Center"
+                                 PlaceholderText="{x:Static core:Resources.Settings_Board_QuickTags_Placeholder}"
+                                 Text="{Binding Tags.TagDraft, Mode=TwoWay}"
+                                 KeyDown="OnTagDraftKeyDown" />
+                        <Button VerticalAlignment="Center"
+                                Command="{Binding Tags.AddTagCommand}"
+                                IsEnabled="{Binding Tags.CanAddDraft}"
+                                Content="{x:Static core:Resources.Settings_Board_QuickTags_Add}" />
+                    </StackPanel>
+                </fa:FASettingsExpander.Footer>
+
+                <StackPanel Spacing="8" Margin="0 4 0 0">
+                    <TextBlock Classes="caption"
+                               Text="{x:Static core:Resources.Settings_Board_QuickTags_Empty}"
+                               IsVisible="{Binding Tags.IsTagListEmpty}" />
+
+                    <!--
+                        已有的标签：**胶囊横排、多了自动换行**（和上面科目胶囊同一套做法，用户要求），
+                        胶囊里是名字 + 一颗小叉删标签。
+                    -->
+                    <ItemsControl ItemsSource="{Binding Tags.Tags}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:QuickTagItem">
+                                <Border Margin="0 0 8 8"
+                                        Padding="12 4 4 4"
+                                        CornerRadius="14"
+                                        Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                        BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                        BorderThickness="1">
+                                    <StackPanel Orientation="Horizontal" Spacing="2">
+                                        <TextBlock VerticalAlignment="Center" Text="{Binding Name}" />
+                                        <Button Background="Transparent"
+                                                BorderThickness="0"
+                                                Padding="6"
+                                                FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                                Content="&#xE61C;"
+                                                ToolTip.Tip="{x:Static core:Resources.Settings_Board_QuickTags_Delete}"
+                                                Click="OnDeleteTagClick" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- 计数提示：「已加 N 个，最多 M 个」。到上限时新增按钮不可点，这行同时算提示。 -->
+                    <TextBlock Classes="caption" Text="{Binding Tags.CountText}" />
+                </StackPanel>
+            </fa:FASettingsExpander>
+
         </StackPanel>
     </ScrollViewer>
 </UserControl>

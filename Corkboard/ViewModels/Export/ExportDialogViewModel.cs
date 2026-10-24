@@ -13,7 +13,7 @@ namespace Corkboard.ViewModels.Export;
 ///         真需要「只导出一部分」时不用再改调用方。
 ///     </para>
 /// </summary>
-/// <param name="Format">图片还是 PDF。</param>
+/// <param name="Format">图片还是表格。</param>
 /// <param name="NoteIds">要导出的作业；<c>null</c> 表示全部。</param>
 /// <param name="CopyToClipboard">只把图片复制到剪贴板、不落盘（用户点的是「复制图片」）。</param>
 public sealed record ExportDialogResult(
@@ -22,7 +22,7 @@ public sealed record ExportDialogResult(
     bool CopyToClipboard = false);
 
 /// <summary>
-///     「导出作业板」对话框的 ViewModel：只问导图片还是 PDF（范围固定全部作业）。
+///     「导出作业板」对话框的 ViewModel：只问导图片还是表格（范围固定全部作业）。
 ///     <para>
 ///         对话框只负责问，不负责导出：用户点「下一步」后把 <see cref="ExportDialogResult" />
 ///         交给作业板页面，由它去排版 / 渲染 / 弹保存框。
@@ -50,8 +50,8 @@ public partial class ExportDialogViewModel : ViewModelBase
     /// <summary>图片格式是否被选中（模板用它标高亮）。</summary>
     [ObservableProperty] private bool _isImageSelected;
 
-    /// <summary>PDF 格式是否被选中。</summary>
-    [ObservableProperty] private bool _isPdfSelected;
+    /// <summary>表格格式是否被选中。</summary>
+    [ObservableProperty] private bool _isTableSelected;
 
     /// <summary>构造：默认格式取设置里记的那个。</summary>
     /// <param name="configHandler">主配置（只用来读 / 写导出设置）。</param>
@@ -69,15 +69,15 @@ public partial class ExportDialogViewModel : ViewModelBase
     [RelayCommand]
     private void SelectImage() => ApplyFormat(ExportFormat.Image);
 
-    /// <summary>切换格式：PDF。</summary>
+    /// <summary>切换格式：表格。</summary>
     [RelayCommand]
-    private void SelectPdf() => ApplyFormat(ExportFormat.Pdf);
+    private void SelectTable() => ApplyFormat(ExportFormat.Table);
 
     private void ApplyFormat(ExportFormat format)
     {
         Format = format;
         IsImageSelected = format == ExportFormat.Image;
-        IsPdfSelected = format == ExportFormat.Pdf;
+        IsTableSelected = format == ExportFormat.Table;
     }
 
     /// <summary>点「下一步」：把格式交给调用方（范围固定全部作业）。</summary>
@@ -91,7 +91,7 @@ public partial class ExportDialogViewModel : ViewModelBase
     private ExportDialogResult BuildResult(ExportFormat format, bool copyToClipboard)
     {
         // 只要这次点的是某个格式，就把它记成下次打开对话框时的默认格式
-        // （用户选了图片、下次再点导出却还是 PDF，就是因为之前只在勾「以后直接导出」时才记）。
+        // （用户选了图片、下次再点导出却还是表格，就是因为之前只在勾「以后直接导出」时才记）。
         Config.ExportSettings.DefaultFormat = format;
 
         if (RememberChoice)

@@ -7,6 +7,8 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using Corkboard.Core.Export;
+using Corkboard.Core.Notes;
+using Corkboard.Core.Services.Config;
 using Corkboard.Services.Ui.Export;
 using Microsoft.Extensions.Logging;
 using CR = Corkboard.Core.Langs.Common.Resources;
@@ -14,7 +16,7 @@ using CR = Corkboard.Core.Langs.Common.Resources;
 namespace Corkboard.Services.Ui;
 
 /// <summary>
-///     导出作业板：把板子上面那块内容（不是整窗）渲染成 PNG，或者把排好版的 PDF 页面写成文件。
+///     导出作业板：把板子上面那块内容（不是整窗）渲染成 PNG，或者把作业写成一张 xlsx 表格。
 ///     <para>
 ///         只渲染传入的控件，所以不会带上窗口底色、自绘标题栏和桌面背景；
 ///         内容比窗口高时控件本身是完整排版的，渲染整块就得到完整长图。
@@ -25,7 +27,7 @@ namespace Corkboard.Services.Ui;
 ///         成功返回 <c>true</c>。必须在 UI 线程上调用（渲染与保存对话框都要求）。
 ///     </para>
 /// </summary>
-public sealed class BoardExportService(ILogger<BoardExportService> logger)
+public sealed class BoardExportService(ILogger<BoardExportService> logger, MainConfigHandler configHandler)
 {
     /// <summary>
     ///     单边像素上限。整块板子可能很长，乘上高清屏的 <c>RenderScaling</c> 后会超过 GPU 纹理上限，
@@ -47,12 +49,12 @@ public sealed class BoardExportService(ILogger<BoardExportService> logger)
         AppleUniformTypeIdentifiers = ["public.png"]
     };
 
-    /// <summary>PDF 文件类型。</summary>
-    private static readonly FilePickerFileType PdfFileType = new("PDF")
+    /// <summary>XLSX 文件类型（保存对话框里的「文件类型」下拉）。</summary>
+    private static readonly FilePickerFileType XlsxFileType = new("Excel")
     {
-        Patterns = ["*.pdf"],
-        MimeTypes = ["application/pdf"],
-        AppleUniformTypeIdentifiers = ["com.adobe.pdf"]
+        Patterns = ["*.xlsx"],
+        MimeTypes = ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
+        AppleUniformTypeIdentifiers = ["org.openxmlformats.spreadsheetml.sheet"]
     };
 
     /// <summary>底色候选资源：Fluent 的「实体底色」是纯色、不透明，在浅色/深色字典里都有。</summary>
@@ -110,8 +112,8 @@ public sealed class BoardExportService(ILogger<BoardExportService> logger)
     }
 
     /// <summary>
-    ///     把已经渲染好的位图存成 PNG（导出对话框里「只导出一部分」那条路、
-    ///     以及 PDF 预览之后的图片导出共用）。返回是否保存成功。
+    ///     把已经渲染好的位图存成 PNG（导出对话框里「复制到剪贴板」那条路、
+    ///     以及调用方自己渲染好位图再落盘的场合共用）。返回是否保存成功。
     /// </summary>
     public async Task<bool> SaveImageAsync(
         Bitmap bitmap,
@@ -266,40 +268,51 @@ public sealed class BoardExportService(ILogger<BoardExportService> logger)
 
     #endregion
 
-    #region PDF
+    #region 表格
 
     /// <summary>
-    ///     把排好版的页面写成 PDF：先弹保存对话框，再用 <see cref="PdfDocumentWriter" />
-    ///     把 JPEG 页面拼成带书签的 PDF。返回是否真的保存了文件。
+    ///     把作业导成一张 xlsx 表格：先弹保存对话框，再用 <see cref="HomeworkTableBuilder" /> 排版、
+    ///     <see cref="XlsxTableWriter" /> 写文件。返回是否真的保存了文件（用户取消返回 <c>false</c>）。
     /// </summary>
-    public async Task<bool> ExportPdfAsync(
-        IReadOnlyList<PdfPageImage> pages,
+    /// <param name="notes">要导出的作业（含已清理的也行，要不要写由设置决定）。</param>
+    /// <param name="boardName">表格第 1 行的板名。</param>
+    /// <param name="topLevel">弹保存对话框用。</param>
+    /// <param name="suggestedFileName">默认文件名；为空时用「时间戳.xlsx」。</param>
+    /// <param name="cancellationToken">取消令牌。</param>
+    public async Task<bool> ExportTableAsync(
+        IReadOnlyList<Note> notes,
+        string boardName,
         TopLevel topLevel,
-        string suggestedFileName,
-        string? documentTitle,
+        string? suggestedFileName,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(pages);
+        ArgumentNullException.ThrowIfNull(notes);
         ArgumentNullException.ThrowIfNull(topLevel);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var fileName = string.IsNullOrWhiteSpace(suggestedFileName)
+            ? ExportFileNameBuilder.Build(DateTime.Now, "xlsx")
+            : suggestedFileName;
 
         IStorageFile? file;
         try
         {
             file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
-                Title = CR.Export_FormatPdf,
-                SuggestedFileName = ExportFileNameBuilder.EnsureExtension(suggestedFileName, "pdf"),
-                DefaultExtension = "pdf",
+                Title = CR.Export_FormatTable,
+                SuggestedFileName = ExportFileNameBuilder.EnsureExtension(fileName, "xlsx"),
+                DefaultExtension = "xlsx",
                 ShowOverwritePrompt = true,
-                FileTypeChoices = [PdfFileType]
+                FileTypeChoices = [XlsxFileType]
             }).ConfigureAwait(true);
         }
         catch (Exception exception)
         {
-            logger.LogError(exception, "打开导出 PDF 的保存对话框失败");
+            logger.LogError(exception, "打开导出表格的保存对话框失败");
             throw new InvalidOperationException(CR.Export_Failed, exception);
         }
 
+        // 用户按了取消：不是失败，也不用写日志。
         if (file is null)
             return false;
 
@@ -307,6 +320,16 @@ public sealed class BoardExportService(ILogger<BoardExportService> logger)
 
         try
         {
+            // 设置现读：用户刚在设置里改完样式，这一次导出就该按新样式来。
+            var settings = configHandler.Data.ExportSettings;
+            var table = new HomeworkTableBuilder().Build(
+                notes,
+                boardName,
+                DateTime.Now,
+                settings.TableGroupBySubject,
+                settings.TableIncludeCleaned,
+                settings.TableSortMode);
+
             await using var stream = await file.OpenWriteAsync().ConfigureAwait(true);
             if (stream.CanSeek)
             {
@@ -314,10 +337,10 @@ public sealed class BoardExportService(ILogger<BoardExportService> logger)
                 stream.Position = 0;
             }
 
-            PdfDocumentWriter.Write(stream, pages, documentTitle);
+            new XlsxTableWriter().Write(table, stream);
             await stream.FlushAsync(cancellationToken).ConfigureAwait(true);
 
-            logger.LogInformation("作业板 PDF 已导出：{FileName}（{PageCount} 页）", file.Name, pages.Count);
+            logger.LogInformation("作业板表格已导出：{FileName}（{RowCount} 行）", file.Name, table.Rows.Count);
             return true;
         }
         catch (OperationCanceledException)
@@ -326,7 +349,7 @@ public sealed class BoardExportService(ILogger<BoardExportService> logger)
         }
         catch (Exception exception)
         {
-            logger.LogError(exception, "导出作业板 PDF 失败");
+            logger.LogError(exception, "导出作业板表格失败");
             throw new InvalidOperationException(CR.Export_Failed, exception);
         }
     }

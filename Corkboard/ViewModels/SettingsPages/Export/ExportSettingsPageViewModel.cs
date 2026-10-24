@@ -20,11 +20,12 @@ public sealed record ExportOption<T>(T Value, string DisplayName)
 }
 
 /// <summary>
-///     「导出」设置页：导出时要不要问格式、默认格式，以及 PDF 的纸张 / 方向 / 边距 / 列数 / 排序、
-///     要不要每个科目另起一页、要不要页眉页脚。
+///     「导出」设置页：导出时要不要问格式、默认格式，以及表格怎么排——按不按科目分块、
+///     要不要带上已清理的作业、按什么顺序。
 ///     <para>
 ///         下拉框都走「选中项 → 写回配置」：选项集合是固定的，配置里是越界值时由
 ///         <see cref="ExportSettingsConfig.Normalize" /> 在读盘时收拾掉，这里不用再兜底。
+///         两个开关直接在 XAML 里双向绑配置（布尔量是离散的，不存在「敲一个字落一次盘」的问题）。
 ///     </para>
 /// </summary>
 public partial class ExportSettingsPageViewModel : ViewModelBase
@@ -41,41 +42,18 @@ public partial class ExportSettingsPageViewModel : ViewModelBase
     public IReadOnlyList<ExportOption<ExportFormat>> FormatOptions { get; } =
     [
         new(ExportFormat.Image, CR.Export_FormatImage),
-        new(ExportFormat.Pdf, CR.Export_FormatPdf)
+        new(ExportFormat.Table, CR.Export_FormatTable)
     ];
 
-    public IReadOnlyList<ExportOption<PdfPageSize>> PageSizeOptions { get; } =
+    public IReadOnlyList<ExportOption<ExportSortMode>> SortOptions { get; } =
     [
-        new(PdfPageSize.A4, "A4"),
-        new(PdfPageSize.A5, "A5"),
-        new(PdfPageSize.Letter, "Letter")
+        new(ExportSortMode.FollowBoard, CR.Export_Sort_FollowBoard),
+        new(ExportSortMode.CreatedDescending, CR.Export_Sort_CreatedDescending),
+        new(ExportSortMode.CreatedAscending, CR.Export_Sort_CreatedAscending),
+        new(ExportSortMode.UpdatedDescending, CR.Export_Sort_UpdatedDescending),
+        new(ExportSortMode.Subject, CR.Export_Sort_Subject),
+        new(ExportSortMode.Fixed, CR.Export_Sort_Fixed)
     ];
-
-    public IReadOnlyList<ExportOption<PdfOrientation>> OrientationOptions { get; } =
-    [
-        new(PdfOrientation.Auto, CR.Export_Orientation_Auto),
-        new(PdfOrientation.Portrait, CR.Export_Orientation_Portrait),
-        new(PdfOrientation.Landscape, CR.Export_Orientation_Landscape)
-    ];
-
-    public IReadOnlyList<ExportOption<PdfMargin>> MarginOptions { get; } =
-    [
-        new(PdfMargin.Narrow, CR.Export_Margin_Narrow),
-        new(PdfMargin.Normal, CR.Export_Margin_Normal),
-        new(PdfMargin.Wide, CR.Export_Margin_Wide)
-    ];
-
-    public IReadOnlyList<ExportOption<PdfSortMode>> SortOptions { get; } =
-    [
-        new(PdfSortMode.FollowBoard, CR.Export_Sort_FollowBoard),
-        new(PdfSortMode.CreatedDescending, CR.Export_Sort_CreatedDescending),
-        new(PdfSortMode.CreatedAscending, CR.Export_Sort_CreatedAscending),
-        new(PdfSortMode.UpdatedDescending, CR.Export_Sort_UpdatedDescending),
-        new(PdfSortMode.Subject, CR.Export_Sort_Subject),
-        new(PdfSortMode.Fixed, CR.Export_Sort_Fixed)
-    ];
-
-    public IReadOnlyList<int> ColumnOptions { get; } = [1, 2, 3, 4];
 
     #endregion
 
@@ -91,50 +69,14 @@ public partial class ExportSettingsPageViewModel : ViewModelBase
         }
     }
 
-    public ExportOption<PdfPageSize> SelectedPageSizeOption
+    public ExportOption<ExportSortMode> SelectedSortOption
     {
-        get => PageSizeOptions.First(option => option.Value == Settings.PdfPageSize);
+        get => SortOptions.First(option => option.Value == Settings.TableSortMode);
         set
         {
             if (value is not null)
-                Settings.PdfPageSize = value.Value;
+                Settings.TableSortMode = value.Value;
         }
-    }
-
-    public ExportOption<PdfOrientation> SelectedOrientationOption
-    {
-        get => OrientationOptions.First(option => option.Value == Settings.PdfOrientation);
-        set
-        {
-            if (value is not null)
-                Settings.PdfOrientation = value.Value;
-        }
-    }
-
-    public ExportOption<PdfMargin> SelectedMarginOption
-    {
-        get => MarginOptions.First(option => option.Value == Settings.PdfMargin);
-        set
-        {
-            if (value is not null)
-                Settings.PdfMargin = value.Value;
-        }
-    }
-
-    public ExportOption<PdfSortMode> SelectedSortOption
-    {
-        get => SortOptions.First(option => option.Value == Settings.PdfSortMode);
-        set
-        {
-            if (value is not null)
-                Settings.PdfSortMode = value.Value;
-        }
-    }
-
-    public int SelectedColumns
-    {
-        get => PdfOptions.GetColumnCount(Settings.PdfColumns);
-        set => Settings.PdfColumns = PdfOptions.GetColumnCount(value);
     }
 
     #endregion

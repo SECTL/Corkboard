@@ -7,21 +7,91 @@
              xmlns:core="using:Corkboard.Core.Langs.Common"
              xmlns:icons="using:Corkboard.Core.Icons"
              mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="450"
-             x:Class="Corkboard.Views.SettingsPages.Board.DockSettingsPage"
-             x:DataType="vm:DockSettingsPageViewModel">
+             x:Class="Corkboard.Views.SettingsPages.Board.BoardWindowSettingsPage"
+             x:DataType="vm:BoardWindowSettingsPageViewModel">
     <ScrollViewer>
+        <!--
+            设置卡：Header 是设置项名称，Description 是简介，Footer 放控件。
+            两个分区：窗口（平台能力）、收纳（浮钮）。
+        -->
         <StackPanel Classes="page-container">
             <!-- 页标题画在 page-container 里：它才和设置卡同宽、同左边缘，并随卡片一起滚动。 -->
             <TextBlock Margin="0 4 0 0"
                        FontWeight="Normal"
-                       Text="{x:Static core:Resources.Settings_Board_Dock_Title}"
+                       Text="{x:Static core:Resources.Settings_Board_Window_Title}"
                        Theme="{StaticResource TitleTextBlockStyle}" />
+
+            <TextBlock Classes="section-title"
+                       Text="{x:Static core:Resources.Settings_Section_Window}" />
+
+            <!-- 平台不支持的能力整张卡隐藏，而不是留一个点不动的控件。 -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Basic_MainWindowOpacity}"
+                                   Description="{x:Static core:Resources.Settings_Basic_MainWindowOpacityDescription}"
+                                   IsVisible="{Binding IsWindowOpacitySupported}">
+                <fa:FASettingsExpander.Footer>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <!--
+                            绑草稿而不是配置：拖滑杆时每帧都在变，直接写配置会连发落盘（见 ViewModel）。
+                            拖完停手 400ms 落到配置上，主窗口立刻跟着变。
+                        -->
+                        <Slider MinWidth="180"
+                                Minimum="{Binding OpacityPercentMinimum}"
+                                Maximum="{Binding OpacityPercentMaximum}"
+                                TickFrequency="1"
+                                IsSnapToTickEnabled="True"
+                                VerticalAlignment="Center"
+                                Value="{Binding OpacityPercent, Mode=TwoWay}" />
+
+                        <TextBlock MinWidth="44"
+                                   VerticalAlignment="Center"
+                                   TextAlignment="Right"
+                                   Text="{Binding OpacityDisplayText}" />
+                    </StackPanel>
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <!-- 平台不支持的能力整张卡隐藏，而不是留一个点不动的开关。 -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Basic_PinToDesktop}"
+                                   Description="{x:Static core:Resources.Settings_Basic_PinToDesktopDescription}"
+                                   IsVisible="{Binding IsPinToDesktopSupported}">
+                <fa:FASettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding Basic.PinToDesktop}" />
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <!-- 平台不支持的能力整张卡隐藏，而不是留一个点不动的开关。 -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Basic_WindowCorners}"
+                                   Description="{x:Static core:Resources.Settings_Basic_WindowCornersDescription}"
+                                   IsVisible="{Binding IsWindowCornersSupported}">
+                <fa:FASettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding Basic.MainWindowRoundedCorners}" />
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Basic_HoldToDragWindow}"
+                                   Description="{x:Static core:Resources.Settings_Basic_HoldToDragWindowDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding Basic.HoldToDragWindow}" />
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <!-- 平台不支持的能力整张卡隐藏，而不是留一个点不动的开关。 -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Basic_ClickThrough}"
+                                   Description="{x:Static core:Resources.Settings_Basic_ClickThroughDescription}"
+                                   IsVisible="{Binding IsClickThroughSupported}">
+                <fa:FASettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding Basic.ClickThrough}" />
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <TextBlock Classes="section-title"
+                       Text="{x:Static core:Resources.Settings_Board_Dock_Title}" />
 
             <!-- 开关：决定标题栏上有没有「收纳」按钮。开关是离散动作，直接双向绑配置即可。 -->
             <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_Dock_Enabled}"
                                    Description="{x:Static core:Resources.Settings_Board_Dock_EnabledDescription}">
                 <fa:FASettingsExpander.Footer>
-                    <ToggleSwitch IsChecked="{Binding Settings.DockEnabled, Mode=TwoWay}" />
+                    <ToggleSwitch IsChecked="{Binding Dock.Settings.DockEnabled, Mode=TwoWay}" />
                 </fa:FASettingsExpander.Footer>
             </fa:FASettingsExpander>
 
@@ -40,7 +110,7 @@
                                 ToolTip.Tip="{x:Static core:Resources.Settings_Board_Dock_AnchorHint}"
                                 Click="OnAnchorPickerClick">
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                <TextBlock VerticalAlignment="Center" Text="{Binding AnchorText}" />
+                                <TextBlock VerticalAlignment="Center" Text="{Binding Dock.AnchorText}" />
                                 <TextBlock Grid.Column="1"
                                            VerticalAlignment="Center"
                                            FontFamily="{DynamicResource FluentSystemIconsResizeable}"
@@ -75,7 +145,7 @@
                                             BorderThickness="1"
                                             CornerRadius="8"
                                             Padding="8">
-                                        <ItemsControl ItemsSource="{Binding AnchorOptions}">
+                                        <ItemsControl ItemsSource="{Binding Dock.AnchorOptions}">
                                             <ItemsControl.ItemsPanel>
                                                 <ItemsPanelTemplate>
                                                     <UniformGrid Rows="3" Columns="3" />
@@ -117,7 +187,7 @@
                                        Maximum="2000"
                                        Increment="10"
                                        FormatString="0"
-                                       Value="{Binding DockOffsetXDraft, Mode=TwoWay}"
+                                       Value="{Binding Dock.DockOffsetXDraft, Mode=TwoWay}"
                                        LostFocus="OnEditorLostFocus" />
                     </fa:FASettingsExpanderItem.Footer>
                 </fa:FASettingsExpanderItem>
@@ -128,7 +198,7 @@
                                        Maximum="2000"
                                        Increment="10"
                                        FormatString="0"
-                                       Value="{Binding DockOffsetYDraft, Mode=TwoWay}"
+                                       Value="{Binding Dock.DockOffsetYDraft, Mode=TwoWay}"
                                        LostFocus="OnEditorLostFocus" />
                     </fa:FASettingsExpanderItem.Footer>
                 </fa:FASettingsExpanderItem>
@@ -146,7 +216,7 @@
                                        Maximum="200"
                                        Increment="5"
                                        FormatString="0"
-                                       Value="{Binding DockScaleDraft, Mode=TwoWay}"
+                                       Value="{Binding Dock.DockScaleDraft, Mode=TwoWay}"
                                        LostFocus="OnEditorLostFocus" />
                         <TextBlock VerticalAlignment="Center" Text="%" />
                     </StackPanel>

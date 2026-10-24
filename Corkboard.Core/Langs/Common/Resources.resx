@@ -217,9 +217,6 @@
   <data name="Settings_Section_DeleteAndCleanup" xml:space="preserve">
     <value>删除与清理</value>
   </data>
-  <data name="Settings_Section_StyleAndPalette" xml:space="preserve">
-    <value>样式与色板</value>
-  </data>
   <data name="Settings_Section_Theme" xml:space="preserve">
     <value>主题与颜色</value>
   </data>
@@ -307,12 +304,6 @@
   </data>
   <data name="Settings_Board_NamePlaceholder" xml:space="preserve">
     <value>留空则用默认名称</value>
-  </data>
-  <data name="Settings_Board_TitleBarButtons" xml:space="preserve">
-    <value>顶部按钮</value>
-  </data>
-  <data name="Settings_Board_TitleBarButtonsDescription" xml:space="preserve">
-    <value>右上角那排按钮留哪些，关掉的就不显示</value>
   </data>
   <data name="Settings_Board_TitleBarSettings" xml:space="preserve">
     <value>设置按钮</value>
@@ -870,9 +861,6 @@
   <data name="Settings_Board_Handwriting_Title" xml:space="preserve">
     <value>手写</value>
   </data>
-  <data name="Settings_Board_QuickTags_Title" xml:space="preserve">
-    <value>快捷标签</value>
-  </data>
   <data name="Settings_Board_Cleanup_Title" xml:space="preserve">
     <value>清理</value>
   </data>
@@ -1375,27 +1363,6 @@
   <data name="Export_FormatImageDescription" xml:space="preserve">
     <value>把整块板子导成一张长图</value>
   </data>
-  <data name="Export_FormatPdf" xml:space="preserve">
-    <value>PDF</value>
-  </data>
-  <data name="Export_FormatPdfDescription" xml:space="preserve">
-    <value>重新排版、自动分页，适合打印</value>
-  </data>
-  <data name="Export_ScopeLabel" xml:space="preserve">
-    <value>导出范围</value>
-  </data>
-  <data name="Export_ScopeAll" xml:space="preserve">
-    <value>全部作业</value>
-  </data>
-  <data name="Export_ScopePartial" xml:space="preserve">
-    <value>只导出一部分</value>
-  </data>
-  <data name="Export_SelectAll" xml:space="preserve">
-    <value>全选</value>
-  </data>
-  <data name="Export_SelectedCount" xml:space="preserve">
-    <value>已选 {0} / {1} 条</value>
-  </data>
   <data name="Export_RememberChoice" xml:space="preserve">
     <value>以后直接导出这个格式</value>
   </data>
@@ -1408,26 +1375,8 @@
   <data name="Export_Next" xml:space="preserve">
     <value>下一步</value>
   </data>
-  <data name="Export_Save" xml:space="preserve">
-    <value>保存</value>
-  </data>
-  <data name="Export_PreviewTitle" xml:space="preserve">
-    <value>导出预览</value>
-  </data>
-  <data name="Export_PreviewPageCount" xml:space="preserve">
-    <value>共 {0} 页</value>
-  </data>
-  <data name="Export_PreviewBack" xml:space="preserve">
-    <value>返回修改</value>
-  </data>
-  <data name="Export_PreviewExport" xml:space="preserve">
-    <value>导出 PDF</value>
-  </data>
   <data name="Export_SuccessImage" xml:space="preserve">
     <value>图片已保存</value>
-  </data>
-  <data name="Export_SuccessPdf" xml:space="preserve">
-    <value>PDF 已保存</value>
   </data>
   <data name="Export_SuccessCopied" xml:space="preserve">
     <value>图片已复制到剪贴板</value>
@@ -1453,65 +1402,11 @@
   <data name="Settings_Export_DefaultFormat" xml:space="preserve">
     <value>默认格式</value>
   </data>
-  <data name="Settings_Export_PdfLayout" xml:space="preserve">
-    <value>PDF 排版</value>
-  </data>
-  <data name="Settings_Export_PdfLayoutDescription" xml:space="preserve">
-    <value>纸张、分页与页眉页脚</value>
-  </data>
-  <data name="Settings_Export_PageSize" xml:space="preserve">
-    <value>纸张大小</value>
-  </data>
-  <data name="Settings_Export_Orientation" xml:space="preserve">
-    <value>页面方向</value>
-  </data>
-  <data name="Settings_Export_OrientationDescription" xml:space="preserve">
-    <value>自动时横向板子用横向纸</value>
-  </data>
-  <data name="Settings_Export_Margin" xml:space="preserve">
-    <value>页面边距</value>
-  </data>
-  <data name="Settings_Export_Columns" xml:space="preserve">
-    <value>每页列数</value>
-  </data>
-  <data name="Settings_Export_ColumnsDescription" xml:space="preserve">
-    <value>内容多的板子可以多排几列</value>
-  </data>
   <data name="Settings_Export_Sort" xml:space="preserve">
     <value>导出排序</value>
   </data>
   <data name="Settings_Export_SortDescription" xml:space="preserve">
     <value>跟随板子或按时间重排</value>
-  </data>
-  <data name="Settings_Export_SubjectPageBreak" xml:space="preserve">
-    <value>每个科目另起一页</value>
-  </data>
-  <data name="Settings_Export_SubjectPageBreakDescription" xml:space="preserve">
-    <value>打开后一科从新页开始</value>
-  </data>
-  <data name="Settings_Export_HeaderFooter" xml:space="preserve">
-    <value>页眉页脚</value>
-  </data>
-  <data name="Settings_Export_HeaderFooterDescription" xml:space="preserve">
-    <value>页眉写板名、页脚写页码</value>
-  </data>
-  <data name="Export_Orientation_Auto" xml:space="preserve">
-    <value>自动</value>
-  </data>
-  <data name="Export_Orientation_Portrait" xml:space="preserve">
-    <value>竖向</value>
-  </data>
-  <data name="Export_Orientation_Landscape" xml:space="preserve">
-    <value>横向</value>
-  </data>
-  <data name="Export_Margin_Narrow" xml:space="preserve">
-    <value>窄</value>
-  </data>
-  <data name="Export_Margin_Normal" xml:space="preserve">
-    <value>普通</value>
-  </data>
-  <data name="Export_Margin_Wide" xml:space="preserve">
-    <value>宽</value>
   </data>
   <data name="Export_Sort_FollowBoard" xml:space="preserve">
     <value>跟随作业板</value>
@@ -1929,5 +1824,116 @@
   </data>
   <data name="Settings_Exam_Schedule_Next" xml:space="preserve">
     <value>下一场 {0} · {1} {2}</value>
+  </data>
+  <data name="Settings_Board_Content_Title" xml:space="preserve">
+    <value>内容与样式</value>
+  </data>
+  <data name="Settings_Board_Automation_Title" xml:space="preserve">
+    <value>自动化与数据</value>
+  </data>
+  <data name="Settings_Board_Window_Title" xml:space="preserve">
+    <value>窗口与收纳</value>
+  </data>
+  <data name="Settings_Section_Text" xml:space="preserve">
+    <value>文字</value>
+  </data>
+  <data name="Settings_Section_Maintenance" xml:space="preserve">
+    <value>数据维护</value>
+  </data>
+  <data name="Settings_Board_Entries" xml:space="preserve">
+    <value>界面入口</value>
+  </data>
+  <data name="Settings_Board_EntriesDescription" xml:space="preserve">
+    <value>主界面上显示哪些按钮</value>
+  </data>
+  <data name="Settings_Board_Handwriting_DefaultColor" xml:space="preserve">
+    <value>默认笔色</value>
+  </data>
+  <data name="Settings_Board_Handwriting_DefaultColorDescription" xml:space="preserve">
+    <value>新写的字用什么颜色</value>
+  </data>
+  <data name="Export_FormatTable" xml:space="preserve">
+    <value>表格</value>
+  </data>
+  <data name="Export_FormatTableDescription" xml:space="preserve">
+    <value>一行一条作业，能用 Excel 打开</value>
+  </data>
+  <data name="Export_SuccessTable" xml:space="preserve">
+    <value>表格已保存</value>
+  </data>
+  <data name="Settings_Export_Table" xml:space="preserve">
+    <value>表格样式</value>
+  </data>
+  <data name="Settings_Export_TableDescription" xml:space="preserve">
+    <value>导出的表格长什么样</value>
+  </data>
+  <data name="Settings_Export_TableGroupBySubject" xml:space="preserve">
+    <value>按科目分块</value>
+  </data>
+  <data name="Settings_Export_TableGroupBySubjectDescription" xml:space="preserve">
+    <value>每个科目单独一段，带一行小标题</value>
+  </data>
+  <data name="Settings_Export_TableIncludeCleaned" xml:space="preserve">
+    <value>包含已清理的作业</value>
+  </data>
+  <data name="Settings_Export_TableIncludeCleanedDescription" xml:space="preserve">
+    <value>收起来的过期作业也写进表格</value>
+  </data>
+  <data name="Export_Table_HeaderIndex" xml:space="preserve">
+    <value>序号</value>
+  </data>
+  <data name="Export_Table_HeaderSubject" xml:space="preserve">
+    <value>科目</value>
+  </data>
+  <data name="Export_Table_HeaderSection" xml:space="preserve">
+    <value>分类</value>
+  </data>
+  <data name="Export_Table_HeaderDueDate" xml:space="preserve">
+    <value>截止日期</value>
+  </data>
+  <data name="Export_Table_HeaderStatus" xml:space="preserve">
+    <value>状态</value>
+  </data>
+  <data name="Export_Table_HeaderContent" xml:space="preserve">
+    <value>内容</value>
+  </data>
+  <data name="Export_Table_HeaderTags" xml:space="preserve">
+    <value>标签</value>
+  </data>
+  <data name="Export_Table_HeaderCreated" xml:space="preserve">
+    <value>创建时间</value>
+  </data>
+  <data name="Export_Table_NoSubject" xml:space="preserve">
+    <value>未分类</value>
+  </data>
+  <data name="Export_Table_NoDueDate" xml:space="preserve">
+    <value>未设期限</value>
+  </data>
+  <data name="Export_Table_DueToday" xml:space="preserve">
+    <value>今天截止</value>
+  </data>
+  <data name="Export_Table_DueTomorrow" xml:space="preserve">
+    <value>明天截止</value>
+  </data>
+  <data name="Export_Table_DueRemaining" xml:space="preserve">
+    <value>还剩 {0} 天</value>
+  </data>
+  <data name="Export_Table_DueOverdue" xml:space="preserve">
+    <value>已过期 {0} 天</value>
+  </data>
+  <data name="Export_Table_Cleaned" xml:space="preserve">
+    <value>已清理</value>
+  </data>
+  <data name="Export_Table_Handwriting" xml:space="preserve">
+    <value>（手写内容）</value>
+  </data>
+  <data name="Export_Table_Summary" xml:space="preserve">
+    <value>共 {0} 条作业 · 导出时间 {1}</value>
+  </data>
+  <data name="Export_Table_GroupTitle" xml:space="preserve">
+    <value>{0} · {1} 条</value>
+  </data>
+  <data name="Export_Table_SheetName" xml:space="preserve">
+    <value>作业板</value>
   </data>
 </root>

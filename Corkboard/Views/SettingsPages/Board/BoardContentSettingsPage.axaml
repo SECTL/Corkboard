@@ -1,0 +1,292 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fa="using:FluentAvalonia.UI.Controls"
+             xmlns:vm="using:Corkboard.ViewModels.SettingsPages.Board"
+             xmlns:rt="using:Corkboard.ViewModels.SettingsPages.RichText"
+             xmlns:core="using:Corkboard.Core.Langs.Common"
+             mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="450"
+             x:Class="Corkboard.Views.SettingsPages.Board.BoardContentSettingsPage"
+             x:DataType="vm:BoardContentSettingsPageViewModel">
+    <ScrollViewer>
+        <!--
+            设置卡：Header 是设置项名称，Description 是简介，Footer 放控件（见 Core/Styles/StylesBase.axaml）。
+            所有控件都绑 ViewModel 的草稿属性、不直接绑配置：取色器与数字框都是一路动一路变，
+            直接双向绑会每变一次就落一遍 settings.json。
+        -->
+        <StackPanel Classes="page-container">
+            <!-- 页标题画在 page-container 里：它才和设置卡同宽、同左边缘，并随卡片一起滚动。 -->
+            <TextBlock Margin="0 4 0 0"
+                       FontWeight="Normal"
+                       Text="{x:Static core:Resources.Settings_Board_Content_Title}"
+                       Theme="{StaticResource TitleTextBlockStyle}" />
+
+            <TextBlock Classes="section-title"
+                       Text="{x:Static core:Resources.Settings_Section_Text}" />
+
+            <!--
+                内容的默认样式：新作业没单独定「整篇字号」/颜色时用它们。
+                两个控件都绑草稿而不是配置：NumericUpDown 与取色器都是「一路动一路变」的控件，
+                直接双向绑会让每一次变化都落一遍 settings.json（见 ViewModel 的说明）。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_ContentStyle}"
+                                   Description="{x:Static core:Resources.Settings_Board_ContentStyleDescription}">
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_DefaultFontSize}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <NumericUpDown MinWidth="130"
+                                       Minimum="8"
+                                       Maximum="96"
+                                       Increment="1"
+                                       FormatString="0"
+                                       Value="{Binding DefaultFontSizeDraft, Mode=TwoWay}"
+                                       LostFocus="OnEditorLostFocus" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_DefaultColor}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="12"
+                                    VerticalAlignment="Center">
+                            <!-- 「跟随主题」时把取色器整块藏起来，而不是留一个点不动的控件。 -->
+                            <ColorPicker VerticalAlignment="Center"
+                                         IsAlphaEnabled="False"
+                                         IsVisible="{Binding !FollowThemeColor}"
+                                         Color="{Binding DefaultColorDraft, Mode=TwoWay}" />
+                            <StackPanel Orientation="Horizontal"
+                                        Spacing="8"
+                                        VerticalAlignment="Center">
+                                <ToggleSwitch IsChecked="{Binding FollowThemeColor, Mode=TwoWay}" />
+                                <TextBlock VerticalAlignment="Center"
+                                           Text="{x:Static core:Resources.Settings_Board_DefaultColorFollowTheme}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+            </fa:FASettingsExpander>
+
+            <!--
+                两个字号：科目标题，以及作业条上的小字（类型与字段值、截止日期）。
+                原先一个跟着窗口默认值走、一个写死 12，后排看不清，所以都提到设置里。
+                同样绑草稿：NumericUpDown 每动一下就会落一次盘。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_FontSizes}"
+                                   Description="{x:Static core:Resources.Settings_Board_FontSizesDescription}">
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_SubjectFontSize}"
+                                           Description="{x:Static core:Resources.Settings_Board_SubjectFontSizeDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <NumericUpDown MinWidth="130"
+                                       Minimum="12"
+                                       Maximum="48"
+                                       Increment="1"
+                                       FormatString="0"
+                                       Value="{Binding SubjectFontSizeDraft, Mode=TwoWay}"
+                                       LostFocus="OnEditorLostFocus" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_NoteMetaFontSize}"
+                                           Description="{x:Static core:Resources.Settings_Board_NoteMetaFontSizeDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <NumericUpDown MinWidth="130"
+                                       Minimum="10"
+                                       Maximum="32"
+                                       Increment="1"
+                                       FormatString="0"
+                                       Value="{Binding NoteMetaFontSizeDraft, Mode=TwoWay}"
+                                       LostFocus="OnEditorLostFocus" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_SectionFontSize}"
+                                           Description="{x:Static core:Resources.Settings_Board_SectionFontSizeDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <NumericUpDown MinWidth="130"
+                                       Minimum="9"
+                                       Maximum="32"
+                                       Increment="1"
+                                       FormatString="0"
+                                       Value="{Binding SectionFontSizeDraft, Mode=TwoWay}"
+                                       LostFocus="OnEditorLostFocus" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_NoteTagFontSize}"
+                                           Description="{x:Static core:Resources.Settings_Board_NoteTagFontSizeDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <NumericUpDown MinWidth="130"
+                                       Minimum="8"
+                                       Maximum="32"
+                                       Increment="1"
+                                       FormatString="0"
+                                       Value="{Binding NoteTagFontSizeDraft, Mode=TwoWay}"
+                                       LostFocus="OnEditorLostFocus" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+            </fa:FASettingsExpander>
+
+            <!--
+                工具浮窗的预设色板：选中文字后弹出来的工具条上那排色块。
+                最多 RichTextPalette.MaxColors 个（到顶就把「新增」禁掉），可改色、可调序、可删。
+                取色器绑的是「色块下标 + 颜色」的一对命令参数——集合元素是 Color 结构体，
+                改它不会发通知，只能回调 ViewModel 按位替换。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_Palette}"
+                                   Description="{x:Static core:Resources.Settings_Board_PaletteDescription}">
+                <StackPanel Spacing="12" Margin="0 4 0 0">
+                    <ItemsControl ItemsSource="{Binding PaletteColors}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="rt:RichTextPaletteColorItem">
+                                <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto"
+                                      ColumnSpacing="8"
+                                      Margin="0 0 0 6">
+                                    <ColorPicker Grid.Column="0"
+                                                 VerticalAlignment="Center"
+                                                 IsAlphaEnabled="False"
+                                                 Color="{Binding Color, Mode=TwoWay}" />
+                                    <Button Grid.Column="2"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Padding="6"
+                                            FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                            Content="&#xE70E;"
+                                            ToolTip.Tip="{x:Static core:Resources.Settings_Board_PaletteMoveUp}"
+                                            Click="OnMovePaletteColorUpClick" />
+                                    <Button Grid.Column="3"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Padding="6"
+                                            FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                            Content="&#xE70D;"
+                                            ToolTip.Tip="{x:Static core:Resources.Settings_Board_PaletteMoveDown}"
+                                            Click="OnMovePaletteColorDownClick" />
+                                    <Button Grid.Column="4"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Padding="6"
+                                            FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                            Content="&#xE61C;"
+                                            ToolTip.Tip="{x:Static core:Resources.Settings_Board_PaletteDelete}"
+                                            Click="OnDeletePaletteColorClick" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <Button HorizontalAlignment="Left"
+                            Command="{Binding AddPaletteColorCommand}"
+                            IsEnabled="{Binding CanAddPaletteColor}"
+                            Content="{x:Static core:Resources.Settings_Board_PaletteAdd}" />
+                </StackPanel>
+            </fa:FASettingsExpander>
+
+            <TextBlock Classes="section-title"
+                       Text="{x:Static core:Resources.Settings_Board_Handwriting_Title}" />
+
+            <!-- 默认笔粗：1–24（夹取规则在 HandwritingStyle 里）。 -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_Handwriting_PenWidth}"
+                                   Description="{x:Static core:Resources.Settings_Board_Handwriting_PenWidthDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <NumericUpDown MinWidth="130"
+                                   Minimum="1"
+                                   Maximum="24"
+                                   Increment="1"
+                                   FormatString="0"
+                                   Value="{Binding Handwriting.PenWidthDraft, Mode=TwoWay}"
+                                   LostFocus="OnEditorLostFocus" />
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <!-- 默认橡皮粗细：8–64。 -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_Handwriting_EraserWidth}"
+                                   Description="{x:Static core:Resources.Settings_Board_Handwriting_EraserWidthDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <NumericUpDown MinWidth="130"
+                                   Minimum="8"
+                                   Maximum="64"
+                                   Increment="1"
+                                   FormatString="0"
+                                   Value="{Binding Handwriting.EraserWidthDraft, Mode=TwoWay}"
+                                   LostFocus="OnEditorLostFocus" />
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <!-- 默认笔色：配置里为空表示跟随主题，这时把取色器整块藏起来而不是留一个点不动的控件。 -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_Handwriting_DefaultColor}"
+                                   Description="{x:Static core:Resources.Settings_Board_Handwriting_DefaultColorDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <StackPanel Orientation="Horizontal"
+                                Spacing="12"
+                                VerticalAlignment="Center">
+                        <ColorPicker VerticalAlignment="Center"
+                                     IsAlphaEnabled="False"
+                                     IsVisible="{Binding !Handwriting.FollowThemeColor}"
+                                     Color="{Binding Handwriting.PenColorDraft, Mode=TwoWay}" />
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="8"
+                                    VerticalAlignment="Center">
+                            <ToggleSwitch IsChecked="{Binding Handwriting.FollowThemeColor, Mode=TwoWay}" />
+                            <TextBlock VerticalAlignment="Center"
+                                       Text="{x:Static core:Resources.Settings_Board_Handwriting_FollowTheme}" />
+                        </StackPanel>
+                    </StackPanel>
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <!--
+                手写工具栏上的常用色板：最多 HandwritingStyle.MaxColors 个（到顶就把「新增」禁掉），
+                可改色、可调序、可删。取色器绑的是行对象——集合元素是 Color 结构体，改它不会发通知，
+                只能回调 ViewModel 按位替换。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_Handwriting_Colors}"
+                                   Description="{x:Static core:Resources.Settings_Board_Handwriting_ColorsDescription}">
+                <StackPanel Spacing="12" Margin="0 4 0 0">
+                    <ItemsControl ItemsSource="{Binding Handwriting.PaletteColors}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="rt:RichTextPaletteColorItem">
+                                <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto"
+                                      ColumnSpacing="8"
+                                      Margin="0 0 0 6">
+                                    <ColorPicker Grid.Column="0"
+                                                 VerticalAlignment="Center"
+                                                 IsAlphaEnabled="False"
+                                                 Color="{Binding Color, Mode=TwoWay}" />
+                                    <Button Grid.Column="2"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Padding="6"
+                                            FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                            Content="&#xE70E;"
+                                            ToolTip.Tip="{x:Static core:Resources.Settings_Board_PaletteMoveUp}"
+                                            Click="OnMoveHandwritingColorUpClick" />
+                                    <Button Grid.Column="3"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Padding="6"
+                                            FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                            Content="&#xE70D;"
+                                            ToolTip.Tip="{x:Static core:Resources.Settings_Board_PaletteMoveDown}"
+                                            Click="OnMoveHandwritingColorDownClick" />
+                                    <Button Grid.Column="4"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Padding="6"
+                                            FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                            Content="&#xE61C;"
+                                            ToolTip.Tip="{x:Static core:Resources.Settings_Board_PaletteDelete}"
+                                            Click="OnDeleteHandwritingColorClick" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <Button HorizontalAlignment="Left"
+                            Command="{Binding Handwriting.AddPaletteColorCommand}"
+                            IsEnabled="{Binding Handwriting.CanAddPaletteColor}"
+                            Content="{x:Static core:Resources.Settings_Board_PaletteAdd}" />
+                </StackPanel>
+            </fa:FASettingsExpander>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -12,7 +12,7 @@
         <!--
             格式卡：每张卡是一颗按钮，但视觉全画在内层 Border 上——
             Fluent 的 Button 模板会在悬停/按下时自己刷内容层底色，只设 Button.Background 会被盖掉
-            （用户反馈：点 PDF 之后蓝色「淡下去」，其实还是选中态）。把模板换成裸 ContentPresenter，
+            （用户反馈：点表格之后蓝色「淡下去」，其实还是选中态）。把模板换成裸 ContentPresenter，
             选中/悬停都交给 .format-card-body 自己画，就不会跟主题抢。
         -->
         <Style Selector="Button.format-card">
@@ -110,19 +110,19 @@
 
                     <Button Grid.Column="1"
                             Classes="format-card"
-                            Command="{Binding SelectPdfCommand}">
+                            Command="{Binding SelectTableCommand}">
                         <Button.Template>
                             <ControlTemplate>
                                 <ContentPresenter Content="{TemplateBinding Content}"
                                                   HorizontalContentAlignment="Stretch" />
                             </ControlTemplate>
                         </Button.Template>
-                        <Border Classes="format-card-body" Classes.selected="{Binding IsPdfSelected}">
+                        <Border Classes="format-card-body" Classes.selected="{Binding IsTableSelected}">
                             <StackPanel Spacing="4">
                                 <TextBlock Classes="format-title"
-                                           Text="{x:Static core:Resources.Export_FormatPdf}" />
+                                           Text="{x:Static core:Resources.Export_FormatTable}" />
                                 <TextBlock Classes="caption" TextWrapping="Wrap"
-                                           Text="{x:Static core:Resources.Export_FormatPdfDescription}" />
+                                           Text="{x:Static core:Resources.Export_FormatTableDescription}" />
                             </StackPanel>
                         </Border>
                     </Button>
@@ -134,7 +134,7 @@
                 <Grid ColumnDefinitions="*,Auto">
                     <!--
                         图片还能直接进剪贴板：不落盘、贴到聊天窗口里就完事。
-                        只在图片格式下出现——PDF 没有剪贴板这条路。
+                        只在图片格式下出现——表格没有剪贴板这条路。
                     -->
                     <Button Grid.Column="0"
                             HorizontalAlignment="Left"

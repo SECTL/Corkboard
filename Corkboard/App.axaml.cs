@@ -233,6 +233,9 @@ public partial class App : Application
         services.AddTransient<HomeworkAssignmentFormViewModel>();
         services.AddTransient<BasicSettingsPageViewModel>();
         services.AddTransient<BoardSettingsPageViewModel>();
+        services.AddTransient<BoardContentSettingsPageViewModel>();
+        services.AddTransient<BoardAutomationSettingsPageViewModel>();
+        services.AddTransient<BoardWindowSettingsPageViewModel>();
         services.AddTransient<AppearanceSettingsPageViewModel>();
         services.AddTransient<AboutSettingsPageViewModel>();
         services.AddTransient<AccountSettingsPageViewModel>();
@@ -263,12 +266,10 @@ public partial class App : Application
         // 子页的 PageInfo 上必须带同一个 groupId，否则会被当成顶层项平铺出去。
         services.AddGroup(new PageGroupInfo(CR.Settings_Board_Group, "settings.board.group", FluentIcons.BoardFilled));
         services.AddSettingsPage<BoardSettingsPage>(CR.Settings_Board_General_Title);
+        services.AddSettingsPage<BoardContentSettingsPage>(CR.Settings_Board_Content_Title);
         services.AddSettingsPage<BoardSectionsSettingsPage>(CR.Settings_Board_Sections_Title);
-        services.AddSettingsPage<HandwritingSettingsPage>(CR.Settings_Board_Handwriting_Title);
-        services.AddSettingsPage<QuickTagsSettingsPage>(CR.Settings_Board_QuickTags_Title);
-        services.AddSettingsPage<CleanupSettingsPage>(CR.Settings_Board_Cleanup_Title);
-        services.AddSettingsPage<HistorySettingsPage>(CR.Settings_Board_History_Title);
-        services.AddSettingsPage<DockSettingsPage>(CR.Settings_Board_Dock_Title);
+        services.AddSettingsPage<BoardAutomationSettingsPage>(CR.Settings_Board_Automation_Title);
+        services.AddSettingsPage<BoardWindowSettingsPage>(CR.Settings_Board_Window_Title);
         // 「导出」在作业板分组里：导出的就是作业板，放顶层会让人找不着。
         services.AddSettingsPage<ExportSettingsPage>(CR.Settings_Export_Title);
 

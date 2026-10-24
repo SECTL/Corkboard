@@ -19,7 +19,7 @@ public static class UsageMetricNames
     /// <summary>新增一条作业（编辑不算）。</summary>
     public const string NoteAdd = "daily_note_add_count";
 
-    /// <summary>成功导出一次（图片或 PDF，复制到剪贴板也算）。</summary>
+    /// <summary>成功导出一次（图片或表格，复制到剪贴板也算）。</summary>
     public const string Export = "daily_export_count";
 }
 

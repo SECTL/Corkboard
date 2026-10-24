@@ -412,7 +412,7 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
 
     /// <summary>
     ///     标题栏上的「导出」：真正的导出逻辑在作业板页面里（它才拿得到内容容器），
-    ///     会先弹格式 / 范围对话框，PDF 还要过一遍预览。
+    ///     会先弹格式对话框（导图片还是表格）。
     ///     主页面不是作业板时什么都不做（当前只有作业板一个主页面）。
     /// </summary>
     private async void ExportImageButton_OnClick(object? sender, RoutedEventArgs e)

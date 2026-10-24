@@ -4,8 +4,6 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:fa="using:FluentAvalonia.UI.Controls"
              xmlns:vm="using:Corkboard.ViewModels.SettingsPages.Board"
-             xmlns:hm="using:Corkboard.ViewModels.SettingsPages.Homework"
-             xmlns:rt="using:Corkboard.ViewModels.SettingsPages.RichText"
              xmlns:core="using:Corkboard.Core.Langs.Common"
              mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="450"
              x:Class="Corkboard.Views.SettingsPages.Board.BoardSettingsPage"
@@ -69,14 +67,15 @@
             </fa:FASettingsExpander>
 
             <!--
-                区块宽度（展示设置）：只在「区块」排布下起作用。上面那一格是单块的基准宽度——
-                它决定一行排几块；下面那个开关决定这宽度是死的还是活的：开着时单块在基准宽度与
-                它的上限之间随窗口伸缩（宽到上限才换行），关掉就固定成基准宽度。
+                区块宽度（展示设置）：只在「区块」排布下起作用，别的排布里整张卡隐藏（不留点不动的控件）。
+                上面那一格是单块的基准宽度——它决定一行排几块；下面那个开关决定这宽度是死的还是活的：
+                开着时单块在基准宽度与它的上限之间随窗口伸缩（宽到上限才换行），关掉就固定成基准宽度。
                 上下限与 Core 的 BoardBlockStyle 一致，ViewModel 提交时还会再夹一次，
                 手输越界值不会落到配置里。
             -->
             <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_BlockMinWidth}"
-                                   Description="{x:Static core:Resources.Settings_Board_BlockMinWidthDescription}">
+                                   Description="{x:Static core:Resources.Settings_Board_BlockMinWidthDescription}"
+                                   IsVisible="{Binding IsBlockLayout}">
                 <fa:FASettingsExpander.Footer>
                     <NumericUpDown MinWidth="130"
                                    Minimum="220"
@@ -96,23 +95,13 @@
             </fa:FASettingsExpander>
 
             <!--
-                右下角布置作业浮标：开着时主窗口右下角浮一颗加号，顺手就能布置作业。
-                原来是基础设置里的项，按「基础设置不放作业板专属项」的要求搬到这里。
-            -->
-            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Basic_CornerAssignButton}"
-                                   Description="{x:Static core:Resources.Settings_Basic_CornerAssignButtonDescription}">
-                <fa:FASettingsExpander.Footer>
-                    <ToggleSwitch IsChecked="{Binding Config.Basic.ShowCornerAssignButton, Mode=TwoWay}" />
-                </fa:FASettingsExpander.Footer>
-            </fa:FASettingsExpander>
-
-            <!--
-                标题栏右上角那排动作按钮的显隐：嫌哪颗多余就关掉哪颗（用户要求）。
+                界面入口：标题栏右上角那排动作按钮 + 右下角的布置作业浮标。
+                嫌哪颗多余就关掉哪颗（用户要求）；两张卡合成一张是因为它们都是「界面上有哪些入口」。
                 直接双向绑配置：开关本身就是布尔、点了就落一次盘，不存在「一路动一路写」的问题。
                 「锁定窗口」那颗不在这里——它是穿透状态下唯一的解锁入口，必须常驻。
             -->
-            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_TitleBarButtons}"
-                                   Description="{x:Static core:Resources.Settings_Board_TitleBarButtonsDescription}">
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_Entries}"
+                                   Description="{x:Static core:Resources.Settings_Board_EntriesDescription}">
                 <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_TitleBarSettings}">
                     <fa:FASettingsExpanderItem.Footer>
                         <ToggleSwitch IsChecked="{Binding Config.BoardSettings.ShowTitleBarSettings, Mode=TwoWay}" />
@@ -143,171 +132,18 @@
                         <ToggleSwitch IsChecked="{Binding Config.BoardSettings.ShowTitleBarDock, Mode=TwoWay}" />
                     </fa:FASettingsExpanderItem.Footer>
                 </fa:FASettingsExpanderItem>
+                <!-- 右下角布置作业浮标：开着时主窗口右下角浮一颗加号，顺手就能布置作业。 -->
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Basic_CornerAssignButton}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ToggleSwitch IsChecked="{Binding Config.Basic.ShowCornerAssignButton, Mode=TwoWay}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
             </fa:FASettingsExpander>
 
             <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_ConfirmBeforeDelete}">
                 <fa:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding Board.ConfirmBeforeDelete}" />
                 </fa:FASettingsExpander.Footer>
-            </fa:FASettingsExpander>
-
-            <TextBlock Classes="section-title"
-                       Text="{x:Static core:Resources.Settings_Section_StyleAndPalette}" />
-
-            <!--
-                内容的默认样式：新作业没单独定「整篇字号」/颜色时用它们。
-                两个控件都绑草稿而不是配置：NumericUpDown 与取色器都是「一路动一路变」的控件，
-                直接双向绑会让每一次变化都落一遍 settings.json（见 ViewModel 的说明）。
-            -->
-            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_ContentStyle}"
-                                   Description="{x:Static core:Resources.Settings_Board_ContentStyleDescription}">
-                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_DefaultFontSize}">
-                    <fa:FASettingsExpanderItem.Footer>
-                        <NumericUpDown MinWidth="130"
-                                       Minimum="8"
-                                       Maximum="96"
-                                       Increment="1"
-                                       FormatString="0"
-                                       Value="{Binding DefaultFontSizeDraft, Mode=TwoWay}"
-                                       LostFocus="OnEditorLostFocus" />
-                    </fa:FASettingsExpanderItem.Footer>
-                </fa:FASettingsExpanderItem>
-
-                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_DefaultColor}">
-                    <fa:FASettingsExpanderItem.Footer>
-                        <StackPanel Orientation="Horizontal"
-                                    Spacing="12"
-                                    VerticalAlignment="Center">
-                            <!-- 「跟随主题」时把取色器整块藏起来，而不是留一个点不动的控件。 -->
-                            <ColorPicker VerticalAlignment="Center"
-                                         IsAlphaEnabled="False"
-                                         IsVisible="{Binding !FollowThemeColor}"
-                                         Color="{Binding DefaultColorDraft, Mode=TwoWay}" />
-                            <StackPanel Orientation="Horizontal"
-                                        Spacing="8"
-                                        VerticalAlignment="Center">
-                                <ToggleSwitch IsChecked="{Binding FollowThemeColor, Mode=TwoWay}" />
-                                <TextBlock VerticalAlignment="Center"
-                                           Text="{x:Static core:Resources.Settings_Board_DefaultColorFollowTheme}" />
-                            </StackPanel>
-                        </StackPanel>
-                    </fa:FASettingsExpanderItem.Footer>
-                </fa:FASettingsExpanderItem>
-            </fa:FASettingsExpander>
-
-            <!--
-                两个字号：科目标题，以及作业条上的小字（类型与字段值、截止日期）。
-                原先一个跟着窗口默认值走、一个写死 12，后排看不清，所以都提到设置里。
-                同样绑草稿：NumericUpDown 每动一下就会落一次盘。
-            -->
-            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_FontSizes}"
-                                   Description="{x:Static core:Resources.Settings_Board_FontSizesDescription}">
-                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_SubjectFontSize}"
-                                           Description="{x:Static core:Resources.Settings_Board_SubjectFontSizeDescription}">
-                    <fa:FASettingsExpanderItem.Footer>
-                        <NumericUpDown MinWidth="130"
-                                       Minimum="12"
-                                       Maximum="48"
-                                       Increment="1"
-                                       FormatString="0"
-                                       Value="{Binding SubjectFontSizeDraft, Mode=TwoWay}"
-                                       LostFocus="OnEditorLostFocus" />
-                    </fa:FASettingsExpanderItem.Footer>
-                </fa:FASettingsExpanderItem>
-
-                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_NoteMetaFontSize}"
-                                           Description="{x:Static core:Resources.Settings_Board_NoteMetaFontSizeDescription}">
-                    <fa:FASettingsExpanderItem.Footer>
-                        <NumericUpDown MinWidth="130"
-                                       Minimum="10"
-                                       Maximum="32"
-                                       Increment="1"
-                                       FormatString="0"
-                                       Value="{Binding NoteMetaFontSizeDraft, Mode=TwoWay}"
-                                       LostFocus="OnEditorLostFocus" />
-                    </fa:FASettingsExpanderItem.Footer>
-                </fa:FASettingsExpanderItem>
-
-                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_SectionFontSize}"
-                                           Description="{x:Static core:Resources.Settings_Board_SectionFontSizeDescription}">
-                    <fa:FASettingsExpanderItem.Footer>
-                        <NumericUpDown MinWidth="130"
-                                       Minimum="9"
-                                       Maximum="32"
-                                       Increment="1"
-                                       FormatString="0"
-                                       Value="{Binding SectionFontSizeDraft, Mode=TwoWay}"
-                                       LostFocus="OnEditorLostFocus" />
-                    </fa:FASettingsExpanderItem.Footer>
-                </fa:FASettingsExpanderItem>
-
-                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_NoteTagFontSize}"
-                                           Description="{x:Static core:Resources.Settings_Board_NoteTagFontSizeDescription}">
-                    <fa:FASettingsExpanderItem.Footer>
-                        <NumericUpDown MinWidth="130"
-                                       Minimum="8"
-                                       Maximum="32"
-                                       Increment="1"
-                                       FormatString="0"
-                                       Value="{Binding NoteTagFontSizeDraft, Mode=TwoWay}"
-                                       LostFocus="OnEditorLostFocus" />
-                    </fa:FASettingsExpanderItem.Footer>
-                </fa:FASettingsExpanderItem>
-            </fa:FASettingsExpander>
-
-            <!--
-                工具浮窗的预设色板：选中文字后弹出来的工具条上那排色块。
-                最多 RichTextPalette.MaxColors 个（到顶就把「新增」禁掉），可改色、可调序、可删。
-                取色器绑的是「色块下标 + 颜色」的一对命令参数——集合元素是 Color 结构体，
-                改它不会发通知，只能回调 ViewModel 按位替换。
-            -->
-            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_Palette}"
-                                   Description="{x:Static core:Resources.Settings_Board_PaletteDescription}">
-                <StackPanel Spacing="12" Margin="0 4 0 0">
-                    <ItemsControl ItemsSource="{Binding PaletteColors}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="rt:RichTextPaletteColorItem">
-                                <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto"
-                                      ColumnSpacing="8"
-                                      Margin="0 0 0 6">
-                                    <ColorPicker Grid.Column="0"
-                                                 VerticalAlignment="Center"
-                                                 IsAlphaEnabled="False"
-                                                 Color="{Binding Color, Mode=TwoWay}" />
-                                    <Button Grid.Column="2"
-                                            Background="Transparent"
-                                            BorderThickness="0"
-                                            Padding="6"
-                                            FontFamily="{DynamicResource FluentSystemIconsResizeable}"
-                                            Content="&#xE70E;"
-                                            ToolTip.Tip="{x:Static core:Resources.Settings_Board_PaletteMoveUp}"
-                                            Click="OnMovePaletteColorUpClick" />
-                                    <Button Grid.Column="3"
-                                            Background="Transparent"
-                                            BorderThickness="0"
-                                            Padding="6"
-                                            FontFamily="{DynamicResource FluentSystemIconsResizeable}"
-                                            Content="&#xE70D;"
-                                            ToolTip.Tip="{x:Static core:Resources.Settings_Board_PaletteMoveDown}"
-                                            Click="OnMovePaletteColorDownClick" />
-                                    <Button Grid.Column="4"
-                                            Background="Transparent"
-                                            BorderThickness="0"
-                                            Padding="6"
-                                            FontFamily="{DynamicResource FluentSystemIconsResizeable}"
-                                            Content="&#xE61C;"
-                                            ToolTip.Tip="{x:Static core:Resources.Settings_Board_PaletteDelete}"
-                                            Click="OnDeletePaletteColorClick" />
-                                </Grid>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-
-                    <Button HorizontalAlignment="Left"
-                            Command="{Binding AddPaletteColorCommand}"
-                            IsEnabled="{Binding CanAddPaletteColor}"
-                            Content="{x:Static core:Resources.Settings_Board_PaletteAdd}" />
-                </StackPanel>
             </fa:FASettingsExpander>
         </StackPanel>
     </ScrollViewer>

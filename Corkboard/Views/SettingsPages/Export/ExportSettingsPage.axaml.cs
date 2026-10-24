@@ -8,8 +8,7 @@ using CR = Corkboard.Core.Langs.Common.Resources;
 namespace Corkboard.Views.SettingsPages.Export;
 
 /// <summary>
-///     「导出」设置页：导出时问不问格式、默认格式，以及 PDF 排版（纸张、方向、边距、列数、排序、
-///     科目分页、页眉页脚）。
+///     「导出」设置页：导出时问不问格式、默认格式，以及表格样式（按科目分块、带上已清理的作业、排序）。
 ///     <para>
 ///         按用户要求放在「作业板」分组里（导出的是作业板），别挪成顶层项。
 ///     </para>

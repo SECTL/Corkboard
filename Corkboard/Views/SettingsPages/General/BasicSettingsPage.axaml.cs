@@ -25,12 +25,11 @@ public partial class BasicSettingsPage : UserControl
         DataContext = viewModel;
         viewModel.LanguageChangeRequested += OnLanguageChangeRequested;
 
-        // ViewModel 是 transient、设置窗口是长期存在的，离开可视树时必须摘掉订阅，
-        // 并把滑杆草稿落一次盘（拖完马上关页面时最后一次拖动不能丢）。
+        // ViewModel 是 transient、设置窗口是长期存在的，离开可视树时必须摘掉订阅。
+        // （不透明度滑杆已经搬到「作业板 → 窗口与收纳」，这里不再需要补交那份草稿。）
         Unloaded += (_, _) =>
         {
             viewModel.LanguageChangeRequested -= OnLanguageChangeRequested;
-            viewModel.FlushOpacityDraft();
         };
     }
 

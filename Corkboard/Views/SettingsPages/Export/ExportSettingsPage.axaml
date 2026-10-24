@@ -38,40 +38,20 @@
                 </fa:FASettingsExpanderItem>
             </fa:FASettingsExpander>
 
-            <!-- PDF 版式：纸张、方向、边距、列数、排序、分页与页眉页脚。 -->
-            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Export_PdfLayout}"
-                                   Description="{x:Static core:Resources.Settings_Export_PdfLayoutDescription}">
-                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Export_PageSize}">
+            <!-- 表格样式：按不按科目分块、要不要带上已清理的作业、按什么顺序排。 -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Export_Table}"
+                                   Description="{x:Static core:Resources.Settings_Export_TableDescription}">
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Export_TableGroupBySubject}"
+                                           Description="{x:Static core:Resources.Settings_Export_TableGroupBySubjectDescription}">
                     <fa:FASettingsExpanderItem.Footer>
-                        <ComboBox MinWidth="160"
-                                  ItemsSource="{Binding PageSizeOptions}"
-                                  SelectedItem="{Binding SelectedPageSizeOption, Mode=TwoWay}" />
+                        <ToggleSwitch IsChecked="{Binding Settings.TableGroupBySubject, Mode=TwoWay}" />
                     </fa:FASettingsExpanderItem.Footer>
                 </fa:FASettingsExpanderItem>
 
-                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Export_Orientation}"
-                                           Description="{x:Static core:Resources.Settings_Export_OrientationDescription}">
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Export_TableIncludeCleaned}"
+                                           Description="{x:Static core:Resources.Settings_Export_TableIncludeCleanedDescription}">
                     <fa:FASettingsExpanderItem.Footer>
-                        <ComboBox MinWidth="160"
-                                  ItemsSource="{Binding OrientationOptions}"
-                                  SelectedItem="{Binding SelectedOrientationOption, Mode=TwoWay}" />
-                    </fa:FASettingsExpanderItem.Footer>
-                </fa:FASettingsExpanderItem>
-
-                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Export_Margin}">
-                    <fa:FASettingsExpanderItem.Footer>
-                        <ComboBox MinWidth="160"
-                                  ItemsSource="{Binding MarginOptions}"
-                                  SelectedItem="{Binding SelectedMarginOption, Mode=TwoWay}" />
-                    </fa:FASettingsExpanderItem.Footer>
-                </fa:FASettingsExpanderItem>
-
-                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Export_Columns}"
-                                           Description="{x:Static core:Resources.Settings_Export_ColumnsDescription}">
-                    <fa:FASettingsExpanderItem.Footer>
-                        <ComboBox MinWidth="100"
-                                  ItemsSource="{Binding ColumnOptions}"
-                                  SelectedItem="{Binding SelectedColumns, Mode=TwoWay}" />
+                        <ToggleSwitch IsChecked="{Binding Settings.TableIncludeCleaned, Mode=TwoWay}" />
                     </fa:FASettingsExpanderItem.Footer>
                 </fa:FASettingsExpanderItem>
 
@@ -81,20 +61,6 @@
                         <ComboBox MinWidth="200"
                                   ItemsSource="{Binding SortOptions}"
                                   SelectedItem="{Binding SelectedSortOption, Mode=TwoWay}" />
-                    </fa:FASettingsExpanderItem.Footer>
-                </fa:FASettingsExpanderItem>
-
-                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Export_SubjectPageBreak}"
-                                           Description="{x:Static core:Resources.Settings_Export_SubjectPageBreakDescription}">
-                    <fa:FASettingsExpanderItem.Footer>
-                        <ToggleSwitch IsChecked="{Binding Settings.PdfSubjectPageBreak, Mode=TwoWay}" />
-                    </fa:FASettingsExpanderItem.Footer>
-                </fa:FASettingsExpanderItem>
-
-                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Export_HeaderFooter}"
-                                           Description="{x:Static core:Resources.Settings_Export_HeaderFooterDescription}">
-                    <fa:FASettingsExpanderItem.Footer>
-                        <ToggleSwitch IsChecked="{Binding Settings.PdfHeaderFooter, Mode=TwoWay}" />
                     </fa:FASettingsExpanderItem.Footer>
                 </fa:FASettingsExpanderItem>
             </fa:FASettingsExpander>
