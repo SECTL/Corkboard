@@ -1724,7 +1724,7 @@
     <value>还没有考试安排</value>
   </data>
   <data name="Settings_Exam_Schedule_EmptyHint" xml:space="preserve">
-    <value>在上面填一场，点「添加」</value>
+    <value>在右边填一场，点「保存」</value>
   </data>
   <data name="Settings_Exam_Schedule_InvalidSubject" xml:space="preserve">
     <value>先填一下科目</value>
@@ -1908,5 +1908,26 @@
   </data>
   <data name="Settings_Exam_Time_Offset_Same" xml:space="preserve">
     <value>与本机时间一致</value>
+  </data>
+  <data name="Common_Close" xml:space="preserve">
+    <value>关闭</value>
+  </data>
+  <data name="Settings_Exam_Editor_WindowTitle" xml:space="preserve">
+    <value>编辑看板 · {0}</value>
+  </data>
+  <data name="Settings_Exam_Schedule_BoardActivate" xml:space="preserve">
+    <value>设为当前</value>
+  </data>
+  <data name="Settings_Exam_Schedule_BoardActive" xml:space="preserve">
+    <value>当前</value>
+  </data>
+  <data name="Settings_Exam_Schedule_BoardEdit" xml:space="preserve">
+    <value>编辑</value>
+  </data>
+  <data name="Settings_Exam_Schedule_BoardEditToolTip" xml:space="preserve">
+    <value>打开编辑窗口改标题和考试</value>
+  </data>
+  <data name="Settings_Exam_Schedule_Next" xml:space="preserve">
+    <value>下一场 {0} · {1} {2}</value>
   </data>
 </root>

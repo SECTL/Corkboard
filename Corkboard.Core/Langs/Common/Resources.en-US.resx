@@ -1719,7 +1719,7 @@
     <value>No exams yet</value>
   </data>
   <data name="Settings_Exam_Schedule_EmptyHint" xml:space="preserve">
-    <value>Fill in the form above and press Add</value>
+    <value>Fill one in on the right and press Save</value>
   </data>
   <data name="Settings_Exam_Schedule_InvalidSubject" xml:space="preserve">
     <value>Enter a subject first</value>
@@ -1903,5 +1903,26 @@
   </data>
   <data name="Settings_Exam_Time_Offset_Same" xml:space="preserve">
     <value>matches the system clock</value>
+  </data>
+  <data name="Common_Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="Settings_Exam_Editor_WindowTitle" xml:space="preserve">
+    <value>Edit board · {0}</value>
+  </data>
+  <data name="Settings_Exam_Schedule_BoardActivate" xml:space="preserve">
+    <value>Set as current</value>
+  </data>
+  <data name="Settings_Exam_Schedule_BoardActive" xml:space="preserve">
+    <value>Current</value>
+  </data>
+  <data name="Settings_Exam_Schedule_BoardEdit" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="Settings_Exam_Schedule_BoardEditToolTip" xml:space="preserve">
+    <value>Open the editor window</value>
+  </data>
+  <data name="Settings_Exam_Schedule_Next" xml:space="preserve">
+    <value>Next {0} · {1} {2}</value>
   </data>
 </root>

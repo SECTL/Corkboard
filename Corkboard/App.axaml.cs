@@ -20,6 +20,7 @@ using Corkboard.Core.Board;
 using Corkboard.Core.Controls;
 using Corkboard.Core.Enums;
 using Corkboard.Core.Enums.Configs;
+using Corkboard.Core.Exam;
 using Corkboard.Core.Extensions.Registry;
 using Corkboard.Core.Icons;
 using Corkboard.Core.Models;
@@ -79,6 +80,7 @@ public partial class App : Application
     private static MainWindow? _mainWindow;
     private static MainWindow? _settingsWindow;
     private static ExamBoardWindow? _examBoardWindow;
+    private static ExamBoardEditorWindow? _examBoardEditorWindow;
     private static IClassicDesktopStyleApplicationLifetime? _desktopLifetime;
     private static Task? _hostStartupTask;
     private MainConfigModel _startupSettings = new();
@@ -244,6 +246,7 @@ public partial class App : Application
         services.AddTransient<DockSettingsPageViewModel>();
         services.AddTransient<ExportSettingsPageViewModel>();
         services.AddTransient<ExamBoardViewModel>();
+        services.AddTransient<ExamBoardEditorViewModel>();
         services.AddTransient<ExamScheduleSettingsPageViewModel>();
         services.AddTransient<ExamDisplaySettingsPageViewModel>();
         services.AddTransient<ExamTimeSettingsPageViewModel>();
@@ -620,6 +623,34 @@ public partial class App : Application
         {
             if (ReferenceEquals(_examBoardWindow, window))
                 _examBoardWindow = null;
+        };
+
+        ShowAndActivate(window);
+    }
+
+    /// <summary>
+    ///     打开「编辑看板」窗口，编辑指定的那一块看板（<paramref name="boardId" /> 为 <see langword="null" /> 时编辑当前那块）。
+    ///     窗口已经开着就换成新的一块、不再另开一个。
+    /// </summary>
+    public static void ShowExamBoardEditorWindow(Guid? boardId = null)
+    {
+        var examService = IAppHost.GetService<IExamService>();
+        if (boardId is { } id)
+            examService.SelectBoard(id);
+
+        if (_examBoardEditorWindow is { } existing)
+        {
+            existing.ReloadBoard();
+            ShowAndActivate(existing);
+            return;
+        }
+
+        var window = new ExamBoardEditorWindow();
+        _examBoardEditorWindow = window;
+        window.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(_examBoardEditorWindow, window))
+                _examBoardEditorWindow = null;
         };
 
         ShowAndActivate(window);

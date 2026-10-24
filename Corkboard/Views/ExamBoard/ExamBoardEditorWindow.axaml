@@ -12,7 +12,7 @@
                          Title="{Binding WindowTitle}"
                          Width="1120" Height="740"
                          MinWidth="900" MinHeight="600"
-                         WindowStartupLocation="CenterOwner">
+                         WindowStartupLocation="CenterScreen">
     <!--
         编辑一块看板文件：上面一条是标题 / 副标题 / 颜色，下面左边是考试表、右边是表单。
 

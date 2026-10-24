@@ -25,6 +25,13 @@ public static class Resources
     public static string App_Title => ResourceManager.GetString(nameof(App_Title), Culture)!;
     public static string Debug_DevelopmentBuild_Notice => ResourceManager.GetString(nameof(Debug_DevelopmentBuild_Notice), Culture)!;
     public static string Common_Cancel => ResourceManager.GetString(nameof(Common_Cancel), Culture)!;
+    public static string Common_Close => ResourceManager.GetString(nameof(Common_Close), Culture)!;
+    public static string Settings_Exam_Editor_WindowTitle => ResourceManager.GetString(nameof(Settings_Exam_Editor_WindowTitle), Culture)!;
+    public static string Settings_Exam_Schedule_BoardActivate => ResourceManager.GetString(nameof(Settings_Exam_Schedule_BoardActivate), Culture)!;
+    public static string Settings_Exam_Schedule_BoardActive => ResourceManager.GetString(nameof(Settings_Exam_Schedule_BoardActive), Culture)!;
+    public static string Settings_Exam_Schedule_BoardEdit => ResourceManager.GetString(nameof(Settings_Exam_Schedule_BoardEdit), Culture)!;
+    public static string Settings_Exam_Schedule_BoardEditToolTip => ResourceManager.GetString(nameof(Settings_Exam_Schedule_BoardEditToolTip), Culture)!;
+    public static string Settings_Exam_Schedule_Next => ResourceManager.GetString(nameof(Settings_Exam_Schedule_Next), Culture)!;
     public static string Feat_Settings => ResourceManager.GetString(nameof(Feat_Settings), Culture)!;
     public static string Menu_OpenMainWindow => ResourceManager.GetString(nameof(Menu_OpenMainWindow), Culture)!;
     public static string Menu_OpenSettings => ResourceManager.GetString(nameof(Menu_OpenSettings), Culture)!;

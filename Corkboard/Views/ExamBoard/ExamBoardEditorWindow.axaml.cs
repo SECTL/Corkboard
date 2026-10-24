@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using FluentAvalonia.UI.Controls;
+using FluentAvalonia.UI.Windowing;
 using Corkboard.Core.Abstraction;
 using Corkboard.ViewModels.ExamBoard;
 using CR = Corkboard.Core.Langs.Common.Resources;
@@ -19,7 +20,7 @@ namespace Corkboard.Views.ExamBoard;
 ///         否则每开一次窗口就多挂一份处理器、多跑一个 15 秒的计时器。
 ///     </para>
 /// </summary>
-public partial class ExamBoardEditorWindow : Window
+public partial class ExamBoardEditorWindow : FAAppWindow
 {
     public ExamBoardEditorWindow()
     {

@@ -1,6 +1,5 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Avalonia.Markup.Xaml;
 using Corkboard.Core.Abstraction;
 using Corkboard.Core.Attributes;
 using Corkboard.Core.Icons;
@@ -32,12 +31,6 @@ public partial class ExamDisplaySettingsPage : UserControl
     }
 
     private ExamDisplaySettingsPageViewModel? ViewModel => DataContext as ExamDisplaySettingsPageViewModel;
-
-    private void InitializeComponent()
-    {
-        AvaloniaXamlLoader.Load(this);
-    }
-
     /// <summary>数值输入框失焦就提交：配置没有防抖，双向绑等于每敲一个字符写一遍盘。</summary>
     private void OnEditorLostFocus(object? sender, RoutedEventArgs e) => ViewModel?.CommitAll();
 }

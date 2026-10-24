@@ -1,7 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
-using Avalonia.Markup.Xaml;
 using Corkboard.Core.Abstraction;
 using Corkboard.Core.Attributes;
 using Corkboard.Core.Icons;
@@ -30,12 +29,6 @@ public partial class ExamTimeSettingsPage : UserControl
     }
 
     private ExamTimeSettingsPageViewModel? ViewModel => DataContext as ExamTimeSettingsPageViewModel;
-
-    private void InitializeComponent()
-    {
-        AvaloniaXamlLoader.Load(this);
-    }
-
     /// <summary>间隔 / 超时输入框失焦就提交。</summary>
     private void OnEditorLostFocus(object? sender, RoutedEventArgs e) => ViewModel?.CommitAll();
 
