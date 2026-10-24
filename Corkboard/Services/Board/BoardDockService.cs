@@ -3,10 +3,13 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Corkboard.Core.Board;
 using Corkboard.Core.Models.SubConfigs.Board;
+using Corkboard.Core.Models.SubConfigs.General;
 using Corkboard.Core.Services.Config;
+using Corkboard.Services.Desktop;
 using Corkboard.Views;
 using Microsoft.Extensions.Logging;
 
@@ -34,6 +37,9 @@ public partial class BoardDockService : ObservableObject, IDisposable
     /// <summary>当前订阅着的那份作业板配置。配置从云端恢复时整个对象会被换掉（见 OnConfigReloaded）。</summary>
     private BoardSettingsConfig _settings;
 
+    /// <summary>当前订阅着的那份基础配置（只为了盯「置底到桌面」这一个键，见 OnBasicSettingsChanged）。</summary>
+    private BasicSettingsConfig _basic;
+
     private Window? _mainWindow;
     private BoardDockWindow? _dockWindow;
     private bool _disposed;
@@ -45,6 +51,11 @@ public partial class BoardDockService : ObservableObject, IDisposable
 
         _settings = configHandler.Data.BoardSettings;
         _settings.PropertyChanged += OnSettingsChanged;
+
+        // 置底到桌面是基础配置里的键，但它决定了浮钮的层级（见 ApplyDockWindowLayer），
+        // 所以要单独盯一下：用户收起来之后再改置底，浮钮也得跟着换层级。
+        _basic = configHandler.Data.Basic;
+        _basic.PropertyChanged += OnBasicSettingsChanged;
 
         // 从云端恢复设置会把配置对象整个换掉（ConfigHandlerBase.Reload），
         // 手里那份旧的要换下来，否则拖设置页时浮钮不会再跟着动。
@@ -95,6 +106,9 @@ public partial class BoardDockService : ObservableObject, IDisposable
         // 显示之后再摆一次：有些平台在原生窗口创建出来之前不接受 Position，
         // 只在 Show 之前设会落到平台默认位置（屏幕左上角），显示后补一次才可靠。
         ApplyDockWindowPosition();
+
+        // 层级最后再定：句柄要等 Show 之后才存在，而且置底状态是主窗口那边现算的。
+        ApplyDockWindowLayer();
     }
 
     /// <summary>把作业板展开（收起状态的逆操作）：收掉浮钮、把主窗口显示回来并重放窗口能力。</summary>
@@ -153,6 +167,26 @@ public partial class BoardDockService : ObservableObject, IDisposable
         }
     }
 
+    /// <summary>主窗口的「置底到桌面」变了：浮钮的层级要跟着换（它自己是独立窗口，不会自动跟随）。</summary>
+    private void OnBasicSettingsChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is null or nameof(BasicSettingsConfig.PinToDesktop))
+            ApplyDockWindowLayerDeferred();
+    }
+
+    /// <summary>
+    ///     推迟到下一轮消息循环再定浮钮层级。
+    ///     <para>
+    ///         ⚠️ 不能在这一拍直接读 <c>MainWindow.IsPinnedToDesktop</c>：本服务在构造期就订阅了配置，
+    ///         而主窗口是 <c>Loaded</c> 时才订阅——同一份配置变化，主窗口那条处理器排在后面，
+    ///         此刻 <c>_isPinnedToDesktop</c> 还是旧值，浮钮会晚一步才跟上来（表现是「取消置底后浮钮还是
+    ///         不置顶，要再点一次」）。挪到 <see cref="DispatcherPriority.Background" /> 之后，
+    ///         主窗口那条处理器已经跑完，读到的就是这一拍的新值。
+    ///     </para>
+    /// </summary>
+    private void ApplyDockWindowLayerDeferred() =>
+        Dispatcher.UIThread.Post(ApplyDockWindowLayer, DispatcherPriority.Background);
+
     /// <summary>配置对象被整体换掉（云端恢复设置）：重新挂订阅，并按新配置摆一次。</summary>
     private void OnConfigReloaded(object? sender, EventArgs e)
     {
@@ -164,6 +198,14 @@ public partial class BoardDockService : ObservableObject, IDisposable
             _settings.PropertyChanged += OnSettingsChanged;
         }
 
+        var basic = _configHandler.Data.Basic;
+        if (!ReferenceEquals(basic, _basic))
+        {
+            _basic.PropertyChanged -= OnBasicSettingsChanged;
+            _basic = basic;
+            _basic.PropertyChanged += OnBasicSettingsChanged;
+        }
+
         if (!_configHandler.Data.BoardSettings.DockEnabled && IsDocked)
         {
             Expand();
@@ -171,7 +213,10 @@ public partial class BoardDockService : ObservableObject, IDisposable
         }
 
         if (IsDocked)
+        {
             ApplyDockWindowPosition();
+            ApplyDockWindowLayer();
+        }
     }
 
     /// <summary>屏幕变了（接了显示器、改了分辨率/缩放）：浮钮跟着重新摆。</summary>
@@ -293,6 +338,10 @@ public partial class BoardDockService : ObservableObject, IDisposable
         var window = new BoardDockWindow();
         window.ExpandRequested += OnDockExpandRequested;
         window.Closed += OnDockWindowClosed;
+
+        // 记下这颗窗口自己的默认层级（XAML 里写的是置顶），置底关掉时按它还原。
+        FloatingWindowLayer.Register(window);
+
         _dockWindow = window;
         return window;
     }
@@ -321,8 +370,41 @@ public partial class BoardDockService : ObservableObject, IDisposable
 
     private void HideDockWindow()
     {
-        if (_dockWindow is { IsVisible: true } window)
-            window.Hide();
+        if (_dockWindow is not { IsVisible: true } window)
+            return;
+
+        window.Hide();
+    }
+
+    /// <summary>
+    ///     按主窗口是否置底，决定收纳浮钮是「置顶」还是「跟板子一样当普通窗口」。
+    ///     <para>
+    ///         用户反馈：开了置底之后，板子已经沉到桌面了，这颗展开按钮却还浮在所有窗口之上。
+    ///         所以置底生效时它跟着退掉置顶（被普通窗口盖住），与板子待在同一个层级；
+    ///         置底没生效时照旧置顶，板子被别的窗口盖住时也仍然点得到。
+    ///     </para>
+    ///     <para>
+    ///         ⚠️ 独立窗口不会自己跟着主窗口变层级：主窗口重放置底、浮钮显示之后都要调一次
+    ///         （见 <see cref="Collapse" />）。
+    ///     </para>
+    /// </summary>
+    private void ApplyDockWindowLayer()
+    {
+        if (_dockWindow is not { } dockWindow)
+            return;
+
+        FloatingWindowLayer.Apply(dockWindow, ResolvePinnedToDesktop());
+    }
+
+    /// <summary>
+    ///     主窗口的置底是否实际生效。主窗口不是 <see cref="MainWindow" />（或还没建好）时按配置值兜底。
+    /// </summary>
+    private bool ResolvePinnedToDesktop()
+    {
+        if (_mainWindow is MainWindow mainWindow)
+            return mainWindow.IsPinnedToDesktop;
+
+        return _configHandler.Data.Basic.PinToDesktop;
     }
 
     /// <summary>
@@ -400,7 +482,9 @@ public partial class BoardDockService : ObservableObject, IDisposable
         x = Math.Clamp(x, workArea.X, maxX);
         y = Math.Clamp(y, workArea.Y, maxY);
 
-        dockWindow.Position = new PixelPoint(x, y);
+        // 位置交给 FloatingWindowLayer：浮钮可能被挂进桌面层（主窗口置底时），
+        // 那时它是桌面宿主的子窗口，写屏幕坐标会整块偏掉（副显示器上尤其明显）。
+        FloatingWindowLayer.Place(dockWindow, new PixelPoint(x, y));
     }
 
     /// <summary>
@@ -440,6 +524,7 @@ public partial class BoardDockService : ObservableObject, IDisposable
         _disposed = true;
 
         _settings.PropertyChanged -= OnSettingsChanged;
+        _basic.PropertyChanged -= OnBasicSettingsChanged;
         _configHandler.Reloaded -= OnConfigReloaded;
 
         DetachMainWindow();

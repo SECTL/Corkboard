@@ -711,4 +711,72 @@ public class ExamScheduleCascadeTests
         Assert.Equal(new TimeOnly(12, 0), entries[1].Start);
         Assert.Equal(new TimeOnly(14, 20), entries[2].Start);
     }
+
+    [Fact]
+    public void Relayout_RepacksTheWholeTableByTheSchedule()
+    {
+        // 一天两场、08:00 起、歇 20：三场 → 第一天两场、第二天一场。
+        var plan = ExamSchedulePlanner.Plan(
+            [Subject("语文", 150), Subject("数学", 120), Subject("英语", 120)],
+            ExamPlanSlotPresets.ForCount(2, new TimeOnly(8, 0), 20),
+            Day1);
+
+        var entries = plan.Entries.ToList();
+        ExamSchedulePlanner.Relayout(entries, 2, new TimeOnly(8, 0), 20);
+
+        Assert.Equal(2, entries.Select(entry => entry.Date).Distinct().Count());
+        Assert.Equal(new TimeOnly(8, 0), entries[0].Start);
+        Assert.Equal(new TimeOnly(10, 50), entries[1].Start); // 8:00 + 150 + 20
+        Assert.Equal(Day1.AddDays(1), entries[2].Date);
+        Assert.Equal(new TimeOnly(8, 0), entries[2].Start);   // 第二天第一场回到锚点
+    }
+
+    [Fact]
+    public void Relayout_MovesASubjectToAnotherDayWhenTheOrderChanges()
+    {
+        // 一天两场、三门课 → 英语排在第二天；把它挪到最前面，它就该落到第一天第一场。
+        var plan = ExamSchedulePlanner.Plan(
+            [Subject("语文", 120), Subject("数学", 120), Subject("英语", 120)],
+            ExamPlanSlotPresets.ForCount(2, new TimeOnly(8, 0), 20),
+            Day1);
+
+        var entries = plan.Entries.ToList();
+        var english = entries[2];
+        Assert.Equal(Day1.AddDays(1), english.Date);
+
+        // 用户点了两次「上移」：列表顺序变成 英语、语文、数学。
+        var ordered = new List<ExamPlanEntry> { english, entries[0], entries[1] };
+        ExamSchedulePlanner.Relayout(ordered, 2, new TimeOnly(8, 0), 20);
+
+        Assert.Equal(Day1, english.Date);
+        Assert.Equal(new TimeOnly(8, 0), english.Start);
+        Assert.Equal(1, english.IndexInDay);
+    }
+
+    [Fact]
+    public void Relayout_WithOneSlotPerDay_PutsEveryExamOnItsOwnDay()
+    {
+        var plan = ExamSchedulePlanner.Plan(
+            [Subject("语文", 120), Subject("数学", 120), Subject("英语", 120)],
+            [new ExamPlanSlot(new TimeOnly(9, 0))],
+            Day1);
+
+        var entries = plan.Entries.ToList();
+        ExamSchedulePlanner.Relayout(entries, 1, new TimeOnly(9, 0), 20);
+
+        for (var i = 0; i < entries.Count; i++)
+        {
+            Assert.Equal(Day1.AddDays(i), entries[i].Date);
+            Assert.Equal(new TimeOnly(9, 0), entries[i].Start);
+            Assert.Equal(1, entries[i].IndexInDay);
+        }
+    }
+
+    [Fact]
+    public void Relayout_WithEmptyList_DoesNothing()
+    {
+        var entries = new List<ExamPlanEntry>();
+        ExamSchedulePlanner.Relayout(entries, 2, new TimeOnly(8, 0), 20);
+        Assert.Empty(entries);
+    }
 }

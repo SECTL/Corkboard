@@ -75,6 +75,50 @@ public sealed class LinuxWindowFeatureService : IWindowFeatureService
     }
 
     /// <summary>
+    ///     X11 上窗口坐标本来就是相对根窗口的屏幕坐标，没有「桌面宿主子窗口」那种形态
+    ///     （<see cref="WindowFeatures.DesktopBottom" /> 在本平台不支持），所以直接写位置即可。
+    /// </summary>
+    public bool TryPlaceAtScreenPoint(PlatformWindowHandle window, ScreenPoint position)
+    {
+        if (!window.IsValid)
+            return false;
+
+        if (!string.IsNullOrWhiteSpace(window.Descriptor)
+            && !string.Equals(window.Descriptor, "XID", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        nint display;
+        try
+        {
+            display = XOpenDisplay(nint.Zero);
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+
+        if (display == nint.Zero)
+            return false;
+
+        try
+        {
+            XMoveWindow(display, window.Value, position.X, position.Y);
+            XFlush(display);
+            return true;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+        finally
+        {
+            XCloseDisplay(display);
+        }
+    }
+
+    /// <summary>
     ///     标题栏按钮由桌面环境画在窗口外（有客户端装饰时也是窗口自己的标题栏），
     ///     页面内容不会被压住，所以这里不需要让位。
     /// </summary>
@@ -328,6 +372,9 @@ public sealed class LinuxWindowFeatureService : IWindowFeatureService
 
     [DllImport("libX11.so.6", CallingConvention = CallingConvention.Cdecl)]
     private static extern int XFlush(nint display);
+
+    [DllImport("libX11.so.6", CallingConvention = CallingConvention.Cdecl)]
+    private static extern int XMoveWindow(nint display, nint window, int x, int y);
 
     [DllImport("libX11.so.6", CallingConvention = CallingConvention.Cdecl)]
     private static extern int XSync(nint display, [MarshalAs(UnmanagedType.Bool)] bool discard);

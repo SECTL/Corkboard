@@ -122,6 +122,7 @@ public class LocalizationTests
     [InlineData("Settings_Exam_AutoShow_Lead")]
     [InlineData("Settings_Exam_AutoShow_AlsoShowAfterStart")]
     [InlineData("Settings_Exam_AutoShow_CloseDelay")]
+    [InlineData("Settings_Exam_AutoShow_SwitchBoard")]
     public void ExamResourceKeysExistInBothLanguages(string key)
     {
         var chinese = ReadResourceSet(CultureInfo.InvariantCulture);

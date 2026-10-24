@@ -84,6 +84,13 @@ public partial class MainWindow : FAAppWindow
     private bool _isDesktopBottomReleased;
 
     /// <summary>
+    ///     置底是不是<b>实际生效</b>了（平台可能报不支持或退化）。
+    ///     主窗口之外那几颗浮钮（收纳按钮、锁定徽标、右下角浮标）按它决定自己置顶还是也跟着进桌面层
+    ///     （见 <see cref="FloatingWindowLayer" />）。
+    /// </summary>
+    public bool IsPinnedToDesktop => _isPinnedToDesktop;
+
+    /// <summary>
     ///     锁定态（点击穿透开着）时承载「开锁」按钮的独立小窗口。
     ///     它必须待在主窗口之外：点击穿透是整窗生效的，画在主窗口里的按钮自己也会点不动。
     /// </summary>
@@ -648,6 +655,11 @@ public partial class MainWindow : FAAppWindow
 
         // 置底/取消置底会换掉窗口的父窗口与样式：圆角区域贴的还是上一次的形态与尺寸，重贴一次。
         ApplyWindowCorners();
+
+        // 浮钮（锁定徽标 / 右下角浮标）的层级跟着主窗口走：板子沉到桌面了，
+        // 这几颗按钮也不该再浮在所有窗口之上（见 FloatingWindowLayer）。
+        SyncLockBadge();
+        SyncCornerAssignButton();
     }
 
     /// <summary>
@@ -765,6 +777,9 @@ public partial class MainWindow : FAAppWindow
             _lockWindow.UnlockRequested += OnLockBadgeUnlockRequested;
             _lockWindow.AssignRequested += OnLockBadgeAssignRequested;
             _lockWindow.Closed += OnLockBadgeClosed;
+
+            // 记下这颗窗口自己的默认层级（XAML 里写的是置顶），置底关掉时按它还原。
+            FloatingWindowLayer.Register(_lockWindow);
         }
 
         // 同步「锁定时也能添加作业」按钮的显隐
@@ -776,6 +791,10 @@ public partial class MainWindow : FAAppWindow
             _lockWindow.Show(this);
 
         _lockWindow.PlaceAtTitleBarCorner(this);
+
+        // 主窗口置底时徽标也跟着贴到桌面层：板子已经沉到桌面了，这颗锁再浮在所有窗口之上
+        // 就很突兀（用户反馈）。置底没生效时它照旧置顶，主窗口被盖住时仍然点得到。
+        FloatingWindowLayer.Apply(_lockWindow, _isPinnedToDesktop);
     }
 
     /// <summary>点了徽标上的「开锁」：把点击穿透关掉。只写配置，生效与显隐都由配置变化那条路走。</summary>
@@ -857,6 +876,7 @@ public partial class MainWindow : FAAppWindow
         {
             if (_cornerAssignWindow is { IsVisible: true } hidden)
                 hidden.Hide();
+
             return;
         }
 
@@ -865,12 +885,18 @@ public partial class MainWindow : FAAppWindow
             _cornerAssignWindow = new CornerAssignFloatingWindow();
             _cornerAssignWindow.AssignRequested += OnCornerAssignRequested;
             _cornerAssignWindow.Closed += OnCornerAssignClosed;
+
+            // 记下这颗窗口自己的默认层级（XAML 里没写 Topmost，本来就不置顶）。
+            FloatingWindowLayer.Register(_cornerAssignWindow);
         }
 
         if (!_cornerAssignWindow.IsVisible)
             _cornerAssignWindow.Show(this);
 
         _cornerAssignWindow.PlaceAtBottomRightCorner(this);
+
+        // 与锁定徽标同理：主窗口置底时这颗浮标也跟着进桌面层。
+        FloatingWindowLayer.Apply(_cornerAssignWindow, _isPinnedToDesktop);
     }
 
     /// <summary>

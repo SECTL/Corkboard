@@ -264,6 +264,33 @@
   <data name="Settings_Basic_HoldToDragWindowDescription" xml:space="preserve">
     <value>Press any empty part of the window to drag it</value>
   </data>
+  <data name="Settings_Basic_WindowDragMode" xml:space="preserve">
+    <value>Dragging</value>
+  </data>
+  <data name="Settings_Basic_WindowDragModeDescription" xml:space="preserve">
+    <value>How the window moves, or lock it in place</value>
+  </data>
+  <data name="Settings_Basic_WindowDragModeHoldAnywhere" xml:space="preserve">
+    <value>Hold anywhere to drag</value>
+  </data>
+  <data name="Settings_Basic_WindowDragModeTitleBarOnly" xml:space="preserve">
+    <value>Title bar only</value>
+  </data>
+  <data name="Settings_Basic_WindowDragModeFixed" xml:space="preserve">
+    <value>Fixed, cannot be moved</value>
+  </data>
+  <data name="Settings_Basic_WindowLockMode" xml:space="preserve">
+    <value>What the lock button does</value>
+  </data>
+  <data name="Settings_Basic_WindowLockModeDescription" xml:space="preserve">
+    <value>Lock the position, or let the mouse pass through</value>
+  </data>
+  <data name="Settings_Basic_WindowLockModeClickThrough" xml:space="preserve">
+    <value>Click-through</value>
+  </data>
+  <data name="Settings_Basic_WindowLockModeFixedPosition" xml:space="preserve">
+    <value>Fix the window position</value>
+  </data>
   <data name="Settings_Basic_MainWindowOpacity" xml:space="preserve">
     <value>Main window opacity</value>
   </data>
@@ -1452,7 +1479,7 @@
     <value>Online users</value>
   </data>
   <data name="Exam_Board_DefaultTitle" xml:space="preserve">
-    <value>Exam board</value>
+    <value>Just an ordinary exam</value>
   </data>
   <data name="Exam_Board_ExitHint" xml:space="preserve">
     <value>Hold to exit</value>
@@ -1801,6 +1828,9 @@
   </data>
   <data name="Settings_Exam_Plan_PresetThree" xml:space="preserve">
     <value>Three a day</value>
+  </data>
+  <data name="Settings_Exam_Plan_SlotPresetCustom" xml:space="preserve">
+    <value>Custom routine</value>
   </data>
       <data name="Settings_Exam_Plan_SlotPresetDefaultName" xml:space="preserve">
     <value>Untitled schedule</value>
@@ -2209,6 +2239,12 @@
   </data>
   <data name="Settings_Exam_AutoShow_CloseDelayDescription" xml:space="preserve">
     <value>How long the board stays up after the last exam</value>
+  </data>
+  <data name="Settings_Exam_AutoShow_SwitchBoard" xml:space="preserve">
+    <value>Follow the board automatically</value>
+  </data>
+  <data name="Settings_Exam_AutoShow_SwitchBoardDescription" xml:space="preserve">
+    <value>Switches to whichever board has today's exam</value>
   </data>
   <data name="Settings_Board_Content_Title" xml:space="preserve">
     <value>Content &amp; style</value>

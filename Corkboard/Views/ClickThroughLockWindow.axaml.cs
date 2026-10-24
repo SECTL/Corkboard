@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+using Corkboard.Services.Desktop;
 
 namespace Corkboard.Views;
 
@@ -85,15 +86,20 @@ public partial class ClickThroughLockWindow : Window
     ///         <c>Window.Position</c> 加偏移算：主窗口「置底到桌面」时是桌面宿主的子窗口，
     ///         子窗口坐标不是屏幕坐标，只有原生那条换算路径能算对。
     ///     </para>
+    ///     <para>
+    ///         ⚠️ 算出来的屏幕坐标不能直接写 <c>Position</c>：本窗口自己也可能被挂进桌面层
+    ///         （见 <see cref="FloatingWindowLayer" />），那时它同样是桌面宿主的子窗口，
+    ///         位置要按宿主客户区写。所以一律交给 <see cref="FloatingWindowLayer.Place" /> 换算。
+    ///     </para>
     /// </summary>
     public void PlaceAtTitleBarCorner(Window mainWindow)
     {
         var origin = mainWindow.PointToScreen(default);
         var scaling = mainWindow.RenderScaling;
 
-        Position = new PixelPoint(
+        FloatingWindowLayer.Place(this, new PixelPoint(
             origin.X + (int)Math.Round((mainWindow.ClientSize.Width - TitleBarRightMargin - Width) * scaling),
-            origin.Y + (int)Math.Round((TitleBarHeight - Height) / 2 * scaling));
+            origin.Y + (int)Math.Round((TitleBarHeight - Height) / 2 * scaling)));
     }
 
     private void AssignButton_OnClick(object? sender, RoutedEventArgs e) =>

@@ -54,6 +54,17 @@
             </fa:FASettingsExpander>
 
             <!--
+                时钟下面那组考试信息（进行中 / 下一场是哪一科、时间范围、剩余时间、卷面）：
+                它跟右边那张总览表是两块东西，关掉之后只剩一个大时钟。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Exam_Display_ShowInfo}"
+                                   Description="{x:Static core:Resources.Settings_Exam_Display_ShowInfoDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding Settings.ShowExamInfo, Mode=TwoWay}" />
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <!--
                 两种形态的取舍：
                 「即将开始」默认把整张表收起来，只留下一场（科目 + 时间 + 状态）；
                 「进行中」默认只留一个大时钟，想看卷面信息再把开关打开。

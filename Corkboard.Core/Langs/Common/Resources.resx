@@ -269,6 +269,33 @@
   <data name="Settings_Basic_HoldToDragWindowDescription" xml:space="preserve">
     <value>按住窗口空白处就能拖，不用抓标题栏</value>
   </data>
+  <data name="Settings_Basic_WindowDragMode" xml:space="preserve">
+    <value>拖动窗口</value>
+  </data>
+  <data name="Settings_Basic_WindowDragModeDescription" xml:space="preserve">
+    <value>怎么挪窗口，也可以干脆锁住不动</value>
+  </data>
+  <data name="Settings_Basic_WindowDragModeHoldAnywhere" xml:space="preserve">
+    <value>长按任意位置拖动</value>
+  </data>
+  <data name="Settings_Basic_WindowDragModeTitleBarOnly" xml:space="preserve">
+    <value>只能拖标题栏</value>
+  </data>
+  <data name="Settings_Basic_WindowDragModeFixed" xml:space="preserve">
+    <value>固定窗口，拖不动</value>
+  </data>
+  <data name="Settings_Basic_WindowLockMode" xml:space="preserve">
+    <value>锁定按钮做什么</value>
+  </data>
+  <data name="Settings_Basic_WindowLockModeDescription" xml:space="preserve">
+    <value>点标题栏那把锁之后，是锁住位置还是穿透</value>
+  </data>
+  <data name="Settings_Basic_WindowLockModeClickThrough" xml:space="preserve">
+    <value>点击穿透，鼠标穿过去</value>
+  </data>
+  <data name="Settings_Basic_WindowLockModeFixedPosition" xml:space="preserve">
+    <value>固定窗口，位置锁住</value>
+  </data>
   <data name="Settings_Basic_MainWindowOpacity" xml:space="preserve">
     <value>主窗口不透明度</value>
   </data>
@@ -1457,7 +1484,7 @@
     <value>在线人数</value>
   </data>
   <data name="Exam_Board_DefaultTitle" xml:space="preserve">
-    <value>考试看板</value>
+    <value>一场平凡而又普通的考试</value>
   </data>
   <data name="Exam_Board_ExitHint" xml:space="preserve">
     <value>长按退出</value>
@@ -1806,6 +1833,9 @@
   </data>
   <data name="Settings_Exam_Plan_PresetThree" xml:space="preserve">
     <value>一天三场</value>
+  </data>
+  <data name="Settings_Exam_Plan_SlotPresetCustom" xml:space="preserve">
+    <value>自定义作息</value>
   </data>
       <data name="Settings_Exam_Plan_SlotPresetDefaultName" xml:space="preserve">
     <value>未命名作息</value>
@@ -2214,6 +2244,12 @@
   </data>
   <data name="Settings_Exam_AutoShow_CloseDelayDescription" xml:space="preserve">
     <value>最后一场考完后再放多久才收起来</value>
+  </data>
+  <data name="Settings_Exam_AutoShow_SwitchBoard" xml:space="preserve">
+    <value>当前看板跟着换</value>
+  </data>
+  <data name="Settings_Exam_AutoShow_SwitchBoardDescription" xml:space="preserve">
+    <value>今天考哪块就自己切到哪块，不用手动选</value>
   </data>
   <data name="Settings_Board_Content_Title" xml:space="preserve">
     <value>内容与样式</value>

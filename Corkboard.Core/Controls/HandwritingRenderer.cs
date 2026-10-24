@@ -76,6 +76,11 @@ internal static class HandwritingRenderer
                 continue;
             }
 
+            // 中心线与笔宽都要磨：只磨笔宽的话，外沿还是跟着抖动乱拐，放大看是一圈小锯齿。
+            // ⚠️ 别再往上叠「切角细分」（Chaikin）那类把点数翻倍的平滑：实测边缘抖动只从
+            // 0.263 降到 0.260 像素（肉眼看不出），而整页渲染从 6ms 涨到 17.6ms，
+            // 一页写满就把 60fps 的预算吃穿了。磨中心线这一步才是真正去锯齿的那一下。
+            SmoothPoints(points);
             SmoothRadii(radii);
             SmoothRadii(radii);
             DrawStroke(context, brush, points, radii);
@@ -120,6 +125,10 @@ internal static class HandwritingRenderer
         {
             geometryContext.SetFillRule(FillRule.NonZero);
 
+            // 边沿用折线就够：中心线已经磨过，采样点间距 2 DIP，弯道上的弦高（2²/8R）远小于一个像素，
+            // 肉眼看不到折角。试过把边沿换成二次贝塞尔（顶点当控制点、中点当端点），边缘抖动只从
+            // 0.303 降到 0.286 像素（差 6%，放大 24 倍都看不出来），而每帧从 4.5ms 涨到 12ms
+            // ——一页写满就把 60fps 吃穿，不划算，已回退。
             geometryContext.BeginFigure(Offset(points[0], edges[0], radii[0]), true);
             for (var index = 1; index < count; index++)
                 geometryContext.LineTo(Offset(points[index], edges[index], radii[index]), true);
@@ -210,6 +219,33 @@ internal static class HandwritingRenderer
     private static Point Offset(Point center, Point edge, double halfWidth)
     {
         return new Point(center.X + edge.X * halfWidth, center.Y + edge.Y * halfWidth);
+    }
+
+    /// <summary>
+    ///     把中心线磨一下：手写采样点自带半像素级的抖动（触控/数位板都一样），
+    ///     而边缘是按「相邻两点的方向」推出来的法线——中心线一抖，法线跟着乱拐，
+    ///     带子两侧就长出一圈细锯齿（放大看特别明显，用户反馈过「有毛刺」）。
+    ///     <para>
+    ///         用五点高斯（<c>[1,4,6,4,1]/16</c>）而不是三点平均：三点只压得住最尖的毛刺，
+    ///         剩下半个像素的起伏照样看得见；五点核在 2 DIP 间距上约等于把 8 DIP 以内的起伏抹平，
+    ///         而真实的转折（一个钩、一个折）尺度比这大，不会被磨圆。
+    ///         两端各留 2 个点不动，笔画长度与端头位置都不变。
+    ///     </para>
+    /// </summary>
+    private static void SmoothPoints(List<Point> points)
+    {
+        if (points.Count < 5)
+            return;
+
+        var source = points.ToArray();
+        for (var index = 2; index < points.Count - 2; index++)
+        {
+            points[index] = new Point(
+                (source[index - 2].X + source[index - 1].X * 4 + source[index].X * 6
+                    + source[index + 1].X * 4 + source[index + 2].X) / 16,
+                (source[index - 2].Y + source[index - 1].Y * 4 + source[index].Y * 6
+                    + source[index + 1].Y * 4 + source[index + 2].Y) / 16);
+        }
     }
 
     /// <summary>

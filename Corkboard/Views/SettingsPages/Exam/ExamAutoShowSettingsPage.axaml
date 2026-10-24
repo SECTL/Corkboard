@@ -44,6 +44,18 @@
             </fa:FASettingsExpander>
 
             <!--
+                当前看板跟着换：全屏看板显示的一直是「当前看板」，不换的话手动打开时看到的
+                还是上次手选的那块。换的是当前看板、**不弹窗**，弹不弹仍看每块看板自己的开关。
+                用户手动挑过看板之后，自动切换会让位到下一场考试开考。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Exam_AutoShow_SwitchBoard}"
+                                   Description="{x:Static core:Resources.Settings_Exam_AutoShow_SwitchBoardDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding Settings.AutoSwitchBoard, Mode=TwoWay}" />
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <!--
                 提前量：开考前多少分钟把看板弹出来。上限两小时——再早就不是「快到考试了」。
             -->
             <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Exam_AutoShow_Lead}"

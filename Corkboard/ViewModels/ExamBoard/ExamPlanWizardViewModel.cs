@@ -23,7 +23,7 @@ public enum ExamPlanWizardMode
 }
 
 /// <summary>
-///     「快速布置考试」向导：基本信息 → 考哪些科目 → 作息 → 对照表，四步排完一整场考试。
+///     「快速布置考试」向导：基本信息 → 考哪些科目 → 一天几场与汇总，三步排完一整场考试。
 ///     <para>
 ///         为什么做成向导而不是一堆输入框：用户要的是「非常方便地填写、设置」。真赶时间的时候
 ///         一路「下一步」就能拿到一张可用的表——标题有默认值、科目勾上就带出时长、作息有预设、
@@ -31,13 +31,14 @@ public enum ExamPlanWizardMode
 ///     </para>
 ///     <para>
 ///         排布本身**不在这里算**：全部交给 Core 的 <see cref="ExamSchedulePlanner" />（纯函数、有单测）。
-///         本类只负责把界面上的草稿收成「科目序列 + 作息 + 第一天」，以及把结果摊成对照表的行。
+///         本类只负责把界面上的草稿收成「科目序列 + 作息 + 第一天」，以及把结果摊成汇总表的行。
 ///         三处（向导、模板、单测）共用同一条排布路径，才不会算出三个不同的结果。
 ///     </para>
 ///     <para>
-///         对照表里改时刻 / 时长之后**不会重新从头排**（那会把用户刚调好的东西冲掉）：
+///         汇总表里改时刻 / 时长之后**不会重新从头排**（那会把用户刚调好的东西冲掉）：
 ///         只把改动写回那几场，再让 <see cref="ExamSchedulePlanner.Refresh" /> 重排「第几场」与冲突。
-///         回到上一步改了科目或作息，才整张重排。
+///         回到上一步改了科目或作息，才整张重排；在汇总表里**挪顺序**则按作息整张重铺
+///         （见 <see cref="ExamSchedulePlanner.Relayout" />）。
 ///     </para>
 /// </summary>
 public partial class ExamPlanWizardViewModel : ViewModelBase
@@ -280,6 +281,9 @@ public partial class ExamPlanWizardViewModel : ViewModelBase
     public string? StepError => StepIndex switch
     {
         1 when PlanSubjects.Count == 0 => CR.Settings_Exam_Plan_NeedSubject,
+        // 最后一步一场都没排出来（科目或作息空着）时「完成」不该可点：
+        // 按钮上绑着 !HasStepError，红字顺便说明为什么。
+        2 when ReviewRows.Count == 0 => CR.Settings_Exam_Plan_ReviewEmpty,
         _ => null
     };
 
@@ -671,7 +675,7 @@ public partial class ExamPlanWizardViewModel : ViewModelBase
 
     #endregion
 
-    #region 第 3 步：作息设置（并进了总览页，只有三个数）
+    #region 第 3 步：作息（并进了汇总页，只有三个数）
 
     /// <summary>一天考几场。</summary>
     [ObservableProperty]
@@ -889,6 +893,11 @@ public partial class ExamPlanWizardViewModel : ViewModelBase
         OnPropertyChanged(nameof(SlotsPerDayDraft));
         OnPropertyChanged(nameof(FirstStartDraft));
         OnPropertyChanged(nameof(BreakDraft));
+
+        // ⚠️ 这三个数改完必须重排一次：同步态里赋的值不会触发那几个 partial 回调，
+        // 而用户从作息预设下拉挑一份（ApplySlotPreset → 这里）之后，表格得立刻跟着变。
+        // 漏了这一句的表现就是「选了一天四场，下面的表还是原来那几场」（踩过）。
+        OnPlanShapeChanged();
     }
 
     /// <summary>三个数变了之后，看看还对不对得上某份作息模板。</summary>
@@ -937,7 +946,7 @@ public partial class ExamPlanWizardViewModel : ViewModelBase
     #endregion
 
 
-    #region 第 4 步：对照表
+    #region 第 3 步：汇总表
 
     /// <summary>排出来的每一场（对照表一行一场）。</summary>
     public ObservableCollection<ExamPlanRowItem> ReviewRows { get; }
@@ -1047,8 +1056,12 @@ public partial class ExamPlanWizardViewModel : ViewModelBase
     private void RefreshReviewTexts()
     {
         var today = DateOnly.FromDateTime(DateTime.Today);
-        foreach (var row in ReviewRows)
+        for (var i = 0; i < ReviewRows.Count; i++)
+        {
+            var row = ReviewRows[i];
             row.Refresh(_entries, today);
+            row.SetMoveState(i > 0, i < ReviewRows.Count - 1);
+        }
 
         OnPropertyChanged(nameof(IsReviewEmpty));
         OnPropertyChanged(nameof(StepError));
@@ -1093,7 +1106,18 @@ public partial class ExamPlanWizardViewModel : ViewModelBase
         ApplyReviewEdit();
     }
 
-    /// <summary>对照表里上下挪一场。</summary>
+    /// <summary>
+    ///     总览里上下挪一场 = 换「这门课排在第几天」。
+    ///     <para>
+    ///         做法：先在列表里把这一场与目标那一场**对调位置**，再按作息（一天几场 / 第一场几点 /
+    ///         歇多久）把整张表重新铺一遍——于是这门课自然落到另一天／另一场次上。
+    ///     </para>
+    ///     <para>
+    ///         ⚠️ 重铺会覆盖用户手改过的时刻，这是「挪顺序」这个动作的固有代价：
+    ///         顺序变了，原来的时刻就不成立了。只想改某一场的时刻请直接改它（见
+    ///         <see cref="OnRowStartChanged" />，那条路只顺延、不重铺）。
+    ///     </para>
+    /// </summary>
     public void MoveRow(ExamPlanRowItem row, int delta)
     {
         if (row is null)
@@ -1104,12 +1128,23 @@ public partial class ExamPlanWizardViewModel : ViewModelBase
         if (index < 0 || target < 0 || target >= ReviewRows.Count)
             return;
 
-        // 挪动 = 换开考时刻：把这一场与目标那一场的时刻对调，再让 Refresh 重算冲突。
-        var other = ReviewRows[target];
-        (row.Entry.Start, other.Entry.Start) = (other.Entry.Start, row.Entry.Start);
-        (row.Entry.Date, other.Entry.Date) = (other.Entry.Date, row.Entry.Date);
+        // 列表顺序即考试顺序（见 ExamSchedulePlanner.Relayout）。
+        var ordered = ReviewRows.Select(item => item.Entry).ToList();
+        (ordered[index], ordered[target]) = (ordered[target], ordered[index]);
 
-        ApplyReviewEdit();
+        var firstStart = FirstStartDraft is { } start
+            ? TimeOnly.FromTimeSpan(start)
+            : ExamTimeSlotPolicy.DefaultStart(ExamTimeSlot.Morning);
+
+        var breakMinutes = BreakDraft is { } raw
+            ? ExamPlanSlot.ClampBreak((int)raw)
+            : ExamPlanSlot.DefaultBreakMinutes;
+
+        ExamSchedulePlanner.Relayout(ordered, SlotsPerDay, firstStart, breakMinutes);
+
+        // Relayout 会按日期 + 时刻重新排序，所以 _entries 直接换成它的结果。
+        _entries = ordered;
+        RebuildReviewRows();
     }
 
     /// <summary>
@@ -1469,6 +1504,21 @@ public partial class ExamPlanRowItem(ExamPlanEntry entry, ExamPlanWizardViewMode
     private decimal? _durationDraft;
 
     private bool _isRefreshing;
+
+    /// <summary>能不能往上挪（第一行不行）。</summary>
+    [ObservableProperty]
+    private bool _canMoveUp;
+
+    /// <summary>能不能往下挪（最后一行不行）。</summary>
+    [ObservableProperty]
+    private bool _canMoveDown;
+
+    /// <summary>由所有者按行在表里的位置置值（第一行不能上移、最后一行不能下移）。</summary>
+    public void SetMoveState(bool canMoveUp, bool canMoveDown)
+    {
+        CanMoveUp = canMoveUp;
+        CanMoveDown = canMoveDown;
+    }
 
     /// <summary>按背后的那场考试重算这一行的文案。</summary>
     public void Refresh(IReadOnlyList<ExamPlanEntry> ordered, DateOnly today)

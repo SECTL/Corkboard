@@ -27,13 +27,18 @@ public partial class BoardWindowSettingsPage : UserControl
 
         // 收纳的子 VM 是 transient、配置是单例：订阅必须在离开可视树时断开，
         // 否则每开一次这个页面就往配置上多挂一个处理器。
-        Loaded += (_, _) => ViewModel?.Dock.Attach();
+        Loaded += (_, _) =>
+        {
+            ViewModel?.Attach();
+            ViewModel?.Dock.Attach();
+        };
         Unloaded += (_, _) =>
         {
             // 拖完滑杆马上关页面时最后一次拖动不能丢。
             ViewModel?.FlushOpacityDraft();
             ViewModel?.Dock.CommitAll();
             ViewModel?.Dock.Detach();
+            ViewModel?.Detach();
         };
     }
 

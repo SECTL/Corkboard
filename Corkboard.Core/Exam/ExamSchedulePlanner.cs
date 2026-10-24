@@ -418,4 +418,74 @@ public static class ExamSchedulePlanner
 
         Refresh(entries);
     }
+
+    /// <summary>
+    ///     按作息把**整张表**重新铺一遍：列表的先后顺序就是考试顺序，第 1 场落在第一天的
+    ///     <paramref name="firstStart" />，同一天后面每场「接上一场收卷 + 休息」，
+    ///     一天排满 <paramref name="slotsPerDay" /> 场就换下一天。
+    ///     <para>
+    ///         这是「把某门课挪到另一天」的落地方式：向导先把两场的内容对调，
+    ///     再让这里按作息重排，于是那门课自然落到别的天／别的场次上。
+    ///     </para>
+    ///     <para>
+    ///         ⚠️ 它会**覆盖**列表里现有的 <see cref="ExamPlanEntry.Date" /> 与
+    ///         <see cref="ExamPlanEntry.Start" />（用户手改过的时刻也不例外）——
+    ///         因为「挪顺序」这个动作的语义就是「按作息重新排一遍」。
+    ///         只想动时刻、不重排时请用 <see cref="Cascade" />。
+    ///     </para>
+    /// </summary>
+    /// <param name="entries">就地重排的场次；**列表顺序即考试顺序**。</param>
+    /// <param name="slotsPerDay">一天几场（小于 1 按 1 算）。</param>
+    /// <param name="firstStart">每天第 1 场的开考时刻。</param>
+    /// <param name="breakMinutes">场与场之间歇多久。</param>
+    public static void Relayout(IList<ExamPlanEntry> entries, int slotsPerDay, TimeOnly firstStart, int breakMinutes)
+    {
+        ArgumentNullException.ThrowIfNull(entries);
+
+        if (entries.Count == 0)
+            return;
+
+        var perDay = Math.Max(1, slotsPerDay);
+        var rest = ExamPlanSlot.ClampBreak(breakMinutes);
+        var firstDay = entries.Min(entry => entry.Date);
+
+        TimeOnly? previousEnd = null;
+        var currentDay = -1;
+
+        for (var i = 0; i < entries.Count; i++)
+        {
+            var day = i / perDay;
+            var slotIndex = i % perDay;
+            var entry = entries[i];
+
+            if (day != currentDay)
+            {
+                currentDay = day;
+                previousEnd = null;
+            }
+
+            entry.Date = firstDay.AddDays(day);
+            entry.BreakMinutes = slotIndex == 0
+                ? ExamPlanSlot.DefaultBreakMinutes
+                : rest;
+
+            var start = previousEnd is not { } lastEnd
+                ? firstStart
+                : AddMinutes(lastEnd, rest);
+
+            entry.Start = start;
+            previousEnd = entry.End;
+        }
+
+        Refresh(entries);
+    }
+
+    /// <summary>把时刻往后推若干分钟；越过当天末尾的夹在 23:59（与 <see cref="ExamPlanEntry.ClampedEnd" /> 一致）。</summary>
+    private static TimeOnly AddMinutes(TimeOnly start, int minutes)
+    {
+        var total = start.Hour * 60 + start.Minute + minutes;
+        return total >= ExamPlanEntry.MinutesPerDay
+            ? ExamPlanEntry.ClampedEnd
+            : TimeOnly.FromTimeSpan(TimeSpan.FromMinutes(total));
+    }
 }

@@ -14,10 +14,10 @@
                          MinWidth="900" MinHeight="620"
                          WindowStartupLocation="CenterScreen">
     <!--
-        快速布置向导：基本信息 → 考哪些科目 → 作息 → 对照表。
+        快速布置向导：基本信息 → 考哪些科目 → 一天几场与汇总。
 
-        为什么是独立窗口而不是设置页里的一段：四步内容各占一整屏（科目列表 + 顺序表、
-        一天几场的作息表、一张十来列的对照表），塞进设置页那个限宽 960 的纵向滚动列里
+        为什么是独立窗口而不是设置页里的一段：三步内容各占一整屏（科目列表 + 顺序表、
+        排期那三个数 + 一张十来列的汇总表），塞进设置页那个限宽 960 的纵向滚动列里
         只能一路往下堆，看不出「这是一条流程」。
     -->
     <faWindowing:FAAppWindow.Styles>
@@ -89,7 +89,7 @@
 
     <Grid RowDefinitions="Auto,*,Auto" Margin="20,12,20,16">
 
-        <!-- 顶部：四步的进度条，当前那一步高亮。 -->
+        <!-- 顶部：三步的进度条，当前那一步高亮。 -->
         <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="16">
             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                 <Border Classes="step-chip" Classes.active="{Binding IsBasicStep}">
@@ -109,7 +109,7 @@
                        Text="{Binding ModeHint}" />
         </Grid>
 
-        <!-- 正文：四步各一块，只有当前那一步可见。 -->
+        <!-- 正文：三步各一块，只有当前那一步可见。 -->
         <Grid Grid.Row="1" Margin="0,16,0,0">
 
             <!-- ========== 第 1 步：基本信息 ========== -->
@@ -310,12 +310,13 @@
                 </Border>
             </Grid>
 
-            <!-- ========== 第 3 步：排期 + 汇总（上面定一天几场，下面就是排出来的表，改哪儿都行） ========== -->
+            <!-- ========== 第 3 步：一天几场 + 汇总（上面定作息，下面就是排出来的表，改哪儿都行） ========== -->
             <Border Classes="wizard-card" IsVisible="{Binding IsReviewStep}">
-                <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto" RowSpacing="10">
+                <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto,Auto" RowSpacing="12">
 
-                    <!-- 分区一：排期（只要三个数） -->
+                    <!-- 分区一：排期。标题单独一行，下面两个「靠左」的行：三个数、作息预设与写入方式。 -->
                     <TextBlock Grid.Row="0"
+                               VerticalAlignment="Center"
                                FontWeight="SemiBold"
                                Text="{x:Static core:Resources.Settings_Exam_Plan_ScheduleSection}" />
 
@@ -323,35 +324,41 @@
                         作息只要三个数：一天几场、第一场几点开考、两场之间歇多久。
                         「一天几场」定了，同一天后面每场都是「上一场收卷 + 休息」自动算出来，
                         所以这一页不再需要一行一场的时刻表。
+                        ⚠️ 三个「标签 + 控件」各自包一个 StackPanel：这样标签永远紧贴自己的控件，
+                        不会因为相邻列宽变化被拉成一条参差不齐的横排（用户反馈过「不整齐」）。
+                        ⚠️ 整行靠左（HorizontalAlignment="Left"），不要用 `*` 列去撑满——
+                        撑满后三组会被推到窗口两端，看着更散。
                     -->
-                    <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,*" ColumnSpacing="10">
-                        <TextBlock Grid.Column="0"
-                                   VerticalAlignment="Center"
-                                   Classes="wizard-label"
-                                   Text="{x:Static core:Resources.Settings_Exam_Plan_SlotsPerDay}" />
-                        <NumericUpDown Grid.Column="1"
-                                       Width="110"
-                                       Minimum="1"
-                                       Maximum="6"
-                                       Increment="1"
-                                       FormatString="0"
-                                       Value="{Binding SlotsPerDayDraft, Mode=TwoWay}" />
+                    <StackPanel Grid.Row="1"
+                                Orientation="Horizontal"
+                                HorizontalAlignment="Left"
+                                Spacing="24">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock VerticalAlignment="Center"
+                                       Classes="wizard-label"
+                                       Text="{x:Static core:Resources.Settings_Exam_Plan_SlotsPerDay}" />
+                            <NumericUpDown Width="104"
+                                           Minimum="1"
+                                           Maximum="6"
+                                           Increment="1"
+                                           FormatString="0"
+                                           Value="{Binding SlotsPerDayDraft, Mode=TwoWay}" />
+                        </StackPanel>
 
-                        <TextBlock Grid.Column="2"
-                                   VerticalAlignment="Center"
-                                   Classes="wizard-label"
-                                   Text="{x:Static core:Resources.Settings_Exam_Plan_FirstStart}" />
-                        <TimePicker Grid.Column="3"
-                                    Width="150"
-                                    ClockIdentifier="24HourClock"
-                                    SelectedTime="{Binding FirstStartDraft, Mode=TwoWay}" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock VerticalAlignment="Center"
+                                       Classes="wizard-label"
+                                       Text="{x:Static core:Resources.Settings_Exam_Plan_FirstStart}" />
+                            <TimePicker Width="168"
+                                        ClockIdentifier="24HourClock"
+                                        SelectedTime="{Binding FirstStartDraft, Mode=TwoWay}" />
+                        </StackPanel>
 
-                        <TextBlock Grid.Column="4"
-                                   VerticalAlignment="Center"
-                                   Classes="wizard-label"
-                                   Text="{x:Static core:Resources.Settings_Exam_Plan_BreakBetween}" />
-                        <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="6">
-                            <NumericUpDown Width="120"
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock VerticalAlignment="Center"
+                                       Classes="wizard-label"
+                                       Text="{x:Static core:Resources.Settings_Exam_Plan_BreakBetween}" />
+                            <NumericUpDown Width="104"
                                            Minimum="0"
                                            Maximum="240"
                                            Increment="5"
@@ -361,33 +368,18 @@
                                        Classes="wizard-hint"
                                        Text="{x:Static core:Resources.Common_Minutes}" />
                         </StackPanel>
+                    </StackPanel>
 
-                        <!-- 写入方式：只有「从编辑窗口进来」（追加模式）才问。新建看板时它天然是空的。 -->
-                        <StackPanel Grid.Column="6"
-                                    Orientation="Horizontal"
-                                    HorizontalAlignment="Right"
-                                    Spacing="8"
-                                    IsVisible="{Binding IsAppendMode}">
-                            <TextBlock VerticalAlignment="Center"
-                                       Classes="wizard-label"
-                                       Text="{x:Static core:Resources.Settings_Exam_Plan_WriteMode}" />
-                            <ComboBox Width="210"
-                                      SelectedIndex="{Binding WriteModeIndex, Mode=TwoWay}">
-                                <ComboBoxItem Content="{x:Static core:Resources.Settings_Exam_Plan_WriteAppend}" />
-                                <ComboBoxItem Content="{x:Static core:Resources.Settings_Exam_Plan_WriteReplace}" />
-                            </ComboBox>
-                        </StackPanel>
-                    </Grid>
-
-                    <!-- 作息预设（内置 + 自己存的），单独一行靠右，免得把上面那行挤爆。 -->
+                    <!-- 第二行：作息预设 + 存为模板，追加模式下再跟上「写入方式」。整行同样靠左。 -->
                     <StackPanel Grid.Row="2"
                                 Orientation="Horizontal"
-                                HorizontalAlignment="Right"
-                                Spacing="6">
+                                HorizontalAlignment="Left"
+                                Spacing="8">
                         <TextBlock VerticalAlignment="Center"
                                    Classes="wizard-label"
                                    Text="{x:Static core:Resources.Settings_Exam_Plan_SlotsPreset}" />
-                        <ComboBox Width="200"
+                        <ComboBox Width="170"
+                                  PlaceholderText="{x:Static core:Resources.Settings_Exam_Plan_SlotPresetCustom}"
                                   ItemsSource="{Binding SlotPresets}"
                                   SelectedItem="{Binding SelectedSlotPreset, Mode=TwoWay}">
                             <ComboBox.ItemTemplate>
@@ -411,6 +403,21 @@
                                            Text="{x:Static core:Resources.Settings_Exam_Plan_SaveSlotPreset}" />
                             </StackPanel>
                         </Button>
+
+                        <!-- 写入方式：只有「从编辑窗口进来」（追加模式）才问。新建看板时它天然是空的。 -->
+                        <StackPanel Orientation="Horizontal"
+                                    Spacing="8"
+                                    Margin="16,0,0,0"
+                                    IsVisible="{Binding IsAppendMode}">
+                            <TextBlock VerticalAlignment="Center"
+                                       Classes="wizard-label"
+                                       Text="{x:Static core:Resources.Settings_Exam_Plan_WriteMode}" />
+                            <ComboBox Width="210"
+                                      SelectedIndex="{Binding WriteModeIndex, Mode=TwoWay}">
+                                <ComboBoxItem Content="{x:Static core:Resources.Settings_Exam_Plan_WriteAppend}" />
+                                <ComboBoxItem Content="{x:Static core:Resources.Settings_Exam_Plan_WriteReplace}" />
+                            </ComboBox>
+                        </StackPanel>
                     </StackPanel>
 
                     <!-- 分区二：汇总（每行都能就地改，改完同一天后面的自动顺延） -->
@@ -424,9 +431,16 @@
                                    Text="{Binding SummaryText}" />
                     </Grid>
 
-                    <!-- ⚠️ 表头与数据行必须用完全一样的列定义。 -->
+                    <!--
+                        ⚠️ 表头与数据行必须用完全一样的列定义。
+                        时间列 230、时长列 150：TimePicker 两格 + 分隔线实测要 ~200 DIP，
+                        NumericUpDown 还要在最右边画上下箭头，给窄了控件会按自己需要的最小宽度画出去、
+                        压到右边一列上（用户反馈过「重叠了」）。
+                        日期与「距上一场」各让出 10 DIP，总宽不变，最小窗口（900）下也排得开。
+                        末尾两颗行内按钮（上移 / 下移）共 64，最后一列给 96。
+                    -->
                     <Grid Grid.Row="4"
-                          ColumnDefinitions="36,110,60,*,170,110,100,72"
+                          ColumnDefinitions="36,100,60,*,230,150,100,96"
                           ColumnSpacing="10"
                           IsVisible="{Binding !IsReviewEmpty}">
                         <TextBlock Grid.Column="0" Classes="wizard-head" Text="{x:Static core:Resources.Settings_Exam_Plan_ColumnIndex}" />
@@ -444,7 +458,7 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:ExamPlanRowItem">
                                     <Border Classes="wizard-row">
-                                        <Grid ColumnDefinitions="36,110,60,*,170,110,100,72" ColumnSpacing="10">
+                                        <Grid ColumnDefinitions="36,100,60,*,230,150,100,96" ColumnSpacing="10">
                                             <TextBlock Grid.Column="0"
                                                        Classes="wizard-cell"
                                                        Opacity="0.75"
@@ -465,10 +479,12 @@
                                             </StackPanel>
                                             <!-- 就地改开考时刻：同一天后面的场次自动顺延（见 ExamSchedulePlanner.Cascade）。 -->
                                             <TimePicker Grid.Column="4"
+                                                        MinWidth="230"
                                                         HorizontalAlignment="Stretch"
                                                         ClockIdentifier="24HourClock"
                                                         SelectedTime="{Binding StartDraft, Mode=TwoWay}" />
                                             <NumericUpDown Grid.Column="5"
+                                                           MinWidth="150"
                                                            Minimum="10"
                                                            Maximum="600"
                                                            Increment="5"
@@ -479,12 +495,23 @@
                                                        Opacity="0.75"
                                                        IsVisible="{Binding HasBreak}"
                                                        Text="{Binding BreakText}" />
-                                            <Button Grid.Column="7"
-                                                    Classes="row-action"
-                                                    HorizontalAlignment="Left"
-                                                    Content="{x:Static icons:FluentIcons.DeleteFilled}"
-                                                    ToolTip.Tip="{x:Static core:Resources.Settings_Exam_Plan_Remove}"
-                                                    Click="OnRemoveRowClick" />
+                                            <!-- 挪顺序 = 换「第几天」：挪完按作息重排整天（见 ExamPlanWizardViewModel.MoveRow）。 -->
+                                            <StackPanel Grid.Column="7" Orientation="Horizontal" Spacing="2">
+                                                <Button Classes="row-action"
+                                                        Content="{x:Static icons:FluentIcons.ChevronUpFilled}"
+                                                        IsEnabled="{Binding CanMoveUp}"
+                                                        ToolTip.Tip="{x:Static core:Resources.Settings_Exam_Plan_OrderUp}"
+                                                        Click="OnMoveRowUpClick" />
+                                                <Button Classes="row-action"
+                                                        Content="{x:Static icons:FluentIcons.ChevronDownFilled}"
+                                                        IsEnabled="{Binding CanMoveDown}"
+                                                        ToolTip.Tip="{x:Static core:Resources.Settings_Exam_Plan_OrderDown}"
+                                                        Click="OnMoveRowDownClick" />
+                                                <Button Classes="row-action"
+                                                        Content="{x:Static icons:FluentIcons.DeleteFilled}"
+                                                        ToolTip.Tip="{x:Static core:Resources.Settings_Exam_Plan_Remove}"
+                                                        Click="OnRemoveRowClick" />
+                                            </StackPanel>
                                         </Grid>
                                     </Border>
                                 </DataTemplate>

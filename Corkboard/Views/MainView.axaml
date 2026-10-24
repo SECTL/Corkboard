@@ -268,16 +268,18 @@
                         </Button>
 
                         <!--
-                            锁定窗口：点一下开点击穿透，主窗口就不再收鼠标。
-                            它是这一排的最右一个，因为锁定后整排会隐藏、由独立的
-                            ClickThroughLockWindow 在同一位置接着显示「开锁」图标，
-                            两态位置对齐才不会跳。图标是「开锁」= 现在还能操作、点它即锁。
+                            锁定窗口：按「设置 → 作业板 → 窗口与收纳 → 锁定按钮做什么」决定点下去
+                            是开点击穿透还是只固定位置。它是这一排的最右一个，因为锁定后整排会隐藏、
+                            由独立的 ClickThroughLockWindow 在同一位置接着显示「开锁」图标，
+                            两态位置对齐才不会跳。
+                            字形与提示跟着状态走（MainViewModel.LockWindowIcon / LockWindowTip）：
+                            「固定位置」那一档锁上之后图标变闭锁、再点一次就解开，所以要能变。
                         -->
                         <Button VerticalAlignment="Center"
-                                ToolTip.Tip="{x:Static core:Resources.MainView_LockWindow}"
+                                ToolTip.Tip="{Binding ViewModel.LockWindowTip}"
                                 WindowDecorationProperties.ElementRole="User"
                                 Click="LockWindowButton_OnClick">
-                            <TextBlock Text="{x:Static icons:FluentIcons.LockOpenFilled}"
+                            <TextBlock Text="{Binding ViewModel.LockWindowIcon}"
                                        FontFamily="{DynamicResource FluentSystemIconsResizeable}"
                                        VerticalAlignment="Center" />
                         </Button>

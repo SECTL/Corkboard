@@ -43,6 +43,22 @@ public sealed class ExamAutoShowHostedService(
     private Guid? _sessionBoardId;
 
     /// <summary>
+    ///     上一次看到的「当前看板」。用来认出**用户自己**换了看板
+    ///     （设置页点「设为当前」、打开编辑窗口），而不是我们切的。
+    /// </summary>
+    private Guid? _lastActiveBoardId;
+
+    /// <summary>
+    ///     用户手动换过看板之后，自动切换要「让位」到什么时候（下一场考试开考）。
+    ///     让位期间不去覆盖用户的选择——他刚点的那块，十几秒后就被改回去，等于那个按钮没用了。
+    ///     <para>
+    ///         <see langword="null" /> 表示当前没有让位；一场考试都排不出来时置成
+    ///         <see cref="DateTime.MaxValue" />（一直让位下去）。
+    ///     </para>
+    /// </summary>
+    private DateTime? _manualOverrideUntil;
+
+    /// <summary>
     ///     挪到线程池上跑。<c>Host.StartAsync</c> 会同步执行 <c>ExecuteAsync</c> 到第一个未完成的 await，
     ///     而这里第一件事就是往 UI 线程排队——不能把启动线程卡在那儿等界面转起来。
     /// </summary>
@@ -125,6 +141,9 @@ public sealed class ExamAutoShowHostedService(
             return;
         }
 
+        // 当前看板自己跟着今天考什么走（手动放看板也管用），这一步不看 AutoShowEnabled。
+        AutoSwitchBoard(now, settings);
+
         if (FindPending(now, settings) is not { } pending)
             return;
 
@@ -139,7 +158,7 @@ public sealed class ExamAutoShowHostedService(
 
         // 全屏看板显示的是「当前看板」，所以先把参与放映的那块切过去（换看板会重读考试集合）。
         if (!ReferenceEquals(examService.ActiveBoard, targetBoard))
-            examService.SelectBoard(targetBoard.Id);
+            SwitchTo(targetBoard.Id);
 
         _shownExamIds.Add(targetExam.Id);
         _sessionBoardId = targetBoard.Id;
@@ -147,6 +166,63 @@ public sealed class ExamAutoShowHostedService(
 
         logger.LogInformation("自动放映开始：{Board} · {Exam} {Time}", targetBoard.ResolveTitle(), targetExam.Subject,
             ExamTimeFormatter.FormatTimeRange(targetExam));
+    }
+
+    /// <summary>
+    ///     当前看板跟着「今天考什么」自己换。换的是 <see cref="IExamService.ActiveBoard" />，不弹窗——
+    ///     弹不弹仍然只由每块看板自己的 <see cref="ExamBoardDocument.AutoShowEnabled" /> 决定。
+    /// </summary>
+    private void AutoSwitchBoard(DateTime now, ExamAutoShowSettingsConfig settings)
+    {
+        var activeId = examService.ActiveBoard?.Id;
+
+        // 认一下这次变化是不是用户自己点的（设置页「设为当前」、打开编辑窗口）。
+        // 我们自己切的都走 SwitchTo()，那里会把 _lastActiveBoardId 一起更新，所以不会误判。
+        if (_lastActiveBoardId is { } previousId && activeId != previousId)
+        {
+            // 让位到下一场开考：用户刚挑的那块不能十几秒后就被改回去。
+            // 一场考试都排不出来（没有下一场）就一直让位，等他加了新考试再说。
+            _manualOverrideUntil = ExamBoardSwitchPolicy.FindNextStart(examService.Boards, now) ?? DateTime.MaxValue;
+            logger.LogDebug("用户手动换了看板，自动切换让位到 {Until}", _manualOverrideUntil);
+        }
+
+        _lastActiveBoardId = activeId;
+
+        if (!settings.AutoSwitchBoard)
+            return;
+
+        if (_manualOverrideUntil is { } until)
+        {
+            // 「当时一场考试都没排」的让位是一直让位，但用户后来加了考试就得认账：
+            // 每拍重新问一次下一场什么时候，问到了就按它到期。
+            if (until == DateTime.MaxValue)
+            {
+                until = ExamBoardSwitchPolicy.FindNextStart(examService.Boards, now) ?? DateTime.MaxValue;
+                _manualOverrideUntil = until;
+            }
+
+            if (now < until)
+                return;
+
+            // 让位到期（下一场已经开考）：交还给自动切换。
+            _manualOverrideUntil = null;
+        }
+
+        if (activeId is null)
+            return;
+
+        if (ExamBoardSwitchPolicy.FindTarget(examService.Boards, now) is not { } target || target.Id == activeId)
+            return;
+
+        SwitchTo(target.Id);
+        logger.LogInformation("当前看板自动切换到：{Board}", target.ResolveTitle());
+    }
+
+    /// <summary>切当前看板，并把「上一次看到的当前看板」一起更新，免得被当成用户手动切换。</summary>
+    private void SwitchTo(Guid boardId)
+    {
+        examService.SelectBoard(boardId);
+        _lastActiveBoardId = boardId;
     }
 
     /// <summary>

@@ -1,3 +1,4 @@
+using Avalonia.Threading;
 using Microsoft.Extensions.Logging;
 using Corkboard.Core.Models.SubConfigs.Exam;
 using Corkboard.Core.Services.Config;
@@ -126,5 +127,29 @@ public sealed class NtpTimeService
         RaiseStatusChanged();
     }
 
-    private void RaiseStatusChanged() => StatusChanged?.Invoke(this, EventArgs.Empty);
+    /// <summary>
+    ///     状态事件一律在 UI 线程上发。
+    ///     <para>
+    ///         ⚠️ <see cref="SyncNowAsync" /> 全程 <c>ConfigureAwait(false)</c>（不能在 UI 线程上等网络），
+    ///         所以它的 <c>finally</c> 里的这一发**落在​线程池线程上**；订阅者拿到事件就改绑定属性、
+    ///         调 <c>NotifyCanExecuteChanged</c>，跨线程直接抛
+    ///         「The calling thread cannot access this object because a different thread owns it」，
+    ///         而它是在 <c>finally</c> 里抛的，会顺着 <c>AsyncRelayCommand</c> 冒到 Dispatcher 变成未处理崩溃
+    ///         （「立即同步」按钮点一下就可能崩）。后台轮询那条路（<see cref="RefreshEnabledState" />）同理。
+    ///     </para>
+    ///     <para>
+    ///         放在这里而不是各个订阅者里：订阅者有三个（时间同步页、自动放映页、全屏看板），
+    ///         以后再挂新的还会踩同一个坑。事件是「给界面看的状态」，线程口径就该由服务自己保证。
+    ///     </para>
+    /// </summary>
+    private void RaiseStatusChanged()
+    {
+        if (Dispatcher.UIThread.CheckAccess())
+        {
+            StatusChanged?.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
+        Dispatcher.UIThread.Post(() => StatusChanged?.Invoke(this, EventArgs.Empty));
+    }
 }

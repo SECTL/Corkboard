@@ -68,10 +68,42 @@
                 </fa:FASettingsExpander.Footer>
             </fa:FASettingsExpander>
 
-            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Basic_HoldToDragWindow}"
-                                   Description="{x:Static core:Resources.Settings_Basic_HoldToDragWindowDescription}">
+            <!--
+                拖动窗口：三档下拉（长按任意位置 / 只能拖标题栏 / 固定窗口）。
+                原来这里是一颗「长按拖动窗口」开关，第三档「固定」是新加的能力，
+                两个布尔值一起表达三档，落盘的还是老键（见 WindowDragModes）。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Basic_WindowDragMode}"
+                                   Description="{x:Static core:Resources.Settings_Basic_WindowDragModeDescription}">
                 <fa:FASettingsExpander.Footer>
-                    <ToggleSwitch IsChecked="{Binding Basic.HoldToDragWindow}" />
+                    <ComboBox MinWidth="200"
+                              ItemsSource="{Binding DragModeOptions}"
+                              SelectedItem="{Binding SelectedDragMode, Mode=TwoWay}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:WindowDragModeOption">
+                                <TextBlock Text="{Binding DisplayName}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <!--
+                锁定按钮做什么：点击穿透（老行为）还是只固定位置。
+                前者整窗不收鼠标，后者窗口里的按钮照常点得动，用户按自己的用法选。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Basic_WindowLockMode}"
+                                   Description="{x:Static core:Resources.Settings_Basic_WindowLockModeDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <ComboBox MinWidth="200"
+                              ItemsSource="{Binding LockModeOptions}"
+                              SelectedItem="{Binding SelectedLockMode, Mode=TwoWay}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:WindowLockModeOption">
+                                <TextBlock Text="{Binding DisplayName}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
                 </fa:FASettingsExpander.Footer>
             </fa:FASettingsExpander>
 

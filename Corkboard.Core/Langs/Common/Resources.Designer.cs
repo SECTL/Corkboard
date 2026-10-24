@@ -48,6 +48,8 @@ public static class Resources
     public static string Settings_Exam_AutoShow_AlsoShowAfterStartDescription => ResourceManager.GetString(nameof(Settings_Exam_AutoShow_AlsoShowAfterStartDescription), Culture)!;
     public static string Settings_Exam_AutoShow_CloseDelay => ResourceManager.GetString(nameof(Settings_Exam_AutoShow_CloseDelay), Culture)!;
     public static string Settings_Exam_AutoShow_CloseDelayDescription => ResourceManager.GetString(nameof(Settings_Exam_AutoShow_CloseDelayDescription), Culture)!;
+    public static string Settings_Exam_AutoShow_SwitchBoard => ResourceManager.GetString(nameof(Settings_Exam_AutoShow_SwitchBoard), Culture)!;
+    public static string Settings_Exam_AutoShow_SwitchBoardDescription => ResourceManager.GetString(nameof(Settings_Exam_AutoShow_SwitchBoardDescription), Culture)!;
     public static string Feat_Settings => ResourceManager.GetString(nameof(Feat_Settings), Culture)!;
     public static string Menu_OpenMainWindow => ResourceManager.GetString(nameof(Menu_OpenMainWindow), Culture)!;
     public static string Menu_OpenSettings => ResourceManager.GetString(nameof(Menu_OpenSettings), Culture)!;
@@ -124,6 +126,15 @@ public static class Resources
     public static string Settings_Basic_PinToDesktopDescription => ResourceManager.GetString(nameof(Settings_Basic_PinToDesktopDescription), Culture)!;
     public static string Settings_Basic_HoldToDragWindow => ResourceManager.GetString(nameof(Settings_Basic_HoldToDragWindow), Culture)!;
     public static string Settings_Basic_HoldToDragWindowDescription => ResourceManager.GetString(nameof(Settings_Basic_HoldToDragWindowDescription), Culture)!;
+    public static string Settings_Basic_WindowDragMode => ResourceManager.GetString(nameof(Settings_Basic_WindowDragMode), Culture)!;
+    public static string Settings_Basic_WindowDragModeDescription => ResourceManager.GetString(nameof(Settings_Basic_WindowDragModeDescription), Culture)!;
+    public static string Settings_Basic_WindowDragModeHoldAnywhere => ResourceManager.GetString(nameof(Settings_Basic_WindowDragModeHoldAnywhere), Culture)!;
+    public static string Settings_Basic_WindowDragModeTitleBarOnly => ResourceManager.GetString(nameof(Settings_Basic_WindowDragModeTitleBarOnly), Culture)!;
+    public static string Settings_Basic_WindowDragModeFixed => ResourceManager.GetString(nameof(Settings_Basic_WindowDragModeFixed), Culture)!;
+    public static string Settings_Basic_WindowLockMode => ResourceManager.GetString(nameof(Settings_Basic_WindowLockMode), Culture)!;
+    public static string Settings_Basic_WindowLockModeDescription => ResourceManager.GetString(nameof(Settings_Basic_WindowLockModeDescription), Culture)!;
+    public static string Settings_Basic_WindowLockModeClickThrough => ResourceManager.GetString(nameof(Settings_Basic_WindowLockModeClickThrough), Culture)!;
+    public static string Settings_Basic_WindowLockModeFixedPosition => ResourceManager.GetString(nameof(Settings_Basic_WindowLockModeFixedPosition), Culture)!;
     public static string Settings_Basic_MainWindowOpacity => ResourceManager.GetString(nameof(Settings_Basic_MainWindowOpacity), Culture)!;
     public static string Settings_Basic_MainWindowOpacityDescription => ResourceManager.GetString(nameof(Settings_Basic_MainWindowOpacityDescription), Culture)!;
     public static string Settings_Basic_ClickThrough => ResourceManager.GetString(nameof(Settings_Basic_ClickThrough), Culture)!;
@@ -605,6 +616,7 @@ public static class Resources
     public static string Settings_Exam_Plan_TemplateDeleteTitle => ResourceManager.GetString(nameof(Settings_Exam_Plan_TemplateDeleteTitle), Culture)!;
     public static string Settings_Exam_Plan_TemplateDeleteBody => ResourceManager.GetString(nameof(Settings_Exam_Plan_TemplateDeleteBody), Culture)!;
     public static string Settings_Exam_Plan_PresetThree => ResourceManager.GetString(nameof(Settings_Exam_Plan_PresetThree), Culture)!;
+    public static string Settings_Exam_Plan_SlotPresetCustom => ResourceManager.GetString(nameof(Settings_Exam_Plan_SlotPresetCustom), Culture)!;
     public static string Settings_Exam_Plan_SlotPresetDefaultName => ResourceManager.GetString(nameof(Settings_Exam_Plan_SlotPresetDefaultName), Culture)!;
     public static string Settings_Exam_Plan_SaveSlotPreset => ResourceManager.GetString(nameof(Settings_Exam_Plan_SaveSlotPreset), Culture)!;
     public static string Settings_Exam_Plan_SaveSlotPresetToolTip => ResourceManager.GetString(nameof(Settings_Exam_Plan_SaveSlotPresetToolTip), Culture)!;

@@ -92,6 +92,37 @@ public sealed class MacOsWindowFeatureService : IWindowFeatureService
     }
 
     /// <summary>
+    ///     macOS 的窗口坐标就是屏幕坐标（没有桌面宿主子窗口那种形态，
+    ///     <see cref="WindowFeatures.DesktopBottom" /> 在本平台不支持），直接写位置即可。
+    /// </summary>
+    public bool TryPlaceAtScreenPoint(PlatformWindowHandle window, ScreenPoint position)
+    {
+        if (!window.IsValid)
+            return false;
+
+        if (!string.IsNullOrWhiteSpace(window.Descriptor)
+            && !string.Equals(window.Descriptor, "NSWindow", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        try
+        {
+            // setFrameOrigin: 的入参是 NSPoint（两个 CGFloat），按 double 传。
+            var selector = SelRegisterName("setFrameOrigin:");
+            if (selector == nint.Zero)
+                return false;
+
+            ObjcMsgSendPoint(window.Value, selector, position.X, position.Y);
+            return true;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
     ///     macOS 的红绿灯按钮在标题栏左侧（设置界面留了一块空白），右侧没有系统按钮。
     /// </summary>
     public double GetSystemCaptionButtonWidth(PlatformWindowHandle window) => 0;
@@ -192,6 +223,10 @@ public sealed class MacOsWindowFeatureService : IWindowFeatureService
     /// <summary><c>objc_msgSend</c> 的另一份签名：CGFloat 参数按 double 传（alphaValue 就是这种）。</summary>
     [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend", CallingConvention = CallingConvention.Cdecl)]
     private static extern void ObjcMsgSendDouble(nint receiver, nint selector, double argument);
+
+    /// <summary><c>objc_msgSend</c> 的另一份签名：两个 CGFloat 参数（NSPoint 就是这种）。</summary>
+    [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend", CallingConvention = CallingConvention.Cdecl)]
+    private static extern void ObjcMsgSendPoint(nint receiver, nint selector, double x, double y);
 
     [DllImport("/usr/lib/libobjc.A.dylib", EntryPoint = "objc_msgSend", CallingConvention = CallingConvention.Cdecl)]
     private static extern nint ObjcMsgSendNint(nint receiver, nint selector);

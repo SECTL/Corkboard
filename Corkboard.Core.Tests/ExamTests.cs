@@ -749,6 +749,54 @@ public class ExamTimeFormatterTests
     }
 
     /// <summary>
+    ///     时钟那行是「HH:mm:ss」、倒计时也带秒，两行并排摆着就要求「时钟的秒 + 倒计时的秒」正好进位到整分——
+    ///     差一秒用户会当成数错了（反馈过「强迫症犯了」）。所以倒计时先把 now 的毫秒丢掉再算，
+    ///     不能拿带小数的 now 去 floor。
+    /// </summary>
+    [Fact]
+    public void FormatInfoRemaining_KeepsItsSecondsInStepWithTheClock()
+    {
+        // 结束时间永远是整秒（TimeOnly），时钟显示的秒就是 now 的秒。
+        var exam = new ExamEntry
+        {
+            Subject = "数学",
+            Date = new DateOnly(2026, 11, 6),
+            StartTime = new TimeOnly(14, 30),
+            EndTime = new TimeOnly(16, 30)
+        };
+        var end = new DateTime(2026, 11, 6, 16, 30, 0, DateTimeKind.Unspecified);
+
+        // 真实还剩 16 分 14.6 秒：时钟读 16:13:45，倒计时必须写「16 分 15 秒」（45 + 15 = 60），
+        // 而不是按 16:14.6 向下取整出来的「16 分 14 秒」（45 + 14 = 59）。
+        var now = end.AddMinutes(-16).AddSeconds(-15).AddMilliseconds(400);
+        Assert.Equal(
+            string.Format(CultureInfo.CurrentCulture, CR.Exam_Status_Remaining,
+                string.Format(CultureInfo.CurrentCulture, CR.Exam_Duration_MinutesSeconds, 16, 15)),
+            ExamTimeFormatter.FormatInfoRemaining(ExamStatus.InProgress, exam, now, true));
+
+        // 换成「即将开始」也一样（前置词不同，对齐关系不变）。
+        var upcoming = new ExamEntry
+        {
+            Subject = "语文",
+            Date = new DateOnly(2026, 11, 6),
+            StartTime = new TimeOnly(15, 0),
+            EndTime = new TimeOnly(17, 0)
+        };
+        var soonNow = new DateTime(2026, 11, 6, 14, 59, 30, 500, DateTimeKind.Unspecified);
+        Assert.Equal(
+            string.Format(CultureInfo.CurrentCulture, CR.Exam_Countdown_Remaining,
+                string.Format(CultureInfo.CurrentCulture, CR.Exam_Duration_Seconds, 30)),
+            ExamTimeFormatter.FormatInfoRemaining(ExamStatus.Upcoming, upcoming, soonNow, true));
+
+        // 毫秒不该改变结果：同一秒内任意时刻算出来都一样。
+        Assert.Equal(
+            ExamTimeFormatter.FormatInfoRemaining(ExamStatus.InProgress, exam, now, true),
+            ExamTimeFormatter.FormatInfoRemaining(ExamStatus.InProgress, exam,
+                new DateTime(now.Year, now.Month, now.Day, now.Hour, now.Minute, now.Second, 900,
+                    DateTimeKind.Unspecified), true));
+    }
+
+    /// <summary>
     ///     状态底下那句提示单独拿出来：全屏看板把状态名与这句分两行放，
     ///     两半拼起来必须与 <see cref="ExamTimeFormatter.FormatStatusDetail" /> 一模一样，
     ///     未开始 / 已结束那两档必须是空串（调用方据此隐藏那一行）。

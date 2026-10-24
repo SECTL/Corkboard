@@ -63,6 +63,12 @@ public partial class ExamBoardSettingsConfig : ObservableObject
     /// </summary>
     [ObservableProperty] private bool _remainingSecondsEnabled;
 
+    /// <summary>
+    ///     时钟下面那组考试信息（进行中 / 下一场是哪一科、时间范围、剩余时间、卷面）要不要显示。
+    ///     默认开——它就是这个看板的信息主体；关掉之后只剩一个大时钟，适合只想看时间的场合。
+    /// </summary>
+    [ObservableProperty] private bool _showExamInfo = true;
+
     /// <summary>读盘后收拾一遍：阈值夹进合法区间、遗留的标题与副标题去首尾空白（手改的脏数据不进界面）。</summary>
     public void Normalize()
     {

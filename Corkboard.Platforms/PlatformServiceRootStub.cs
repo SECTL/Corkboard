@@ -26,5 +26,7 @@ public sealed class PlatformServiceRootStub : IPlatformServiceRoot, IWindowFeatu
     public WindowFeatureApplyResult Apply(PlatformWindowHandle window, WindowFeatureRequest request) =>
         WindowFeatureApplyResult.Unsupported(request.Features, "The active platform does not support window features.");
 
+    public bool TryPlaceAtScreenPoint(PlatformWindowHandle window, ScreenPoint position) => false;
+
     public double GetSystemCaptionButtonWidth(PlatformWindowHandle window) => 0;
 }

@@ -128,15 +128,27 @@ public static class ExamPlanSlotPresets
     /// <summary>
     ///     按科目数挑一份合适的作息：科目多就一天多排几场，别让 9 门课按一天一场排成 9 天。
     ///     <para>1–2 门一天一场、3–4 门一天两场、5–6 门一天三场、7–8 门一天四场、9 门以上一天五场。</para>
+    ///     <para>
+    ///         ⚠️ 必须走 <see cref="ForCount" /> 摊场次，**不要**回那几个带绝对锚点（14:00、19:00）的预设：
+    ///         界面上作息只有「一天几场 / 第一场几点 / 歇多久」三个数，推荐出来的作息必须能由这三个数
+    ///         原样还原，否则推荐完三个数跟哪份模板都对不上，下拉框就是一片空白（踩过）。
+    ///     </para>
     /// </summary>
-    public static IReadOnlyList<ExamPlanSlot> Recommend(int subjectCount) => subjectCount switch
+    public static IReadOnlyList<ExamPlanSlot> Recommend(int subjectCount) =>
+        ForCount(RecommendedSlotsPerDay(subjectCount), RecommendedFirstStart, ExamPlanSlot.DefaultBreakMinutes);
+
+    /// <summary>推荐的一天场数（<see cref="Recommend" /> 用的那一档）。</summary>
+    public static int RecommendedSlotsPerDay(int subjectCount) => subjectCount switch
     {
-        <= 2 => SingleMorning(),
-        <= 4 => TwoPerDay(),
-        <= 6 => ThreePerDay(),
-        <= 8 => FourPerDay(),
-        _ => FivePerDay()
+        <= 2 => 1,
+        <= 4 => 2,
+        <= 6 => 3,
+        <= 8 => 4,
+        _ => 5
     };
+
+    /// <summary>推荐作息的第一场开考时刻（早上八点，与界面的默认值一致）。</summary>
+    private static TimeOnly RecommendedFirstStart => new(8, 0);
 
     /// <summary>
     ///     按「一天几场 + 第一场几点开考 + 每场之间歇多久」生成一份作息。

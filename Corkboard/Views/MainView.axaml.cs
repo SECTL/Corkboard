@@ -14,6 +14,7 @@ using Corkboard.Core.Attributes;
 using Corkboard.Core.Controls;
 using Corkboard.Core.Board;
 using Corkboard.Core.Enums.Configs;
+using Corkboard.Core.Helpers;
 using Corkboard.Core.Services;
 using Corkboard.Helpers;
 using Corkboard.Services.Board;
@@ -125,14 +126,22 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
     public BoardReplayService Replay { get; } = IAppHost.GetService<BoardReplayService>();
 
     /// <summary>
-    ///     窗口是否被「固定」：位置与大小都锁住，拖动与四边缩放一起失效。
+    ///     当前拖动档位（设置页那张「拖动窗口」下拉框里的三档之一）。
     ///     <para>
-    ///         它和「长按拖动」是同一组设置的两个档位（设置页那张下拉框），但落盘是两个老键：
-    ///         固定优先，开着它就不再看 <c>HoldToDragWindow</c>。
-    ///         拖动、缩放、光标三处判定都从这里取，不要在别处另读配置。
+    ///         配置里落盘的是两个老布尔值，三档的折算只有 <see cref="WindowDragModes" /> 一份，
+    ///         这里直接读它，不要在视图里再拼一遍「固定优先还是长按优先」。
     ///     </para>
     /// </summary>
-    private bool IsWindowFixed => ViewModel.Config.Basic.WindowFixed;
+    private WindowDragMode CurrentDragMode => WindowDragModes.Normalize(
+        WindowDragModes.FromConfig(
+            ViewModel.Config.Basic.HoldToDragWindow,
+            ViewModel.Config.Basic.WindowFixed));
+
+    /// <summary>
+    ///     窗口是否被「固定」：位置与大小都锁住，拖动与四边缩放一起失效。
+    ///     拖动、缩放、光标三处判定都从这里取，不要在别处另读配置。
+    /// </summary>
+    private bool IsWindowFixed => !WindowDragModes.AllowsDrag(CurrentDragMode);
 
     public MainView()
     {
@@ -346,7 +355,7 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
             return;
 
         // 固定窗口时四边也没有缩放热区：不然光标照旧变成双向箭头、按下去却没反应。
-        if (ViewModel.Config.Basic.WindowFixed)
+        if (!WindowDragModes.AllowsResize(CurrentDragMode))
             return;
 
         if (e.Pointer.Type == PointerType.Mouse && !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
@@ -415,7 +424,7 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
         if (WindowDragGesture.IsSuppressed(e.Source))
             return;
 
-        if (!ViewModel.Config.Basic.HoldToDragWindow || IsWindowFixed)
+        if (!WindowDragModes.AllowsHoldAnywhere(CurrentDragMode))
             return;
 
         _holdToDragPressedEvent = e;
@@ -919,11 +928,16 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
     ///     点击穿透（老行为）还是固定窗口（位置锁死但内容照常点得动）。
     ///     只写配置：窗口样式与显隐都由 <c>MainWindow</c> 订阅配置变化后处理，
     ///     视图不直接碰平台能力，也不需要知道徽标窗口的存在。
+    ///     <para>
+    ///         「固定窗口」这一档是<b>可来回切</b>的：固定之后标题栏照样点得动（固定只是不收拖动），
+    ///         再点一次这颗锁就解开。点击穿透那一档不行——穿透之后整窗收不到鼠标，
+    ///         解锁只能靠独立的锁定徽标（见 <c>ClickThroughLockWindow</c>）。
+    ///     </para>
     /// </summary>
     private void LockWindowButton_OnClick(object? sender, RoutedEventArgs e)
     {
         if (ViewModel.Config.Basic.WindowLockMode == WindowLockMode.FixedPosition)
-            ViewModel.Config.Basic.WindowFixed = true;
+            ViewModel.Config.Basic.WindowFixed = !ViewModel.Config.Basic.WindowFixed;
         else
             ViewModel.Config.Basic.ClickThrough = true;
     }

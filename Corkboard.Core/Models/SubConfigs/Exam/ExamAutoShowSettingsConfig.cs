@@ -31,6 +31,18 @@ public partial class ExamAutoShowSettingsConfig : ObservableObject
     /// </summary>
     [ObservableProperty] private int _closeDelayMinutes = ExamAutoShowPolicy.DefaultCloseDelayMinutes;
 
+    /// <summary>
+    ///     当前看板要不要跟着考试自己换。默认开——看板显示的是「当前看板」，
+    ///     不换的话手动打开看板时看到的还是上次手选的那块，跟今天考什么没关系。
+    ///     <para>
+    ///         规则见 <see cref="ExamBoardSwitchPolicy" />（只看今天、考完不切回去）。
+    ///         与「哪块看板参加自动放映」是两件事：**换看板不弹窗**，弹不弹仍由每块看板自己的
+    ///         <see cref="Exam.ExamBoardDocument.AutoShowEnabled" /> 决定。
+    ///     </para>
+    ///     <para>关掉之后当前看板就完全由用户自己挑（设置页「设为当前」/ 打开编辑窗口）。</para>
+    /// </summary>
+    [ObservableProperty] private bool _autoSwitchBoard = true;
+
     /// <summary>读盘后收拾一遍：两个数值夹进合法区间（手改的脏数据不进界面）。</summary>
     public void Normalize()
     {

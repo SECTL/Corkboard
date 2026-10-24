@@ -4,6 +4,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Corkboard.Core.Attributes;
 using Corkboard.Core.Board;
+using Corkboard.Core.Enums.Configs;
+using Corkboard.Core.Icons;
 using Corkboard.Core.Models.SubConfigs.General;
 using Corkboard.Core.Models.SubConfigs.Board;
 using Corkboard.ViewModels.MainPages.Board;
@@ -93,6 +95,22 @@ public partial class MainViewModel : ViewModelBase
     /// <summary>收纳（两个开关都开着才显示）。</summary>
     public bool ShowTitleBarDock => Config.BoardSettings.ShowTitleBarDock && Config.BoardSettings.DockEnabled;
 
+    /// <summary>
+    ///     标题栏那颗锁画哪个字形。锁定行为是「固定窗口」时它会真的锁上、也还能再点开，
+    ///     所以图标得跟着变（闭锁 = 现在锁着、点它解开）；点击穿透那一档永远是「开锁」，
+    ///     因为穿透之后这颗按钮自己就点不动了，解锁靠独立徽标。
+    /// </summary>
+    public string LockWindowIcon =>
+        Config.Basic.WindowLockMode == WindowLockMode.FixedPosition && Config.Basic.WindowFixed
+            ? FluentIcons.LockClosedFilled
+            : FluentIcons.LockOpenFilled;
+
+    /// <summary>那颗锁的提示文案：按当前状态说清楚点它会发生什么。</summary>
+    public string LockWindowTip =>
+        Config.Basic.WindowLockMode == WindowLockMode.FixedPosition && Config.Basic.WindowFixed
+            ? CR.MainView_UnlockWindow
+            : CR.MainView_LockWindow;
+
     // 菜单里的勾选不在这里：菜单项画在弹出层里、拿不到这里的 DataContext，
     // 所以由 MainView 在弹出时按 SelectedSortOption 直接写（见 MainView.RefreshSortMenuChecks）。
 
@@ -163,6 +181,15 @@ public partial class MainViewModel : ViewModelBase
             or nameof(BasicSettingsConfig.ClickThrough))
         {
             OnPropertyChanged(nameof(ShowCornerAssignButton));
+        }
+
+        // 那颗锁的字形与提示：锁定行为、固定状态任一变了都要重算。
+        if (e.PropertyName is null
+            or nameof(BasicSettingsConfig.WindowFixed)
+            or nameof(BasicSettingsConfig.WindowLockMode))
+        {
+            OnPropertyChanged(nameof(LockWindowIcon));
+            OnPropertyChanged(nameof(LockWindowTip));
         }
     }
 

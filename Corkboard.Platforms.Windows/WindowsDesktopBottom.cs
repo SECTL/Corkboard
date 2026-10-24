@@ -29,6 +29,7 @@ internal static class WindowsDesktopBottom
     private const uint SmtoAbortIfHung = 0x0002;
     private const uint SwpNoSize = 0x0001;
     private const uint SwpNoMove = 0x0002;
+    private const uint SwpNoZOrder = 0x0004;
     private const uint SwpNoActivate = 0x0010;
     private const uint SwpFrameChanged = 0x0020;
     private const uint SwpShowWindow = 0x0040;
@@ -131,6 +132,42 @@ internal static class WindowsDesktopBottom
         catch (Exception exception)
         {
             failure = exception.Message;
+            return false;
+        }
+    }
+
+    /// <summary>
+    ///     把窗口摆到屏幕坐标。挂进桌面层之后窗口是桌面宿主的子窗口，
+    ///     <c>SetWindowPos</c> 的坐标要相对宿主客户区，这里负责换算；
+    ///     没挂载的窗口按普通顶层窗口处理，屏幕坐标原样写下去。
+    ///     <para>
+    ///         为什么不能由调用方直接写 <c>Window.Position</c>：主显示器上桌面宿主的客户区原点
+    ///         通常正好在 (0,0)，屏幕坐标写下去「碰巧是对的」，副显示器（原点为负）或宿主不铺满
+    ///         整屏时就会整块偏掉——这种 bug 只在多屏或改过任务栏位置的机器上才冒出来。
+    ///     </para>
+    /// </summary>
+    public static bool TryPlaceAtScreenPoint(nint window, int screenX, int screenY)
+    {
+        try
+        {
+            var point = new NativePoint { X = screenX, Y = screenY };
+
+            // 只有真的挂着（并且父窗口确实是桌面宿主）才需要换算：窗口最小化再还原会把
+            // WS_CHILD 摘掉，那时它又变回普通顶层窗口，坐标就是屏幕坐标。
+            if (Attachments.TryGetValue(window, out var attachment)
+                && attachment.IsEmbedded
+                && attachment.DesktopHost != nint.Zero
+                && GetParent(window) == attachment.DesktopHost)
+            {
+                if (!ScreenToClient(attachment.DesktopHost, ref point))
+                    return false;
+            }
+
+            return SetWindowPos(window, nint.Zero, point.X, point.Y, 0, 0,
+                SwpNoSize | SwpNoActivate | SwpNoZOrder);
+        }
+        catch (Exception)
+        {
             return false;
         }
     }

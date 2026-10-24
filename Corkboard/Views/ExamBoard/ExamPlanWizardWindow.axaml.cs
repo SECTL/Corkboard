@@ -109,6 +109,20 @@ public partial class ExamPlanWizardWindow : FAAppWindow
             _viewModel.RemoveRow(row);
     }
 
+    /// <summary>把这一场往前挪（= 换到更早的场次／更早的那一天，见 <c>MoveRow</c>）。</summary>
+    private void OnMoveRowUpClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Control { DataContext: ExamPlanRowItem row })
+            _viewModel.MoveRow(row, -1);
+    }
+
+    /// <summary>把这一场往后挪。</summary>
+    private void OnMoveRowDownClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Control { DataContext: ExamPlanRowItem row })
+            _viewModel.MoveRow(row, 1);
+    }
+
     /// <summary>
     ///     「存为作息模板」：弹框问一个名字，把当前这张作息表存进 <c>data/exam/slot-presets.json</c>。
     ///     与看板编辑窗口的「另存为模板」同一套写法（<see cref="FAContentDialog" /> + 输入框 + 一句提示）。

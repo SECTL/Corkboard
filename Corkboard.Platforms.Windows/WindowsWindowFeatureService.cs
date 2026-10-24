@@ -199,6 +199,20 @@ public sealed class WindowsWindowFeatureService : IWindowFeatureService
         return WindowFeatureApplyResult.Partial(applied, unsupported, failed, detail);
     }
 
+    public bool TryPlaceAtScreenPoint(PlatformWindowHandle window, ScreenPoint position)
+    {
+        if (!window.IsValid)
+            return false;
+
+        if (!string.IsNullOrWhiteSpace(window.Descriptor)
+            && !string.Equals(window.Descriptor, "HWND", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return WindowsDesktopBottom.TryPlaceAtScreenPoint(window.Value, position.X, position.Y);
+    }
+
     public double GetSystemCaptionButtonWidth(PlatformWindowHandle window)
     {
         if (!window.IsValid)

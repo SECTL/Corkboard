@@ -358,7 +358,8 @@ public partial class ExamBoardViewModel : ViewModelBase
 
         var paperInfo = ExamTimeFormatter.FormatPaperInfo(next);
 
-        ShowExamInfo = true;
+        // 设置里关掉之后只剩一个大时钟（默认开：这组字就是看板的信息主体）。
+        ShowExamInfo = Settings.ShowExamInfo;
         InfoCaption = ExamTimeFormatter.FormatInfoCaption(status);
         InfoSubject = next.Subject;
         InfoDateText = ExamTimeFormatter.FormatDate(next.Date, DateOnly.FromDateTime(now));
