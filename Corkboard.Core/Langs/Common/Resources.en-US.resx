@@ -1605,7 +1605,7 @@
     <value>Subjects</value>
   </data>
     <data name="Settings_Exam_Plan_StepReview" xml:space="preserve">
-    <value>Review</value>
+    <value>Slots &amp; summary</value>
   </data>
   <data name="Settings_Exam_Plan_TitleDefault" xml:space="preserve">
     <value>{0} Final Exams</value>
@@ -1685,10 +1685,7 @@
     <data name="Settings_Exam_Plan_SlotsPreset" xml:space="preserve">
     <value>Routine presets</value>
   </data>
-                  <data name="Settings_Exam_Plan_ReviewTitle" xml:space="preserve">
-    <value>Here is the schedule</value>
-  </data>
-  <data name="Settings_Exam_Plan_ReviewEmpty" xml:space="preserve">
+                  <data name="Settings_Exam_Plan_ReviewEmpty" xml:space="preserve">
     <value>Nothing has been scheduled yet</value>
   </data>
   <data name="Settings_Exam_Plan_ReviewEmptyHint" xml:space="preserve">
@@ -1861,6 +1858,12 @@
   </data>
   <data name="Settings_Exam_Plan_WriteReplace" xml:space="preserve">
     <value>Replace the exams on the board</value>
+  </data>
+  <data name="Settings_Exam_Plan_ScheduleSection" xml:space="preserve">
+    <value>Schedule</value>
+  </data>
+  <data name="Settings_Exam_Plan_SummarySection" xml:space="preserve">
+    <value>Summary</value>
   </data>
   <data name="Menu_OpenExamBoard" xml:space="preserve">
     <value>Exam board</value>
@@ -2062,6 +2065,12 @@
   </data>
   <data name="Settings_Exam_Display_RemainingSecondsDescription" xml:space="preserve">
     <value>The last hour ticks down with seconds</value>
+  </data>
+  <data name="Settings_Exam_Display_ShowInfo" xml:space="preserve">
+    <value>Show exam info under the clock</value>
+  </data>
+  <data name="Settings_Exam_Display_ShowInfoDescription" xml:space="preserve">
+    <value>Turn it off to leave only the big clock</value>
   </data>
   <data name="Settings_Exam_Time_Title" xml:space="preserve">
     <value>Time sync</value>

@@ -310,20 +310,14 @@
                 </Border>
             </Grid>
 
-            <!-- ========== 第 3 步：总览（作息三个数 + 排出来的表） ========== -->
+            <!-- ========== 第 3 步：排期 + 汇总（上面定一天几场，下面就是排出来的表，改哪儿都行） ========== -->
             <Border Classes="wizard-card" IsVisible="{Binding IsReviewStep}">
-                <Grid RowDefinitions="Auto,Auto,Auto,Auto,*,Auto" RowSpacing="10">
+                <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto" RowSpacing="10">
 
-                    <!-- 标题行 -->
-                    <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="16">
-                        <TextBlock VerticalAlignment="Center"
-                                   FontWeight="SemiBold"
-                                   Text="{x:Static core:Resources.Settings_Exam_Plan_ReviewTitle}" />
-                        <TextBlock Grid.Column="1"
-                                   VerticalAlignment="Center"
-                                   Classes="wizard-hint"
-                                   Text="{Binding SummaryText}" />
-                    </Grid>
+                    <!-- 分区一：排期（只要三个数） -->
+                    <TextBlock Grid.Row="0"
+                               FontWeight="SemiBold"
+                               Text="{x:Static core:Resources.Settings_Exam_Plan_ScheduleSection}" />
 
                     <!--
                         作息只要三个数：一天几场、第一场几点开考、两场之间歇多久。
@@ -419,8 +413,19 @@
                         </Button>
                     </StackPanel>
 
+                    <!-- 分区二：汇总（每行都能就地改，改完同一天后面的自动顺延） -->
+                    <Grid Grid.Row="3" ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                        <TextBlock VerticalAlignment="Center"
+                                   FontWeight="SemiBold"
+                                   Text="{x:Static core:Resources.Settings_Exam_Plan_SummarySection}" />
+                        <TextBlock Grid.Column="1"
+                                   VerticalAlignment="Center"
+                                   Classes="wizard-hint"
+                                   Text="{Binding SummaryText}" />
+                    </Grid>
+
                     <!-- ⚠️ 表头与数据行必须用完全一样的列定义。 -->
-                    <Grid Grid.Row="3"
+                    <Grid Grid.Row="4"
                           ColumnDefinitions="36,110,60,*,170,110,100,72"
                           ColumnSpacing="10"
                           IsVisible="{Binding !IsReviewEmpty}">
@@ -434,7 +439,7 @@
                         <TextBlock Grid.Column="7" Classes="wizard-head" Text="" />
                     </Grid>
 
-                    <ScrollViewer Grid.Row="4" VerticalScrollBarVisibility="Auto">
+                    <ScrollViewer Grid.Row="5" VerticalScrollBarVisibility="Auto">
                         <ItemsControl ItemsSource="{Binding ReviewRows}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:ExamPlanRowItem">
@@ -488,7 +493,7 @@
                     </ScrollViewer>
 
                     <!-- 一场都没排出来：说清楚回哪儿去。 -->
-                    <StackPanel Grid.Row="4"
+                    <StackPanel Grid.Row="5"
                                 VerticalAlignment="Center"
                                 HorizontalAlignment="Center"
                                 Spacing="8"
@@ -501,7 +506,7 @@
                                    Text="{x:Static core:Resources.Settings_Exam_Plan_ReviewEmptyHint}" />
                     </StackPanel>
 
-                    <TextBlock Grid.Row="5"
+                    <TextBlock Grid.Row="6"
                                Classes="conflict"
                                IsVisible="{Binding HasConflicts}"
                                Text="{Binding ConflictText}" />

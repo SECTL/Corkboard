@@ -536,6 +536,8 @@ public static class Resources
     public static string Settings_Exam_Plan_WindowTitle => ResourceManager.GetString(nameof(Settings_Exam_Plan_WindowTitle), Culture)!;
     public static string Settings_Exam_Plan_StepBasic => ResourceManager.GetString(nameof(Settings_Exam_Plan_StepBasic), Culture)!;
     public static string Settings_Exam_Plan_StepSubjects => ResourceManager.GetString(nameof(Settings_Exam_Plan_StepSubjects), Culture)!;
+    public static string Settings_Exam_Plan_ScheduleSection => ResourceManager.GetString(nameof(Settings_Exam_Plan_ScheduleSection), Culture)!;
+    public static string Settings_Exam_Plan_SummarySection => ResourceManager.GetString(nameof(Settings_Exam_Plan_SummarySection), Culture)!;
     public static string Settings_Exam_Plan_StepReview => ResourceManager.GetString(nameof(Settings_Exam_Plan_StepReview), Culture)!;
     public static string Settings_Exam_Plan_TitleDefault => ResourceManager.GetString(nameof(Settings_Exam_Plan_TitleDefault), Culture)!;
 
@@ -564,7 +566,6 @@ public static class Resources
     public static string Settings_Exam_Plan_SelectedCount => ResourceManager.GetString(nameof(Settings_Exam_Plan_SelectedCount), Culture)!;
     public static string Settings_Exam_Plan_SlotsTitle => ResourceManager.GetString(nameof(Settings_Exam_Plan_SlotsTitle), Culture)!;
     public static string Settings_Exam_Plan_SlotsPreset => ResourceManager.GetString(nameof(Settings_Exam_Plan_SlotsPreset), Culture)!;
-    public static string Settings_Exam_Plan_ReviewTitle => ResourceManager.GetString(nameof(Settings_Exam_Plan_ReviewTitle), Culture)!;
     public static string Settings_Exam_Plan_ReviewEmpty => ResourceManager.GetString(nameof(Settings_Exam_Plan_ReviewEmpty), Culture)!;
     public static string Settings_Exam_Plan_ReviewEmptyHint => ResourceManager.GetString(nameof(Settings_Exam_Plan_ReviewEmptyHint), Culture)!;
     public static string Settings_Exam_Plan_Summary => ResourceManager.GetString(nameof(Settings_Exam_Plan_Summary), Culture)!;
@@ -696,6 +697,8 @@ public static class Resources
     public static string Settings_Exam_Display_WarningMinutesDescription => ResourceManager.GetString(nameof(Settings_Exam_Display_WarningMinutesDescription), Culture)!;
     public static string Settings_Exam_Display_RemainingSeconds => ResourceManager.GetString(nameof(Settings_Exam_Display_RemainingSeconds), Culture)!;
     public static string Settings_Exam_Display_RemainingSecondsDescription => ResourceManager.GetString(nameof(Settings_Exam_Display_RemainingSecondsDescription), Culture)!;
+    public static string Settings_Exam_Display_ShowInfo => ResourceManager.GetString(nameof(Settings_Exam_Display_ShowInfo), Culture)!;
+    public static string Settings_Exam_Display_ShowInfoDescription => ResourceManager.GetString(nameof(Settings_Exam_Display_ShowInfoDescription), Culture)!;
     public static string Settings_Exam_Time_Title => ResourceManager.GetString(nameof(Settings_Exam_Time_Title), Culture)!;
     public static string Settings_Exam_Time_Enabled => ResourceManager.GetString(nameof(Settings_Exam_Time_Enabled), Culture)!;
     public static string Settings_Exam_Time_EnabledDescription => ResourceManager.GetString(nameof(Settings_Exam_Time_EnabledDescription), Culture)!;

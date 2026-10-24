@@ -1610,7 +1610,7 @@
     <value>考哪些科目</value>
   </data>
     <data name="Settings_Exam_Plan_StepReview" xml:space="preserve">
-    <value>对照表</value>
+    <value>一天几场与汇总</value>
   </data>
   <data name="Settings_Exam_Plan_TitleDefault" xml:space="preserve">
     <value>{0} 年期末考试</value>
@@ -1690,10 +1690,7 @@
     <data name="Settings_Exam_Plan_SlotsPreset" xml:space="preserve">
     <value>作息预设</value>
   </data>
-                  <data name="Settings_Exam_Plan_ReviewTitle" xml:space="preserve">
-    <value>排出来是这样</value>
-  </data>
-  <data name="Settings_Exam_Plan_ReviewEmpty" xml:space="preserve">
+                  <data name="Settings_Exam_Plan_ReviewEmpty" xml:space="preserve">
     <value>还没排出来任何考试</value>
   </data>
   <data name="Settings_Exam_Plan_ReviewEmptyHint" xml:space="preserve">
@@ -1866,6 +1863,12 @@
   </data>
   <data name="Settings_Exam_Plan_WriteReplace" xml:space="preserve">
     <value>覆盖看板上已有的考试</value>
+  </data>
+  <data name="Settings_Exam_Plan_ScheduleSection" xml:space="preserve">
+    <value>排期</value>
+  </data>
+  <data name="Settings_Exam_Plan_SummarySection" xml:space="preserve">
+    <value>汇总</value>
   </data>
   <data name="Menu_OpenExamBoard" xml:space="preserve">
     <value>考试看板</value>
@@ -2067,6 +2070,12 @@
   </data>
   <data name="Settings_Exam_Display_RemainingSecondsDescription" xml:space="preserve">
     <value>最后一小时里的倒计时连秒一起跳</value>
+  </data>
+  <data name="Settings_Exam_Display_ShowInfo" xml:space="preserve">
+    <value>显示时钟下面的考试信息</value>
+  </data>
+  <data name="Settings_Exam_Display_ShowInfoDescription" xml:space="preserve">
+    <value>关掉之后整块看板只剩一个大时钟</value>
   </data>
   <data name="Settings_Exam_Time_Title" xml:space="preserve">
     <value>时间同步</value>
