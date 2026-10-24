@@ -46,6 +46,9 @@ public static class FluentIcons
     /// <summary>下拉箭头（收纳位置选择那种「点开才展开」的入口用）。</summary>
     public const string ChevronDownFilled = "\uE447";
 
+    /// <summary>上移箭头。码位来自上游图标映射表 <c>chevron_up_20_filled</c>。</summary>
+    public const string ChevronUpFilled = "\uE44F";
+
     /// <summary>未锁定（可以点得动）。码位来自上游图标映射表 <c>lock_open_20_filled</c>。</summary>
     public const string LockOpenFilled = "\uEAF7";
 
@@ -90,4 +93,7 @@ public static class FluentIcons
 
     /// <summary>设置里的「窗口与收纳」页。码位来自上游图标映射表 <c>window_20_filled</c>。</summary>
     public const string WindowFilled = "\uF482";
+
+    /// <summary>「快速布置考试」入口（设置页的看板列表与编辑窗口顶部）。码位来自上游图标映射表 <c>wand_20_filled</c>。</summary>
+    public const string WandFilled = "\uF42E";
 }

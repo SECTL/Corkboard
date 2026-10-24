@@ -35,9 +35,28 @@ public partial class BasicSettingsConfig : ObservableObject
     /// <summary>
     ///     长按拖动：按住主窗口<b>任意位置</b>（含按钮、输入框、列表）约半秒即可拖动窗口；
     ///     短按与拖动方向的手势仍归控件。关闭后只有顶部标题栏能拖动。
-    ///     用户可见文案见 <c>Settings_Basic_HoldToDragWindow</c>。
+    ///     <para>
+    ///         ⚠️ 这个键<b>冻结</b>：设置页已经把它和 <see cref="WindowFixed" /> 整合成一个三档下拉框
+    ///         （长按拖动 / 仅标题栏 / 固定窗口），但落盘仍是这两个老键，老配置读出来就是它原本的意思，
+    ///         不需要迁移。两个 bool 一起表达三态：固定 = <see cref="WindowFixed" />，
+    ///         否则看这一项。
+    ///     </para>
+    ///     用户可见文案见 <c>Settings_Basic_WindowDragMode</c>。
     /// </summary>
     [ObservableProperty] private bool _holdToDragWindow = true;
+
+    /// <summary>
+    ///     固定窗口：位置与大小都锁住，拖不动、四边也拉不动（标题栏拖动与长按拖动一起失效）。
+    ///     与「长按拖动」是同一组设置的两个档位——<b>它优先</b>：开着它就不再看
+    ///     <see cref="HoldToDragWindow" />。
+    ///     <para>
+    ///         与 <see cref="ClickThrough" /> 的区别：固定只是不响应拖动/缩放，窗口里的按钮照样点得动；
+    ///         点击穿透是整窗不接收鼠标。标题栏那颗锁定按钮到底做哪件事，由
+    ///         <see cref="WindowLockMode" /> 决定。
+    ///     </para>
+    ///     用户可见文案见 <c>Settings_Basic_WindowDragMode</c>（第三档）。
+    /// </summary>
+    [ObservableProperty] private bool _windowFixed;
 
     /// <summary>
     ///     主窗口整体不透明度：1 完全不透明，越小越透（下限见设置页与平台实现）。
@@ -53,6 +72,13 @@ public partial class BasicSettingsConfig : ObservableObject
     ///     用户可见文案见 <c>Settings_Basic_ClickThrough</c>。
     /// </summary>
     [ObservableProperty] private bool _clickThrough;
+
+    /// <summary>
+    ///     标题栏那颗锁定按钮点一下做什么：点击穿透（老行为）还是固定窗口。
+    ///     默认 <see cref="WindowLockMode.ClickThrough" />，与加这个配置之前完全一致。
+    ///     用户可见文案见 <c>Settings_Basic_WindowLockMode</c>。
+    /// </summary>
+    [ObservableProperty] private WindowLockMode _windowLockMode = WindowLockMode.ClickThrough;
 
     /// <summary>
     ///     窗口圆角：开着时主窗口四角按固定半径收圆，默认关（用户要的是「能开」）。

@@ -13,6 +13,7 @@ using Corkboard.Core.Abstraction;
 using Corkboard.Core.Attributes;
 using Corkboard.Core.Controls;
 using Corkboard.Core.Board;
+using Corkboard.Core.Enums.Configs;
 using Corkboard.Core.Services;
 using Corkboard.Helpers;
 using Corkboard.Services.Board;
@@ -122,6 +123,16 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
     ///     这样「壳控制、页面显示」两边共享同一份进度。
     /// </summary>
     public BoardReplayService Replay { get; } = IAppHost.GetService<BoardReplayService>();
+
+    /// <summary>
+    ///     窗口是否被「固定」：位置与大小都锁住，拖动与四边缩放一起失效。
+    ///     <para>
+    ///         它和「长按拖动」是同一组设置的两个档位（设置页那张下拉框），但落盘是两个老键：
+    ///         固定优先，开着它就不再看 <c>HoldToDragWindow</c>。
+    ///         拖动、缩放、光标三处判定都从这里取，不要在别处另读配置。
+    ///     </para>
+    /// </summary>
+    private bool IsWindowFixed => ViewModel.Config.Basic.WindowFixed;
 
     public MainView()
     {
@@ -334,6 +345,10 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
         if (_isResizingWindow || _isDraggingWindow || Overlay.IsOpen)
             return;
 
+        // 固定窗口时四边也没有缩放热区：不然光标照旧变成双向箭头、按下去却没反应。
+        if (ViewModel.Config.Basic.WindowFixed)
+            return;
+
         if (e.Pointer.Type == PointerType.Mouse && !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
             return;
 
@@ -377,7 +392,7 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
             // 标题栏按下即拖；命中标题栏里的交互控件时让出（导航栏去掉后主界面标题栏暂时没有控件，
             // 但以后加按钮就靠这张排除表，见 IsInteractiveSource）。
             // 拖动开始后同样标 Handled：否则库的原生标题栏拖动可能再接管一次。
-            if (!IsInteractiveSource(e.Source))
+            if (!IsInteractiveSource(e.Source) && !IsWindowFixed)
             {
                 StartWindowDrag(e);
                 if (_isDraggingWindow)
@@ -400,7 +415,7 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
         if (WindowDragGesture.IsSuppressed(e.Source))
             return;
 
-        if (!ViewModel.Config.Basic.HoldToDragWindow)
+        if (!ViewModel.Config.Basic.HoldToDragWindow || IsWindowFixed)
             return;
 
         _holdToDragPressedEvent = e;
@@ -581,7 +596,7 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
     /// </summary>
     private bool TryStartWindowResize(PointerPressedEventArgs e)
     {
-        if (_isResizingWindow)
+        if (_isResizingWindow || IsWindowFixed)
             return false;
 
         if (TopLevel.GetTopLevel(this) is not Window { WindowState: WindowState.Normal } window)
@@ -697,6 +712,15 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
     /// <summary>没有手势在跑时按指针所在边缘换光标，用户才知道这里能拉。</summary>
     private void UpdateResizeCursor(PointerEventArgs e)
     {
+        // 固定窗口时四边拉不动，光标也不该变成双向箭头（否则是「提示能拉、拉不动」）。
+        if (IsWindowFixed)
+        {
+            if (Cursor is not null)
+                Cursor = null;
+
+            return;
+        }
+
         // 与 Scaling / 判定同源，统一用窗口坐标（置底后 MainView 不贴窗口四边，见 TryStartWindowResize）。
         var sides = TopLevel.GetTopLevel(this) is Window window
             ? HitTestResizeSides(e.GetPosition(window), window.Bounds.Size)
@@ -891,11 +915,18 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
         Dock.Collapse(TopLevel.GetTopLevel(this) as Window);
 
     /// <summary>
-    ///     「锁定窗口」：开点击穿透。只写配置——窗口样式与显隐都由 <c>MainWindow</c> 订阅配置变化后处理，
-    ///     视图不直接碰平台能力，也不需要知道徽标窗口的存在（<c>MainView</c> 会把这一排连同自己一起让开）。
+    ///     「锁定窗口」：按 <c>BasicSettingsConfig.WindowLockMode</c> 决定点下去做什么——
+    ///     点击穿透（老行为）还是固定窗口（位置锁死但内容照常点得动）。
+    ///     只写配置：窗口样式与显隐都由 <c>MainWindow</c> 订阅配置变化后处理，
+    ///     视图不直接碰平台能力，也不需要知道徽标窗口的存在。
     /// </summary>
-    private void LockWindowButton_OnClick(object? sender, RoutedEventArgs e) =>
-        ViewModel.Config.Basic.ClickThrough = true;
+    private void LockWindowButton_OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (ViewModel.Config.Basic.WindowLockMode == WindowLockMode.FixedPosition)
+            ViewModel.Config.Basic.WindowFixed = true;
+        else
+            ViewModel.Config.Basic.ClickThrough = true;
+    }
 
     #endregion
 

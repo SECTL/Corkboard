@@ -13,7 +13,7 @@
         <!--
             设置卡：Header 是设置项名称，Description 是简介，Footer 放控件。
             一个卡里有多项时用 fa:FASettingsExpanderItem 分行——名称与简介在左，控件在右。
-            三个分区：自动清理、历史与回放、数据维护。
+            四个分区：自动清理、历史与回放、自动保存、数据维护。
         -->
         <StackPanel Classes="page-container">
             <!-- 页标题画在 page-container 里：它才和设置卡同宽、同左边缘，并随卡片一起滚动。 -->
@@ -201,6 +201,136 @@
             </fa:FASettingsExpander>
 
             <TextBlock Classes="section-title"
+                       Text="{x:Static core:Resources.Settings_Board_AutoSave_Title}" />
+
+            <!--
+                自动保存：板子改完等几秒把整块板面存成一张 PNG（与手动「导出图片」是同一张长图）。
+                「每天一张」当天覆盖，「每次修改都存」每笔改动一张；两种模式都按「保留天数」删旧的。
+                默认关着、默认存在软件自己的数据目录里——不往用户文档目录里乱写东西。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_AutoSave}"
+                                   Description="{x:Static core:Resources.Settings_Board_AutoSaveDescription}">
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_AutoSaveEnabled}"
+                                           Description="{x:Static core:Resources.Settings_Board_AutoSaveEnabledDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ToggleSwitch IsChecked="{Binding AutoSave.Settings.Enabled, Mode=TwoWay}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_AutoSave_Mode}"
+                                           Description="{x:Static core:Resources.Settings_Board_AutoSave_ModeDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ComboBox MinWidth="160"
+                                  ItemsSource="{Binding AutoSave.ModeOptions}"
+                                  SelectedItem="{Binding AutoSave.SelectedModeOption, Mode=TwoWay}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:BoardAutoSaveModeOption">
+                                    <TextBlock Text="{Binding DisplayName}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_AutoSave_Retention}"
+                                           Description="{x:Static core:Resources.Settings_Board_AutoSave_RetentionDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <NumericUpDown MinWidth="130"
+                                           Minimum="{Binding AutoSave.MinRetentionDays}"
+                                           Maximum="{Binding AutoSave.MaxRetentionDays}"
+                                           Increment="1"
+                                           FormatString="0"
+                                           Value="{Binding AutoSave.RetentionDaysDraft, Mode=TwoWay}"
+                                           LostFocus="OnEditorLostFocus" />
+                            <TextBlock VerticalAlignment="Center"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                       Text="{x:Static core:Resources.Settings_Board_AutoSave_RetentionUnit}" />
+                        </StackPanel>
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <!--
+                    保存位置：只能从文件夹选择器挑或恢复默认，不给手输。
+                    手输一个打错的路径，结果是「开了自动保存却什么都没存」，而失败只记日志，用户发现不了。
+                -->
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_AutoSave_Folder}"
+                                           Description="{x:Static core:Resources.Settings_Board_AutoSave_FolderDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <TextBlock MaxWidth="260"
+                                       VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis"
+                                       ToolTip.Tip="{Binding AutoSave.Folder}"
+                                       Text="{Binding AutoSave.Folder}" />
+                            <!-- 没自己挑过目录时标一句「默认位置」，省得用户以为这是自己设过的。 -->
+                            <Border Padding="6 1"
+                                    VerticalAlignment="Center"
+                                    CornerRadius="4"
+                                    IsVisible="{Binding !AutoSave.HasCustomFolder}"
+                                    Background="{DynamicResource ControlFillColorSecondaryBrush}">
+                                <TextBlock FontSize="12"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                           Text="{x:Static core:Resources.Settings_Board_AutoSave_FolderDefault}" />
+                            </Border>
+                            <Button Content="{x:Static core:Resources.Settings_Board_AutoSave_ChooseFolder}"
+                                    Click="OnChooseFolderClick" />
+                            <Button Content="{x:Static core:Resources.Settings_Board_AutoSave_OpenFolder}"
+                                    Command="{Binding AutoSave.OpenFolderCommand}" />
+                            <Button Content="{x:Static core:Resources.Settings_Board_AutoSave_ResetFolder}"
+                                    Command="{Binding AutoSave.ResetFolderCommand}"
+                                    IsVisible="{Binding AutoSave.HasCustomFolder}" />
+                        </StackPanel>
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <!-- 保存状态：上一次存到哪 / 为什么失败，右边一颗「立即保存一张」（关着开关也能手动存）。 -->
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_AutoSave_Status}"
+                                           Description="{x:Static core:Resources.Settings_Board_AutoSave_StatusDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                            <!-- 正常与失败各一条：失败时换成红色那条，别让「没存成功」看起来像普通状态。 -->
+                            <TextBlock MaxWidth="260"
+                                       VerticalAlignment="Center"
+                                       TextAlignment="Right"
+                                       TextWrapping="Wrap"
+                                       IsVisible="{Binding !AutoSave.HasError}"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                       Text="{Binding AutoSave.StatusText}" />
+                            <TextBlock MaxWidth="260"
+                                       VerticalAlignment="Center"
+                                       TextAlignment="Right"
+                                       TextWrapping="Wrap"
+                                       IsVisible="{Binding AutoSave.HasError}"
+                                       Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                                       Text="{Binding AutoSave.StatusText}" />
+                            <Button Classes="accent"
+                                    VerticalAlignment="Center"
+                                    Content="{x:Static core:Resources.Settings_Board_AutoSave_SaveNow}"
+                                    Command="{Binding AutoSave.SaveNowCommand}" />
+                        </StackPanel>
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_AutoSave_StatCount}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                            <TextBlock VerticalAlignment="Center" Text="{Binding AutoSave.CountText}" />
+                            <TextBlock VerticalAlignment="Center"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                       Text="{x:Static core:Resources.Settings_Board_AutoSave_CountUnit}" />
+                        </StackPanel>
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_AutoSave_StatSize}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <TextBlock VerticalAlignment="Center" Text="{Binding AutoSave.SizeText}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+            </fa:FASettingsExpander>
+
+            <TextBlock Classes="section-title"
                        Text="{x:Static core:Resources.Settings_Section_Maintenance}" />
 
             <!--
@@ -216,11 +346,20 @@
                 </fa:FASettingsExpander.Footer>
             </fa:FASettingsExpander>
 
-            <!-- 立即清理：不看开关也不看时刻，点一下把到了截止日期的作业当场清掉。 -->
-            <Button Classes="accent"
-                    HorizontalAlignment="Left"
-                    Content="{x:Static core:Resources.Settings_Board_CleanupRunNow}"
-                    Command="{Binding Cleanup.RunCleanupNowCommand}" />
+            <!--
+                立即清理：不看开关也不看时刻，点一下把到了截止日期的作业当场清掉。
+                跟上面那张一样是设置卡——裸一颗按钮没人知道它是干什么的（用户反馈过）；
+                结果照旧看上面「自动清理」卡里的「上次清理」那一行（两者共用同一份状态）。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_CleanupRunNow}"
+                                   Description="{x:Static core:Resources.Settings_Board_CleanupRunNowDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <Button Classes="accent"
+                            VerticalAlignment="Center"
+                            Content="{x:Static core:Resources.Settings_Board_CleanupRunNow}"
+                            Command="{Binding Cleanup.RunCleanupNowCommand}" />
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

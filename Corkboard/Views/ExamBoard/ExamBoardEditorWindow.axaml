@@ -111,11 +111,27 @@
                     BorderThickness="1"
                     CornerRadius="8">
                 <Grid RowDefinitions="Auto,Auto,*,Auto">
-                    <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="16,12,16,10">
+                    <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="12" Margin="16,12,16,10">
                         <TextBlock VerticalAlignment="Center"
                                    FontWeight="SemiBold"
                                    Text="{x:Static core:Resources.Settings_Exam_Schedule_Title}" />
-                        <TextBlock Grid.Column="1"
+                        <!--
+                            「快速布置」紧贴这张表：要补的就是这张表里的东西。
+                            它往当前看板追加，已有的考试一条都不动（与设置页那个「新建看板」的入口不同）。
+                        -->
+                        <Button Grid.Column="1"
+                                VerticalAlignment="Center"
+                                ToolTip.Tip="{x:Static core:Resources.Settings_Exam_Plan_QuickButtonToolTip}"
+                                Click="OnQuickPlanClick">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBlock VerticalAlignment="Center"
+                                           FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                           Text="{x:Static icons:FluentIcons.WandFilled}" />
+                                <TextBlock VerticalAlignment="Center"
+                                           Text="{x:Static core:Resources.Settings_Exam_Plan_QuickButton}" />
+                            </StackPanel>
+                        </Button>
+                        <TextBlock Grid.Column="2"
                                    VerticalAlignment="Center"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                                    Text="{Binding CountText}" />
@@ -335,7 +351,7 @@
             </Border>
         </Grid>
 
-        <!-- 底部：看一眼全屏效果，或者关掉窗口（改动早就落盘了，关掉不丢）。 -->
+        <!-- 底部：看一眼全屏效果、把这套排法存成模板，或者关掉窗口（改动早就落盘了，关掉不丢）。 -->
         <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8" Margin="0,14,0,0">
             <Button Click="OnPreviewClick">
                 <StackPanel Orientation="Horizontal" Spacing="8">
@@ -344,6 +360,20 @@
                                Text="{x:Static icons:FluentIcons.FullScreenMaximizeFilled}" />
                     <TextBlock VerticalAlignment="Center"
                                Text="{x:Static core:Resources.Settings_Exam_Schedule_OpenBoard}" />
+                </StackPanel>
+            </Button>
+            <!--
+                「另存为模板」：模板里只存「第几天几点考什么」，不存绝对日期，
+                所以这一套排法下一届换个第一天就能直接用。
+            -->
+            <Button ToolTip.Tip="{x:Static core:Resources.Settings_Exam_Plan_SaveTemplateToolTip}"
+                    Click="OnSaveTemplateClick">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock VerticalAlignment="Center"
+                               FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                               Text="{x:Static icons:FluentIcons.SaveFilled}" />
+                    <TextBlock VerticalAlignment="Center"
+                               Text="{x:Static core:Resources.Settings_Exam_Plan_SaveTemplate}" />
                 </StackPanel>
             </Button>
             <Button Content="{x:Static core:Resources.Common_Close}" Click="OnCloseClick" />

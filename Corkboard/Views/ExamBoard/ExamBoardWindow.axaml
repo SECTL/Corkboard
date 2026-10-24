@@ -52,6 +52,17 @@
             <Setter Property="FontSize" Value="24" />
             <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
         </Style>
+
+        <!--
+            时钟下面那句「还剩 40 分钟」：平时是次要文字色；
+            剩到设置里那个分钟数（默认 15）再转红，别整场都是红的、红到底就没人看了。
+        -->
+        <Style Selector="TextBlock.remaining">
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        </Style>
+        <Style Selector="TextBlock.remaining.urgent">
+            <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+        </Style>
         <Style Selector="TextBlock.cell.status.upcoming">
             <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCautionBrush}" />
             <Setter Property="FontWeight" Value="SemiBold" />
@@ -62,6 +73,15 @@
         </Style>
         <Style Selector="TextBlock.cell.status.finished">
             <Setter Property="Opacity" Value="0.5" />
+        </Style>
+
+        <!--
+            状态底下那句「还有 12 分钟」：比状态名小一档、比它更淡，读起来是注解而不是第二行状态。
+            这一行**不带** upcoming / progress 配色类——状态名已经用颜色说话了，注解再跟着变色就抢眼。
+        -->
+        <Style Selector="TextBlock.cell.hint">
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
         </Style>
 
         <!-- 「下一场」那一行整行提亮。 -->
@@ -111,7 +131,7 @@
         <!-- 正文：时钟 + 考试信息，两列，谁在左由「时钟位置」决定。 -->
         <Grid Grid.Row="1" ColumnDefinitions="*,*" Margin="0,28,0,20">
 
-            <!-- 时钟（只剩时钟时横跨两列、居中放大）。 -->
+            <!-- 时钟（只剩时钟时横跨两列、居中放大），收起列表时下面再带一组考试信息。 -->
             <StackPanel Grid.Column="{Binding ClockColumn}"
                         Grid.ColumnSpan="{Binding ClockColumnSpan}"
                         VerticalAlignment="Center"
@@ -122,24 +142,100 @@
                            FontWeight="SemiBold"
                            Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                            HorizontalAlignment="Center" />
-                <StackPanel Orientation="Horizontal" Spacing="14" HorizontalAlignment="Center">
-                    <TextBlock Text="{Binding ClockDate}"
-                               FontSize="22"
-                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                    <TextBlock Text="{Binding ClockSource}"
-                               FontSize="16"
-                               VerticalAlignment="Bottom"
-                               Margin="0,0,0,3"
+                <!-- 日期跟着时钟居中；「已校时 / 本机时间」那行小字已按用户要求删掉（作用不大）。 -->
+                <TextBlock Text="{Binding ClockDate}"
+                           FontSize="22"
+                           HorizontalAlignment="Center"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+
+                <!--
+                    表格收起时（即将开始 / 进行中）钟下面这组字：这一刻该看什么全在这里——
+                    考哪科、哪天几点到几点、还剩多久（快到点转红）、卷面信息（填了才显示）。
+
+                    为什么不单独做一张卡：时钟是一整块没有底的字，下面再压一块有底的卡，
+                    画面会被切成上下两半（看着就是「一个钟 + 一个组件」两个东西）。
+                    这里用一条极淡的短分隔线分组、靠字号与颜色分层，整组跟时钟是同一个视觉单元。
+                -->
+                <StackPanel IsVisible="{Binding ShowExamInfo}"
+                            HorizontalAlignment="Center"
+                            Spacing="6"
+                            Margin="0,30,0,0">
+                    <Border Width="240"
+                            Height="1"
+                            Margin="0,0,0,20"
+                            HorizontalAlignment="Center"
+                            Opacity="0.45"
+                            Background="{DynamicResource DividerStrokeColorDefaultBrush}" />
+                    <TextBlock Text="{Binding InfoCaption}"
+                               FontSize="18"
+                               HorizontalAlignment="Center"
+                               Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                    <TextBlock Text="{Binding InfoSubject}"
+                               FontSize="54"
+                               FontWeight="SemiBold"
+                               HorizontalAlignment="Center"
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                    <StackPanel Orientation="Horizontal" Spacing="18" HorizontalAlignment="Center">
+                        <TextBlock Text="{Binding InfoDateText}"
+                                   FontSize="26"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        <TextBlock Text="{Binding InfoTimeRange}"
+                                   FontSize="26"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                    <TextBlock Classes="remaining"
+                               Classes.urgent="{Binding InfoIsUrgent}"
+                               Text="{Binding InfoRemaining}"
+                               IsVisible="{Binding InfoHasRemaining}"
+                               FontSize="32"
+                               FontWeight="SemiBold"
+                               HorizontalAlignment="Center" />
+                    <TextBlock Text="{Binding InfoPaperInfo}"
+                               IsVisible="{Binding InfoHasPaperInfo}"
+                               FontSize="19"
+                               HorizontalAlignment="Center"
                                Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
                 </StackPanel>
             </StackPanel>
 
-            <!-- 全部考试：表头 + 每场一行。 -->
+            <!--
+                全部考试：表头 + 每场一行。
+                整块限宽 720、在右半区居中——不限宽的话表会一直拉到窗口边缘，
+                四列被摊得很开、每行只有几个短词却横跨半个屏幕，看着反而空。
+                ⚠️ 这里必须用 Stretch（默认）而不是 Center：Grid 一旦按内容量尺寸，
+                `*` 列就会塌成内容宽（科目列只剩「语文」两个字宽，时间直接贴上来），
+                而 Stretch + MaxWidth 在 Avalonia 里就是「最多这么宽、然后居中」。
+            -->
             <Grid Grid.Column="{Binding ListColumn}"
                   IsVisible="{Binding ShowList}"
                   VerticalAlignment="Center"
+                  MaxWidth="720"
                   RowDefinitions="Auto,Auto,*">
-                <Grid Grid.Row="0" ColumnDefinitions="170,*,250,260" Margin="18,0,18,10">
+                <!--
+                    ⚠️ 表头与数据行必须用完全相同的 ColumnDefinitions（见 AGENTS.md「表格对齐」）。
+                    原来写的是 170,*,250,260：时间列 250、状态列 260 都远大于里面的字
+                    （「08:00 – 10:00」163、「未开始」72），多出来的宽度全被它们占着，
+                    科目列只剩 73 DIP——「信息技术」这种四个字的科目直接被截成省略号，
+                    而且日期与科目之间只剩 16 DIP 的缝，这就是用户说的「表格有点拥挤」。
+                    现在按内容配：日期 175 / 科目 * / 时间 180 / 状态 140
+                    （720 里扣掉两侧内边距 40、三列固定 495，科目还剩 185）。
+                    这几个数是从实测字宽倒推的，别再随手放大：
+                    「11月6日 周五」26 号字实测 149 DIP，「08:00 – 10:00」24 号字 171 DIP，
+                    「还有 12 分钟」17 号字 119 DIP，三列各自留十几 DIP 余量就够。
+                    状态那一列的字现在也分两行放（见下面的行模板），不再需要 260。
+                    ⚠️ 三列固定宽 + 内边距必须 ≤ 720，否则星号列被 MinWidth 顶住、状态列会顶出卡片右边缘。
+                    ⚠️ 科目那个 `*` **必须显式给 MinWidth**：只写 `*` 的话，一旦外层把它当内容量尺寸
+                    （或者可用宽度不够），星号列会塌成内容宽，科目字就被后面两列压住叠在一起
+                    （用户截图反馈过「科目和时间叠在一起」）。用 ColumnDefinition 元素写法才带得了 MinWidth。
+                -->
+                <Grid Grid.Row="0" Margin="20,0,20,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="190" />
+                        <ColumnDefinition Width="*" MinWidth="130" />
+                        <ColumnDefinition Width="190" />
+                        <ColumnDefinition Width="140" />
+                    </Grid.ColumnDefinitions>
                     <TextBlock Grid.Column="0" Classes="col-head"
                                Text="{x:Static core:Resources.Exam_Board_Table_Date}" />
                     <TextBlock Grid.Column="1" Classes="col-head"
@@ -149,7 +245,7 @@
                     <TextBlock Grid.Column="3" Classes="col-head"
                                Text="{x:Static core:Resources.Exam_Board_Table_Status}" />
                 </Grid>
-                <Border Grid.Row="1" Classes="row-separator" Margin="18,0" />
+                <Border Grid.Row="1" Classes="row-separator" Margin="20,0" />
 
                 <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <ItemsControl ItemsSource="{Binding Rows}" Margin="0,6,0,0">
@@ -158,27 +254,36 @@
                                 <StackPanel>
                                     <Border Classes="exam-row"
                                             Classes.next="{Binding IsNext}"
-                                            Padding="18,12">
-                                        <Grid ColumnDefinitions="170,*,250,260">
+                                            Padding="20,14">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="190" />
+                                                <ColumnDefinition Width="*" MinWidth="130" />
+                                                <ColumnDefinition Width="190" />
+                                                <ColumnDefinition Width="140" />
+                                            </Grid.ColumnDefinitions>
                                             <TextBlock Grid.Column="0" Classes="cell" Text="{Binding DateText}" />
-                                            <StackPanel Grid.Column="1" Spacing="2">
-                                                <TextBlock Classes="cell subject" Text="{Binding Subject}" />
-                                                <TextBlock Classes="cell"
-                                                           FontSize="17"
-                                                           Text="{Binding PaperInfo}"
-                                                           IsVisible="{Binding HasPaperInfo}"
-                                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
-                                            </StackPanel>
+                                            <!--
+                                                科目这一列只写科目本身。
+                                                卷面信息（几张几页几题）早先在这里另起一行，行高被撑开、
+                                                长一点的「2 张 · 8 页 · 3 大题」还溢出成省略号（用户嫌「表格里
+                                                别多加东西」）——它现在由左边那组独立的考试信息承载，表里不再重复。
+                                            -->
+                                            <TextBlock Grid.Column="1" Classes="cell subject" Text="{Binding Subject}" />
                                             <TextBlock Grid.Column="2" Classes="cell" Text="{Binding TimeText}" />
+                                            <!--
+                                                状态只写状态名（未开始 / 即将开始 / 进行中 / 已结束）。
+                                                「还有 12 分钟」这种注解一律不进表格——行高会被撑开、六行看着挤
+                                                （用户要求「表格里别多加东西」），它由左边那组考试信息承载。
+                                            -->
                                             <TextBlock Grid.Column="3" Classes="cell status"
                                                        Classes.upcoming="{Binding IsUpcoming}"
                                                        Classes.progress="{Binding IsInProgress}"
                                                        Classes.finished="{Binding IsFinished}"
-                                                       Text="{Binding StatusText}"
-                                                       VerticalAlignment="Center" />
+                                                       Text="{Binding StatusText}" />
                                         </Grid>
                                     </Border>
-                                    <Border Classes="row-separator" Margin="18,0" />
+                                    <Border Classes="row-separator" Margin="20,0" />
                                 </StackPanel>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
@@ -198,41 +303,6 @@
                                Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
                 </StackPanel>
             </Grid>
-
-            <!-- 即将开始且收起了列表：只留下一场这一张卡。 -->
-            <Border Grid.Column="{Binding ListColumn}"
-                    IsVisible="{Binding ShowNextCard}"
-                    VerticalAlignment="Center"
-                    Background="{DynamicResource SubtleFillColorSecondaryBrush}"
-                    CornerRadius="18"
-                    Padding="40,32">
-                <StackPanel Spacing="14">
-                    <TextBlock Text="{x:Static core:Resources.Exam_Board_NextExam}"
-                               FontSize="18"
-                               Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
-                    <TextBlock Text="{Binding NextSubject}"
-                               FontSize="58"
-                               FontWeight="SemiBold"
-                               TextWrapping="Wrap"
-                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
-                    <StackPanel Orientation="Horizontal" Spacing="18">
-                        <TextBlock Text="{Binding NextDate}" FontSize="24"
-                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                        <TextBlock Text="{Binding NextTime}" FontSize="24"
-                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-                    </StackPanel>
-                    <TextBlock Text="{Binding NextStatus}"
-                               FontSize="30"
-                               FontWeight="SemiBold"
-                               Classes="cell status"
-                               Classes.upcoming="{Binding NextIsUpcoming}"
-                               Classes.progress="{Binding NextIsInProgress}" />
-                    <TextBlock Text="{Binding NextPaperInfo}"
-                               IsVisible="{Binding NextHasPaperInfo}"
-                               FontSize="20"
-                               Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
-                </StackPanel>
-            </Border>
         </Grid>
 
         <!--

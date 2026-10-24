@@ -42,6 +42,10 @@ public partial class ExamDisplaySettingsPageViewModel : ViewModelBase
     [ObservableProperty]
     private decimal? _thresholdDraft;
 
+    /// <summary>「剩余时间变红」门槛的草稿（分钟，0 = 不提醒）。</summary>
+    [ObservableProperty]
+    private decimal? _warningDraft;
+
     /// <summary>时钟摆左边还是右边。</summary>
     public IReadOnlyList<ExamClockSideOption> ClockSideOptions { get; }
 
@@ -81,7 +85,11 @@ public partial class ExamDisplaySettingsPageViewModel : ViewModelBase
     }
 
     /// <summary>把还压在草稿里的数值立刻写进配置（失焦 / 回车 / 离开页面时调）。</summary>
-    public void CommitAll() => CommitThreshold();
+    public void CommitAll()
+    {
+        CommitThreshold();
+        CommitWarning();
+    }
 
     private void CommitThreshold()
     {
@@ -97,10 +105,25 @@ public partial class ExamDisplaySettingsPageViewModel : ViewModelBase
             ThresholdDraft = normalized;
     }
 
+    private void CommitWarning()
+    {
+        var value = WarningDraft is { } draft
+            ? ExamStatusPolicy.ClampRemainingWarningMinutes((int)draft)
+            : ExamStatusPolicy.ClampRemainingWarningMinutes(Settings.RemainingWarningMinutes);
+
+        if (Settings.RemainingWarningMinutes != value)
+            Settings.RemainingWarningMinutes = value;
+
+        var normalized = (decimal)value;
+        if (WarningDraft != normalized)
+            WarningDraft = normalized;
+    }
+
     /// <summary>把草稿整体同步成配置里的值（首次进页面、云端恢复设置之后）。</summary>
     private void ResetDrafts()
     {
         ThresholdDraft = ExamStatusPolicy.ClampUpcomingMinutes(Settings.UpcomingThresholdMinutes);
+        WarningDraft = ExamStatusPolicy.ClampRemainingWarningMinutes(Settings.RemainingWarningMinutes);
         OnPropertyChanged(nameof(SelectedClockSideOption));
     }
 
@@ -111,6 +134,9 @@ public partial class ExamDisplaySettingsPageViewModel : ViewModelBase
         {
             case null or nameof(ExamBoardSettingsConfig.UpcomingThresholdMinutes):
                 ThresholdDraft = ExamStatusPolicy.ClampUpcomingMinutes(Settings.UpcomingThresholdMinutes);
+                break;
+            case nameof(ExamBoardSettingsConfig.RemainingWarningMinutes):
+                WarningDraft = ExamStatusPolicy.ClampRemainingWarningMinutes(Settings.RemainingWarningMinutes);
                 break;
             case nameof(ExamBoardSettingsConfig.ClockSide):
                 OnPropertyChanged(nameof(SelectedClockSideOption));

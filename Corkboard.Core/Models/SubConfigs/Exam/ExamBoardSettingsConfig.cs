@@ -50,10 +50,24 @@ public partial class ExamBoardSettingsConfig : ObservableObject
     /// </summary>
     [ObservableProperty] private bool _showExamListInProgress;
 
+    /// <summary>
+    ///     「剩余时间快到了」的门槛（分钟）：正在考剩多久、即将开始还有多久，少于这个数就转红。
+    ///     默认 15 分钟；0 表示不提醒。读的时候一律过一遍
+    ///     <see cref="ExamStatusPolicy.ClampRemainingWarningMinutes" />。
+    /// </summary>
+    [ObservableProperty] private int _remainingWarningMinutes = ExamStatusPolicy.DefaultRemainingWarningMinutes;
+
+    /// <summary>
+    ///     「剩余时间精确到秒」：开启后最后一小时里的倒计时带秒（「还剩 12 分 30 秒」），
+    ///     一小时以上仍然只说小时/分钟（那时候秒没意义）。默认关。
+    /// </summary>
+    [ObservableProperty] private bool _remainingSecondsEnabled;
+
     /// <summary>读盘后收拾一遍：阈值夹进合法区间、遗留的标题与副标题去首尾空白（手改的脏数据不进界面）。</summary>
     public void Normalize()
     {
         UpcomingThresholdMinutes = ExamStatusPolicy.ClampUpcomingMinutes(UpcomingThresholdMinutes);
+        RemainingWarningMinutes = ExamStatusPolicy.ClampRemainingWarningMinutes(RemainingWarningMinutes);
         Title = Title?.Trim() ?? string.Empty;
         Subtitle = Subtitle?.Trim() ?? string.Empty;
     }

@@ -1,10 +1,13 @@
+using System.IO;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+using Avalonia.Platform.Storage;
 using Corkboard.Core.Abstraction;
 using Corkboard.Core.Attributes;
 using Corkboard.Core.Icons;
 using Corkboard.Services.Ui;
+using Corkboard.Shared;
 using Corkboard.ViewModels.SettingsPages.Board;
 using FluentAvalonia.UI.Controls;
 using CR = Corkboard.Core.Langs.Common.Resources;
@@ -27,13 +30,21 @@ public partial class BoardAutomationSettingsPage : UserControl
         DataContext = IAppHost.GetService<BoardAutomationSettingsPageViewModel>();
 
         // 历史占用统计在页面出现时现读一次，别拿上一次留下的数字糊弄人。
-        Loaded += (_, _) => ViewModel?.History.RefreshStatistics();
+        // 自动保存的子 VM 要在这时才开始听服务的状态变化（页面是 transient，每次进来重挂）。
+        Loaded += (_, _) =>
+        {
+            ViewModel?.History.RefreshStatistics();
+            ViewModel?.AutoSave.Attach();
+        };
 
         // 时刻与三个数值框都是草稿式的：用户可能没让控件失焦就关了页面，离开时补交一次。
+        // 自动保存的子 VM 订阅了单例服务的 StatusChanged，也必须在这里断开（见它的类型注释）。
         Unloaded += (_, _) =>
         {
             ViewModel?.Cleanup.CommitCleanup();
             ViewModel?.History.CommitAll();
+            ViewModel?.AutoSave.CommitAutoSave();
+            ViewModel?.AutoSave.Detach();
         };
     }
 
@@ -44,6 +55,41 @@ public partial class BoardAutomationSettingsPage : UserControl
     {
         ViewModel?.Cleanup.CommitCleanup();
         ViewModel?.History.CommitAll();
+        ViewModel?.AutoSave.CommitAutoSave();
+    }
+
+    /// <summary>
+    ///     挑一个存档目录。目录只从这里进来、不接受手输：打错的路径只会让自动保存静默失败。
+    ///     选择器的起始位置给「现在生效的那个目录」，没有就退回软件数据目录。
+    /// </summary>
+    private async void OnChooseFolderClick(object? sender, RoutedEventArgs e)
+    {
+        if (ViewModel is not { } viewModel || TopLevel.GetTopLevel(this) is not { } topLevel)
+            return;
+
+        var folder = viewModel.AutoSave.Folder;
+        var start = Directory.Exists(folder) ? folder : Utils.DataRoot;
+        try
+        {
+            var picked = await topLevel.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+            {
+                Title = CR.Settings_Board_AutoSave_ChooseFolder,
+                AllowMultiple = false,
+                SuggestedStartLocation = await topLevel.StorageProvider.TryGetFolderFromPathAsync(start)
+            });
+
+            if (picked.Count == 0)
+                return;
+
+            var path = picked[0].TryGetLocalPath();
+            if (!string.IsNullOrWhiteSpace(path))
+                viewModel.AutoSave.SetFolder(path);
+        }
+        catch (Exception ex)
+        {
+            // 选择器在个别平台 / 无权限的目录上会抛异常，别让它从 async void 里冒出去。
+            System.Diagnostics.Debug.WriteLine($"选择自动保存目录失败：{ex}");
+        }
     }
 
     /// <summary>

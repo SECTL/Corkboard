@@ -71,6 +71,39 @@
                     <ToggleSwitch IsChecked="{Binding Settings.ShowExamListInProgress, Mode=TwoWay}" />
                 </fa:FASettingsExpander.Footer>
             </fa:FASettingsExpander>
+
+            <!--
+                列表收起时时钟下面那句「还剩 40 分钟」，剩到这个分钟数就转红。
+                0 表示不提醒。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Exam_Display_WarningMinutes}"
+                                   Description="{x:Static core:Resources.Settings_Exam_Display_WarningMinutesDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <StackPanel Orientation="Horizontal"
+                                VerticalAlignment="Center"
+                                Spacing="8">
+                        <NumericUpDown MinWidth="130"
+                                       Minimum="0"
+                                       Maximum="240"
+                                       Increment="5"
+                                       FormatString="0"
+                                       Value="{Binding WarningDraft, Mode=TwoWay}"
+                                       LostFocus="OnEditorLostFocus" />
+                        <TextBlock VerticalAlignment="Center" Text="{x:Static core:Resources.Common_Minutes}" />
+                    </StackPanel>
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <!--
+                倒计时的精确度：开到最后 1 小时的倒计时带秒（「还剩 12 分 30 秒」），
+                一小时以上仍然只说小时/分钟。开关是离散动作，直接双向绑配置。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Exam_Display_RemainingSeconds}"
+                                   Description="{x:Static core:Resources.Settings_Exam_Display_RemainingSecondsDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding Settings.RemainingSecondsEnabled, Mode=TwoWay}" />
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

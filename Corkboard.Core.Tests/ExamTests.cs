@@ -82,6 +82,58 @@ public class ExamStatusPolicyTests
         Assert.Equal(1440, ExamStatusPolicy.MaxUpcomingMinutes);
     }
 
+    /// <summary>「剩余时间变红」门槛的夹取区间：0（不提醒）到一天，默认 15。</summary>
+    [Fact]
+    public void ClampRemainingWarningMinutes_AllowsZeroAsOff()
+    {
+        Assert.Equal(0, ExamStatusPolicy.ClampRemainingWarningMinutes(int.MinValue));
+        Assert.Equal(0, ExamStatusPolicy.ClampRemainingWarningMinutes(-5));
+        Assert.Equal(0, ExamStatusPolicy.ClampRemainingWarningMinutes(0));
+        Assert.Equal(15, ExamStatusPolicy.ClampRemainingWarningMinutes(15));
+        Assert.Equal(1440, ExamStatusPolicy.ClampRemainingWarningMinutes(1440));
+        Assert.Equal(1440, ExamStatusPolicy.ClampRemainingWarningMinutes(5000));
+
+        Assert.Equal(15, ExamStatusPolicy.DefaultRemainingWarningMinutes);
+        Assert.Equal(0, ExamStatusPolicy.MinRemainingWarningMinutes);
+        Assert.Equal(1440, ExamStatusPolicy.MaxRemainingWarningMinutes);
+    }
+
+    /// <summary>
+    ///     剩余时间什么时候该转红：正在考看「离收卷还有多久」、即将开始看「离开考还有多久」，
+    ///     到点（含正好等于门槛）就红；未开始 / 已结束不红；门槛 0 表示不提醒。
+    /// </summary>
+    [Fact]
+    public void IsRemainingUrgent_WatchesTheCloserEdge()
+    {
+        var start = new DateTime(2026, 6, 7, 9, 0, 0, DateTimeKind.Unspecified);
+        var exam = new ExamEntry
+        {
+            Subject = "数学",
+            Date = new DateOnly(2026, 6, 7),
+            StartTime = new TimeOnly(9, 0),
+            EndTime = new TimeOnly(11, 0)
+        };
+
+        // 进行中：离收卷 10 分钟 → 红；20 分钟 → 不红；正好 15 分钟 → 红（门槛含等于）。
+        Assert.True(ExamStatusPolicy.IsRemainingUrgent(ExamStatus.InProgress, exam, start.AddMinutes(110), 15));
+        Assert.False(ExamStatusPolicy.IsRemainingUrgent(ExamStatus.InProgress, exam, start.AddMinutes(100), 15));
+        Assert.True(ExamStatusPolicy.IsRemainingUrgent(ExamStatus.InProgress, exam, start.AddMinutes(105), 15));
+
+        // 即将开始：离开考 5 分钟 → 红；25 分钟 → 不红。
+        Assert.True(ExamStatusPolicy.IsRemainingUrgent(ExamStatus.Upcoming, exam, start.AddMinutes(-5), 15));
+        Assert.False(ExamStatusPolicy.IsRemainingUrgent(ExamStatus.Upcoming, exam, start.AddMinutes(-25), 15));
+
+        // 未开始 / 已结束不提醒，哪怕时间更近。
+        Assert.False(ExamStatusPolicy.IsRemainingUrgent(ExamStatus.NotStarted, exam, start.AddHours(-3), 15));
+        Assert.False(ExamStatusPolicy.IsRemainingUrgent(ExamStatus.Finished, exam, start.AddHours(5), 15));
+
+        // 门槛 0 = 关掉提醒。
+        Assert.False(ExamStatusPolicy.IsRemainingUrgent(ExamStatus.InProgress, exam, start.AddMinutes(110), 0));
+
+        // 门槛超出区间按上限算（一天以内一律提醒）。
+        Assert.True(ExamStatusPolicy.IsRemainingUrgent(ExamStatus.Upcoming, exam, start.AddMinutes(-5), 99999));
+    }
+
     /// <summary>
     ///     收 <see cref="ExamEntry" /> 的那个重载走的是同一套规则，并且认 <see cref="ExamEntry.EndAt" />
     ///     的夹取——时间填反了（收卷早于开考）的考试没有「进行中」这一段，直接算考完。
@@ -590,6 +642,155 @@ public class ExamTimeFormatterTests
             ExamTimeFormatter.FormatStatusDetail(ExamStatus.Finished, exam, start.AddHours(5)));
 
         Assert.Throws<ArgumentNullException>(() => ExamTimeFormatter.FormatStatusDetail(ExamStatus.Upcoming, null!, start));
+    }
+
+    /// <summary>
+    ///     看板左侧那组「考试信息」的抬头与倒计时：离得远时说「下一场 / 还有 3 天」，
+    ///     快要考试说「即将开始」，正在考说「进行中 / 还剩 40 分钟」——两行都要给得出字，
+    ///     否则看板左边会留下一个没有倒计时的空块。
+    /// </summary>
+    [Fact]
+    public void FormatInfoCaption_AndRemaining_AlwaysHaveSomethingToSay()
+    {
+        var start = new DateTime(2026, 6, 7, 9, 0, 0, DateTimeKind.Unspecified);
+        var exam = new ExamEntry
+        {
+            Subject = "数学",
+            Date = new DateOnly(2026, 6, 7),
+            StartTime = new TimeOnly(9, 0),
+            EndTime = new TimeOnly(11, 0)
+        };
+
+        // 离得远：抬头说「下一场」（不写「未开始」，那等于什么都没说），倒计时按天说。
+        Assert.Equal(CR.Exam_Board_NextExam, ExamTimeFormatter.FormatInfoCaption(ExamStatus.NotStarted));
+        Assert.Equal(
+            string.Format(CultureInfo.CurrentCulture, CR.Exam_Countdown_Days, 3),
+            ExamTimeFormatter.FormatInfoRemaining(ExamStatus.NotStarted, exam, start.AddDays(-3), false));
+
+        // 即将开始 / 进行中：抬头用状态名，倒计时与表格里那一句是同一套说法。
+        Assert.Equal(CR.Exam_Status_Upcoming, ExamTimeFormatter.FormatInfoCaption(ExamStatus.Upcoming));
+        Assert.Equal(
+            ExamTimeFormatter.FormatStatusHint(ExamStatus.Upcoming, exam, start.AddMinutes(-12)),
+            ExamTimeFormatter.FormatInfoRemaining(ExamStatus.Upcoming, exam, start.AddMinutes(-12), false));
+
+        Assert.Equal(CR.Exam_Status_InProgress, ExamTimeFormatter.FormatInfoCaption(ExamStatus.InProgress));
+        Assert.Equal(
+            string.Format(CultureInfo.CurrentCulture, CR.Exam_Status_Remaining,
+                string.Format(CultureInfo.CurrentCulture, CR.Exam_Duration_Minutes, 40)),
+            ExamTimeFormatter.FormatInfoRemaining(ExamStatus.InProgress, exam, start.AddMinutes(80), false));
+
+        Assert.Throws<ArgumentNullException>(() =>
+            ExamTimeFormatter.FormatInfoRemaining(ExamStatus.InProgress, null!, start, false));
+    }
+
+    /// <summary>
+    ///     倒计时的精确度：一天以上按天说；一小时以上说「X 小时 Y 分」（不是 187 分钟）；
+    ///     最后一小时说分钟；开了「精确到秒」再连秒一起跳，关着的时候不到一分钟仍然说「不到 1 分钟」。
+    /// </summary>
+    [Fact]
+    public void FormatInfoRemaining_PrecisionRules()
+    {
+        var start = new DateTime(2026, 6, 7, 9, 0, 0, DateTimeKind.Unspecified);
+        var exam = new ExamEntry
+        {
+            Subject = "数学",
+            Date = new DateOnly(2026, 6, 7),
+            StartTime = new TimeOnly(9, 0),
+            EndTime = new TimeOnly(11, 0)
+        };
+
+        Assert.Equal(Remaining0(Hours(2)), Remaining(ExamStatus.InProgress, exam, start, false));
+        Assert.Equal(Remaining0(HoursMinutes(1, 30)), Remaining(ExamStatus.InProgress, exam, start.AddMinutes(30), false));
+        Assert.Equal(Remaining0(HoursMinutes(1, 1)), Remaining(ExamStatus.InProgress, exam, start.AddMinutes(59), false));
+
+        // 最后一小时按分钟说，向下取整：40 分 30 秒 → 「40 分钟」（宁可少说，不让人以为还有时间）。
+        Assert.Equal(Remaining0(Minutes(40)),
+            Remaining(ExamStatus.InProgress, exam, start.AddMinutes(79).AddSeconds(30), false));
+        Assert.Equal(Remaining0(CR.Exam_Duration_LessThanMinute),
+            Remaining(ExamStatus.InProgress, exam, start.AddMinutes(119).AddSeconds(45), false));
+
+        // 开了秒：最后一小时按「分 秒」跳，不到一分钟只写秒。
+        Assert.Equal(Remaining0(MinutesSeconds(40, 30)),
+            Remaining(ExamStatus.InProgress, exam, start.AddMinutes(79).AddSeconds(30), true));
+        Assert.Equal(Remaining0(Seconds(15)),
+            Remaining(ExamStatus.InProgress, exam, start.AddMinutes(119).AddSeconds(45), true));
+
+        // 即将开始也一样（前置词变成「还有」），但一小时以上不带秒。
+        Assert.Equal(Countdown0(HoursMinutes(1, 30)), Remaining(ExamStatus.Upcoming, exam, start.AddMinutes(-90), true));
+        Assert.Equal(Countdown0(MinutesSeconds(5, 20)),
+            Remaining(ExamStatus.Upcoming, exam, start.AddMinutes(-6).AddSeconds(40), true));
+
+        // 一天以上只按天说，开不开秒都一样。
+        Assert.Equal(string.Format(CultureInfo.CurrentCulture, CR.Exam_Countdown_Days, 3),
+            Remaining(ExamStatus.NotStarted, exam, start.AddDays(-3), true));
+
+        static string Remaining(ExamStatus status, ExamEntry exam, DateTime now, bool seconds) =>
+            ExamTimeFormatter.FormatInfoRemaining(status, exam, now, seconds);
+
+        static string Remaining0(string phrase) =>
+            string.Format(CultureInfo.CurrentCulture, CR.Exam_Status_Remaining, phrase);
+
+        static string Countdown0(string phrase) =>
+            string.Format(CultureInfo.CurrentCulture, CR.Exam_Countdown_Remaining, phrase);
+
+        static string Hours(int hours) => string.Format(CultureInfo.CurrentCulture, CR.Exam_Duration_Hours, hours);
+
+        static string HoursMinutes(int hours, int minutes) =>
+            string.Format(CultureInfo.CurrentCulture, CR.Exam_Duration_HoursMinutes, hours, minutes);
+
+        static string Minutes(int minutes) =>
+            string.Format(CultureInfo.CurrentCulture, CR.Exam_Duration_Minutes, minutes);
+
+        static string MinutesSeconds(int minutes, int seconds) =>
+            string.Format(CultureInfo.CurrentCulture, CR.Exam_Duration_MinutesSeconds, minutes, seconds);
+
+        static string Seconds(int seconds) =>
+            string.Format(CultureInfo.CurrentCulture, CR.Exam_Duration_Seconds, seconds);
+    }
+
+    /// <summary>
+    ///     状态底下那句提示单独拿出来：全屏看板把状态名与这句分两行放，
+    ///     两半拼起来必须与 <see cref="ExamTimeFormatter.FormatStatusDetail" /> 一模一样，
+    ///     未开始 / 已结束那两档必须是空串（调用方据此隐藏那一行）。
+    /// </summary>
+    [Fact]
+    public void FormatStatusHint_IsTheSecondHalfOfStatusDetail()
+    {
+        var start = new DateTime(2026, 6, 7, 9, 0, 0, DateTimeKind.Unspecified);
+        var exam = new ExamEntry
+        {
+            Subject = "数学",
+            Date = new DateOnly(2026, 6, 7),
+            StartTime = new TimeOnly(9, 0),
+            EndTime = new TimeOnly(11, 0)
+        };
+
+        foreach (var (status, now) in new[]
+                 {
+                     (ExamStatus.NotStarted, start.AddDays(-3)),
+                     (ExamStatus.Upcoming, start.AddMinutes(-12)),
+                     (ExamStatus.InProgress, start.AddMinutes(80)),
+                     (ExamStatus.Finished, start.AddHours(5))
+                 })
+        {
+            var hint = ExamTimeFormatter.FormatStatusHint(status, exam, now);
+            var detail = ExamTimeFormatter.FormatStatusDetail(status, exam, now);
+
+            if (hint.Length == 0)
+            {
+                Assert.Equal(ExamTimeFormatter.FormatStatus(status), detail);
+            }
+            else
+            {
+                Assert.Equal($"{ExamTimeFormatter.FormatStatus(status)} \u00b7 {hint}", detail);
+            }
+        }
+
+        // 未开始与已结束没有可补的那句话。
+        Assert.Equal(string.Empty, ExamTimeFormatter.FormatStatusHint(ExamStatus.NotStarted, exam, start.AddDays(-3)));
+        Assert.Equal(string.Empty, ExamTimeFormatter.FormatStatusHint(ExamStatus.Finished, exam, start.AddHours(5)));
+
+        Assert.Throws<ArgumentNullException>(() => ExamTimeFormatter.FormatStatusHint(ExamStatus.Upcoming, null!, start));
     }
 }
 

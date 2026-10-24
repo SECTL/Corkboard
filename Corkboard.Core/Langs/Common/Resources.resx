@@ -187,7 +187,7 @@
     <value>英语</value>
   </data>
   <data name="Board_Layout_SingleColumn" xml:space="preserve">
-    <value>单列</value>
+    <value>多列</value>
   </data>
   <data name="Board_Layout_Block" xml:space="preserve">
     <value>区块</value>
@@ -333,7 +333,7 @@
     <value>排布</value>
   </data>
   <data name="Settings_Board_LayoutDescription" xml:space="preserve">
-    <value>单列居中，或者按窗口宽度分栏</value>
+    <value>区块排成一片，或者并排几条窄阅读栏</value>
   </data>
   <data name="Settings_Board_SubjectReorderEnabled" xml:space="preserve">
     <value>拖拽排序</value>
@@ -493,6 +493,9 @@
   </data>
   <data name="Settings_Board_CleanupRunNow" xml:space="preserve">
     <value>立即清理</value>
+  </data>
+  <data name="Settings_Board_CleanupRunNowDescription" xml:space="preserve">
+    <value>不等清理时刻，点一下就把过了期的收走</value>
   </data>
   <data name="Settings_Board_CleanupLastResult" xml:space="preserve">
     <value>上次清理</value>
@@ -1534,6 +1537,12 @@
   <data name="Exam_Duration_HoursMinutes" xml:space="preserve">
     <value>{0} 小时 {1} 分</value>
   </data>
+  <data name="Exam_Duration_Seconds" xml:space="preserve">
+    <value>{0} 秒</value>
+  </data>
+  <data name="Exam_Duration_MinutesSeconds" xml:space="preserve">
+    <value>{0} 分 {1} 秒</value>
+  </data>
   <data name="Exam_Countdown_Days" xml:space="preserve">
     <value>还有 {0} 天</value>
   </data>
@@ -1551,6 +1560,312 @@
   </data>
   <data name="Exam_PaperInfoSeparator" xml:space="preserve">
     <value> · </value>
+  </data>
+  <data name="Exam_Slot_Morning" xml:space="preserve">
+    <value>上午</value>
+  </data>
+  <data name="Exam_Slot_Afternoon" xml:space="preserve">
+    <value>下午</value>
+  </data>
+  <data name="Exam_Slot_Evening" xml:space="preserve">
+    <value>晚上</value>
+  </data>
+  <data name="Exam_Plan_DurationMinutes" xml:space="preserve">
+    <value>{0} 分钟</value>
+  </data>
+  <data name="Exam_Plan_Conflict_CrossDay" xml:space="preserve">
+    <value>这一场跨到了第二天</value>
+  </data>
+  <data name="Exam_Plan_Conflict_Overlap" xml:space="preserve">
+    <value>比上一场收卷还早，时间撞了</value>
+  </data>
+  <data name="Exam_Plan_Conflict_Existing" xml:space="preserve">
+    <value>与看板上已有的考试撞了</value>
+  </data>
+  <data name="Settings_Exam_Plan_PresetSingle" xml:space="preserve">
+    <value>一天一场</value>
+  </data>
+  <data name="Settings_Exam_Plan_PresetTwo" xml:space="preserve">
+    <value>一天两场</value>
+  </data>
+  <data name="Settings_Exam_Plan_PresetFour" xml:space="preserve">
+    <value>一天四场</value>
+  </data>
+  <data name="Settings_Exam_Plan_PresetFive" xml:space="preserve">
+    <value>一天五场</value>
+  </data>
+    <data name="Settings_Exam_Plan_QuickButton" xml:space="preserve">
+    <value>快速布置</value>
+  </data>
+  <data name="Settings_Exam_Plan_QuickButtonToolTip" xml:space="preserve">
+    <value>按科目和作息一次排完整场考试</value>
+  </data>
+  <data name="Settings_Exam_Plan_WindowTitle" xml:space="preserve">
+    <value>快速布置考试</value>
+  </data>
+  <data name="Settings_Exam_Plan_StepBasic" xml:space="preserve">
+    <value>基本信息</value>
+  </data>
+  <data name="Settings_Exam_Plan_StepSubjects" xml:space="preserve">
+    <value>考哪些科目</value>
+  </data>
+    <data name="Settings_Exam_Plan_StepReview" xml:space="preserve">
+    <value>对照表</value>
+  </data>
+  <data name="Settings_Exam_Plan_TitleDefault" xml:space="preserve">
+    <value>{0} 年期末考试</value>
+  </data>
+  <data name="Settings_Exam_Plan_StepFormat" xml:space="preserve">
+    <value>第 {0} 步 / 共 {1} 步 · {2}</value>
+  </data>
+    <data name="Settings_Exam_Plan_TitleLabel" xml:space="preserve">
+    <value>看板标题</value>
+  </data>
+  <data name="Settings_Exam_Plan_TitlePlaceholder" xml:space="preserve">
+    <value>不填就用默认名</value>
+  </data>
+  <data name="Settings_Exam_Plan_SubtitleLabel" xml:space="preserve">
+    <value>副标题</value>
+  </data>
+  <data name="Settings_Exam_Plan_SubtitlePlaceholder" xml:space="preserve">
+    <value>比如「距离高考还有 200 天」</value>
+  </data>
+  <data name="Settings_Exam_Plan_SubtitleColor" xml:space="preserve">
+    <value>副标题颜色</value>
+  </data>
+  <data name="Settings_Exam_Plan_SubtitleColorDefault" xml:space="preserve">
+    <value>跟随主题</value>
+  </data>
+  <data name="Settings_Exam_Plan_FirstDay" xml:space="preserve">
+    <value>第一天</value>
+  </data>
+  <data name="Settings_Exam_Plan_FirstDayHint" xml:space="preserve">
+    <value>从这天往后排，一天排满就顺延到第二天</value>
+  </data>
+  <data name="Settings_Exam_Plan_SubjectsTitle" xml:space="preserve">
+    <value>要考哪些科目</value>
+  </data>
+  <data name="Settings_Exam_Plan_SubjectsSource" xml:space="preserve">
+    <value>科目来自作业板</value>
+  </data>
+  <data name="Settings_Exam_Plan_SubjectsEmpty" xml:space="preserve">
+    <value>作业板里还没有科目</value>
+  </data>
+  <data name="Settings_Exam_Plan_SubjectsEmptyHint" xml:space="preserve">
+    <value>先在「设置 → 作业板 → 科目与分类」里加几个</value>
+  </data>
+  <data name="Settings_Exam_Plan_AddSubject" xml:space="preserve">
+    <value>添加科目</value>
+  </data>
+  <data name="Settings_Exam_Plan_AddSubjectPlaceholder" xml:space="preserve">
+    <value>科目名，回车即添加</value>
+  </data>
+  <data name="Settings_Exam_Plan_Combine" xml:space="preserve">
+    <value>合卷</value>
+  </data>
+  <data name="Settings_Exam_Plan_CombineHint" xml:space="preserve">
+    <value>勾几门合成一场，比如理综</value>
+  </data>
+  <data name="Settings_Exam_Plan_CombineTitle" xml:space="preserve">
+    <value>哪几门合成一场</value>
+  </data>
+  <data name="Settings_Exam_Plan_Duration" xml:space="preserve">
+    <value>时长</value>
+  </data>
+  <data name="Settings_Exam_Plan_OrderUp" xml:space="preserve">
+    <value>上移</value>
+  </data>
+  <data name="Settings_Exam_Plan_OrderDown" xml:space="preserve">
+    <value>下移</value>
+  </data>
+  <data name="Settings_Exam_Plan_Remove" xml:space="preserve">
+    <value>移除</value>
+  </data>
+  <data name="Settings_Exam_Plan_SelectedCount" xml:space="preserve">
+    <value>已选 {0} 场</value>
+  </data>
+  <data name="Settings_Exam_Plan_SlotsTitle" xml:space="preserve">
+    <value>一天考几场</value>
+  </data>
+    <data name="Settings_Exam_Plan_SlotsPreset" xml:space="preserve">
+    <value>作息预设</value>
+  </data>
+                  <data name="Settings_Exam_Plan_ReviewTitle" xml:space="preserve">
+    <value>排出来是这样</value>
+  </data>
+  <data name="Settings_Exam_Plan_ReviewEmpty" xml:space="preserve">
+    <value>还没排出来任何考试</value>
+  </data>
+  <data name="Settings_Exam_Plan_ReviewEmptyHint" xml:space="preserve">
+    <value>回到上一步勾几门科目</value>
+  </data>
+  <data name="Settings_Exam_Plan_Summary" xml:space="preserve">
+    <value>共 {0} 场 · 跨 {1} 天 · {2} 至 {3}</value>
+  </data>
+  <data name="Settings_Exam_Plan_ConflictCount" xml:space="preserve">
+    <value>有 {0} 场时间撞了，看红字那几行</value>
+  </data>
+  <data name="Settings_Exam_Plan_ColumnIndex" xml:space="preserve">
+    <value>#</value>
+  </data>
+  <data name="Settings_Exam_Plan_ColumnDate" xml:space="preserve">
+    <value>日期</value>
+  </data>
+  <data name="Settings_Exam_Plan_ColumnSlot" xml:space="preserve">
+    <value>时段</value>
+  </data>
+  <data name="Settings_Exam_Plan_ColumnSubject" xml:space="preserve">
+    <value>科目</value>
+  </data>
+  <data name="Settings_Exam_Plan_ColumnTime" xml:space="preserve">
+    <value>时间</value>
+  </data>
+  <data name="Settings_Exam_Plan_ColumnDuration" xml:space="preserve">
+    <value>时长</value>
+  </data>
+  <data name="Settings_Exam_Plan_ColumnBreak" xml:space="preserve">
+    <value>距上一场</value>
+  </data>
+  <data name="Settings_Exam_Plan_Previous" xml:space="preserve">
+    <value>上一步</value>
+  </data>
+  <data name="Settings_Exam_Plan_Next" xml:space="preserve">
+    <value>下一步</value>
+  </data>
+  <data name="Settings_Exam_Plan_Finish" xml:space="preserve">
+    <value>完成</value>
+  </data>
+  <data name="Settings_Exam_Plan_NeedSubject" xml:space="preserve">
+    <value>至少勾一门科目再往下走</value>
+  </data>
+    <data name="Settings_Exam_Plan_AppendHint" xml:space="preserve">
+    <value>会加进当前看板，已有的考试不动</value>
+  </data>
+  <data name="Settings_Exam_Plan_CreateHint" xml:space="preserve">
+    <value>会新建一块看板，建完直接进编辑窗口</value>
+  </data>
+  <data name="Settings_Exam_Plan_Success" xml:space="preserve">
+    <value>已排好 {0} 场考试</value>
+  </data>
+  <data name="Settings_Exam_Plan_TemplateLabel" xml:space="preserve">
+    <value>用模板</value>
+  </data>
+  <data name="Settings_Exam_Plan_TemplatePlaceholder" xml:space="preserve">
+    <value>选一份模板，科目和作息照它来</value>
+  </data>
+  <data name="Settings_Exam_Plan_TemplateEmpty" xml:space="preserve">
+    <value>还没有存过模板，先排一次再「另存为模板」</value>
+  </data>
+  <data name="Settings_Exam_Plan_TemplateHint" xml:space="preserve">
+    <value>科目和作息都按模板来，只确认一下日期</value>
+  </data>
+  <data name="Settings_Exam_Plan_TemplateDefaultName" xml:space="preserve">
+    <value>未命名模板</value>
+  </data>
+  <data name="Settings_Exam_Plan_TemplateSummary" xml:space="preserve">
+    <value>共 {0} 场 · 跨 {1} 天</value>
+  </data>
+  <data name="Settings_Exam_Plan_SaveTemplate" xml:space="preserve">
+    <value>另存为模板</value>
+  </data>
+  <data name="Settings_Exam_Plan_SaveTemplateToolTip" xml:space="preserve">
+    <value>把这套排法存下来，下次换个日期直接套</value>
+  </data>
+  <data name="Settings_Exam_Plan_SaveTemplateTitle" xml:space="preserve">
+    <value>存成模板</value>
+  </data>
+  <data name="Settings_Exam_Plan_SaveTemplateBody" xml:space="preserve">
+    <value>起个名字，以后换一届只要改第一天</value>
+  </data>
+  <data name="Settings_Exam_Plan_SaveTemplateName" xml:space="preserve">
+    <value>模板名</value>
+  </data>
+  <data name="Settings_Exam_Plan_SaveTemplateNamePlaceholder" xml:space="preserve">
+    <value>比如「期末考试」</value>
+  </data>
+  <data name="Settings_Exam_Plan_SaveTemplateDone" xml:space="preserve">
+    <value>已存成模板「{0}」</value>
+  </data>
+  <data name="Settings_Exam_Plan_SaveTemplateEmpty" xml:space="preserve">
+    <value>看板上还没有考试，先录几条再存</value>
+  </data>
+  <data name="Settings_Exam_Plan_TemplateList" xml:space="preserve">
+    <value>考试模板</value>
+  </data>
+  <data name="Settings_Exam_Plan_TemplateListDescription" xml:space="preserve">
+    <value>存下来的排法，换一届改个日期就能用</value>
+  </data>
+  <data name="Settings_Exam_Plan_TemplateListEmpty" xml:space="preserve">
+    <value>还没有模板，在编辑窗口里点「另存为模板」</value>
+  </data>
+  <data name="Settings_Exam_Plan_TemplateDelete" xml:space="preserve">
+    <value>删掉模板</value>
+  </data>
+  <data name="Settings_Exam_Plan_TemplateDeleteTitle" xml:space="preserve">
+    <value>删掉这份模板</value>
+  </data>
+  <data name="Settings_Exam_Plan_TemplateDeleteBody" xml:space="preserve">
+    <value>模板「{0}」会被删掉，已经排进看板的考试不受影响</value>
+  </data>
+  <data name="Settings_Exam_Plan_PresetThree" xml:space="preserve">
+    <value>一天三场</value>
+  </data>
+      <data name="Settings_Exam_Plan_SlotPresetDefaultName" xml:space="preserve">
+    <value>未命名作息</value>
+  </data>
+  <data name="Settings_Exam_Plan_SaveSlotPreset" xml:space="preserve">
+    <value>存为作息模板</value>
+  </data>
+  <data name="Settings_Exam_Plan_SaveSlotPresetToolTip" xml:space="preserve">
+    <value>把现在这张作息表存下来，下次直接选</value>
+  </data>
+  <data name="Settings_Exam_Plan_SaveSlotPresetTitle" xml:space="preserve">
+    <value>存成作息模板</value>
+  </data>
+  <data name="Settings_Exam_Plan_SaveSlotPresetBody" xml:space="preserve">
+    <value>起个名字，下次在「作息预设」里就能选到</value>
+  </data>
+  <data name="Settings_Exam_Plan_SaveSlotPresetName" xml:space="preserve">
+    <value>模板名</value>
+  </data>
+  <data name="Settings_Exam_Plan_SaveSlotPresetNamePlaceholder" xml:space="preserve">
+    <value>比如「两天六场」</value>
+  </data>
+  <data name="Settings_Exam_Plan_SaveSlotPresetDone" xml:space="preserve">
+    <value>已存成作息模板「{0}」</value>
+  </data>
+  <data name="Settings_Exam_Plan_SlotPresetDelete" xml:space="preserve">
+    <value>删掉这份作息模板</value>
+  </data>
+  <data name="Settings_Exam_Plan_SlotPresetDeleteTitle" xml:space="preserve">
+    <value>删掉作息模板</value>
+  </data>
+  <data name="Settings_Exam_Plan_SlotPresetDeleteBody" xml:space="preserve">
+    <value>作息模板「{0}」会被删掉，已经排好的考试不受影响</value>
+  </data>
+  <data name="Settings_Exam_Plan_SubtitleDefault" xml:space="preserve">
+    <value>冷静分析，沉着应考</value>
+  </data>
+  <data name="Settings_Exam_Plan_SlotPresetSummary" xml:space="preserve">
+    <value>一天 {0} 场</value>
+  </data>
+    <data name="Settings_Exam_Plan_SlotsPerDay" xml:space="preserve">
+    <value>一天几场</value>
+  </data>
+  <data name="Settings_Exam_Plan_FirstStart" xml:space="preserve">
+    <value>第一场几点开考</value>
+  </data>
+  <data name="Settings_Exam_Plan_BreakBetween" xml:space="preserve">
+    <value>两场之间歇多久</value>
+  </data>
+  <data name="Settings_Exam_Plan_WriteMode" xml:space="preserve">
+    <value>写入方式</value>
+  </data>
+  <data name="Settings_Exam_Plan_WriteAppend" xml:space="preserve">
+    <value>添加到看板上已有的考试后面</value>
+  </data>
+  <data name="Settings_Exam_Plan_WriteReplace" xml:space="preserve">
+    <value>覆盖看板上已有的考试</value>
   </data>
   <data name="Menu_OpenExamBoard" xml:space="preserve">
     <value>考试看板</value>
@@ -1741,6 +2056,18 @@
   <data name="Settings_Exam_Display_ShowListInProgressDescription" xml:space="preserve">
     <value>默认考试中只留一个时钟</value>
   </data>
+  <data name="Settings_Exam_Display_WarningMinutes" xml:space="preserve">
+    <value>剩余时间快到就变红</value>
+  </data>
+  <data name="Settings_Exam_Display_WarningMinutesDescription" xml:space="preserve">
+    <value>剩余时间少于这个分钟数时变成红色</value>
+  </data>
+  <data name="Settings_Exam_Display_RemainingSeconds" xml:space="preserve">
+    <value>剩余时间精确到秒</value>
+  </data>
+  <data name="Settings_Exam_Display_RemainingSecondsDescription" xml:space="preserve">
+    <value>最后一小时里的倒计时连秒一起跳</value>
+  </data>
   <data name="Settings_Exam_Time_Title" xml:space="preserve">
     <value>时间同步</value>
   </data>
@@ -1830,6 +2157,54 @@
   </data>
   <data name="Settings_Exam_Schedule_Next" xml:space="preserve">
     <value>下一场 {0} · {1} {2}</value>
+  </data>
+  <data name="Settings_Exam_Schedule_BoardAutoShow" xml:space="preserve">
+    <value>这块看板到点自动放映</value>
+  </data>
+  <data name="Settings_Exam_AutoShow_Title" xml:space="preserve">
+    <value>自动放映</value>
+  </data>
+  <data name="Settings_Exam_AutoShow_Status" xml:space="preserve">
+    <value>放映状态</value>
+  </data>
+  <data name="Settings_Exam_AutoShow_StatusDescription" xml:space="preserve">
+    <value>到点自己把看板铺满屏幕，考完再收起来</value>
+  </data>
+  <data name="Settings_Exam_AutoShow_Preview" xml:space="preserve">
+    <value>立即放映</value>
+  </data>
+  <data name="Settings_Exam_AutoShow_NoBoard" xml:space="preserve">
+    <value>还没有看板开启自动放映</value>
+  </data>
+  <data name="Settings_Exam_AutoShow_NoExam" xml:space="preserve">
+    <value>开着的看板里没有以后的考试</value>
+  </data>
+  <data name="Settings_Exam_AutoShow_Next" xml:space="preserve">
+    <value>下一场 {0} · {1} · 将于 {2} 自动放映</value>
+  </data>
+  <data name="Settings_Exam_AutoShow_NextNow" xml:space="preserve">
+    <value>下一场 {0} · {1} · 现在就该放映了</value>
+  </data>
+  <data name="Settings_Exam_AutoShow_BoardSummary" xml:space="preserve">
+    <value>{0} / {1} 块看板参加自动放映</value>
+  </data>
+  <data name="Settings_Exam_AutoShow_Lead" xml:space="preserve">
+    <value>提前放映</value>
+  </data>
+  <data name="Settings_Exam_AutoShow_LeadDescription" xml:space="preserve">
+    <value>开考前多少分钟把看板自己弹出来</value>
+  </data>
+  <data name="Settings_Exam_AutoShow_AlsoShowAfterStart" xml:space="preserve">
+    <value>开考后仍然弹</value>
+  </data>
+  <data name="Settings_Exam_AutoShow_AlsoShowAfterStartDescription" xml:space="preserve">
+    <value>软件中途启动、已经开考了也补放一次</value>
+  </data>
+  <data name="Settings_Exam_AutoShow_CloseDelay" xml:space="preserve">
+    <value>考完延迟关闭</value>
+  </data>
+  <data name="Settings_Exam_AutoShow_CloseDelayDescription" xml:space="preserve">
+    <value>最后一场考完后再放多久才收起来</value>
   </data>
   <data name="Settings_Board_Content_Title" xml:space="preserve">
     <value>内容与样式</value>
@@ -1941,5 +2316,86 @@
   </data>
   <data name="Export_Table_SheetName" xml:space="preserve">
     <value>作业板</value>
+  </data>
+  <data name="Settings_Board_AutoSave_Title" xml:space="preserve">
+    <value>自动保存</value>
+  </data>
+  <data name="Settings_Board_AutoSave" xml:space="preserve">
+    <value>自动保存图片</value>
+  </data>
+  <data name="Settings_Board_AutoSaveDescription" xml:space="preserve">
+    <value>板子改完几秒后，自动存成一张图片</value>
+  </data>
+  <data name="Settings_Board_AutoSaveEnabled" xml:space="preserve">
+    <value>开启自动保存</value>
+  </data>
+  <data name="Settings_Board_AutoSaveEnabledDescription" xml:space="preserve">
+    <value>改完作业后把整块板面存成图片</value>
+  </data>
+  <data name="Settings_Board_AutoSave_Mode" xml:space="preserve">
+    <value>保存时机</value>
+  </data>
+  <data name="Settings_Board_AutoSave_ModeDescription" xml:space="preserve">
+    <value>每天一张当天覆盖，每次修改各留一份</value>
+  </data>
+  <data name="Settings_Board_AutoSave_ModeDaily" xml:space="preserve">
+    <value>每天一张</value>
+  </data>
+  <data name="Settings_Board_AutoSave_ModeEveryChange" xml:space="preserve">
+    <value>每次修改都存</value>
+  </data>
+  <data name="Settings_Board_AutoSave_Retention" xml:space="preserve">
+    <value>保留天数</value>
+  </data>
+  <data name="Settings_Board_AutoSave_RetentionDescription" xml:space="preserve">
+    <value>超过这么多天的图片会被自动删掉</value>
+  </data>
+  <data name="Settings_Board_AutoSave_RetentionUnit" xml:space="preserve">
+    <value>天</value>
+  </data>
+  <data name="Settings_Board_AutoSave_Folder" xml:space="preserve">
+    <value>保存位置</value>
+  </data>
+  <data name="Settings_Board_AutoSave_FolderDescription" xml:space="preserve">
+    <value>默认放在软件自己的数据目录里</value>
+  </data>
+  <data name="Settings_Board_AutoSave_FolderDefault" xml:space="preserve">
+    <value>默认位置</value>
+  </data>
+  <data name="Settings_Board_AutoSave_ChooseFolder" xml:space="preserve">
+    <value>选择文件夹</value>
+  </data>
+  <data name="Settings_Board_AutoSave_OpenFolder" xml:space="preserve">
+    <value>打开文件夹</value>
+  </data>
+  <data name="Settings_Board_AutoSave_ResetFolder" xml:space="preserve">
+    <value>恢复默认</value>
+  </data>
+  <data name="Settings_Board_AutoSave_Status" xml:space="preserve">
+    <value>保存状态</value>
+  </data>
+  <data name="Settings_Board_AutoSave_StatusDescription" xml:space="preserve">
+    <value>最近一次存到了哪里，也可以马上存一张</value>
+  </data>
+  <data name="Settings_Board_AutoSave_LastSavedNever" xml:space="preserve">
+    <value>还没存过</value>
+  </data>
+  <data name="Settings_Board_AutoSave_LastSavedFormat" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="Settings_Board_AutoSave_SaveNow" xml:space="preserve">
+    <value>立即保存一张</value>
+  </data>
+  <data name="Settings_Board_AutoSave_StatCount" xml:space="preserve">
+    <value>已有图片</value>
+  </data>
+  <data name="Settings_Board_AutoSave_StatSize" xml:space="preserve">
+    <value>占用大小</value>
+  </data>
+  <data name="Settings_Board_AutoSave_CountUnit" xml:space="preserve">
+    <value>张</value>
+  </data>
+  <data name="Settings_Board_AutoSave_Failed" xml:space="preserve">
+    <value>自动保存失败，请检查保存位置</value>
   </data>
 </root>

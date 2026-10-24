@@ -4,6 +4,7 @@ using FluentAvalonia.UI.Controls;
 using Corkboard.Core.Abstraction;
 using Corkboard.Core.Attributes;
 using Corkboard.Core.Icons;
+using Corkboard.ViewModels.ExamBoard;
 using Corkboard.ViewModels.SettingsPages.Exam;
 using CR = Corkboard.Core.Langs.Common.Resources;
 
@@ -38,6 +39,15 @@ public partial class ExamScheduleSettingsPage : UserControl
     /// <summary>「新建看板」：多一份空白看板文件，并直接把编辑窗口开到它上面。</summary>
     private void OnCreateBoardClick(object? sender, RoutedEventArgs e) =>
         ViewModel?.CreateBoardCommand.Execute(null);
+
+    /// <summary>
+    ///     「快速布置」：开向导，按科目 + 作息一次排完一整场考试，完成时新建一块看板。
+    ///     <para>
+    ///         与「新建看板」并列摆着：从零开始的人多半是要排一场考试，不是要一块空板。
+    ///     </para>
+    /// </summary>
+    private void OnQuickPlanClick(object? sender, RoutedEventArgs e) =>
+        App.ShowExamPlanWizardWindow(ExamPlanWizardMode.CreateBoard);
 
     /// <summary>某一行点「编辑」：把这块看板设成当前，再开编辑窗口。</summary>
     private void OnEditBoardClick(object? sender, RoutedEventArgs e)
@@ -76,5 +86,27 @@ public partial class ExamScheduleSettingsPage : UserControl
 
         if (await dialog.ShowAsync(topLevel) == FAContentDialogResult.Primary)
             viewModel.DeleteBoard(item);
+    }
+
+    /// <summary>某一份模板点「删除」：模板删掉，已经排进看板的考试不受影响，先确认一次。</summary>
+    private async void OnDeleteTemplateClick(object? sender, RoutedEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is not ExamTemplateItem item
+            || ViewModel is not { } viewModel
+            || TopLevel.GetTopLevel(this) is not { } topLevel)
+        {
+            return;
+        }
+
+        var dialog = new FAContentDialog
+        {
+            Title = CR.Settings_Exam_Plan_TemplateDeleteTitle,
+            Content = string.Format(CR.Settings_Exam_Plan_TemplateDeleteBody, item.Name),
+            PrimaryButtonText = CR.Settings_Exam_Plan_TemplateDelete,
+            CloseButtonText = CR.Common_Cancel
+        };
+
+        if (await dialog.ShowAsync(topLevel) == FAContentDialogResult.Primary)
+            viewModel.DeleteTemplate(item);
     }
 }

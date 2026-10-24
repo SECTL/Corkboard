@@ -39,6 +39,7 @@ public partial class ExamBoardEditorViewModel : ViewModelBase
     private static readonly TimeSpan ColorCommitDelay = TimeSpan.FromMilliseconds(400);
 
     private readonly IExamService _examService;
+    private readonly IExamTemplateService _templateService;
     private readonly DispatcherTimer _statusTimer;
 
     private Color? _subtitleColorDraft;
@@ -48,10 +49,14 @@ public partial class ExamBoardEditorViewModel : ViewModelBase
     /// <summary>正在编辑哪一场（新增时为 <see langword="null" />）。</summary>
     private Guid? _editingId;
 
-    public ExamBoardEditorViewModel(MainConfigHandler configHandler, IExamService examService)
+    public ExamBoardEditorViewModel(
+        MainConfigHandler configHandler,
+        IExamService examService,
+        IExamTemplateService templateService)
         : base(configHandler)
     {
         _examService = examService;
+        _templateService = templateService;
         Items = [];
 
         _statusTimer = new DispatcherTimer { Interval = StatusRefreshInterval };
@@ -332,6 +337,35 @@ public partial class ExamBoardEditorViewModel : ViewModelBase
     {
         if (item is not null)
             _examService.Remove(item.Id);
+    }
+
+    /// <summary>
+    ///     「另存为模板」：把当前看板这一套排法存成模板。
+    ///     <para>
+    ///         模板里**只存「第几天几点考什么、考多久」**，不存绝对日期（见
+    ///         <see cref="ExamPlanTemplateEntry" />）——下一届换个第一天就能直接套，
+    ///         模板也不会因为日期过去而作废。同名模板就地覆盖，反复存不会越堆越多。
+    ///     </para>
+    /// </summary>
+    /// <returns>存下来的模板（名字用 <see cref="ExamPlanTemplate.ResolveName" /> 取）。</returns>
+    public ExamPlanTemplate? SaveAsTemplate(string? name)
+    {
+        var exams = _examService.Exams;
+        if (exams.Count == 0)
+            return null;
+
+        // 先把草稿里的标题 / 副标题落盘，模板里存的就是用户眼前这一份。
+        CommitAll();
+
+        var board = _examService.ActiveBoard;
+        var template = ExamPlanTemplate.FromExams(
+            name ?? string.Empty,
+            exams,
+            board.Title,
+            board.Subtitle,
+            board.SubtitleColor);
+
+        return _templateService.Save(template);
     }
 
     /// <summary>「保存」：校验通过就写进考试服务，然后把表单退回新增态。</summary>

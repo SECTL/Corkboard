@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using System.IO;
 using Microsoft.Extensions.Logging;
 
 namespace Corkboard.Services.Desktop;
@@ -11,6 +12,12 @@ public interface IExternalLauncher
 {
     /// <summary>在系统默认浏览器里打开网址。无法打开时返回 false。</summary>
     bool TryOpenUri(string uri);
+
+    /// <summary>
+    ///     在系统文件管理器里打开一个目录（设置页「打开文件夹」走它）。目录不存在时返回 false——
+    ///     要不要先建出来由调用方决定，这里不替调用方造目录。
+    /// </summary>
+    bool TryOpenDirectory(string path);
 }
 
 /// <summary>
@@ -42,6 +49,31 @@ public sealed class SystemExternalLauncher(ILogger<SystemExternalLauncher> logge
                                               or FileNotFoundException)
         {
             logger.LogWarning(exception, "打开链接失败：{Uri}", target.AbsoluteUri);
+            return false;
+        }
+    }
+
+    public bool TryOpenDirectory(string path)
+    {
+        // 空路径交给 shell 会打开「我的电脑」，那不是用户点「打开文件夹」想要的结果。
+        if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
+            return false;
+
+        try
+        {
+            Process.Start(new ProcessStartInfo(path)
+            {
+                UseShellExecute = true
+            });
+            return true;
+        }
+        catch (Exception exception) when (exception is InvalidOperationException
+                                              or Win32Exception
+                                              or PlatformNotSupportedException
+                                              or FileNotFoundException
+                                              or DirectoryNotFoundException)
+        {
+            logger.LogWarning(exception, "打开文件夹失败：{Path}", path);
             return false;
         }
     }

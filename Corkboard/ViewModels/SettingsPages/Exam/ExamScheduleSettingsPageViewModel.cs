@@ -30,19 +30,26 @@ public partial class ExamScheduleSettingsPageViewModel : ViewModelBase
     private static readonly TimeSpan StatusRefreshInterval = TimeSpan.FromSeconds(15);
 
     private readonly IExamService _examService;
+    private readonly IExamTemplateService _templateService;
     private readonly DispatcherTimer _statusTimer;
     private bool _isAttached;
 
-    public ExamScheduleSettingsPageViewModel(MainConfigHandler configHandler, IExamService examService)
+    public ExamScheduleSettingsPageViewModel(
+        MainConfigHandler configHandler,
+        IExamService examService,
+        IExamTemplateService templateService)
         : base(configHandler)
     {
         _examService = examService;
+        _templateService = templateService;
         Items = [];
+        Templates = [];
 
         _statusTimer = new DispatcherTimer { Interval = StatusRefreshInterval };
         _statusTimer.Tick += (_, _) => RefreshSummaries();
 
         Rebuild();
+        RebuildTemplates();
     }
 
     /// <summary>看板显示偏好：这里只用它的「即将开始」阈值，好让列表里的状态与看板一致。</summary>
@@ -54,6 +61,12 @@ public partial class ExamScheduleSettingsPageViewModel : ViewModelBase
     /// <summary>只剩一块看板时不给删——界面上永远要有一块可看的看板。</summary>
     public bool CanDeleteBoard => Items.Count > 1;
 
+    /// <summary>存下来的考试模板（新的在前）。</summary>
+    public ObservableCollection<ExamTemplateItem> Templates { get; }
+
+    /// <summary>一份模板都没有：界面上说清楚去哪儿存一份。</summary>
+    public bool HasNoTemplate => Templates.Count == 0;
+
     /// <summary>挂上考试数据与配置变化的订阅（页面进入可视树时调）。重复调用不会重复挂。</summary>
     public void Attach()
     {
@@ -62,9 +75,11 @@ public partial class ExamScheduleSettingsPageViewModel : ViewModelBase
 
         _isAttached = true;
         _examService.Changed += OnServiceChanged;
+        _templateService.Changed += OnTemplateChanged;
         Settings.PropertyChanged += OnSettingsChanged;
         _statusTimer.Start();
         Rebuild();
+        RebuildTemplates();
     }
 
     /// <summary>断开订阅（页面离开可视树时调）。</summary>
@@ -76,6 +91,7 @@ public partial class ExamScheduleSettingsPageViewModel : ViewModelBase
         _isAttached = false;
         _statusTimer.Stop();
         _examService.Changed -= OnServiceChanged;
+        _templateService.Changed -= OnTemplateChanged;
         Settings.PropertyChanged -= OnSettingsChanged;
     }
 
@@ -103,10 +119,28 @@ public partial class ExamScheduleSettingsPageViewModel : ViewModelBase
     {
         Items.Clear();
         foreach (var board in _examService.Boards)
-            Items.Add(new ExamBoardItem(board, board.Id == _examService.ActiveBoard.Id));
+            Items.Add(new ExamBoardItem(board, board.Id == _examService.ActiveBoard.Id, _examService));
 
+        MarkLast(Items);
         RefreshSummaries();
         OnPropertyChanged(nameof(CanDeleteBoard));
+    }
+
+    /// <summary>
+    ///     把「最后一行」标出来：列表行之间的分界线画在行尾，最后一行底下没有下一行了，
+    ///     那条线就该收起来（用户要求过：后面没有别的文件了就别画线）。
+    /// </summary>
+    private static void MarkLast(ObservableCollection<ExamBoardItem> items)
+    {
+        for (var i = 0; i < items.Count; i++)
+            items[i].IsLast = i == items.Count - 1;
+    }
+
+    /// <inheritdoc cref="MarkLast(ObservableCollection{ExamBoardItem})" />
+    private static void MarkLast(ObservableCollection<ExamTemplateItem> items)
+    {
+        for (var i = 0; i < items.Count; i++)
+            items[i].IsLast = i == items.Count - 1;
     }
 
     /// <summary>只刷新「场次 / 下一场 / 当前」这些会随时间变的小结，不重建控件。</summary>
@@ -124,6 +158,22 @@ public partial class ExamScheduleSettingsPageViewModel : ViewModelBase
 
     private void OnServiceChanged(object? sender, EventArgs e) => Rebuild();
 
+    private void OnTemplateChanged(object? sender, EventArgs e) => RebuildTemplates();
+
+    /// <summary>重建模板列表（新的在前，顺序由服务保证）。</summary>
+    private void RebuildTemplates()
+    {
+        Templates.Clear();
+        foreach (var template in _templateService.Templates)
+            Templates.Add(new ExamTemplateItem(template));
+
+        MarkLast(Templates);
+        OnPropertyChanged(nameof(HasNoTemplate));
+    }
+
+    /// <summary>删掉一份模板（确认框在页面 code-behind 里弹）。</summary>
+    public bool DeleteTemplate(ExamTemplateItem item) => item is not null && _templateService.Remove(item.Id);
+
     private void OnSettingsChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         // 阈值变了，小结里的状态分档也跟着变（看板上是同一套规则）。
@@ -133,10 +183,11 @@ public partial class ExamScheduleSettingsPageViewModel : ViewModelBase
 }
 
 /// <summary>
-///     看板列表里的一行：标题、场次数、下一场、是不是当前那块。
+///     看板列表里的一行：标题、场次数、下一场、是不是当前那块，以及「自动放映」开关。
 ///     文案由页面按当前时刻刷新（「下一场」会随考试结束而换）。
 /// </summary>
-public partial class ExamBoardItem(ExamBoardDocument board, bool isActive) : ObservableObject
+public partial class ExamBoardItem(ExamBoardDocument board, bool isActive, IExamService examService)
+    : ObservableObject
 {
     /// <summary>这块看板的文件（改标题等直接走它 + <c>Save()</c>）。</summary>
     public ExamBoardDocument Board { get; } = board;
@@ -146,6 +197,16 @@ public partial class ExamBoardItem(ExamBoardDocument board, bool isActive) : Obs
     /// <summary>看板标题（用户填的，或资源里的默认名）。</summary>
     [ObservableProperty]
     private string _title = board.ResolveTitle();
+
+    /// <summary>
+    ///     这块看板参不参加自动放映（落盘到看板文件自己的 <c>auto_show_enabled</c>，默认不参加）。
+    ///     <para>
+    ///         写回走 <see cref="IExamService.SetAutoShow" />：它只改这一份看板文件、不换当前看板、
+    ///         也不触发 <c>Changed</c>——列表正在重建，把开关的宿主控件抽走会点不动。
+    ///     </para>
+    /// </summary>
+    [ObservableProperty]
+    private bool _autoShowEnabled = board.AutoShowEnabled;
 
     /// <summary>副标题，没填就是空串（界面上那一行不显示）。</summary>
     [ObservableProperty]
@@ -169,12 +230,22 @@ public partial class ExamBoardItem(ExamBoardDocument board, bool isActive) : Obs
     [ObservableProperty]
     private bool _isActive = isActive;
 
+    /// <summary>
+    ///     列表里的最后一行：底下没有下一行了，行尾那条分界线就不该画
+    ///     （axaml 侧绑 <c>IsVisible="{Binding !IsLast}"</c> 到分隔线元素上）。
+    /// </summary>
+    [ObservableProperty]
+    private bool _isLast;
+
     /// <summary>按当前时刻重算这一行的文案。</summary>
     public void Refresh(DateTime now, int upcomingMinutes)
     {
         Title = Board.ResolveTitle();
         Subtitle = Board.ResolveSubtitle();
         HasSubtitle = !string.IsNullOrWhiteSpace(Subtitle);
+
+        // 看板文件可能被别处改过（编辑窗口里也能改这块的开关），刷新时对齐一次。
+        AutoShowEnabled = Board.AutoShowEnabled;
 
         var exams = Board.Exams?.Where(exam => exam is not null).ToList() ?? [];
         CountText = string.Format(CR.Settings_Exam_Schedule_Count, exams.Count);
@@ -192,4 +263,45 @@ public partial class ExamBoardItem(ExamBoardDocument board, bool isActive) : Obs
                 ExamTimeFormatter.FormatDate(next.Date, DateOnly.FromDateTime(now)),
                 ExamTimeFormatter.FormatTimeRange(next));
     }
+
+    /// <summary>
+    ///     开关被按了就落盘。落盘失败（看板文件读不了）时把界面退回原来那一档，
+    ///     不然用户会以为已经存上了。
+    /// </summary>
+    partial void OnAutoShowEnabledChanged(bool value)
+    {
+        if (value == Board.AutoShowEnabled)
+            return;
+
+        if (!examService.SetAutoShow(Board.Id, value))
+            AutoShowEnabled = Board.AutoShowEnabled;
+    }
+}
+
+/// <summary>
+///     模板列表里的一行：名字 + 「共 12 场 · 跨 3 天」。
+///     <para>
+///         模板本身不带日期（存的是「第几天」），所以这里也不显示任何具体日期——
+///         显示的日期只会误导人以为模板锁在某一年。
+///     </para>
+/// </summary>
+public sealed partial class ExamTemplateItem(ExamPlanTemplate template) : ObservableObject
+{
+    /// <summary>背后那份模板。</summary>
+    public ExamPlanTemplate Template { get; } = template;
+
+    public Guid Id => Template.Id;
+
+    /// <summary>模板名（没填名字时给一个默认名）。</summary>
+    public string Name => Template.ResolveName();
+
+    /// <summary>「共 12 场 · 跨 3 天」。</summary>
+    public string Summary => Template.Describe();
+
+    /// <summary>
+    ///     列表里的最后一行：底下没有下一行了，行尾那条分界线就不该画
+    ///     （axaml 侧绑 <c>IsVisible="{Binding !IsLast}"</c> 到分隔线元素上）。
+    /// </summary>
+    [ObservableProperty]
+    private bool _isLast;
 }

@@ -35,6 +35,7 @@ using Corkboard.Services;
 using Corkboard.Services.Auth;
 using Corkboard.Services.Cloud;
 using Corkboard.Services.Desktop;
+using Corkboard.Services.Exam;
 using Corkboard.Services.Ipc;
 using Corkboard.Services.Stats;
 using Corkboard.Services.Time;
@@ -81,6 +82,7 @@ public partial class App : Application
     private static MainWindow? _settingsWindow;
     private static ExamBoardWindow? _examBoardWindow;
     private static ExamBoardEditorWindow? _examBoardEditorWindow;
+    private static ExamPlanWizardWindow? _examPlanWizardWindow;
     private static IClassicDesktopStyleApplicationLifetime? _desktopLifetime;
     private static Task? _hostStartupTask;
     private MainConfigModel _startupSettings = new();
@@ -217,6 +219,9 @@ public partial class App : Application
         // 收纳：把主窗口收成屏幕角落的一颗展开按钮，位置与大小来自「设置 → 作业板 → 收纳」。
         services.AddSingleton<BoardDockService>();
 
+        // 作业板自动存档：板子改完等几秒把整块板面存成 PNG，按「设置 → 作业板 → 自动化与数据」的规则裁剪。
+        services.AddSingleton<BoardAutoSaveService>();
+
         // 作业自动清理：到点给过期作业打 CleanedAt 标记、从主页面上拿掉（规则与判定都在 Core 的 HomeworkCleanupService）。
         services.AddHostedService<HomeworkCleanupHostedService>();
 
@@ -225,6 +230,10 @@ public partial class App : Application
 
         // NTP 校时：按「设置 → 考试看板 → 时间同步」的间隔在后台对齐标准时间，看板时钟读它。
         services.AddHostedService<NtpSyncHostedService>();
+
+        // 考试看板自动放映：到点自己把全屏看板弹出来，最后一场考完（延迟 N 分钟）再收回去。
+        // 哪块看板参加由看板文件自己的 auto_show_enabled 决定，判定规则在 Core 的 ExamAutoShowPolicy。
+        services.AddHostedService<ExamAutoShowHostedService>();
 
         // ViewModel 与页面。AddMainPage/AddSettingsPage 同时写导航注册表和键控 DI，两者必须成对。
         services.AddTransient<MainViewModel>();
@@ -246,13 +255,16 @@ public partial class App : Application
         services.AddTransient<QuickTagsSettingsPageViewModel>();
         services.AddTransient<CleanupSettingsPageViewModel>();
         services.AddTransient<HistorySettingsPageViewModel>();
+        services.AddTransient<AutoSaveSettingsPageViewModel>();
         services.AddTransient<DockSettingsPageViewModel>();
         services.AddTransient<ExportSettingsPageViewModel>();
         services.AddTransient<ExamBoardViewModel>();
         services.AddTransient<ExamBoardEditorViewModel>();
+        services.AddTransient<ExamPlanWizardViewModel>();
         services.AddTransient<ExamScheduleSettingsPageViewModel>();
         services.AddTransient<ExamDisplaySettingsPageViewModel>();
         services.AddTransient<ExamTimeSettingsPageViewModel>();
+        services.AddTransient<ExamAutoShowSettingsPageViewModel>();
 
         // 主页面标题的默认文案；用户可以在作业板设置里改成别的名字。
         services.AddMainPage<BoardPage>(CR.Board_Title);
@@ -273,11 +285,12 @@ public partial class App : Application
         // 「导出」在作业板分组里：导出的就是作业板，放顶层会让人找不着。
         services.AddSettingsPage<ExportSettingsPage>(CR.Settings_Export_Title);
 
-        // 「考试看板」是第二个可折叠分组，排在「作业板」下面：考试安排、看板显示、时间同步。
+        // 「考试看板」是第二个可折叠分组，排在「作业板」下面：考试安排、看板显示、时间同步、自动放映。
         services.AddGroup(new PageGroupInfo(CR.Settings_Exam_Group, "settings.exam.group", FluentIcons.CalendarFilled));
         services.AddSettingsPage<ExamScheduleSettingsPage>(CR.Settings_Exam_Schedule_Title);
         services.AddSettingsPage<ExamDisplaySettingsPage>(CR.Settings_Exam_Display_Title);
         services.AddSettingsPage<ExamTimeSettingsPage>(CR.Settings_Exam_Time_Title);
+        services.AddSettingsPage<ExamAutoShowSettingsPage>(CR.Settings_Exam_AutoShow_Title);
 
         // 「账号」「云同步」暂不开放入口：两个页面的 PageInfo 上标了 isHide: true，不进侧边栏。
         // 注册保留（键控 DI 仍按 Id 可取到），以后开放时去掉 PageInfo 上的 isHide 即可。
@@ -302,6 +315,10 @@ public partial class App : Application
             // 开机自启是系统集成：启动时按配置重新写一遍（用户可能在别处删掉了自启项）。
             EnsureAutostartIntegration();
 
+            // 自动保存是「构造即开工」的单例（构造函数里起防抖与补存循环），
+            // 这里主动取一次：页面还没建出来时它也在跑，跨天之后补存今天那张不会漏。
+            IAppHost.TryGetService<BoardAutoSaveService>();
+
             // 账号会话恢复只影响登录态，失败不能拖住启动。
             var accountSession = RestoreAccountSessionAsync();
             // 云同步要用账号会话，所以串在它后面：已开启同步且已登录时查一遍云端。
@@ -312,9 +329,13 @@ public partial class App : Application
             Current.AppStarted?.Invoke(Current, EventArgs.Empty);
 
             // 冒烟验证用：带 --open-settings 启动时直接打开设置窗口，不影响正常启动流程。
-            if (Environment.GetCommandLineArgs()
-                .Contains("--open-settings", StringComparer.OrdinalIgnoreCase))
+            var args = Environment.GetCommandLineArgs();
+            if (args.Contains("--open-settings", StringComparer.OrdinalIgnoreCase))
                 ShowSettingsWindow();
+
+            // 同上：带 --open-exam-board 时直接铺开全屏考试看板，方便对版式截图。
+            if (args.Contains("--open-exam-board", StringComparer.OrdinalIgnoreCase))
+                ShowExamBoardWindow();
         }
         catch (Exception exception)
         {
@@ -630,6 +651,29 @@ public partial class App : Application
     }
 
     /// <summary>
+    ///     全屏考试看板此刻是不是开着。自动放映的看门狗靠它判断「该不该弹」「该不该收」——
+    ///     用户自己开着的看板不能被当成自动放映的结果去关掉。
+    /// </summary>
+    public static bool IsExamBoardWindowOpen => _examBoardWindow is { IsVisible: true };
+
+    /// <summary>
+    ///     把全屏考试看板收起来（自动放映到点收工）。窗口本来就没开就什么都不做。
+    ///     <para>
+    ///         先摘掉字段再关窗：看门狗下一拍就要读 <see cref="IsExamBoardWindowOpen" />，
+    ///         不等 <c>Closed</c> 事件走完。
+    ///     </para>
+    /// </summary>
+    public static void CloseExamBoardWindow()
+    {
+        var window = _examBoardWindow;
+        if (window is null)
+            return;
+
+        _examBoardWindow = null;
+        window.Close();
+    }
+
+    /// <summary>
     ///     打开「编辑看板」窗口，编辑指定的那一块看板（<paramref name="boardId" /> 为 <see langword="null" /> 时编辑当前那块）。
     ///     窗口已经开着就换成新的一块、不再另开一个。
     /// </summary>
@@ -652,6 +696,35 @@ public partial class App : Application
         {
             if (ReferenceEquals(_examBoardEditorWindow, window))
                 _examBoardEditorWindow = null;
+        };
+
+        ShowAndActivate(window);
+    }
+
+    /// <summary>
+    ///     打开「快速布置考试」向导。
+    ///     <para>
+    ///         <paramref name="mode" /> 决定这一趟是新建一块看板还是往当前看板追加。
+    ///         向导一次只开一个：已经开着就把它拉到前面（它是模态流程，两三个并排跑没有意义）。
+    ///     </para>
+    /// </summary>
+    public static void ShowExamPlanWizardWindow(ExamPlanWizardMode mode = ExamPlanWizardMode.CreateBoard)
+    {
+        if (_examPlanWizardWindow is { } existing)
+        {
+            ShowAndActivate(existing);
+            return;
+        }
+
+        var viewModel = IAppHost.GetService<ExamPlanWizardViewModel>();
+        viewModel.ModeOverride = mode;
+
+        var window = new ExamPlanWizardWindow(viewModel);
+        _examPlanWizardWindow = window;
+        window.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(_examPlanWizardWindow, window))
+                _examPlanWizardWindow = null;
         };
 
         ShowAndActivate(window);

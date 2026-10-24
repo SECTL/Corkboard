@@ -1,4 +1,4 @@
-using Avalonia.Media;
+﻿using Avalonia.Media;
 using Corkboard.Core.Handwriting;
 
 namespace Corkboard.Core.Tests;
@@ -147,8 +147,48 @@ public class HandwritingTests
     }
 
     [Fact]
-    public void Decode_LegacyJsonWithoutReferenceWidthLeavesItUnset()
+    public void Decode_IgnoresTheRetiredEntrySharpnessSegment()
     {
+        // 这个字段已经废弃（起笔不再做收锋），但旧文件里可能还带着第五段：
+        // 读的时候必须容忍多一段，点一个都不能少。
+        const string ink =
+            "CORKBOARD-INK/2\naspect=1.6\nref=540.00\n#FF1A1A1A|4.00|0|0.1,0.2,1.0;0.3,0.4,1.0|1.000";
+
+        Assert.True(HandwritingCodec.TryDecode(ink, out var decoded));
+        Assert.Equal(2, decoded.Strokes[0].Points.Count);
+        Assert.Equal(4, decoded.Strokes[0].Width, 3);
+    }
+
+    [Fact]
+    public void Erase_KeepsWidthOfTheSplitPieces()
+    {
+        // 擦断之后每一截都保留原来的笔宽（曾经因为漏带字段出现过擦一下就变细的问题）。
+        var document = new HandwritingDocument
+        {
+            Strokes =
+            [
+                new HandwritingStroke
+                {
+                    Color = Color.Parse("#FF1A1A1A"),
+                    Width = 4,
+                    Points =
+                    [
+                        HandwritingPoint.Create(0.1, 0.5),
+                        HandwritingPoint.Create(0.5, 0.5),
+                        HandwritingPoint.Create(0.9, 0.5)
+                    ]
+                }
+            ]
+        };
+
+        var erased = HandwritingEraser.Erase(document.Strokes, 0.5, 0.5, 50, 1000, 1000, out var changed);
+
+        Assert.True(changed);
+        Assert.Equal(2, erased.Count);
+        Assert.All(erased, stroke => Assert.Equal(4, stroke.Width, 3));
+    }
+    [Fact]
+    public void Decode_LegacyJsonWithoutReferenceWidthLeavesItUnset()    {
         const string json = """
                             {"version":1,"aspect":1.6,"strokes":[{"color":"#FF000000","width":4,"points":[0.2,0.2,0.4,0.4]}]}
                             """;

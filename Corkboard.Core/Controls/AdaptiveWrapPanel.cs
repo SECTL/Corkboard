@@ -13,6 +13,11 @@ namespace Corkboard.Core.Controls;
 ///         空着一大片。
 ///     </para>
 ///     <para>
+///         作业板的两种排布共用它：区块排布把 <see cref="MinItemWidth" /> 交给用户调（默认 300），
+///         多列排布把上下限写成 <see cref="Board.BoardColumnStyle" /> 那对阅读栏宽度并打开
+///         <see cref="CenterContent" />。
+///     </para>
+///     <para>
 ///         纵向不按行对齐：区块高度是各自内容的高度（不拉成等高），矮的那块下面不留空行，
 ///         后面的区块直接补进来，落位规则见 <see cref="AdaptiveGridMetrics.ResolveMasonry" />。
 ///     </para>
@@ -39,6 +44,13 @@ public class AdaptiveWrapPanel : Panel
         AvaloniaProperty.Register<AdaptiveWrapPanel, double>(nameof(LineSpacing), 8d);
 
     /// <summary>
+    ///     内容比可用宽度窄时要不要整排居中。默认靠左（区块排布就是这样，左边对齐才不会跳）；
+    ///     多列排布开着它——栏宽有上限，窗口很宽、栏又少时余量全堆在右边会很难看。
+    /// </summary>
+    public static readonly StyledProperty<bool> CenterContentProperty =
+        AvaloniaProperty.Register<AdaptiveWrapPanel, bool>(nameof(CenterContent));
+
+    /// <summary>
     ///     上一次测量算出来的列数与区块宽度。排布直接照用：两次算出来的结果必须一致，
     ///     否则落位会和测量时对不上（表现为最后一块跑出列外）。
     /// </summary>
@@ -60,6 +72,9 @@ public class AdaptiveWrapPanel : Panel
             MaxItemWidthProperty,
             SpacingProperty,
             LineSpacingProperty);
+
+        // 居不居中只影响摆放位置，不影响每块量出来的尺寸。
+        AffectsArrange<AdaptiveWrapPanel>(CenterContentProperty);
     }
 
     public double MinItemWidth
@@ -84,6 +99,12 @@ public class AdaptiveWrapPanel : Panel
     {
         get => GetValue(LineSpacingProperty);
         set => SetValue(LineSpacingProperty, value);
+    }
+
+    public bool CenterContent
+    {
+        get => GetValue(CenterContentProperty);
+        set => SetValue(CenterContentProperty, value);
     }
 
     protected override Size MeasureOverride(Size availableSize)
@@ -137,13 +158,23 @@ public class AdaptiveWrapPanel : Panel
             _placements = AdaptiveGridMetrics.ResolveMasonry(_heights, _columns, LineSpacing);
         }
 
+        // 居中对齐时把整排往右推一点：栏宽有上限，窗口很宽、栏又少时余量会全堆在右边。
+        // 只推正的余量，内容比可用宽度还宽时（理论上不会，Resolve 已经夹过）靠左照旧。
+        var offsetX = 0d;
+        if (CenterContent)
+        {
+            var slack = finalSize.Width - GetUsedWidth(_columns, _itemWidth);
+            if (double.IsFinite(slack) && slack > 0d)
+                offsetX = slack / 2d;
+        }
+
         for (var index = 0; index < children.Count; index++)
         {
             var (column, y) = _placements[index];
             var child = children[index];
 
             child.Arrange(new Rect(
-                column * (_itemWidth + Spacing), y, _itemWidth, child.DesiredSize.Height));
+                offsetX + (column * (_itemWidth + Spacing)), y, _itemWidth, child.DesiredSize.Height));
         }
 
         return finalSize;

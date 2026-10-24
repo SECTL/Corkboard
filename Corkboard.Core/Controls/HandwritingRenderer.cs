@@ -8,9 +8,13 @@ namespace Corkboard.Core.Controls;
 ///     把一页手写画到 <see cref="DrawingContext" /> 上：可编辑画布与只读预览共用这一份，
 ///     免得两边各写一套「笔怎么画」的代码、修了一边漏一边。
 ///     <para>
-///         <b>笔锋</b>：每个点带一个粗细倍率（<see cref="HandwritingPoint.WidthScale" />，按书写速度算：
-///         慢写粗、快写细）。所以一笔不再是一根等宽折线，而是沿中心线左右各推出半个笔宽的多边形
-///         （两头再补圆帽）。没有笔锋数据的老笔迹倍率都是 1，画出来就是等宽线。
+///         <b>笔锋 = 速度笔锋</b>：每个点带一个粗细倍率（<see cref="HandwritingPoint.WidthScale" />，
+///         按书写速度算：慢写粗、快写细）。所以一笔不再是一根等宽折线，而是沿中心线左右各推出半个笔宽的多边形；
+///         走快的一段自然变细、走慢的一段自然变粗，中间是<b>沿弧长渐变</b>的，不是到笔尾才突然收一下。
+///         两端一律补一个整宽的圆帽（就像笔尖落在纸上、提起来各留下一个圆点），
+///         <b>不做「收锋包络」</b>——在笔尾强行收细会画出一根尖刺，真实笔迹的收笔是靠手在提笔前
+///         自然减速变粗/加速变细带出来的，那个渐变已经在倍率里了。
+///         没有笔锋数据的老笔迹倍率都是 1，画出来就是等宽线 + 圆头。
 ///     </para>
 ///     <para>
 ///         笔宽是「参考画布上的 DIP」：用户挑的「4 像素粗」在写的时候就是 4 像素粗。
@@ -74,140 +78,143 @@ internal static class HandwritingRenderer
 
             SmoothRadii(radii);
             SmoothRadii(radii);
-            DrawTaperedStroke(context, brush, points, radii, baseWidth);
+            DrawStroke(context, brush, points, radii);
         }
     }
 
     /// <summary>
-    ///     沿中心线画一条粗细变化的带子：按点的法线往两侧各推半个笔宽，围成一个多边形。
+    ///     沿中心线画一条粗细变化的带子：按每点的边缘方向往两侧各推半个笔宽，围成一个闭合多边形，
+    ///     再在两段端头各补一个整宽的圆点当圆帽。
     ///     <para>
-    ///         <b>笔锋是「尖」的</b>：两端各留一小段收锋区，笔宽按幂函数收到接近 0，
-    ///         多边形自己收到一个点——不用圆帽（圆头看起来像棉签，不像笔）。
-    ///         中间的粗细跟书写速度走（慢粗快细）。
+    ///         <b>这里不做任何「收锋」</b>：笔迹的粗细变化全部来自 <paramref name="radii" />
+    ///         （也就是书写速度算出来的 <see cref="HandwritingPoint.WidthScale" />）。
+    ///         在笔尾再叠一层收锋包络的话，笔宽会在最后十几个像素里从全宽掉到很细，
+    ///         看起来就是一根尖刺——真笔的收笔是手在提笔前慢慢减速带出来的渐变，不是几何上的一刀切。
     ///     </para>
     /// </summary>
-    private static void DrawTaperedStroke(
-        DrawingContext context,
-        IBrush brush,
-        List<Point> points,
-        List<double> radii,
-        double baseWidth)
+    private static void DrawStroke(DrawingContext context, IBrush brush, List<Point> points, List<double> radii)
     {
         var count = points.Count;
         if (count < 2)
             return;
 
-        // 累计弧长：收锋区按「走了多远」算，而不是按点数，快慢不同的段落看起来才一致。
-        var lengths = new double[count];
+        // 几乎没动的一笔：画个圆点，别画成一条看不见的细缝。
+        var total = 0.0;
         for (var index = 1; index < count; index++)
-        {
-            var dx = points[index].X - points[index - 1].X;
-            var dy = points[index].Y - points[index - 1].Y;
-            lengths[index] = lengths[index - 1] + Math.Sqrt(dx * dx + dy * dy);
-        }
-
-        var total = lengths[count - 1];
+            total += Distance(points[index - 1], points[index]);
         if (total < 0.5)
         {
-            // 几乎没动的一笔：画个圆点，别画成一条看不见的细缝。
-            var radius = Math.Max(radii[0], 0.5);
-            context.DrawEllipse(brush, null, points[0], radius, radius);
+            var dotRadius = Math.Max(radii[0], 0.5);
+            context.DrawEllipse(brush, null, points[0], dotRadius, dotRadius);
             return;
         }
 
-        // 收锋长度：太短不尖，太长整笔都在收、粗笔看起来就像拖把。取 1.6 倍笔宽，
-        // 最多占全长的 22%——粗笔的端头不会收成一大片斜边。
-        var tipLength = Math.Clamp(baseWidth * 1.6, 3, Math.Max(3, total * 0.22));
-
-        var widths = new double[count];
-        for (var index = 0; index < count; index++)
-        {
-            var fromStart = Math.Clamp(lengths[index] / tipLength, 0, 1);
-            var fromEnd = Math.Clamp((total - lengths[index]) / tipLength, 0, 1);
-
-            // 平方根曲线：离开端点时快速长粗，到收锋尽头自然接回正常笔宽。
-            var envelope = Math.Sqrt(Math.Min(fromStart, fromEnd));
-
-            // 最细处也留 0.35 DIP：收锋要尖，但不能细成一根看不见的头发丝。
-            widths[index] = Math.Clamp(radii[index] * envelope, 0.35, radii[index] * 1.6);
-        }
-
-        // 粗笔时把中心线往两侧推成「一条带子」的多边形会自交：笔越粗、拐得越急，交叉越厉害，
-        // 边缘就出现毛刺、缺口和「毛笔分叉」那种脏边（用户反馈过）。
-        // 所以改成「一段一个梯形 + 每个顶点一个圆盘」：梯形永远是凸的、不自交，
-        // 顶点圆盘把两段之间的接缝补圆（等于圆角连接），两者用 NonZero 填充合成一条笔迹。
+        // 笔迹做成「一条连续的带状多边形」：左沿顺着走一遍、右沿反着走回来、首尾闭合。
+        // ⚠️ 不要退回「一段一个梯形 + 每个顶点一个圆盘」那套：那些子路径互相重叠，
+        // 而重叠的子路径在填充时会被当成内外翻转，重叠区被挖成空洞——放大后整条笔迹
+        // 变成一串珠子、边缘一圈缺口（用户说的「尾巴很奇怪」就是它，实测两种绕向都一样）。
+        // 一条不自交的闭合多边形没有这个问题；圆头改由两端单独补一个椭圆（叠着画，不参与翻转）。
+        var edges = BuildEdgeOffsets(points, count);
         var geometry = new StreamGeometry();
         using (var geometryContext = geometry.Open())
         {
             geometryContext.SetFillRule(FillRule.NonZero);
 
-            for (var index = 0; index + 1 < count; index++)
-            {
-                var startPoint = points[index];
-                var endPoint = points[index + 1];
-                var dx = endPoint.X - startPoint.X;
-                var dy = endPoint.Y - startPoint.Y;
-                var length = Math.Sqrt(dx * dx + dy * dy);
-                if (length < 1e-6)
-                    continue;
-
-                // 这一段的法线只用这一段自己的方向：不跟相邻段平均，梯形才是凸的。
-                var normalX = -dy / length;
-                var normalY = dx / length;
-                var startWidth = widths[index];
-                var endWidth = widths[index + 1];
-
-                geometryContext.BeginFigure(
-                    new Point(startPoint.X + normalX * startWidth, startPoint.Y + normalY * startWidth), true);
-                geometryContext.LineTo(
-                    new Point(endPoint.X + normalX * endWidth, endPoint.Y + normalY * endWidth), true);
-                geometryContext.LineTo(
-                    new Point(endPoint.X - normalX * endWidth, endPoint.Y - normalY * endWidth), true);
-                geometryContext.LineTo(
-                    new Point(startPoint.X - normalX * startWidth, startPoint.Y - normalY * startWidth), true);
-                geometryContext.EndFigure(true);
-            }
-
-            // 顶点圆盘：补上接缝和起止端头。半径跟着这一点的实际笔宽走，所以收锋处自然收成尖点。
-            for (var index = 0; index < count; index++)
-                AppendDisc(geometryContext, points[index], widths[index]);
+            geometryContext.BeginFigure(Offset(points[0], edges[0], radii[0]), true);
+            for (var index = 1; index < count; index++)
+                geometryContext.LineTo(Offset(points[index], edges[index], radii[index]), true);
+            for (var index = count - 1; index >= 0; index--)
+                geometryContext.LineTo(Offset(points[index], edges[index], -radii[index]), true);
+            geometryContext.EndFigure(true);
         }
 
         context.DrawGeometry(brush, null, geometry);
+
+        // 两端圆帽（笔尖落纸、提笔各留下一个圆点）。单独画，叠着覆盖，不参与多边形的翻转判断。
+        if (radii[0] > 0.05)
+            context.DrawEllipse(brush, null, points[0], radii[0], radii[0]);
+        if (radii[count - 1] > 0.05)
+            context.DrawEllipse(brush, null, points[count - 1], radii[count - 1], radii[count - 1]);
+    }
+
+    private static double Distance(Point a, Point b)
+    {
+        var dx = a.X - b.X;
+        var dy = a.Y - b.Y;
+        return Math.Sqrt(dx * dx + dy * dy);
     }
 
     /// <summary>
-    ///     在 <paramref name="center" /> 处补一个实心圆（多边形近似），用来做圆角连接与端头。
-    ///     分段数按半径定：细笔 10 段就够，粗笔才需要更多段，免得边缘看出棱角。
+    ///     每个点的边缘偏移方向：取相邻两段方向的角平分线（斜接），再乘一个斜接长度系数。
+    ///     拐得越急、外沿越要往外伸，所以系数限制上限，免得太尖的转折处内外沿交叉、带子翻出去。
     /// </summary>
-    private static void AppendDisc(StreamGeometryContext context, Point center, double radius)
+    private static Point[] BuildEdgeOffsets(List<Point> points, int count)
     {
-        if (!double.IsFinite(radius) || radius <= 0)
-            return;
+        const double miterLimit = 3.0;
+        var offsets = new Point[count];
 
-        var segments = Math.Clamp((int)Math.Ceiling(radius * 3) + 8, 10, 48);
-        var step = Math.PI * 2 / segments;
-        var normalX = 0.0;
-        var normalY = 0.0;
-
-        for (var index = 0; index < segments; index++)
+        for (var index = 0; index < count; index++)
         {
-            var angle = index * step;
-            normalX = Math.Cos(angle);
-            normalY = Math.Sin(angle);
-
-            var point = new Point(center.X + normalX * radius, center.Y + normalY * radius);
+            double dx, dy;
             if (index == 0)
-                context.BeginFigure(point, true);
+            {
+                dx = points[1].X - points[0].X;
+                dy = points[1].Y - points[0].Y;
+            }
+            else if (index == count - 1)
+            {
+                dx = points[count - 1].X - points[count - 2].X;
+                dy = points[count - 1].Y - points[count - 2].Y;
+            }
             else
-                context.LineTo(point, true);
+            {
+                dx = points[index + 1].X - points[index - 1].X;
+                dy = points[index + 1].Y - points[index - 1].Y;
+            }
+
+            var length = Math.Sqrt(dx * dx + dy * dy);
+            if (length < 1e-9)
+            {
+                offsets[index] = index > 0 ? offsets[index - 1] : default;
+                continue;
+            }
+
+            var normalX = -dy / length;
+            var normalY = dx / length;
+
+            var miter = 1.0;
+            if (index > 0 && index + 1 < count)
+            {
+                var ax = points[index].X - points[index - 1].X;
+                var ay = points[index].Y - points[index - 1].Y;
+                var bx = points[index + 1].X - points[index].X;
+                var by = points[index + 1].Y - points[index].Y;
+                var firstLength = Math.Sqrt(ax * ax + ay * ay);
+                var secondLength = Math.Sqrt(bx * bx + by * by);
+                if (firstLength > 1e-9 && secondLength > 1e-9)
+                {
+                    var cosine = Math.Clamp((ax * bx + ay * by) / (firstLength * secondLength), -1, 1);
+                    var halfAngleCosine = Math.Sqrt((1 + cosine) / 2);
+                    if (halfAngleCosine > 1e-6)
+                        miter = Math.Clamp(1 / halfAngleCosine, 1, miterLimit);
+                }
+            }
+
+            offsets[index] = new Point(normalX * miter, normalY * miter);
         }
 
-        context.EndFigure(true);
+        return offsets;
     }
+
+    /// <summary>按「中心点 + 偏移方向 × 半宽」算带子的边沿点。</summary>
+    private static Point Offset(Point center, Point edge, double halfWidth)
+    {
+        return new Point(center.X + edge.X * halfWidth, center.Y + edge.Y * halfWidth);
+    }
+
     /// <summary>
     ///     把笔宽磨一下：速度算出来的倍率有抖动，直接画会出现一粗一细的疙瘩；
-    ///     取相邻三点平均，看起来才是自然的提按（两端的收锋由画的时候再叠一层包络）。
+    ///     取相邻三点平均，看起来才是自然的提按（笔锋的渐变本来就在倍率里，这里只去毛刺）。
     /// </summary>
     private static void SmoothRadii(List<double> radii)
     {
@@ -221,3 +228,5 @@ internal static class HandwritingRenderer
         }
     }
 }
+
+

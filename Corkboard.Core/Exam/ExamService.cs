@@ -73,6 +73,78 @@ public sealed class ExamService : IExamService
     }
 
     /// <summary>
+    ///     一次加一批考试：**只落盘一次、只通知一次**（快速布置会一口气排几十场）。
+    ///     不合法的那几条（科目为空）直接丢掉，不假装加进去了。
+    /// </summary>
+    public IReadOnlyList<ExamEntry> AddMany(IEnumerable<ExamEntry> entries)
+    {
+        ArgumentNullException.ThrowIfNull(entries);
+
+        var added = new List<ExamEntry>();
+        foreach (var entry in entries)
+        {
+            if (entry is null)
+                continue;
+
+            var normalized = ExamEntry.Normalize(entry);
+            if (normalized.Subject.Length == 0)
+            {
+                _logger?.LogDebug("Skipped an exam with no subject while adding a batch");
+                continue;
+            }
+
+            if (normalized.Id == Guid.Empty || _exams.Any(exam => exam.Id == normalized.Id))
+                normalized.Id = Guid.NewGuid();
+
+            entry.Id = normalized.Id;
+            _exams.Add(normalized);
+            added.Add(normalized);
+        }
+
+        if (added.Count == 0)
+            return added;
+
+        Persist();
+        return added;
+    }
+
+    /// <summary>
+    ///     用一批考试整份替换当前看板的考试（快速布置的「覆盖」）。
+    ///     **只落盘一次、只通知一次**，不合法的那几条直接丢掉。
+    /// </summary>
+    public IReadOnlyList<ExamEntry> ReplaceAll(IEnumerable<ExamEntry> entries)
+    {
+        ArgumentNullException.ThrowIfNull(entries);
+
+        var added = new List<ExamEntry>();
+        foreach (var entry in entries)
+        {
+            if (entry is null)
+                continue;
+
+            var normalized = ExamEntry.Normalize(entry);
+            if (normalized.Subject.Length == 0)
+            {
+                _logger?.LogDebug("Skipped an exam with no subject while replacing the board");
+                continue;
+            }
+
+            if (normalized.Id == Guid.Empty)
+                normalized.Id = Guid.NewGuid();
+
+            entry.Id = normalized.Id;
+            added.Add(normalized);
+        }
+
+        _exams.Clear();
+        foreach (var entry in added)
+            _exams.Add(entry);
+
+        Persist();
+        return added;
+    }
+
+    /// <summary>
     ///     按 <see cref="ExamEntry.Id" /> 覆盖一条考试。
     ///     ⚠️ 这里是**逐字段复制**（与 <c>BoardService.Update</c> 同一个坑）：给 <see cref="ExamEntry" />
     ///     加字段时必须同步加到这里，否则编辑保存会静默丢字段。
@@ -100,6 +172,7 @@ public sealed class ExamService : IExamService
         target.PageCount = normalized.PageCount;
         target.QuestionCount = normalized.QuestionCount;
         target.Note = normalized.Note;
+        target.SubjectKeys = normalized.SubjectKeys;
 
         Persist();
         return true;
@@ -117,6 +190,32 @@ public sealed class ExamService : IExamService
     }
 
     public void Save() => Persist();
+
+    /// <summary>
+    ///     只改某一块看板的「参不参加自动放映」并落盘。不换当前看板、不通知界面
+    ///     （列表里那颗开关正被按着，重建会把控件抽走）。
+    /// </summary>
+    public bool SetAutoShow(Guid boardId, bool enabled)
+    {
+        var target = _boards.FirstOrDefault(board => board.Id == boardId);
+        if (target is null)
+        {
+            _logger?.LogWarning("Skipped setting auto-show on unknown board {Id}", boardId);
+            return false;
+        }
+
+        if (target.AutoShowEnabled == enabled)
+            return true;
+
+        // 当前看板的考试集合是活的那一份：整份写盘前先把集合同步过去，
+        // 否则刚加进去还没落盘的考试会被这次写盘抹掉。
+        if (ReferenceEquals(target, _activeBoard))
+            target.Exams = [.. _exams];
+
+        target.AutoShowEnabled = enabled;
+        _configService.SaveConfig(target);
+        return true;
+    }
 
     public void Reload()
     {

@@ -22,10 +22,11 @@ public partial class BoardSettingsConfig : ObservableObject
     [ObservableProperty] private string _boardName = string.Empty;
 
     /// <summary>
-    ///     便签排布方式（展示设置）。只在「设置 → 作业板 → 排布」下拉框里改；
-    ///     读的时候一律过一遍 <see cref="BoardLayoutModes.Normalize" />，老配置里的「通铺」按区块显示。
+    ///     便签排布方式（展示设置）。只在「设置 → 作业板 → 排布」下拉框里改；默认区块排布
+    ///     （见 <see cref="BoardLayoutModes.Default" />）。读的时候一律过一遍
+    ///     <see cref="BoardLayoutModes.Normalize" />，老配置里的「通铺」按区块显示。
     /// </summary>
-    [ObservableProperty] private BoardLayoutMode _layoutMode = BoardLayoutMode.SingleColumn;
+    [ObservableProperty] private BoardLayoutMode _layoutMode = BoardLayoutModes.Default;
 
     /// <summary>
     ///     区块排布里单个区块的最小宽度（DIP）。只在「设置 → 作业板 → 区块宽度」里改；

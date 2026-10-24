@@ -28,6 +28,9 @@ public static class CloudSyncExclusions
         "general.basic.main_window",
         // 设置窗口尺寸与位置
         "general.basic.settings_window",
+        // 自动保存的目录：本机的绝对路径，搬到对端多半是个不存在的盘符，
+        // 结果是「开了自动保存却什么都没存」而且失败只记日志。开关与时机照旧同步。
+        "board_auto_save.folder",
         // 云同步开关与上次同步时间：每个账号、每台设备各自决定
         "cloud"
     ];

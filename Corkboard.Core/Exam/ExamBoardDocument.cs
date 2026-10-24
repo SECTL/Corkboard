@@ -49,6 +49,17 @@ public partial class ExamBoardDocument : ConfigBase
     /// </summary>
     [ObservableProperty] private List<ExamEntry> _exams = [];
 
+    /// <summary>
+    ///     这块看板参不参加**自动放映**（到点自己弹成全屏）。默认关：装了好几个看板的人
+    ///     不该每块都自动往屏幕上跳，要参加得自己打开。
+    ///     <para>
+    ///         放映的时机参数是全局的（<see cref="Models.SubConfigs.Exam.ExamAutoShowSettingsConfig" />），
+    ///         这里只管「这块参不参加」。放映范围也不是「打开之后一直放」——
+    ///         只在这块看板真有考试的那几天、按 <see cref="ExamAutoShowPolicy" /> 算出来的区间里才放。
+    ///     </para>
+    /// </summary>
+    [ObservableProperty] private bool _autoShowEnabled;
+
     [JsonIgnore]
     public override string ConfigFilePath =>
         Utils.GetFilePath(StorageDirectoryName, BoardsDirectoryName, $"{Id:N}.json");
@@ -70,6 +81,7 @@ public partial class ExamBoardDocument : ConfigBase
         Title = Title,
         Subtitle = Subtitle,
         SubtitleColor = SubtitleColor,
+        AutoShowEnabled = AutoShowEnabled,
         Exams = [.. Exams]
     };
 

@@ -11,7 +11,6 @@ using Corkboard.Core.Exam;
 using Corkboard.Core.Models.SubConfigs.Exam;
 using Corkboard.Core.Services.Config;
 using Corkboard.Core.Time;
-using CR = Corkboard.Core.Langs.Common.Resources;
 
 namespace Corkboard.ViewModels.ExamBoard;
 
@@ -19,8 +18,8 @@ namespace Corkboard.ViewModels.ExamBoard;
 ///     全屏考试看板的 ViewModel：时钟、考试表格、标题副标题，以及「这一刻该显示什么」。
 ///     <para>
 ///         显示形态由**下一场考试的状态**决定（<see cref="ExamStatusPolicy" />）：
-///         未开始 → 时钟 + 全部考试；即将开始 → 默认只留下一场（可关）；进行中 → 默认只留时钟（可开）。
-///         三种形态共用同一套控件，靠 <see cref="ShowList" /> / <see cref="ShowNextCard" /> 与
+///         未开始 → 时钟 + 全部考试；即将开始 / 进行中 → 默认只留「时钟 + 下面那组信息」（两个开关可改） 。
+///         表格与信息块用同一套控件，靠 <see cref="ShowList" /> / <see cref="ShowExamInfo" /> 与
 ///         时钟的列位 / 字号切换，所以切换时不会有「整块重建」的跳动。
 ///     </para>
 ///     <para>
@@ -108,13 +107,6 @@ public partial class ExamBoardViewModel : ViewModelBase
     [ObservableProperty]
     private string _clockDate = string.Empty;
 
-    /// <summary>「已校时」/「本机时间」——右下角那行小字，让用户知道这个钟准不准。</summary>
-    [ObservableProperty]
-    private string _clockSource = string.Empty;
-
-    [ObservableProperty]
-    private bool _isClockSynced;
-
     [ObservableProperty]
     private double _clockFontSize = ClockFontSizeWithList;
 
@@ -134,9 +126,12 @@ public partial class ExamBoardViewModel : ViewModelBase
     [ObservableProperty]
     private bool _showList = true;
 
-    /// <summary>即将开始且收起了列表：只显示下一场的那张卡。</summary>
+    /// <summary>
+    ///     是否显示时钟下面那组考试信息（列表收起时才出现）：这一刻考哪科、几点到几点、
+    ///     还剩多久、卷面信息。
+    /// </summary>
     [ObservableProperty]
-    private bool _showNextCard;
+    private bool _showExamInfo;
 
     [ObservableProperty]
     private bool _hasExams;
@@ -144,29 +139,37 @@ public partial class ExamBoardViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isTableHeaderVisible;
 
+    /// <summary>信息块顶上那行小字：复用三档状态名（即将开始 / 进行中）。</summary>
     [ObservableProperty]
-    private string _nextSubject = string.Empty;
+    private string _infoCaption = string.Empty;
 
     [ObservableProperty]
-    private string _nextDate = string.Empty;
+    private string _infoSubject = string.Empty;
+
+    /// <summary>考试日期：今天 / 明天 / 后天 / 「11月7日 周六」，跟表格里那列同一套说法。</summary>
+    [ObservableProperty]
+    private string _infoDateText = string.Empty;
 
     [ObservableProperty]
-    private string _nextTime = string.Empty;
+    private string _infoTimeRange = string.Empty;
+
+    /// <summary>「还有 12 分钟」/「还剩 40 分钟」/「还有 13 天」。</summary>
+    [ObservableProperty]
+    private string _infoRemaining = string.Empty;
+
+    /// <summary>这一行有没有内容（未开始 / 已结束时为空，那一行整行隐藏）。</summary>
+    [ObservableProperty]
+    private bool _infoHasRemaining;
+
+    /// <summary>剩余时间到了设置里那个门槛：这一行转红。</summary>
+    [ObservableProperty]
+    private bool _infoIsUrgent;
 
     [ObservableProperty]
-    private string _nextStatus = string.Empty;
+    private string _infoPaperInfo = string.Empty;
 
     [ObservableProperty]
-    private string _nextPaperInfo = string.Empty;
-
-    [ObservableProperty]
-    private bool _nextHasPaperInfo;
-
-    [ObservableProperty]
-    private bool _nextIsUpcoming;
-
-    [ObservableProperty]
-    private bool _nextIsInProgress;
+    private bool _infoHasPaperInfo;
 
     /// <summary>正在长按退出：进度圈与轨道这时才画出来，平时只有一颗干净的图标。</summary>
     [ObservableProperty]
@@ -297,55 +300,74 @@ public partial class ExamBoardViewModel : ViewModelBase
 
         ClockTime = now.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
         ClockDate = FormatClockDate(now);
-        IsClockSynced = _time.IsSynced;
-        ClockSource = IsClockSynced ? CR.Exam_Board_ClockSynced : CR.Exam_Board_ClockLocal;
 
         var threshold = ExamStatusPolicy.ClampUpcomingMinutes(Settings.UpcomingThresholdMinutes);
         var next = ExamStatusPolicy.FindNext(Exams.Exams, now);
         var nextStatus = next is null ? ExamStatus.Finished : ExamStatusPolicy.Resolve(next, now, threshold);
 
-        // 三种形态：整表 / 只留下一场 / 只剩时钟。
-        // 收起列表时，即将开始那一档单独留一张卡；进行中则连卡都不留（整块屏幕上只有时间）。
+        // 两种形态：整表 / 只剩下「时钟 + 下面那组信息」。
+        // 列表收起时不再另开一张卡，统一由时钟下面那组字承载（科目、时间、剩余、卷面）。
         var showList = nextStatus switch
         {
             ExamStatus.InProgress => Settings.ShowExamListInProgress,
             ExamStatus.Upcoming => !Settings.HideExamListWhenUpcoming,
             _ => true
         };
-        var showNextCard = !showList && nextStatus == ExamStatus.Upcoming;
 
         ShowList = showList;
-        ShowNextCard = showNextCard;
         ClockColumnSpan = showList ? 1 : 2;
         ClockFontSize = showList ? ClockFontSizeWithList : ClockFontSizeAlone;
 
         HasExams = Exams.Exams.Count > 0;
         IsTableHeaderVisible = showList && Rows.Count > 0;
 
-        if (next is null)
-        {
-            NextSubject = string.Empty;
-            NextDate = string.Empty;
-            NextTime = string.Empty;
-            NextStatus = string.Empty;
-            NextPaperInfo = string.Empty;
-            NextHasPaperInfo = false;
-            NextIsUpcoming = false;
-            NextIsInProgress = false;
-        }
-        else
-        {
-            NextSubject = next.Subject;
-            NextDate = ExamTimeFormatter.FormatDate(next.Date, DateOnly.FromDateTime(now));
-            NextTime = ExamTimeFormatter.FormatTimeRange(next);
-            NextStatus = ExamTimeFormatter.FormatStatusDetail(nextStatus, next, now);
-            NextPaperInfo = ExamTimeFormatter.FormatPaperInfo(next);
-            NextHasPaperInfo = !string.IsNullOrEmpty(NextPaperInfo);
-            NextIsUpcoming = nextStatus == ExamStatus.Upcoming;
-            NextIsInProgress = nextStatus == ExamStatus.InProgress;
-        }
+        UpdateExamInfo(next, nextStatus, now);
 
         UpdateRowStatuses(now, threshold);
+    }
+
+    /// <summary>
+    ///     时钟下面那组信息（**始终独立存在的一块**，不并进右边那张总览表）：
+    ///     正在考 / 下一场是哪一科、哪天几点到几点、还剩多久（到了设置里那个门槛就转红），
+    ///     以及卷面信息（填了才显示）。
+    ///     <para>
+    ///         表格收起时它是屏幕上唯一的考试信息；表格展开时它仍然单独待着（左边时钟下面），
+    ///         只是与表里那行重复——用户明确要的是「单独一块」，不要跟总览混在一起。
+    ///     </para>
+    ///     <para>
+    ///         只读 <see cref="ExamStatusPolicy" /> 与 <see cref="ExamTimeFormatter" /> 的结果，
+    ///         这里不自己算时间差——「还剩多久」与表格里那一句必须是同一个说法。
+    ///     </para>
+    /// </summary>
+    private void UpdateExamInfo(ExamEntry? next, ExamStatus status, DateTime now)
+    {
+        if (next is null)
+        {
+            ShowExamInfo = false;
+            InfoCaption = string.Empty;
+            InfoSubject = string.Empty;
+            InfoDateText = string.Empty;
+            InfoTimeRange = string.Empty;
+            InfoRemaining = string.Empty;
+            InfoHasRemaining = false;
+            InfoIsUrgent = false;
+            InfoPaperInfo = string.Empty;
+            InfoHasPaperInfo = false;
+            return;
+        }
+
+        var paperInfo = ExamTimeFormatter.FormatPaperInfo(next);
+
+        ShowExamInfo = true;
+        InfoCaption = ExamTimeFormatter.FormatInfoCaption(status);
+        InfoSubject = next.Subject;
+        InfoDateText = ExamTimeFormatter.FormatDate(next.Date, DateOnly.FromDateTime(now));
+        InfoTimeRange = ExamTimeFormatter.FormatTimeRange(next);
+        InfoRemaining = ExamTimeFormatter.FormatInfoRemaining(status, next, now, Settings.RemainingSecondsEnabled);
+        InfoHasRemaining = InfoRemaining.Length > 0;
+        InfoIsUrgent = ExamStatusPolicy.IsRemainingUrgent(status, next, now, Settings.RemainingWarningMinutes);
+        InfoPaperInfo = paperInfo;
+        InfoHasPaperInfo = paperInfo.Length > 0;
     }
 
     /// <summary>整表重建：考试增删改、跨日时调。行对象保持稳定，之后只改它们的文字。</summary>
@@ -374,7 +396,7 @@ public partial class ExamBoardViewModel : ViewModelBase
         foreach (var row in Rows)
         {
             var status = ExamStatusPolicy.Resolve(row.Exam, now, threshold);
-            row.UpdateStatus(ExamTimeFormatter.FormatStatusDetail(status, row.Exam, now), status, row.Exam.Id == nextId);
+            row.UpdateStatus(ExamTimeFormatter.FormatStatus(status), status, row.Exam.Id == nextId);
         }
     }
 
@@ -465,13 +487,6 @@ public partial class ExamRowItem : ObservableObject
     [ObservableProperty]
     private bool _isNext;
 
-    /// <summary>卷面信息（「2 张 · 8 页 · 3 大题」），没填就是空串。</summary>
-    [ObservableProperty]
-    private string _paperInfo = string.Empty;
-
-    [ObservableProperty]
-    private bool _hasPaperInfo;
-
     public void UpdateStatus(string statusText, ExamStatus status, bool isNext)
     {
         StatusText = statusText;
@@ -479,12 +494,5 @@ public partial class ExamRowItem : ObservableObject
         IsInProgress = status == ExamStatus.InProgress;
         IsFinished = status == ExamStatus.Finished;
         IsNext = isNext;
-
-        if (HasPaperInfo)
-            return;
-
-        var paperInfo = ExamTimeFormatter.FormatPaperInfo(Exam);
-        PaperInfo = paperInfo;
-        HasPaperInfo = !string.IsNullOrEmpty(paperInfo);
     }
 }

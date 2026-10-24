@@ -24,12 +24,21 @@ public partial class MainConfigModel : ConfigBase
     [ObservableProperty] private GeneralSettingsConfig _general = new();
     [ObservableProperty] private AppearanceSettingsConfig _appearance = new();
     [ObservableProperty] private BoardSettingsConfig _boardSettings = new();
+
+    /// <summary>作业板自动存档（定时存图片）：开关、时机、目录与保留天数。</summary>
+    [ObservableProperty] private BoardAutoSaveSettingsConfig _boardAutoSave = new();
     [ObservableProperty] private CloudSyncSettingsConfig _cloud = new();
     [ObservableProperty] private UpdateSettingsConfig _updateSettings = new();
     [ObservableProperty] private ExportSettingsConfig _exportSettings = new();
 
     /// <summary>考试看板的显示偏好（标题、阈值、时钟位置……）。考试安排本身在 <c>data/exam/</c>。</summary>
     [ObservableProperty] private ExamBoardSettingsConfig _examBoard = new();
+
+    /// <summary>
+    ///     考试看板的自动放映（到点自己弹成全屏）：提前量、开考后补不补弹、考完延迟多久收。
+    ///     哪块看板参加由看板文件自己的 <c>auto_show_enabled</c> 决定。
+    /// </summary>
+    [ObservableProperty] private ExamAutoShowSettingsConfig _examAutoShow = new();
 
     /// <summary>NTP 校时设置。看板时钟用它，其它界面不受影响。</summary>
     [ObservableProperty] private NtpSettingsConfig _ntp = new();
@@ -46,10 +55,12 @@ public partial class MainConfigModel : ConfigBase
         BoardSettings.NormalizeBoardExtras();
         BoardSettings.NormalizeCleanup();
         BoardSettings.NormalizeHistory();
+        BoardAutoSave.Normalize();
         ExportSettings.Normalize();
         UpdateSettings.Normalize();
         General.PrivacySettings.Normalize();
         ExamBoard.Normalize();
+        ExamAutoShow.Normalize();
         Ntp.Normalize();
     }
 

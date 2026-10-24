@@ -1,0 +1,533 @@
+<faWindowing:FAAppWindow xmlns="https://github.com/avaloniaui"
+                         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                         xmlns:faWindowing="using:FluentAvalonia.UI.Windowing"
+                         xmlns:vm="using:Corkboard.ViewModels.ExamBoard"
+                         xmlns:core="using:Corkboard.Core.Langs.Common"
+                         xmlns:icons="using:Corkboard.Core.Icons"
+                         mc:Ignorable="d" d:DesignWidth="1040" d:DesignHeight="760"
+                         x:Class="Corkboard.Views.ExamBoard.ExamPlanWizardWindow"
+                         x:DataType="vm:ExamPlanWizardViewModel"
+                         Title="{Binding WindowTitle}"
+                         Width="1040" Height="760"
+                         MinWidth="900" MinHeight="620"
+                         WindowStartupLocation="CenterScreen">
+    <!--
+        快速布置向导：基本信息 → 考哪些科目 → 作息 → 对照表。
+
+        为什么是独立窗口而不是设置页里的一段：四步内容各占一整屏（科目列表 + 顺序表、
+        一天几场的作息表、一张十来列的对照表），塞进设置页那个限宽 960 的纵向滚动列里
+        只能一路往下堆，看不出「这是一条流程」。
+    -->
+    <faWindowing:FAAppWindow.Styles>
+        <Style Selector="TextBlock.wizard-label">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        </Style>
+        <Style Selector="TextBlock.wizard-head">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="TextBlock.wizard-cell">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        </Style>
+        <Style Selector="TextBlock.wizard-cell.subject">
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="TextBlock.wizard-hint">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style Selector="Border.wizard-card">
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="16,14" />
+        </Style>
+        <Style Selector="Border.wizard-row">
+            <Setter Property="BorderBrush" Value="{DynamicResource DividerStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="0,0,0,1" />
+            <Setter Property="Padding" Value="0,8" />
+        </Style>
+        <Style Selector="Border.step-chip">
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Padding" Value="12,4" />
+            <Setter Property="Background" Value="{DynamicResource ControlFillColorDefaultBrush}" />
+        </Style>
+        <Style Selector="Border.step-chip.active">
+            <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+        </Style>
+        <Style Selector="Border.step-chip TextBlock">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        </Style>
+        <Style Selector="Border.step-chip.active TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource TextOnAccentFillColorPrimaryBrush}" />
+        </Style>
+        <Style Selector="Button.row-action">
+            <Setter Property="Width" Value="30" />
+            <Setter Property="Height" Value="30" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="FontFamily" Value="{DynamicResource FluentSystemIconsResizeable}" />
+        </Style>
+        <Style Selector="TextBlock.conflict">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+    </faWindowing:FAAppWindow.Styles>
+
+    <Grid RowDefinitions="Auto,*,Auto" Margin="20,12,20,16">
+
+        <!-- 顶部：四步的进度条，当前那一步高亮。 -->
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="16">
+            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <Border Classes="step-chip" Classes.active="{Binding IsBasicStep}">
+                    <TextBlock Text="{x:Static core:Resources.Settings_Exam_Plan_StepBasic}" />
+                </Border>
+                <Border Classes="step-chip" Classes.active="{Binding IsSubjectsStep}"
+                        IsVisible="{Binding IsSubjectsStepVisible}">
+                    <TextBlock Text="{x:Static core:Resources.Settings_Exam_Plan_StepSubjects}" />
+                </Border>
+                <Border Classes="step-chip" Classes.active="{Binding IsReviewStep}">
+                    <TextBlock Text="{x:Static core:Resources.Settings_Exam_Plan_StepReview}" />
+                </Border>
+            </StackPanel>
+            <TextBlock Grid.Column="1"
+                       VerticalAlignment="Center"
+                       Classes="wizard-hint"
+                       Text="{Binding ModeHint}" />
+        </Grid>
+
+        <!-- 正文：四步各一块，只有当前那一步可见。 -->
+        <Grid Grid.Row="1" Margin="0,16,0,0">
+
+            <!-- ========== 第 1 步：基本信息 ========== -->
+            <Border Classes="wizard-card" IsVisible="{Binding IsBasicStep}" VerticalAlignment="Top">
+                <StackPanel Spacing="16">
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="20">
+                        <StackPanel Grid.Column="0" Spacing="4">
+                            <TextBlock Classes="wizard-label" Text="{x:Static core:Resources.Settings_Exam_Plan_TitleLabel}" />
+                            <TextBox PlaceholderText="{x:Static core:Resources.Settings_Exam_Plan_TitlePlaceholder}"
+                                     Text="{Binding TitleDraft, Mode=TwoWay}"
+                                     IsEnabled="{Binding IsCreateMode}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Spacing="4">
+                            <TextBlock Classes="wizard-label" Text="{x:Static core:Resources.Settings_Exam_Plan_SubtitleLabel}" />
+                            <TextBox PlaceholderText="{x:Static core:Resources.Settings_Exam_Plan_SubtitlePlaceholder}"
+                                     Text="{Binding SubtitleDraft, Mode=TwoWay}"
+                                     IsEnabled="{Binding IsCreateMode}" />
+                        </StackPanel>
+                    </Grid>
+
+                    <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                        <TextBlock VerticalAlignment="Center"
+                                   Classes="wizard-label"
+                                   Text="{x:Static core:Resources.Settings_Exam_Plan_SubtitleColor}" />
+                        <!-- 「跟随主题」时把取色器整块藏起来，而不是留一个点不动的控件。 -->
+                        <ColorPicker VerticalAlignment="Center"
+                                     IsAlphaEnabled="False"
+                                     IsVisible="{Binding !FollowSubtitleThemeColor}"
+                                     IsEnabled="{Binding IsCreateMode}"
+                                     Color="{Binding SubtitleColorDraft, Mode=TwoWay}" />
+                        <ToggleSwitch IsChecked="{Binding FollowSubtitleThemeColor, Mode=TwoWay}"
+                                      IsEnabled="{Binding IsCreateMode}" />
+                        <TextBlock VerticalAlignment="Center"
+                                   Classes="wizard-label"
+                                   Text="{x:Static core:Resources.Settings_Exam_Plan_SubtitleColorDefault}" />
+                    </StackPanel>
+
+                    <StackPanel Spacing="4" HorizontalAlignment="Left">
+                        <TextBlock Classes="wizard-label" Text="{x:Static core:Resources.Settings_Exam_Plan_FirstDay}" />
+                        <CalendarDatePicker Width="240"
+                                            HorizontalAlignment="Left"
+                                            SelectedDate="{Binding FirstDayDraft, Mode=TwoWay}" />
+                        <TextBlock Classes="wizard-hint" Text="{x:Static core:Resources.Settings_Exam_Plan_FirstDayHint}" />
+                    </StackPanel>
+
+                    <!--
+                        模板：选一份就跳过「科目」「作息」两步，直接出对照表。
+                        模板里存的是「第几天几点考什么」，所以只要上面那个第一天是对的就行。
+                    -->
+                    <StackPanel Spacing="4" HorizontalAlignment="Left">
+                        <TextBlock Classes="wizard-label" Text="{x:Static core:Resources.Settings_Exam_Plan_TemplateLabel}" />
+                        <ComboBox Width="360"
+                                  HorizontalAlignment="Left"
+                                  PlaceholderText="{x:Static core:Resources.Settings_Exam_Plan_TemplatePlaceholder}"
+                                  IsVisible="{Binding !HasNoTemplate}"
+                                  ItemsSource="{Binding TemplateOptions}"
+                                  SelectedItem="{Binding SelectedTemplate, Mode=TwoWay}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:TemplateOption">
+                                    <TextBlock Text="{Binding Text}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <TextBlock Classes="wizard-hint"
+                                   IsVisible="{Binding HasNoTemplate}"
+                                   Text="{x:Static core:Resources.Settings_Exam_Plan_TemplateEmpty}" />
+                        <TextBlock Classes="wizard-hint"
+                                   IsVisible="{Binding IsTemplateMode}"
+                                   Text="{x:Static core:Resources.Settings_Exam_Plan_TemplateHint}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- ========== 第 2 步：考哪些科目 ========== -->
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="16" IsVisible="{Binding IsSubjectsStep}">
+
+                <!-- 左：作业板里的科目，勾上就进右边的考试顺序。 -->
+                <Border Grid.Column="0" Classes="wizard-card">
+                    <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="10">
+                        <StackPanel Grid.Row="0" Spacing="2">
+                            <TextBlock FontWeight="SemiBold" Text="{x:Static core:Resources.Settings_Exam_Plan_SubjectsTitle}" />
+                            <TextBlock Classes="wizard-hint" Text="{Binding SubjectsSourceText}" />
+                        </StackPanel>
+
+                        <!-- 作业板一个科目都没有：说清楚去哪儿加。 -->
+                        <StackPanel Grid.Row="1" Spacing="2" IsVisible="{Binding HasNoBoardSubject}">
+                            <TextBlock Classes="wizard-hint" Text="{x:Static core:Resources.Settings_Exam_Plan_SubjectsEmpty}" />
+                            <TextBlock Classes="wizard-hint" Text="{x:Static core:Resources.Settings_Exam_Plan_SubjectsEmptyHint}" />
+                        </StackPanel>
+
+                        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding BoardSubjects}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:BoardSubjectOption">
+                                        <Border Classes="wizard-row">
+                                            <CheckBox Content="{Binding Name}" IsChecked="{Binding IsSelected, Mode=TwoWay}" />
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+
+                        <!-- 就地加科目：直接写进作业板的科目表，不另开第二套。 -->
+                        <Grid Grid.Row="3" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                            <TextBox Grid.Column="0"
+                                     PlaceholderText="{x:Static core:Resources.Settings_Exam_Plan_AddSubjectPlaceholder}"
+                                     Text="{Binding AddSubjectDraft, Mode=TwoWay}"
+                                     KeyDown="OnAddSubjectKeyDown" />
+                            <Button Grid.Column="1" Command="{Binding AddSubjectCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <TextBlock VerticalAlignment="Center"
+                                               FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                               Text="{x:Static icons:FluentIcons.AddFilled}" />
+                                    <TextBlock VerticalAlignment="Center"
+                                               Text="{x:Static core:Resources.Settings_Exam_Plan_AddSubject}" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                <!-- 右：这次要考的科目，顺序就是考试顺序。 -->
+                <Border Grid.Column="1" Classes="wizard-card">
+                    <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="10">
+                        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                            <TextBlock VerticalAlignment="Center"
+                                       FontWeight="SemiBold"
+                                       Text="{x:Static core:Resources.Settings_Exam_Plan_Duration}" />
+                            <TextBlock Grid.Column="1"
+                                       VerticalAlignment="Center"
+                                       Classes="wizard-hint"
+                                       Text="{Binding SelectedCountText}" />
+                        </Grid>
+
+                        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
+                            <Button Command="{Binding CombineCommand}" IsEnabled="{Binding CanCombine}">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <TextBlock VerticalAlignment="Center"
+                                               FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                               Text="{x:Static icons:FluentIcons.TextFontFilled}" />
+                                    <TextBlock VerticalAlignment="Center"
+                                               Text="{x:Static core:Resources.Settings_Exam_Plan_Combine}" />
+                                </StackPanel>
+                            </Button>
+                            <TextBlock VerticalAlignment="Center"
+                                       Classes="wizard-hint"
+                                       Text="{x:Static core:Resources.Settings_Exam_Plan_CombineHint}" />
+                        </StackPanel>
+
+                        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding PlanSubjects}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:ExamPlanSubjectItem">
+                                        <Border Classes="wizard-row">
+                                            <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
+                                                <CheckBox Grid.Column="0" IsChecked="{Binding IsChecked, Mode=TwoWay}" />
+                                                <TextBlock Grid.Column="1"
+                                                           Classes="wizard-cell subject"
+                                                           Text="{Binding DisplayName}" />
+                                                <ComboBox Grid.Column="2"
+                                                          Width="120"
+                                                          ItemsSource="{Binding DurationOptions}"
+                                                          SelectedItem="{Binding SelectedDuration, Mode=TwoWay}">
+                                                    <ComboBox.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:DurationOption">
+                                                            <TextBlock Text="{Binding Text}" />
+                                                        </DataTemplate>
+                                                    </ComboBox.ItemTemplate>
+                                                </ComboBox>
+                                                <!-- 上移：箭头必须真朝上（U+E44F）。 -->
+                                                <Button Grid.Column="3"
+                                                        Classes="row-action"
+                                                        Content="{x:Static icons:FluentIcons.ChevronUpFilled}"
+                                                        ToolTip.Tip="{x:Static core:Resources.Settings_Exam_Plan_OrderUp}"
+                                                        Click="OnMoveSubjectUpClick" />
+                                                <!-- 下移：箭头必须真朝下（U+E447），不再靠旋转倒过来。 -->
+                                                <Button Grid.Column="4"
+                                                        Classes="row-action"
+                                                        Content="{x:Static icons:FluentIcons.ChevronDownFilled}"
+                                                        ToolTip.Tip="{x:Static core:Resources.Settings_Exam_Plan_OrderDown}"
+                                                        Click="OnMoveSubjectDownClick" />
+                                                <Button Grid.Column="5"
+                                                        Classes="row-action"
+                                                        Content="{x:Static icons:FluentIcons.DeleteFilled}"
+                                                        ToolTip.Tip="{x:Static core:Resources.Settings_Exam_Plan_Remove}"
+                                                        Click="OnRemoveSubjectClick" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+
+                        <TextBlock Grid.Row="3"
+                                   Classes="wizard-hint"
+                                   Text="{x:Static core:Resources.Settings_Exam_Plan_CombineHint}" />
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- ========== 第 3 步：总览（作息三个数 + 排出来的表） ========== -->
+            <Border Classes="wizard-card" IsVisible="{Binding IsReviewStep}">
+                <Grid RowDefinitions="Auto,Auto,Auto,Auto,*,Auto" RowSpacing="10">
+
+                    <!-- 标题行 -->
+                    <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                        <TextBlock VerticalAlignment="Center"
+                                   FontWeight="SemiBold"
+                                   Text="{x:Static core:Resources.Settings_Exam_Plan_ReviewTitle}" />
+                        <TextBlock Grid.Column="1"
+                                   VerticalAlignment="Center"
+                                   Classes="wizard-hint"
+                                   Text="{Binding SummaryText}" />
+                    </Grid>
+
+                    <!--
+                        作息只要三个数：一天几场、第一场几点开考、两场之间歇多久。
+                        「一天几场」定了，同一天后面每场都是「上一场收卷 + 休息」自动算出来，
+                        所以这一页不再需要一行一场的时刻表。
+                    -->
+                    <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,*" ColumnSpacing="10">
+                        <TextBlock Grid.Column="0"
+                                   VerticalAlignment="Center"
+                                   Classes="wizard-label"
+                                   Text="{x:Static core:Resources.Settings_Exam_Plan_SlotsPerDay}" />
+                        <NumericUpDown Grid.Column="1"
+                                       Width="110"
+                                       Minimum="1"
+                                       Maximum="6"
+                                       Increment="1"
+                                       FormatString="0"
+                                       Value="{Binding SlotsPerDayDraft, Mode=TwoWay}" />
+
+                        <TextBlock Grid.Column="2"
+                                   VerticalAlignment="Center"
+                                   Classes="wizard-label"
+                                   Text="{x:Static core:Resources.Settings_Exam_Plan_FirstStart}" />
+                        <TimePicker Grid.Column="3"
+                                    Width="150"
+                                    ClockIdentifier="24HourClock"
+                                    SelectedTime="{Binding FirstStartDraft, Mode=TwoWay}" />
+
+                        <TextBlock Grid.Column="4"
+                                   VerticalAlignment="Center"
+                                   Classes="wizard-label"
+                                   Text="{x:Static core:Resources.Settings_Exam_Plan_BreakBetween}" />
+                        <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="6">
+                            <NumericUpDown Width="120"
+                                           Minimum="0"
+                                           Maximum="240"
+                                           Increment="5"
+                                           FormatString="0"
+                                           Value="{Binding BreakDraft, Mode=TwoWay}" />
+                            <TextBlock VerticalAlignment="Center"
+                                       Classes="wizard-hint"
+                                       Text="{x:Static core:Resources.Common_Minutes}" />
+                        </StackPanel>
+
+                        <!-- 写入方式：只有「从编辑窗口进来」（追加模式）才问。新建看板时它天然是空的。 -->
+                        <StackPanel Grid.Column="6"
+                                    Orientation="Horizontal"
+                                    HorizontalAlignment="Right"
+                                    Spacing="8"
+                                    IsVisible="{Binding IsAppendMode}">
+                            <TextBlock VerticalAlignment="Center"
+                                       Classes="wizard-label"
+                                       Text="{x:Static core:Resources.Settings_Exam_Plan_WriteMode}" />
+                            <ComboBox Width="210"
+                                      SelectedIndex="{Binding WriteModeIndex, Mode=TwoWay}">
+                                <ComboBoxItem Content="{x:Static core:Resources.Settings_Exam_Plan_WriteAppend}" />
+                                <ComboBoxItem Content="{x:Static core:Resources.Settings_Exam_Plan_WriteReplace}" />
+                            </ComboBox>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- 作息预设（内置 + 自己存的），单独一行靠右，免得把上面那行挤爆。 -->
+                    <StackPanel Grid.Row="2"
+                                Orientation="Horizontal"
+                                HorizontalAlignment="Right"
+                                Spacing="6">
+                        <TextBlock VerticalAlignment="Center"
+                                   Classes="wizard-label"
+                                   Text="{x:Static core:Resources.Settings_Exam_Plan_SlotsPreset}" />
+                        <ComboBox Width="200"
+                                  ItemsSource="{Binding SlotPresets}"
+                                  SelectedItem="{Binding SelectedSlotPreset, Mode=TwoWay}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:SlotPresetOption">
+                                    <TextBlock Text="{Binding Name}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <Button Classes="row-action"
+                                Content="{x:Static icons:FluentIcons.DeleteFilled}"
+                                IsVisible="{Binding CanDeleteSelectedSlotPreset}"
+                                ToolTip.Tip="{x:Static core:Resources.Settings_Exam_Plan_SlotPresetDelete}"
+                                Click="OnDeleteSlotPresetClick" />
+                        <Button ToolTip.Tip="{x:Static core:Resources.Settings_Exam_Plan_SaveSlotPresetToolTip}"
+                                Click="OnSaveSlotPresetClick">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBlock VerticalAlignment="Center"
+                                           FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                           Text="{x:Static icons:FluentIcons.SaveFilled}" />
+                                <TextBlock VerticalAlignment="Center"
+                                           Text="{x:Static core:Resources.Settings_Exam_Plan_SaveSlotPreset}" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+
+                    <!-- ⚠️ 表头与数据行必须用完全一样的列定义。 -->
+                    <Grid Grid.Row="3"
+                          ColumnDefinitions="36,110,60,*,170,110,100,72"
+                          ColumnSpacing="10"
+                          IsVisible="{Binding !IsReviewEmpty}">
+                        <TextBlock Grid.Column="0" Classes="wizard-head" Text="{x:Static core:Resources.Settings_Exam_Plan_ColumnIndex}" />
+                        <TextBlock Grid.Column="1" Classes="wizard-head" Text="{x:Static core:Resources.Settings_Exam_Plan_ColumnDate}" />
+                        <TextBlock Grid.Column="2" Classes="wizard-head" Text="{x:Static core:Resources.Settings_Exam_Plan_ColumnSlot}" />
+                        <TextBlock Grid.Column="3" Classes="wizard-head" Text="{x:Static core:Resources.Settings_Exam_Plan_ColumnSubject}" />
+                        <TextBlock Grid.Column="4" Classes="wizard-head" Text="{x:Static core:Resources.Settings_Exam_Plan_ColumnTime}" />
+                        <TextBlock Grid.Column="5" Classes="wizard-head" Text="{x:Static core:Resources.Settings_Exam_Plan_ColumnDuration}" />
+                        <TextBlock Grid.Column="6" Classes="wizard-head" Text="{x:Static core:Resources.Settings_Exam_Plan_ColumnBreak}" />
+                        <TextBlock Grid.Column="7" Classes="wizard-head" Text="" />
+                    </Grid>
+
+                    <ScrollViewer Grid.Row="4" VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding ReviewRows}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ExamPlanRowItem">
+                                    <Border Classes="wizard-row">
+                                        <Grid ColumnDefinitions="36,110,60,*,170,110,100,72" ColumnSpacing="10">
+                                            <TextBlock Grid.Column="0"
+                                                       Classes="wizard-cell"
+                                                       Opacity="0.75"
+                                                       Text="{Binding IndexText}" />
+                                            <TextBlock Grid.Column="1"
+                                                       Classes="wizard-cell"
+                                                       Opacity="0.75"
+                                                       Text="{Binding DateText}" />
+                                            <TextBlock Grid.Column="2"
+                                                       Classes="wizard-cell"
+                                                       Opacity="0.75"
+                                                       Text="{Binding SlotText}" />
+                                            <StackPanel Grid.Column="3" Spacing="2">
+                                                <TextBlock Classes="wizard-cell subject" Text="{Binding SubjectText}" />
+                                                <TextBlock Classes="conflict"
+                                                           IsVisible="{Binding HasConflict}"
+                                                           Text="{Binding ConflictText}" />
+                                            </StackPanel>
+                                            <!-- 就地改开考时刻：同一天后面的场次自动顺延（见 ExamSchedulePlanner.Cascade）。 -->
+                                            <TimePicker Grid.Column="4"
+                                                        HorizontalAlignment="Stretch"
+                                                        ClockIdentifier="24HourClock"
+                                                        SelectedTime="{Binding StartDraft, Mode=TwoWay}" />
+                                            <NumericUpDown Grid.Column="5"
+                                                           Minimum="10"
+                                                           Maximum="600"
+                                                           Increment="5"
+                                                           FormatString="0"
+                                                           Value="{Binding DurationDraft, Mode=TwoWay}" />
+                                            <TextBlock Grid.Column="6"
+                                                       Classes="wizard-cell"
+                                                       Opacity="0.75"
+                                                       IsVisible="{Binding HasBreak}"
+                                                       Text="{Binding BreakText}" />
+                                            <Button Grid.Column="7"
+                                                    Classes="row-action"
+                                                    HorizontalAlignment="Left"
+                                                    Content="{x:Static icons:FluentIcons.DeleteFilled}"
+                                                    ToolTip.Tip="{x:Static core:Resources.Settings_Exam_Plan_Remove}"
+                                                    Click="OnRemoveRowClick" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+
+                    <!-- 一场都没排出来：说清楚回哪儿去。 -->
+                    <StackPanel Grid.Row="4"
+                                VerticalAlignment="Center"
+                                HorizontalAlignment="Center"
+                                Spacing="8"
+                                IsVisible="{Binding IsReviewEmpty}">
+                        <TextBlock HorizontalAlignment="Center"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Text="{x:Static core:Resources.Settings_Exam_Plan_ReviewEmpty}" />
+                        <TextBlock HorizontalAlignment="Center"
+                                   Classes="wizard-hint"
+                                   Text="{x:Static core:Resources.Settings_Exam_Plan_ReviewEmptyHint}" />
+                    </StackPanel>
+
+                    <TextBlock Grid.Row="5"
+                               Classes="conflict"
+                               IsVisible="{Binding HasConflicts}"
+                               Text="{Binding ConflictText}" />
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- 底部：上一步 / 下一步（最后一步是「完成」）。 -->
+        <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="0,14,0,0">
+            <TextBlock VerticalAlignment="Center"
+                       FontSize="12"
+                       Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                       IsVisible="{Binding HasStepError}"
+                       Text="{Binding StepError}"
+                       TextWrapping="Wrap" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                <Button Content="{x:Static core:Resources.Common_Cancel}" Click="OnCancelClick" />
+                <Button Content="{x:Static core:Resources.Settings_Exam_Plan_Previous}"
+                        IsVisible="{Binding CanGoPrevious}"
+                        Command="{Binding PreviousCommand}" />
+                <!-- 这一步没完成时禁掉「下一步」，左边那行红字继续解释原因。 -->
+                <Button Classes="accent"
+                        Content="{Binding NextText}"
+                        IsEnabled="{Binding !HasStepError}"
+                        Click="OnNextClick" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</faWindowing:FAAppWindow>

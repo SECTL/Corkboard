@@ -46,6 +46,51 @@ public partial class ExamEntry : ObservableObject
     /// <summary>备注（考场、座位号之类）。没填就不显示。</summary>
     [ObservableProperty] private string? _note;
 
+    /// <summary>
+    ///     合卷时绑定的作业板科目（「物理 · 化学」这场绑的就是这两个）。
+    ///     <para>
+    ///         单科考试留空——<see cref="Subject" /> 自己就是科目名，没必要再存一份。
+    ///         合卷时 <see cref="Subject" /> 是拼出来的显示名（<c>物理 · 化学</c>），
+    ///         这份清单才是「到底考了哪几科」，看板按科目统计/筛选时读它。
+    ///     </para>
+    ///     <para>
+    ///         ⚠️ 老数据里没有这个字段，读出来是 <see langword="null" /> = 单科，完全兼容。
+    ///     </para>
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<string>? SubjectKeys
+    {
+        get => _subjectKeys;
+        set => SetProperty(ref _subjectKeys, NormalizeSubjectKeys(value));
+    }
+
+    private List<string>? _subjectKeys;
+
+    /// <summary>收拾科目清单：去空白、去重（忽略大小写）、少于两个就当成单科（返回 <see langword="null" />）。</summary>
+    public static List<string>? NormalizeSubjectKeys(IEnumerable<string?>? keys)
+    {
+        if (keys is null)
+            return null;
+
+        var result = new List<string>();
+        foreach (var key in keys)
+        {
+            var name = (key ?? string.Empty).Trim();
+            if (name.Length == 0 || result.Contains(name, StringComparer.OrdinalIgnoreCase))
+                continue;
+
+            result.Add(name);
+        }
+
+        // 一个科目算不上「合卷」：单科就靠 Subject 自己，省得存两份还可能不一致。
+        return result.Count > 1 ? result : null;
+    }
+
+    /// <summary>绑定的科目清单（单科时返回只含 <see cref="Subject" /> 一项的集合，方便统一处理）。</summary>
+    [JsonIgnore]
+    public IReadOnlyList<string> ResolveSubjectKeys =>
+        SubjectKeys is { Count: > 1 } keys ? keys : [Subject];
+
     /// <summary>开考时刻（本地、<see cref="DateTimeKind.Unspecified" />，只用来和「现在」比大小）。</summary>
     [JsonIgnore]
     public DateTime StartAt => Date.ToDateTime(StartTime);
@@ -80,7 +125,8 @@ public partial class ExamEntry : ObservableObject
         PaperCount = PaperCount,
         PageCount = PageCount,
         QuestionCount = QuestionCount,
-        Note = Note
+        Note = Note,
+        SubjectKeys = SubjectKeys is null ? null : [.. SubjectKeys]
     };
 
     /// <summary>把另一份的内容盖到自己身上（只盖内容，不动 <see cref="Id" />）。</summary>
@@ -96,6 +142,7 @@ public partial class ExamEntry : ObservableObject
         PageCount = other.PageCount;
         QuestionCount = other.QuestionCount;
         Note = other.Note;
+        SubjectKeys = other.SubjectKeys is null ? null : [.. other.SubjectKeys];
     }
 
     /// <summary>

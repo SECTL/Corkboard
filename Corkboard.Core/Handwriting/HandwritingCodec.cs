@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using Avalonia.Media;
@@ -19,6 +19,9 @@ namespace Corkboard.Core.Handwriting;
 ///         #FF1A1A1A|4.00|0|0.1000,0.2000,1.0000;0.3000,0.4000,1.2000
 ///         </code>
 ///         每一笔：<c>颜色|笔宽|橡皮标记|点列表</c>，点用 <c>x,y,笔锋倍率</c> 三元组、分号分隔。
+///         倍率就是这一点的粗细（按书写速度算的「速度笔锋」），解析时缺省按 1（等宽）。
+///         以前某一版在行尾多写过第 5 段「起笔锋利度」，那个字段已经废弃：编码不再写，
+///         解码见到多出来的一段直接忽略，老文件照样能画。
 ///         坐标相对 <c>ref</c>（参考宽度 DIP）归一化，所以拖动内容框改大小时笔迹不会被拉动。
 ///     </para>
 ///     <para>
@@ -224,6 +227,8 @@ public static class HandwritingCodec
         if (points.Count == 0)
             return null;
 
+        // 多出来的段（曾经写过的「起笔锋利度」）直接不认：这段字段已经废弃，
+        // 渲染不再用它，读进来丢掉即可，老文件照样能画。
         return new HandwritingStroke
         {
             Color = color,

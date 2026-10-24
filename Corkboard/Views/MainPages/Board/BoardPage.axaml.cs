@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.IO;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
@@ -6,6 +7,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using FluentAvalonia.UI.Controls;
@@ -44,12 +46,6 @@ public partial class BoardPage : UserControl
     /// <summary>拖动阈值（DIP）：按下后挪动超过它才算「要换位置」，免得点一下标题就改排序。</summary>
     private const double ReorderTolerance = 4;
 
-    /// <summary>
-    ///     单列排布的宽度上限（DIP）：约 40 个中文字一行，再宽就得左右转头读了。
-    ///     超出的宽度由 <c>HorizontalAlignment="Center"</c> 留在两边，列本身不动。
-    /// </summary>
-    private const double SingleColumnMaxWidth = 720;
-
     /// <summary>落位动画时长：短到不拖手、长到看得出「谁给谁让了位」。</summary>
     private static readonly TimeSpan SlideDuration = TimeSpan.FromMilliseconds(160);
 
@@ -70,14 +66,14 @@ public partial class BoardPage : UserControl
     /// <summary>时空回放：回放中导表格要导「当前看到的那一份」。</summary>
     private readonly BoardReplayService _replay;
 
+    /// <summary>自动存档：本页把「怎么把板面渲成 PNG 字节」注册给它（只有页面拿得到内容容器）。</summary>
+    private readonly BoardAutoSaveService _autoSave;
+
     /// <summary>
     ///     导出图片时交给服务的「板子内容容器」：就是 ScrollViewer 里那块装所有科目区块的 StackPanel，
     ///     不是视口、更不是整窗——窗口外面没显示出来的部分也要完整导出来。
     /// </summary>
     private readonly StackPanel? _boardContent;
-
-    /// <summary>单列排布的那份列表：宽度是代码按可用宽度算出来的（见 <see cref="SingleColumnMaxWidth" />）。</summary>
-    private readonly ItemsControl? _singleColumnList;
 
     /// <summary>正在滑回原位的区块（见 <see cref="SlideFrame" />）。</summary>
     private readonly List<SlideEntry> _slides = [];
@@ -108,8 +104,12 @@ public partial class BoardPage : UserControl
         _usageReport = IAppHost.GetService<PlatformUsageReportService>();
         _boardService = IAppHost.GetService<IBoardService>();
         _replay = IAppHost.GetService<BoardReplayService>();
-        _singleColumnList = this.FindControl<ItemsControl>("SingleColumnList");
+        _autoSave = IAppHost.GetService<BoardAutoSaveService>();
         _boardContent = this.FindControl<StackPanel>("BoardContent");
+
+        // 自动存档要的那张图只能由页面渲：内容容器在这里，收起卡片按钮也得靠这里的 ViewModel。
+        // 在 Loaded 里挂、Unloaded 里摘——页面进了可视树才渲得出东西，构造期挂着也没用。
+        Loaded += (_, _) => _autoSave.RegisterRenderer(RenderBoardPngAsync);
 
         // 页面是 transient 的，离开可视树时必须断开对单例服务和配置的订阅；
         // 拖动中留下的指针捕获、落位动画的计时器也要在这里收掉（见 EndReorder / StopSlides）。
@@ -118,6 +118,7 @@ public partial class BoardPage : UserControl
             EndReorder(commit: false);
             StopSlides();
             ViewModel?.Detach();
+            _autoSave.RegisterRenderer(null);
         };
     }
 
@@ -260,6 +261,54 @@ public partial class BoardPage : UserControl
     }
 
     /// <summary>
+    ///     把当前板面渲成 PNG 字节，交给 <see cref="BoardAutoSaveService" /> 落盘。
+    ///     <para>
+    ///         和手动导出走同一个渲染器（<c>RenderContentBitmapAsync</c>），出来的就是用户点「导出图片」
+    ///         会得到的那张长图；渲染期间同样把卡片上的编辑 / 删除按钮和科目拖动把手收起来。
+    ///     </para>
+    ///     <para>
+    ///         返回 <c>null</c> 表示「这一轮没什么可存的」：板子是空的、正在回放、页面还没上屏。
+    ///         这时不报错、也不该覆盖已有的存档——「每天一张」模式下昨天那张还在，不能因为
+    ///         启动瞬间板子还没显示出来就被一张空白图盖掉。
+    ///     </para>
+    /// </summary>
+    private async Task<byte[]?> RenderBoardPngAsync(CancellationToken cancellationToken)
+    {
+        if (_boardContent is null || ViewModel is not { } viewModel)
+            return null;
+
+        // 回放中看到的是历史快照，不是板子现在的样子；空板子也没什么可存的。
+        if (viewModel.IsReplaying || !viewModel.HasNotes)
+            return null;
+
+        if (TopLevel.GetTopLevel(this) is not { } topLevel)
+            return null;
+
+        var wasExporting = viewModel.IsExporting;
+        viewModel.IsExporting = true;
+        try
+        {
+            using var bitmap = await _boardExport
+                .RenderContentBitmapAsync(_boardContent, topLevel, cancellationToken)
+                .ConfigureAwait(true);
+
+            using var stream = new MemoryStream();
+            bitmap.Save(stream, PngBitmapEncoderOptions.Default);
+            return stream.ToArray();
+        }
+        catch (InvalidOperationException)
+        {
+            // 内容还没量出尺寸（<c>Export_NoContent</c>）：页面刚建好那一瞬会发生，当作没内容。
+            return null;
+        }
+        finally
+        {
+            // 别把用户手动导出的状态提前清掉：只有在这次是我们自己拉起来的才还原。
+            viewModel.IsExporting = wasExporting;
+        }
+    }
+
+    /// <summary>
     ///     问用户导图片还是表格。
     ///     设置里关掉「询问导出格式」时直接返回记住的默认格式（范围全部）。
     /// </summary>
@@ -343,28 +392,6 @@ public partial class BoardPage : UserControl
             viewModel.ShowExportHint(CR.Export_SuccessTable);
         }
     }
-
-    #region 排布
-
-    /// <summary>
-    ///     内容区宽度变了：重算单列的限宽。
-    ///     <para>
-    ///         这里给的是<b>显式宽度</b>而不是 MaxWidth：只限上限时 ItemsControl 会缩到内容宽度，
-    ///         内容窄的科目整列就往中间挤、内容宽的又铺满，宽度来回跳；写死成
-    ///         「可用宽度与上限取小」之后，它的宽度只跟窗口走。
-    ///     </para>
-    ///     <para>
-    ///         赋宽度这件事本身会再触发一次 <c>SizeChanged</c>（宽度变了），但第二次算出来的值
-    ///     与当前宽度相同，不会再变，所以不会来回抖。
-    ///     </para>
-    /// </summary>
-    private void OnBoardContentSizeChanged(object? sender, SizeChangedEventArgs e)
-    {
-        if (_singleColumnList is not null)
-            _singleColumnList.Width = Math.Min(e.NewSize.Width, SingleColumnMaxWidth);
-    }
-
-    #endregion
 
     #region 科目区块拖动排序
 
@@ -601,7 +628,7 @@ public partial class BoardPage : UserControl
     ///     </para>
     ///     <para>
     ///         先看指针压在哪个区块里；落在区块之间的空隙时退化成「离谁的中心近算谁」，
-    ///     这样竖排（单列）与横排（区块）两种面板都用同一套判断。
+    ///     这样多列与区块两种面板都用同一套判断。
     ///     </para>
     /// </summary>
     private int ResolveTargetIndex(PointerEventArgs e, int currentIndex)
@@ -672,7 +699,7 @@ public partial class BoardPage : UserControl
             if (!items.IsEffectivelyVisible)
                 continue;
 
-            if (items.Classes.Contains("layout-single")
+            if (items.Classes.Contains("layout-columns")
                 || items.Classes.Contains("layout-block"))
             {
                 return items.ItemsPanelRoot;

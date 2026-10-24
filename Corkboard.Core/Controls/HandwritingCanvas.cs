@@ -98,6 +98,17 @@ public class HandwritingCanvas : Control, ICustomHitTest
     /// <summary>当前笔锋倍率（平滑过的书写速度结果）。</summary>
     private double _widthScale = HandwritingPoint.DefaultWidthScale;
 
+    /// <summary>
+    ///     笔锋的渐变长度（DIP）：笔宽从当前值追到目标倍率，要走过这么远才算变完一大半。
+    ///     24 DIP 大约是两三个字的笔画长度，写起来是「慢慢变粗/变细」，不会一段一段跳。
+    /// </summary>
+    private const double WidthBlendDistance = 24;
+
+    /// <summary>笔锋倍率的下限（再细就断断续续）与上限（再粗就糊成一块）。</summary>
+    private const double MinWidthScale = 0.72;
+
+    private const double MaxWidthScale = 1.3;
+
     /// <summary>视口左上角在「参考坐标」里的位置（DIP），用来平移画布写更多内容。</summary>
     private Point _viewOffset;
 
@@ -432,7 +443,7 @@ public class HandwritingCanvas : Control, ICustomHitTest
         }
         else
         {
-            // 笔锋：按「这段路走了多快」定粗细，慢写粗、快写细，再用指数平滑去掉抖动。
+            // 笔锋：按「这段路走了多快」定粗细，慢写粗、快写细，再按走过的弧长做指数平滑。
             _widthScale = ResolveSmoothedWidthScale(_lastPointerPosition, position, e.Timestamp);
             ExtendStroke(position, _widthScale);
         }
@@ -1044,19 +1055,25 @@ public class HandwritingCanvas : Control, ICustomHitTest
         _document.ReferenceWidth = _referenceWidth;
         _document.HasReferenceWidth = true;
     }
-
     /// <summary>
     ///     按书写速度算笔锋倍率，再做平滑与限幅（慢写略粗、快写略细）：
     ///     速度单位是 DIP/毫秒，正常人写字大概在 0.2–1.2 之间。
+    ///     <para>
+    ///         <b>平滑按「走了多远」算，不按「第几个指针事件」算</b>：笔锋要的是渐变，
+    ///         也就是笔宽的变化摊在一段固定的弧长（<see cref="WidthBlendDistance" /> DIP）上，
+    ///         而不是每来一个事件就跳一下。按事件数平滑的话，同样的写法在事件密度不同的设备上
+    ///         粗细节奏会变；按弧长平滑，任何设备上都是「走这么远才变完」。
+    ///     </para>
     /// </summary>
     private double ResolveSmoothedWidthScale(Point from, Point to, ulong timestamp)
     {
+        var distance = Distance(from, to);
         var target = HandwritingPoint.DefaultWidthScale;
 
         var elapsed = timestamp >= _lastPointerTimestamp ? timestamp - _lastPointerTimestamp : 0;
         if (elapsed > 0)
         {
-            var speed = Distance(from, to) / elapsed;
+            var speed = distance / elapsed;
 
             // 速度 → 倍率：慢写 1.25 倍、快写 0.75 倍。两端都夹住——快甩时不该细成头发丝，
             // 慢写时也不该糊成一块（用户反馈过「速度太快会被拉得特别细」）。
@@ -1066,14 +1083,13 @@ public class HandwritingCanvas : Control, ICustomHitTest
             target = 1.25 - progress * 0.5;
         }
 
-        // 平滑 + 自动矫正：一次极端速度不该把后面几笔全带粗/带细，每点最多变 0.12；
-        // 结果再夹进 0.72–1.3，保证笔迹始终看得清。
-        var smoothed = _widthScale * 0.65 + target * 0.35;
-        _widthScale = Math.Clamp(smoothed, _widthScale - 0.12, _widthScale + 0.12);
-        _widthScale = Math.Clamp(_widthScale, 0.72, 1.3);
+        // 指数平滑，系数由「这一小段走了多远」定：alpha = 1 - e^(-d / WidthBlendDistance)。
+        // 走得越远追得越快；停住不动就不变。结果再夹进 0.72–1.3，保证笔迹始终看得清。
+        var alpha = distance > 0 ? 1 - Math.Exp(-distance / WidthBlendDistance) : 0;
+        _widthScale = Math.Clamp(
+            _widthScale + (target - _widthScale) * alpha, MinWidthScale, MaxWidthScale);
         return _widthScale;
     }
-
     private static double Distance(Point from, Point to)
     {
         var dx = to.X - from.X;

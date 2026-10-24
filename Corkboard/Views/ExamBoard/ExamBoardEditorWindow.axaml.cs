@@ -4,7 +4,9 @@ using Avalonia.Interactivity;
 using FluentAvalonia.UI.Controls;
 using FluentAvalonia.UI.Windowing;
 using Corkboard.Core.Abstraction;
+using Corkboard.Core.Exam;
 using Corkboard.Services.Desktop;
+using Corkboard.Services.Ui;
 using Corkboard.ViewModels.ExamBoard;
 using CR = Corkboard.Core.Langs.Common.Resources;
 
@@ -109,5 +111,86 @@ public partial class ExamBoardEditorWindow : FAAppWindow
         App.ShowExamBoardWindow();
     }
 
+    /// <summary>
+    ///     「快速布置」：开向导，往**当前这块**看板批量追加考试。
+    ///     <para>
+    ///         点之前先把标题 / 副标题的草稿落盘：向导排完会重建这张表，用户敲了一半的字不该丢。
+    ///     </para>
+    /// </summary>
+    private void OnQuickPlanClick(object? sender, RoutedEventArgs e)
+    {
+        ViewModel?.CommitAll();
+        App.ShowExamPlanWizardWindow(ExamPlanWizardMode.AppendToBoard);
+    }
+
     private void OnCloseClick(object? sender, RoutedEventArgs e) => Close();
+
+    /// <summary>
+    ///     「另存为模板」：弹一个只有输入框的确认框问名字，存完在窗口标题栏下方出一行提示。
+    ///     <para>
+    ///         没有考试时不弹框，直接说一句「先录几条」——空模板存下来也没用。
+    ///     </para>
+    /// </summary>
+    private async void OnSaveTemplateClick(object? sender, RoutedEventArgs e)
+    {
+        if (ViewModel is not { } viewModel || TopLevel.GetTopLevel(this) is not { } topLevel)
+            return;
+
+        if (viewModel.Items.Count == 0)
+        {
+            await ShowNoticeAsync(topLevel, CR.Settings_Exam_Plan_SaveTemplateEmpty);
+            return;
+        }
+
+        // 名字默认给「看板标题」，用户直接回车就能存。
+        var nameBox = new TextBox
+        {
+            Text = viewModel.BoardTitle,
+            PlaceholderText = CR.Settings_Exam_Plan_SaveTemplateNamePlaceholder,
+            MinWidth = 320
+        };
+
+        var dialog = new FAContentDialog
+        {
+            Title = CR.Settings_Exam_Plan_SaveTemplateTitle,
+            Content = new StackPanel
+            {
+                Spacing = 8,
+                Children =
+                {
+                    new TextBlock
+                    {
+                        Text = CR.Settings_Exam_Plan_SaveTemplateBody,
+                        TextWrapping = Avalonia.Media.TextWrapping.Wrap
+                    },
+                    nameBox
+                }
+            },
+            PrimaryButtonText = CR.Settings_Exam_Plan_SaveTemplate,
+            CloseButtonText = CR.Common_Cancel
+        };
+
+        using var scope = ModalOpacityScope.Begin(this);
+
+        var result = await dialog.ShowAsync(topLevel);
+        if (result != FAContentDialogResult.Primary)
+            return;
+
+        if (viewModel.SaveAsTemplate(nameBox.Text) is { } template)
+            await ShowNoticeAsync(topLevel, string.Format(CR.Settings_Exam_Plan_SaveTemplateDone, template.ResolveName()));
+    }
+
+    /// <summary>一句话提示（只有「知道了」一个按钮）。</summary>
+    private async Task ShowNoticeAsync(TopLevel topLevel, string message)
+    {
+        var dialog = new FAContentDialog
+        {
+            Title = CR.Settings_Exam_Plan_SaveTemplateTitle,
+            Content = message,
+            CloseButtonText = CR.Common_Close
+        };
+
+        using var scope = ModalOpacityScope.Begin(this);
+        await dialog.ShowAsync(topLevel);
+    }
 }

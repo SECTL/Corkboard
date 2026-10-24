@@ -110,6 +110,18 @@ public class LocalizationTests
     [InlineData("Settings_Exam_Time_SyncNow")]
     [InlineData("Settings_Exam_Time_Status_Success")]
     [InlineData("Settings_Exam_Time_Offset_Fast")]
+    [InlineData("Settings_Exam_Schedule_BoardAutoShow")]
+    [InlineData("Settings_Exam_AutoShow_Title")]
+    [InlineData("Settings_Exam_AutoShow_Status")]
+    [InlineData("Settings_Exam_AutoShow_Preview")]
+    [InlineData("Settings_Exam_AutoShow_NoBoard")]
+    [InlineData("Settings_Exam_AutoShow_NoExam")]
+    [InlineData("Settings_Exam_AutoShow_Next")]
+    [InlineData("Settings_Exam_AutoShow_NextNow")]
+    [InlineData("Settings_Exam_AutoShow_BoardSummary")]
+    [InlineData("Settings_Exam_AutoShow_Lead")]
+    [InlineData("Settings_Exam_AutoShow_AlsoShowAfterStart")]
+    [InlineData("Settings_Exam_AutoShow_CloseDelay")]
     public void ExamResourceKeysExistInBothLanguages(string key)
     {
         var chinese = ReadResourceSet(CultureInfo.InvariantCulture);

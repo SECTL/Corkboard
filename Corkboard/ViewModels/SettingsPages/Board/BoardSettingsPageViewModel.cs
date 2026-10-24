@@ -31,11 +31,14 @@ public partial class BoardSettingsPageViewModel : ViewModelBase
     /// <summary>
     ///     排布（展示设置）下拉项。主页面顶部不放切换器，排布只在这里选；
     ///     排序方式已经搬到主界面标题栏的排序按钮上，所以这里没有排序项。
+    ///     <para>
+    ///         区块排在最前：它是默认值，<see cref="SelectedLayoutOption" /> 兜底也取第 0 项。
+    ///     </para>
     /// </summary>
     public IReadOnlyList<BoardLayoutOption> LayoutOptions { get; } =
     [
-        new(BoardLayoutMode.SingleColumn, CR.Board_Layout_SingleColumn),
-        new(BoardLayoutMode.Block, CR.Board_Layout_Block)
+        new(BoardLayoutMode.Block, CR.Board_Layout_Block),
+        new(BoardLayoutMode.Columns, CR.Board_Layout_SingleColumn)
     ];
 
     /// <summary>

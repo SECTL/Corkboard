@@ -69,11 +69,20 @@ public partial class BoardPageViewModel : ViewModelBase
     /// </summary>
     public BoardLayoutMode LayoutMode => BoardLayoutModes.Normalize(Config.BoardSettings.LayoutMode);
 
-    /// <summary>单列：一张便签一行，页面会限宽居中。</summary>
-    public bool IsSingleColumnLayout => LayoutMode == BoardLayoutMode.SingleColumn;
+    /// <summary>
+    ///     多列：按窗口宽度并排几条窄阅读栏（每栏最宽 <see cref="BoardColumnStyle.MaxColumnWidth" />），
+    ///     窗口够宽就两栏、三栏，窄了自己收回一栏。
+    /// </summary>
+    public bool IsColumnLayout => LayoutMode == BoardLayoutMode.Columns;
 
     /// <summary>区块：等宽区块按可用宽度自适应分栏。</summary>
     public bool IsBlockLayout => LayoutMode == BoardLayoutMode.Block;
+
+    /// <summary>多列排布下单栏的宽度下限，交给面板算能并几栏。</summary>
+    public double ColumnMinWidth => BoardColumnStyle.MinColumnWidth;
+
+    /// <summary>多列排布下单栏的宽度上限：超过这个宽度一行太长，不再均分。</summary>
+    public double ColumnMaxWidth => BoardColumnStyle.MaxColumnWidth;
 
     /// <summary>
     ///     区块排布里单个区块的基准宽度（DIP）：一行能排几块由它决定。
@@ -297,7 +306,7 @@ public partial class BoardPageViewModel : ViewModelBase
         if (e.PropertyName is null or nameof(BoardSettingsConfig.LayoutMode))
         {
             OnPropertyChanged(nameof(LayoutMode));
-            OnPropertyChanged(nameof(IsSingleColumnLayout));
+            OnPropertyChanged(nameof(IsColumnLayout));
             OnPropertyChanged(nameof(IsBlockLayout));
         }
 

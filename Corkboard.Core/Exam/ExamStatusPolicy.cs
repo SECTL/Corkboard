@@ -25,6 +25,42 @@ public static class ExamStatusPolicy
     public static int ClampUpcomingMinutes(int minutes) =>
         Math.Clamp(minutes, MinUpcomingMinutes, MaxUpcomingMinutes);
 
+    /// <summary>「剩余时间变红」的默认门槛：剩 15 分钟。</summary>
+    public const int DefaultRemainingWarningMinutes = 15;
+
+    /// <summary>门槛下限：0 表示不提醒（不去提醒也是一种选择）。</summary>
+    public const int MinRemainingWarningMinutes = 0;
+
+    /// <summary>门槛上限：一天。</summary>
+    public const int MaxRemainingWarningMinutes = 24 * 60;
+
+    /// <summary>把变红门槛夹进合法区间（设置页、手改的 settings.json 都过这里）。</summary>
+    public static int ClampRemainingWarningMinutes(int minutes) =>
+        Math.Clamp(minutes, MinRemainingWarningMinutes, MaxRemainingWarningMinutes);
+
+    /// <summary>
+    ///     剩余时间是不是到了该变红提醒的时候：正在考看「离收卷还剩多久」、即将开始看「离开考还有多久」，
+    ///     少于或等于设置里那个分钟数就算；未开始 / 已结束不提醒。门槛为 0 表示不提醒。
+    ///     <para>纯函数，看板只读它的结果上色，单测直接打这张表。</para>
+    /// </summary>
+    public static bool IsRemainingUrgent(ExamStatus status, ExamEntry exam, DateTime now, int warningMinutes)
+    {
+        ArgumentNullException.ThrowIfNull(exam);
+
+        var minutes = ClampRemainingWarningMinutes(warningMinutes);
+        if (minutes == 0)
+            return false;
+
+        var remaining = status switch
+        {
+            ExamStatus.InProgress => TimeUntilEnd(exam, now),
+            ExamStatus.Upcoming => TimeUntilStart(exam, now),
+            _ => null
+        };
+
+        return remaining is { } span && span <= TimeSpan.FromMinutes(minutes);
+    }
+
     /// <summary>判一场考试此刻处于哪一档。</summary>
     public static ExamStatus Resolve(ExamEntry exam, DateTime now, int upcomingMinutes)
     {

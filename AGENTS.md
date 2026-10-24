@@ -9,7 +9,7 @@
 - 约定冲突时，`docs/project_rules.md` 是最终依据。
 -->
 
-**Last Update:** 2026-10-25（**修订**：合并上游「锁定时也能添加作业」（`BasicSettingsConfig.AllowAddNoteWhenLocked`：穿透态下由 `CornerAssignFloatingWindow` 与锁定徽标上的按钮承载布置作业入口，表单强制走独立窗口），开关放在「设置 → 作业板 → 常规 → 界面入口」；**「作业板」设置组从八页重组为六页**——常规（名称／排布／拖动排序／区块宽度（只在「区块」排布时显示）／界面入口（原「顶部按钮」六项 + 右下角布置作业浮标合成一张）／删除前确认）→ 内容与样式（settings.board.content：内容默认样式、五个字号、快速颜色，外加搬进来的四张手写卡）→ 科目与分类（settings.board.sections：科目、二级分类，外加搬进来的快捷标签列表）→ 自动化与数据（settings.board.automation：清理、历史与回放、数据维护）→ 窗口与收纳（settings.board.window：从基础设置搬来的主窗口不透明度／置底到桌面／窗口圆角／长按拖动窗口／点击穿透，外加四张收纳卡）→ 导出；原来那五页（手写／快捷标签／清理／历史与回放／收纳）的 .axaml 删掉、**ViewModel 全部保留当子 VM**（父页 VM 注入它们，Handwriting.／Tags.／Cleanup.／History.／Dock. 前缀绑定）；手写那张「默认颜色」原来错用 Settings_Board_DefaultColor（与内容默认颜色撞键），改用 Settings_Board_Handwriting_DefaultColor；**导出删掉 PDF、换成 xlsx 表格**——ExportFormat 的 Pdf = 1 改名成 Table = 1（数值不变，老配置里写 1 的读出来就是表格），PdfOptions／PdfLayout／PdfDocumentWriter／BoardPdfRenderSession／ExportPreviewWindow 整体删除，换成 Core 里的 ExportTable + HomeworkTableBuilder + XlsxTableWriter（手写 OOXML、零新增依赖）与 ExportSortMode／ExportNoteSorter／RichTextPlainText；ExportSettingsConfig 的 pdf_* 全换成 table_group_by_subject／table_include_cleaned／table_sort_mode；**窗口/任务栏图标改成「PNG 母图 + 运行期拼多尺寸 ICO」**——`Window.Icon` 交给 `AppIcon.LoadWindowIcon()`（`Corkboard.Core/Imaging/IconRaster` 面积平均缩帧 + `IcoFile` 拼 ICO），任务栏不再把 1254 像素母图硬缩（实测 `WM_GETICON` 从 836×836 变成 36×36 / 24×24，144 DPI 1:1 不缩放，边缘锯齿消失）；「编辑看板」窗口补上同一个图标；自动清理的默认时刻从 4:00 改成每天 8:00（`HomeworkCleanupDefaults.DefaultHour`；已有配置里明确写过的时刻不动）；在线状态与使用量统计（`OnlineStatusService` / `PlatformUsageReportService`、隐私三态、`data/config/usage-stats.json`、关于页在线人数）；导出对话框放大、范围固定全部作业、PDF 加续标题与列数自动加档、导出时隐藏卡片按钮与拖动把手、复制图片改走 Windows CF_DIB；**导出支持图片与 PDF**——标题栏导出按钮先弹自绘对话框选格式与范围（全部/按科目/勾选），PDF 真分页排版（A4/A5/Letter、列数、边距、排序、科目另起页、页眉页脚）+ 书签目录、可先预览、图片可复制到剪贴板，文件名只留 `yyyy-MM-dd_HH-mm-ss`；新增「设置 → 作业板 → 导出」设置页（`ExportSettingsConfig`）；窗口圆角优先走 DWM 系统圆角（分层窗口与置底子窗口才退回区域裁剪，边缘不再是 1 位掩码的锯齿）；导出图片左右各留 24 DIP 边距；设置新增「拖动排序」开关（默认开，关掉后科目区块上不出现拖动按钮）；科目表默认不再预置语文/数学/英语；手写卡片预览把**笔宽**按「渲染宽度 ÷ 参考宽度」跟着整页一起缩放（`HandwritingDocument.ResolveRenderScale` / `HandwritingRenderer.Render`，编辑画布算出来是 1 所以不受影响），修「写的时候字距正常、卡片上笔迹挤成一团」——笔位缩了而笔宽没缩，笔画相对字就粗一倍；清空作业板改成只把作业从当前页面收起来（数据留在原文件、时空回放里点「还原到此刻」能整份放回来；历史按日追加到 `data/history/board/`）、基础设置新增「窗口圆角」开关（Windows 用 `SetWindowRgn` 裁区域、置底也生效）、主窗口四边缩放的命中判定统一改成窗口坐标（修「置底到桌面后四周拉不动」）、作业卡片点出来的编辑/删除按钮最多停 30 秒自动收回、布置作业表单取消整卡拖动、主窗口四边（含顶部与四角）都能缩放、手写支持鼠标与触控、快捷标签改 `Note.Tags` 胶囊显示、导出图片按自然高度渲染；**作业板新增八项功能**：手写、二级分类、快捷标签、界面字号、收纳浮钮、清空作业板（只收起来、回放里能还原）、导出图片、按历史日志重放的时空回放；设置侧边栏把「作业板」收成一个可展开分组（七个子页，含「历史与回放」），基础设置不再放任何作业板专属项；**作业板域代码按四类归目录**：`Corkboard.Core/Notes`（便签通用）、`RichText`（富文本通用）、`Board`（板子框架）、`Homework`（作业专属），App 层视图/VM/服务同步分目录；`BoardNote`→`Note`、`BoardCleanup*`→`HomeworkCleanup*`、`BoardAssignmentForm`→`HomeworkAssignmentForm`、Legacy 三件套→`LegacyNote*`；PageInfo、JSON 键、资源键、数据路径与云端文件名全部未变；主界面去掉侧边导航栏，只承载默认主页面；设置界面保留导航栏、顶部「收纳」与返回按钮（返回箭头改由 Core 样式模板画），设置项改为平铺、不再分组；设置页改设置卡；应用字体换成随包分发的 MiSans；作业板：**取消作业名与完成勾选**、**同科目合并成一个区块**、作业内容多行可拖宽拖高（布置作业卡片有最小宽度／最大宽度／最大高度，上限按**看得见的宿主**算：壳内弹层取窗口内容区、只占其 70%，置底形态退回屏幕工作区，超了卡片内部滚动）、**弹层卡片整张都是拖动面**（按住卡片上输入控件以外的地方都能整张拖走，不再有抓手图标；位移夹在宿主里，卡片尺寸一变就重夹，置底形态下改拖独立窗口）、自绘页面级弹层、纯文字便签、三种排布（**排布切换在主页面顶部已取消，改到「设置 → 作业板」下拉框里选**；成排布局里每个区块各自定高，不跟着同行最高的那块变长）、排序与删除确认、名称/科目可配（**作业类型与字段模板已删除**：便签上只有内容、科目、截止日期三样，旧数据里的 `types`/`type_id`/`values` 静默忽略）；**作业内容是所见即所得富文本**（第三方 `AvaloniaRichEditor`，由 Core 的 `RichTextBlock` 承载，落盘成 HTML 片段；旧的 Markdown 渲染管线与相关单测已整体删除，旧作业由 `LegacyNoteContentConverter` 一次性迁移），可以给选中的字/段单独改颜色与字号，默认字号与默认颜色在「设置 → 作业板 → 内容默认样式」里配；**格式工具栏常驻在编辑区正上方**（库自带的 `RichEditorToolbar`，`Target` 在 code-behind 里指向编辑控件，文案由 Core 的 `RichTextLocalization` 跟着界面语言切），加粗/斜体/下划线/删除线、文字颜色、高亮、列表、缩进、行距、对齐、字号/字体/段落样式与插入表格图片都在上面，点一下直接对当前选区生效；**作业内容只有一个框**：就是一个始终可编辑的富文本编辑器，没有「原文态/效果态」切换；**作业数据移出 `data/config/`**，按创建日期归档到 `data/board/<年>/<月>/<日>/notes.json`；**时空回放**放在主界面标题栏右上角，连点两次才进入、超时自动退回，没作业时不显示入口；Debug 构建在壳的左下角加版本水印，照上游 SecRandom-C 的 `DevelopmentBuildAdorner`；外观设置补齐主题模式（跟随系统 / 浅色 / 深色）与主题色（跟随系统 / 自定义）；**基础设置新增主窗口不透明度（滑杆，落到原生窗口）与点击穿透**，主界面标题栏右上角「布置作业」左侧加设置按钮（打开设置窗口）；**基础设置新增「右下角布置作业按钮」**，打开后主窗口右下角浮一颗圆角加号（`MainView` 里叠在内容之上的一颗按钮，弹层遮罩盖得住它，回放/点击穿透时随其它入口一起隐藏，点一下开出布置作业表单）；**设置页「关于」页复刻上游 SecRandom-C**，改应用信息／作者／版本信息三张卡，外部链接经新服务 `IExternalLauncher`（`Corkboard/Services/Desktop/`）交给系统默认程序打开）；**作业板新增「自动清理过期作业」**（设置 → 作业板：开关（默认开启）+ 每天/每周某天某时刻，默认 8:00，用 `TimePicker`），到点只给**过了截止日期**的作业打上 `CleanedAt` 标记、从主页面拿掉（数据原地不动、不搬目录、不删文件，回放里照旧看得到），**判定只看截止日期**（没填截止日期的作业永远不会被自动清掉，到了截止日期当天就算过期）；卡头的「立即清理」不看时刻、点一下当场把到了截止日期的清掉；**作业新增可选「截止日期」**（`Note.DueDate`，布置作业表单里用 Avalonia 自带的 `CalendarDatePicker`），卡片上按「今天 / 明天 / yyyy-MM-dd / 过期 N 天」显示，过期标红）；**设置新增「账号」页**（登录 SECTL 组织账号：OAuth 2.0 PKCE 跳系统浏览器 + loopback 回调，头像缺失时显示昵称首字（`Corkboard.Core.Helpers.AvatarInitialResolver`），凭据失效提示「重新登录」，退出先弹确认框再清本机凭据，页面订阅 `ISectlAuthService.StateChanged` 并在 `Unloaded` 里 `Detach`）；**设置新增「云同步」页**（把作业板与设置各备份成**一个文件**传到思拓创联云存储：`corkboard-board.zip.b64`（压缩包的 base64 文本，内带 `manifest.json`）与 `corkboard-settings.json`；刻意**只做备份 + 恢复、不做双向合并**——作业板改动（布置 / 修改 / 删除作业）后 5s 防抖自动上传、设置改动后 45s，两次改动挨在一起时按更早的那个截止时间算；**本机自上次同步以来没有改动时才自动拉取**，本机有改动就只提示「云端有更新的备份」由用户点恢复；默认关闭、登录后才能开；窗口大小位置与开机自启这类本机专属项按前缀排除（`CloudSyncExclusions`），设置改动是否算「本机有改动」看内容摘要（`LastSettingsHash`）而不是文件时间，否则拖一下窗口就会永远不敢自动拉；页面上显示云端空间剩余与本平台占用，界面文案里的组织名统一用「思拓创联」；云上传的 multipart 字段名要带引号（.NET 的 `ContentDispositionHeaderValue` 默认把 `name`/`filename` 写成不带引号的形式、还会多带 `filename*=utf-8''`，服务端会回 `400 invalid_request / No file data received`）；**云存储会把上传的字节按 UTF-8 解码一遍**（非法字节变 U+FFFD：实测 256 字节的二进制传上去服务端存成 512 字节、下载回来 sha256 不一致），所以作业板压缩包先 base64 成纯 ASCII 再传（`CloudBackupPayload`，云端名 `corkboard-board.zip.b64`），恢复时解回字节再解压；纯文本的设置文件不受影响；云端同名旧件一次全删、恢复时按 `updated_at` 取最新的一份（曾因留下同名旧件而取到旧数据）；设置窗口最小尺寸抬到 1000x720（`MainWindow.SettingsWindowMinWidth/MinHeight`，屏幕工作区比这还小时按屏幕收，否则设置卡会被挤成一条）；**作业板备份已改成分片上传**（`CloudBackupPackage`：压缩包按 3 MiB 切片、每片单独传，最后传一份 `corkboard-board-<备份标识>-manifest.json`，清单里记着每片的序号/长度/SHA-256 与整包长度/摘要；恢复只认「清单 + 清单里声明的全部分片」这一种完整形态，缺片就提示重新备份，拼完还要再对一次整包 SHA-256；每次上传成功后按清单名删掉上一代分片与早年的整包文件，中途断掉的上传只留下没人认领的分片；上传前拿用量接口的剩余空间做保底 `EnsureQuotaForUpload`，不够就直接回「云端空间不够了」；**这条链路上真正卡请求体大小的是 Appwrite `functions/executions` 的 `body` 参数上限 10 MiB，写死在 app 代码里（`/usr/src/code/src/Appwrite/Platform/Modules/Functions/Http/Executions/Create.php:85` 的 `new Text(10485760, 0)`），环境变量改不动；api-proxy 的 `MAX_BODY_BYTES` 已从 5 MiB 对齐到 10 MiB**（服务器 `/opt/api-proxy/server.js:13`，超了回干净的 413 `payload_too_large`，客户端自己按 6 MiB 预算、3 MiB 一片留余量）；**云同步页多了「清空云端」**（在「备份与恢复」卡片里，`FAContentDialog` 确认后走 `ICloudSyncService.ClearCloudAsync`／`CloudSyncService.ClearCloudAsync`：只删自己这一套文件名（`CloudBackupFiles.IsManagedFile`／`AllManagedFiles`——平台上别人的文件不碰，中断留下的孤儿分片一起清），删完清簿记（`LastSyncedAt`／`LastSettingsHash` 归零、远端快照作废）并重查用量，所以界面回到「还没同步过」、占用归零、按钮自己变灰；删之前先掐掉排着的自动上传，否则几秒后那份备份又自己传回去了；个别文件删不掉会记警告并报错让用户再点一次，不假装全清干净了）；**云端被别的设备改动或清空，本机自己会发现**（云同步页每 60 秒后台查一遍用量与文件清单：后台查询不进「同步中」态、失败只记日志不写错误提示，否则每分钟闪一次禁用态和一条红字；发现云端版本比上次同步新、且本机自上次同步没有改动时按 `CloudSyncPolicy.ShouldAutoPull` 自动拉取，**同一个云端版本只试一次**（`_autoPulledRemote`）——原先的 `_autoPullChecked` 是「一次进程只自动拉一次」，那样轮询永远不会拉；发现本机记着同步成功过、云端却一份备份都不剩（`CloudSyncPolicy.WasClearedRemotely`）就把本机簿记一起清掉，并在页面上提示「云端的备份已经没了，点「立即备份」重新传一份」）；**「上次同步」时间由服务现读配置**（`ICloudSyncService.LastSyncedAt`）：从云端恢复设置会把配置对象整个换掉（`ConfigHandlerBase.Reload`），页面 ViewModel 手里那份旧引用停在恢复前的时间上，会出现「云端备份已经没了」和「上次同步 12:15」同时挂着）；**两边都改过时按并集融合**（`Corkboard.Core/Homework/HomeworkNoteMerge.cs`：同 `Note.Id` 取 `UpdatedAt` 更新的那份整条替换；**Id 不同、但「科目 + 截止日期 + 内容 + 创建那天」都一样**的也当成同一条、只留更新的那份——作业本来就没有名字，两边各建过一次同一份作业时不能留成两张一模一样的卡片，条数记在 `RemovedDuplicates` 里；同一侧自己带重复 Id（历史数据里一个 Id 落在两个日期文件里）也只留更新的一份；合完**就地写回**本机日期文件（`NoteStore.SaveAll` + `CopyBoardFiles(staging, BoardDirectory, overwrite: false)`），**不能整体换目录**——那样会把不在并集管辖范围里的 `board.json`（科目表与手动排序）一起抹掉，`Reload` 随即退回默认科目；最后把并集传回云端收敛，日志带「云端补进来／更新／合并重复」条数）；**「只同步最近多久的作业」**（`cloud.sync_days`，`0` = 全部，下拉预设 全部／30／7／1 天，配置里若是别的天数就按大小插进列表、免得界面显示的和服务实际用的不一致；`CloudSyncPolicy.UploadCutoff`）：上传时 `PrepareBoardUploadDirectory` 只把窗口内（按 `CreatedAt`）的作业写进临时目录再打包，窗口外的老作业只留本机、不传也不删；恢复时 `RestoreBoardWithinWindow` 先把窗口外的本机作业和云端那份并集再写回，**不能整体替换**，否则窗口外的历史会被抹掉）；**考试看板（与作业板并列的第二块板子）**：设置侧边栏「作业板」分组下方新增「考试看板」分组（考试安排 / 看板显示 / 时间同步三页），一块看板 = 一个文件（`data/exam/boards/<Id>.json` + `data/exam/boards.json` 索引，自带标题 / 副标题 / 副标题颜色 / 考试安排，老的单份 `exams.json` 与 settings 里的全局标题一次性迁进第一块看板），看板编辑走独立窗口 `ExamBoardEditorWindow`（设置页只当看板列表：编辑 / 设为当前 / 删除），全屏看板 `ExamBoardWindow` 三档状态（未开始 / 即将开始 / 进行中）按可配阈值判定、左下角长按 2 秒退出（图标进度圈蓝→红），NTP 校时（`Core/Time/`，默认 8 个国内源，后台每 30 分钟同步一次，`NtpTimeService.NowLocal` 是应用内唯一时间来源））
+**Last Update:** 2026-10-25（**修订**：**考试看板新增「自动放映」**——每块看板自带一个 `auto_show_enabled` 开关（默认关、不参加），到「开考 − 提前量」把全屏看板自己铺出来；参数在「设置 → 考试看板 → 自动放映」第 4 页（提前量默认 10 分钟、可 1–120，开考后仍补弹默认开，最后一场考完再放 10 分钟、可 0–120），规则在 `Core/Exam/ExamAutoShowPolicy`、看门狗 `Services/Exam/ExamAutoShowHostedService` 每 15 秒一拍，同一场只弹一次，用户自己开的看板不会被自动收掉；**作业板新增「自动保存为图片」**——板子改完等 5 秒把整块板面照「导出图片」的样子存成一张 PNG，开关在「设置 → 作业板 → 自动化与数据 → 自动保存」，**默认关**；保存时机两档（`BoardAutoSaveMode.Daily = 0` 每天一张、当天覆盖 / `EveryChange = 1` 每次修改各留一张），保留天数到点删旧的（只删自己生成的 `board-*.png`），默认目录是软件数据目录下的 `autosave`、惰性创建，目录只能从文件夹选择器挑（不给手输）；渲染由 `BoardPage` 注册的渲染器做（只有页面拿得到 `BoardContent`，渲染期间把 `IsExporting` 置真以收起卡片按钮与拖动把手）；**考试看板新增「快速布置」向导与模板**——三步（基本信息／考哪些科目／总览）一次排完整场考试，科目取自作业板（缺的能在向导里加，写回 `IBoardService.Subjects`）、各科自动带预设时长（语文 150、数学英语 120、物化生政史地 75、信息技术通用技术音乐 60，另有 30/60/75/120/150 快捷档）、**作息只有三个数**（一天几场 1–6／第一场几点开考／两场之间歇多久，由 `ExamPlanSlotPresets.ForCount` 摊成场次；科目多的自动推荐一天几场）、时段（上午/下午/晚上）由开考时刻推出**不落盘**、冲突只标红不拦截、**总览里改一场后面的同一天场次按各自的休息自动顺延**（`SyncBreak` + `Cascade`，改时长同理；换天就停）、总览可就地改时刻与时长（`ReviewRows.Move` 挪行不重建控件）、**追加模式下可选「覆盖／追加」**（`ReplaceAll` / `AddMany`，都只写盘一次）、作息可存成模板（`data/exam/slot-presets.json`，内置 5 份一天一场…一天五场）；模板**只存「第几天几点考什么、考多久」不存绝对日期**（`data/exam/templates.json`，同名覆盖），套用时只问第一天是哪天、跳过科目与总览的排布；**排布改成「区块（默认）／多列」两种**——`BoardLayoutMode.SingleColumn` 改名 `Columns`（**数值仍是 0**，老配置里写 0 的读出来就是它）、语义从「一列死排到底」改成「按窗口宽度并排几条窄阅读栏」（`Core/Board/BoardColumnStyle.cs`：`MinColumnWidth` 520 / `MaxColumnWidth` 720，栏宽与栏数仍由 `AdaptiveWrapPanel` 现算，面板新增 `CenterContent` 让「窗口很宽、栏又少」时整排居中）；`BoardLayoutModes.Default = BoardLayoutMode.Block`，脏值兜底也从「单列」改成区块，`BoardSettingsConfig.LayoutMode` 默认值跟着改区块，设置页下拉「区块」排在前面；`BoardPage` 里 `SingleColumnMaxWidth` / `_singleColumnList` / `OnBoardContentSizeChanged` 那套「代码给列表写宽度」的钩子整体删掉（多列由面板自己分栏），`layout-single` 类改名 `layout-columns`（`FindItemsPanel` 的匹配表要跟着改）；合并上游「锁定时也能添加作业」（`BasicSettingsConfig.AllowAddNoteWhenLocked`：穿透态下由 `CornerAssignFloatingWindow` 与锁定徽标上的按钮承载布置作业入口，表单强制走独立窗口），开关放在「设置 → 作业板 → 常规 → 界面入口」；**「作业板」设置组从八页重组为六页**——常规（名称／排布／拖动排序／区块宽度（只在「区块」排布时显示）／界面入口（原「顶部按钮」六项 + 右下角布置作业浮标合成一张）／删除前确认）→ 内容与样式（settings.board.content：内容默认样式、五个字号、快速颜色，外加搬进来的四张手写卡）→ 科目与分类（settings.board.sections：科目、二级分类，外加搬进来的快捷标签列表）→ 自动化与数据（settings.board.automation：清理、历史与回放、数据维护）→ 窗口与收纳（settings.board.window：从基础设置搬来的主窗口不透明度／置底到桌面／窗口圆角／长按拖动窗口／点击穿透，外加四张收纳卡）→ 导出；原来那五页（手写／快捷标签／清理／历史与回放／收纳）的 .axaml 删掉、**ViewModel 全部保留当子 VM**（父页 VM 注入它们，Handwriting.／Tags.／Cleanup.／History.／Dock. 前缀绑定）；手写那张「默认颜色」原来错用 Settings_Board_DefaultColor（与内容默认颜色撞键），改用 Settings_Board_Handwriting_DefaultColor；**导出删掉 PDF、换成 xlsx 表格**——ExportFormat 的 Pdf = 1 改名成 Table = 1（数值不变，老配置里写 1 的读出来就是表格），PdfOptions／PdfLayout／PdfDocumentWriter／BoardPdfRenderSession／ExportPreviewWindow 整体删除，换成 Core 里的 ExportTable + HomeworkTableBuilder + XlsxTableWriter（手写 OOXML、零新增依赖）与 ExportSortMode／ExportNoteSorter／RichTextPlainText；ExportSettingsConfig 的 pdf_* 全换成 table_group_by_subject／table_include_cleaned／table_sort_mode；**窗口/任务栏图标改成「PNG 母图 + 运行期拼多尺寸 ICO」**——`Window.Icon` 交给 `AppIcon.LoadWindowIcon()`（`Corkboard.Core/Imaging/IconRaster` 面积平均缩帧 + `IcoFile` 拼 ICO），任务栏不再把 1254 像素母图硬缩（实测 `WM_GETICON` 从 836×836 变成 36×36 / 24×24，144 DPI 1:1 不缩放，边缘锯齿消失）；「编辑看板」窗口补上同一个图标；自动清理的默认时刻从 4:00 改成每天 8:00（`HomeworkCleanupDefaults.DefaultHour`；已有配置里明确写过的时刻不动）；在线状态与使用量统计（`OnlineStatusService` / `PlatformUsageReportService`、隐私三态、`data/config/usage-stats.json`、关于页在线人数）；导出对话框放大、范围固定全部作业、PDF 加续标题与列数自动加档、导出时隐藏卡片按钮与拖动把手、复制图片改走 Windows CF_DIB；**导出支持图片与 PDF**——标题栏导出按钮先弹自绘对话框选格式与范围（全部/按科目/勾选），PDF 真分页排版（A4/A5/Letter、列数、边距、排序、科目另起页、页眉页脚）+ 书签目录、可先预览、图片可复制到剪贴板，文件名只留 `yyyy-MM-dd_HH-mm-ss`；新增「设置 → 作业板 → 导出」设置页（`ExportSettingsConfig`）；窗口圆角优先走 DWM 系统圆角（分层窗口与置底子窗口才退回区域裁剪，边缘不再是 1 位掩码的锯齿）；导出图片左右各留 24 DIP 边距；设置新增「拖动排序」开关（默认开，关掉后科目区块上不出现拖动按钮）；科目表默认不再预置语文/数学/英语；手写卡片预览把**笔宽**按「渲染宽度 ÷ 参考宽度」跟着整页一起缩放（`HandwritingDocument.ResolveRenderScale` / `HandwritingRenderer.Render`，编辑画布算出来是 1 所以不受影响），修「写的时候字距正常、卡片上笔迹挤成一团」——笔位缩了而笔宽没缩，笔画相对字就粗一倍；清空作业板改成只把作业从当前页面收起来（数据留在原文件、时空回放里点「还原到此刻」能整份放回来；历史按日追加到 `data/history/board/`）、基础设置新增「窗口圆角」开关（Windows 用 `SetWindowRgn` 裁区域、置底也生效）、主窗口四边缩放的命中判定统一改成窗口坐标（修「置底到桌面后四周拉不动」）、作业卡片点出来的编辑/删除按钮最多停 30 秒自动收回、布置作业表单取消整卡拖动、主窗口四边（含顶部与四角）都能缩放、手写支持鼠标与触控、快捷标签改 `Note.Tags` 胶囊显示、导出图片按自然高度渲染；**作业板新增八项功能**：手写、二级分类、快捷标签、界面字号、收纳浮钮、清空作业板（只收起来、回放里能还原）、导出图片、按历史日志重放的时空回放；设置侧边栏把「作业板」收成一个可展开分组（七个子页，含「历史与回放」），基础设置不再放任何作业板专属项；**作业板域代码按四类归目录**：`Corkboard.Core/Notes`（便签通用）、`RichText`（富文本通用）、`Board`（板子框架）、`Homework`（作业专属），App 层视图/VM/服务同步分目录；`BoardNote`→`Note`、`BoardCleanup*`→`HomeworkCleanup*`、`BoardAssignmentForm`→`HomeworkAssignmentForm`、Legacy 三件套→`LegacyNote*`；PageInfo、JSON 键、资源键、数据路径与云端文件名全部未变；主界面去掉侧边导航栏，只承载默认主页面；设置界面保留导航栏、顶部「收纳」与返回按钮（返回箭头改由 Core 样式模板画），设置项改为平铺、不再分组；设置页改设置卡；应用字体换成随包分发的 MiSans；作业板：**取消作业名与完成勾选**、**同科目合并成一个区块**、作业内容多行可拖宽拖高（布置作业卡片有最小宽度／最大宽度／最大高度，上限按**看得见的宿主**算：壳内弹层取窗口内容区、只占其 70%，置底形态退回屏幕工作区，超了卡片内部滚动）、**弹层卡片整张都是拖动面**（按住卡片上输入控件以外的地方都能整张拖走，不再有抓手图标；位移夹在宿主里，卡片尺寸一变就重夹，置底形态下改拖独立窗口）、自绘页面级弹层、纯文字便签、三种排布（**排布切换在主页面顶部已取消，改到「设置 → 作业板」下拉框里选**；成排布局里每个区块各自定高，不跟着同行最高的那块变长）、排序与删除确认、名称/科目可配（**作业类型与字段模板已删除**：便签上只有内容、科目、截止日期三样，旧数据里的 `types`/`type_id`/`values` 静默忽略）；**作业内容是所见即所得富文本**（第三方 `AvaloniaRichEditor`，由 Core 的 `RichTextBlock` 承载，落盘成 HTML 片段；旧的 Markdown 渲染管线与相关单测已整体删除，旧作业由 `LegacyNoteContentConverter` 一次性迁移），可以给选中的字/段单独改颜色与字号，默认字号与默认颜色在「设置 → 作业板 → 内容默认样式」里配；**格式工具栏常驻在编辑区正上方**（库自带的 `RichEditorToolbar`，`Target` 在 code-behind 里指向编辑控件，文案由 Core 的 `RichTextLocalization` 跟着界面语言切），加粗/斜体/下划线/删除线、文字颜色、高亮、列表、缩进、行距、对齐、字号/字体/段落样式与插入表格图片都在上面，点一下直接对当前选区生效；**作业内容只有一个框**：就是一个始终可编辑的富文本编辑器，没有「原文态/效果态」切换；**作业数据移出 `data/config/`**，按创建日期归档到 `data/board/<年>/<月>/<日>/notes.json`；**时空回放**放在主界面标题栏右上角，连点两次才进入、超时自动退回，没作业时不显示入口；Debug 构建在壳的左下角加版本水印，照上游 SecRandom-C 的 `DevelopmentBuildAdorner`；外观设置补齐主题模式（跟随系统 / 浅色 / 深色）与主题色（跟随系统 / 自定义）；**基础设置新增主窗口不透明度（滑杆，落到原生窗口）与点击穿透**，主界面标题栏右上角「布置作业」左侧加设置按钮（打开设置窗口）；**基础设置新增「右下角布置作业按钮」**，打开后主窗口右下角浮一颗圆角加号（`MainView` 里叠在内容之上的一颗按钮，弹层遮罩盖得住它，回放/点击穿透时随其它入口一起隐藏，点一下开出布置作业表单）；**设置页「关于」页复刻上游 SecRandom-C**，改应用信息／作者／版本信息三张卡，外部链接经新服务 `IExternalLauncher`（`Corkboard/Services/Desktop/`）交给系统默认程序打开）；**作业板新增「自动清理过期作业」**（设置 → 作业板：开关（默认开启）+ 每天/每周某天某时刻，默认 8:00，用 `TimePicker`），到点只给**过了截止日期**的作业打上 `CleanedAt` 标记、从主页面拿掉（数据原地不动、不搬目录、不删文件，回放里照旧看得到），**判定只看截止日期**（没填截止日期的作业永远不会被自动清掉，到了截止日期当天就算过期）；卡头的「立即清理」不看时刻、点一下当场把到了截止日期的清掉；**作业新增可选「截止日期」**（`Note.DueDate`，布置作业表单里用 Avalonia 自带的 `CalendarDatePicker`），卡片上按「今天 / 明天 / yyyy-MM-dd / 过期 N 天」显示，过期标红）；**设置新增「账号」页**（登录 SECTL 组织账号：OAuth 2.0 PKCE 跳系统浏览器 + loopback 回调，头像缺失时显示昵称首字（`Corkboard.Core.Helpers.AvatarInitialResolver`），凭据失效提示「重新登录」，退出先弹确认框再清本机凭据，页面订阅 `ISectlAuthService.StateChanged` 并在 `Unloaded` 里 `Detach`）；**设置新增「云同步」页**（把作业板与设置各备份成**一个文件**传到思拓创联云存储：`corkboard-board.zip.b64`（压缩包的 base64 文本，内带 `manifest.json`）与 `corkboard-settings.json`；刻意**只做备份 + 恢复、不做双向合并**——作业板改动（布置 / 修改 / 删除作业）后 5s 防抖自动上传、设置改动后 45s，两次改动挨在一起时按更早的那个截止时间算；**本机自上次同步以来没有改动时才自动拉取**，本机有改动就只提示「云端有更新的备份」由用户点恢复；默认关闭、登录后才能开；窗口大小位置与开机自启这类本机专属项按前缀排除（`CloudSyncExclusions`），设置改动是否算「本机有改动」看内容摘要（`LastSettingsHash`）而不是文件时间，否则拖一下窗口就会永远不敢自动拉；页面上显示云端空间剩余与本平台占用，界面文案里的组织名统一用「思拓创联」；云上传的 multipart 字段名要带引号（.NET 的 `ContentDispositionHeaderValue` 默认把 `name`/`filename` 写成不带引号的形式、还会多带 `filename*=utf-8''`，服务端会回 `400 invalid_request / No file data received`）；**云存储会把上传的字节按 UTF-8 解码一遍**（非法字节变 U+FFFD：实测 256 字节的二进制传上去服务端存成 512 字节、下载回来 sha256 不一致），所以作业板压缩包先 base64 成纯 ASCII 再传（`CloudBackupPayload`，云端名 `corkboard-board.zip.b64`），恢复时解回字节再解压；纯文本的设置文件不受影响；云端同名旧件一次全删、恢复时按 `updated_at` 取最新的一份（曾因留下同名旧件而取到旧数据）；设置窗口最小尺寸抬到 1000x720（`MainWindow.SettingsWindowMinWidth/MinHeight`，屏幕工作区比这还小时按屏幕收，否则设置卡会被挤成一条）；**作业板备份已改成分片上传**（`CloudBackupPackage`：压缩包按 3 MiB 切片、每片单独传，最后传一份 `corkboard-board-<备份标识>-manifest.json`，清单里记着每片的序号/长度/SHA-256 与整包长度/摘要；恢复只认「清单 + 清单里声明的全部分片」这一种完整形态，缺片就提示重新备份，拼完还要再对一次整包 SHA-256；每次上传成功后按清单名删掉上一代分片与早年的整包文件，中途断掉的上传只留下没人认领的分片；上传前拿用量接口的剩余空间做保底 `EnsureQuotaForUpload`，不够就直接回「云端空间不够了」；**这条链路上真正卡请求体大小的是 Appwrite `functions/executions` 的 `body` 参数上限 10 MiB，写死在 app 代码里（`/usr/src/code/src/Appwrite/Platform/Modules/Functions/Http/Executions/Create.php:85` 的 `new Text(10485760, 0)`），环境变量改不动；api-proxy 的 `MAX_BODY_BYTES` 已从 5 MiB 对齐到 10 MiB**（服务器 `/opt/api-proxy/server.js:13`，超了回干净的 413 `payload_too_large`，客户端自己按 6 MiB 预算、3 MiB 一片留余量）；**云同步页多了「清空云端」**（在「备份与恢复」卡片里，`FAContentDialog` 确认后走 `ICloudSyncService.ClearCloudAsync`／`CloudSyncService.ClearCloudAsync`：只删自己这一套文件名（`CloudBackupFiles.IsManagedFile`／`AllManagedFiles`——平台上别人的文件不碰，中断留下的孤儿分片一起清），删完清簿记（`LastSyncedAt`／`LastSettingsHash` 归零、远端快照作废）并重查用量，所以界面回到「还没同步过」、占用归零、按钮自己变灰；删之前先掐掉排着的自动上传，否则几秒后那份备份又自己传回去了；个别文件删不掉会记警告并报错让用户再点一次，不假装全清干净了）；**云端被别的设备改动或清空，本机自己会发现**（云同步页每 60 秒后台查一遍用量与文件清单：后台查询不进「同步中」态、失败只记日志不写错误提示，否则每分钟闪一次禁用态和一条红字；发现云端版本比上次同步新、且本机自上次同步没有改动时按 `CloudSyncPolicy.ShouldAutoPull` 自动拉取，**同一个云端版本只试一次**（`_autoPulledRemote`）——原先的 `_autoPullChecked` 是「一次进程只自动拉一次」，那样轮询永远不会拉；发现本机记着同步成功过、云端却一份备份都不剩（`CloudSyncPolicy.WasClearedRemotely`）就把本机簿记一起清掉，并在页面上提示「云端的备份已经没了，点「立即备份」重新传一份」）；**「上次同步」时间由服务现读配置**（`ICloudSyncService.LastSyncedAt`）：从云端恢复设置会把配置对象整个换掉（`ConfigHandlerBase.Reload`），页面 ViewModel 手里那份旧引用停在恢复前的时间上，会出现「云端备份已经没了」和「上次同步 12:15」同时挂着）；**两边都改过时按并集融合**（`Corkboard.Core/Homework/HomeworkNoteMerge.cs`：同 `Note.Id` 取 `UpdatedAt` 更新的那份整条替换；**Id 不同、但「科目 + 截止日期 + 内容 + 创建那天」都一样**的也当成同一条、只留更新的那份——作业本来就没有名字，两边各建过一次同一份作业时不能留成两张一模一样的卡片，条数记在 `RemovedDuplicates` 里；同一侧自己带重复 Id（历史数据里一个 Id 落在两个日期文件里）也只留更新的一份；合完**就地写回**本机日期文件（`NoteStore.SaveAll` + `CopyBoardFiles(staging, BoardDirectory, overwrite: false)`），**不能整体换目录**——那样会把不在并集管辖范围里的 `board.json`（科目表与手动排序）一起抹掉，`Reload` 随即退回默认科目；最后把并集传回云端收敛，日志带「云端补进来／更新／合并重复」条数）；**「只同步最近多久的作业」**（`cloud.sync_days`，`0` = 全部，下拉预设 全部／30／7／1 天，配置里若是别的天数就按大小插进列表、免得界面显示的和服务实际用的不一致；`CloudSyncPolicy.UploadCutoff`）：上传时 `PrepareBoardUploadDirectory` 只把窗口内（按 `CreatedAt`）的作业写进临时目录再打包，窗口外的老作业只留本机、不传也不删；恢复时 `RestoreBoardWithinWindow` 先把窗口外的本机作业和云端那份并集再写回，**不能整体替换**，否则窗口外的历史会被抹掉）；**考试看板（与作业板并列的第二块板子）**：设置侧边栏「作业板」分组下方新增「考试看板」分组（考试安排 / 看板显示 / 时间同步三页），一块看板 = 一个文件（`data/exam/boards/<Id>.json` + `data/exam/boards.json` 索引，自带标题 / 副标题 / 副标题颜色 / 考试安排，老的单份 `exams.json` 与 settings 里的全局标题一次性迁进第一块看板），看板编辑走独立窗口 `ExamBoardEditorWindow`（设置页只当看板列表：编辑 / 设为当前 / 删除），全屏看板 `ExamBoardWindow` 三档状态（未开始 / 即将开始 / 进行中）按可配阈值判定、左下角长按 2 秒退出（图标进度圈蓝→红），NTP 校时（`Core/Time/`，默认 8 个国内源，后台每 30 分钟同步一次，`NtpTimeService.NowLocal` 是应用内唯一时间来源））
 
 ## 这是什么
 
@@ -48,13 +48,13 @@ Corkboard/
 │   ├── Views/SettingsPages/    #   子目录 Board/、Exam/
 │   ├── Views/ExamBoard/        #   全屏考试看板窗口
 │   ├── ViewModels/ExamBoard/   #   全屏考试看板的 ViewModel
-│   └── Services/               #   Ui/、Board/、Homework/、Time/、Cloud/、Auth/、Desktop/、Ipc/
+│   └── Services/               #   Ui/、Board/、Homework/、Exam/、Time/、Cloud/、Auth/、Desktop/、Ipc/
 ├── Corkboard.Core/             # 核心：契约、配置/日志、领域服务、可复用控件与样式、Langs/Common
 │   ├── Notes/                  #   Note、NoteStore、NoteDayFile、INoteStore、Legacy/（旧数据迁移）
 │   ├── RichText/               #   RichTextStyle/Palette/HtmlStyling/ContentKind
 │   ├── Board/                  #   板子框架：BoardService、NoteGrouping、排布排序枚举、回放
 │   ├── Homework/               #   作业专属：HomeworkConfig、SectionCatalog、截止日期、清理、合并
-│   ├── Exam/                   #   考试专属：ExamEntry、三档状态判定、时间格式化、ExamService
+│   ├── Exam/                   #   考试专属：ExamEntry、三档状态判定、时间格式化、ExamService、自动放映策略
 │   ├── Time/                   #   NTP 校时：报文/客户端/国内源目录 + NtpTimeService（应用唯一时间来源）
 │   ├── Imaging/                #   位图工具：IconRaster（面积平均缩帧）、IcoFile（拼多尺寸 ICO）
 │   └── Controls|Styles|...     #   可复用控件与主题
@@ -266,7 +266,7 @@ public partial class BoardSettingsConfig : ObservableObject
   "settings.board.group", FluentIcons.BoardFilled))` 后接一串带 `groupId` 的页面），点它才展开**六个**子页：常规（`settings.board`）／内容与样式（`settings.board.content`）／
   科目与分类（`settings.board.sections`）／自动化与数据（`settings.board.automation`）／
   窗口与收纳（`settings.board.window`）／导出（`settings.board.export`）；**紧接着是「考试看板」**
-  （`groupId = "settings.exam.group"`，`FluentIcons.CalendarFilled`），子页是考试安排／看板显示／时间同步三页。
+  （`groupId = "settings.exam.group"`，`FluentIcons.CalendarFilled`），子页是考试安排／看板显示／时间同步／自动放映四页。
   **作业板专属的设置项一律进作业板组、考试专属的进考试看板组，基础设置里不许再放**。
   底部的「更新」「关于」由 `PageInfo.Location = Bottom` 沉到页脚，与注册顺序无关。
   **「账号」「云同步」两页当前入口隐藏**（页面 `PageInfo` 上 `isHide: true`，`PageItemsExtensions.ToNavigationViewItems`
@@ -523,7 +523,7 @@ public partial class BoardSettingsConfig : ObservableObject
 ## 考试看板与 NTP 校时
 
 考试看板是**与作业板并列的第二块板子**，设置侧边栏里排在「作业板」分组正下方
-（`groupId = "settings.exam.group"`，子页：考试安排 / 看板显示 / 时间同步）。
+（`groupId = "settings.exam.group"`，子页：考试安排 / 看板显示 / 时间同步 / 自动放映）。
 
 ### 一块看板 = 一个文件（多份看板可切换）
 
@@ -554,6 +554,79 @@ public partial class BoardSettingsConfig : ObservableObject
 - `ExamBoardEditorViewModel` 是 transient、`IExamService` 是单例：窗口 `Closed` 里必须 `CommitAll()` + `Detach()`
   （收掉订阅与 15 秒计时器），漏了就是每开一次窗口多挂一份处理器。
 
+### 快速布置考试（向导 + 模板）
+
+从零录一场考试要几十条记录，所以有一条「向导」路线：**基本信息 → 考哪些科目 → 总览**，最后一次性写盘。
+入口两个，都开同一个独立窗口 `Corkboard/Views/ExamBoard/ExamPlanWizardWindow.axaml(.cs)`：
+
+- 设置 → 考试看板 → 考试安排 → 看板列表的「快速布置」= `ExamPlanWizardMode.CreateBoard`（新建一块看板，建完直接进编辑窗口）
+- 看板编辑窗口标题行右侧的「快速布置」= `ExamPlanWizardMode.AppendToBoard`（往**当前**看板批量写）
+
+窗口 1040×760、`FAAppWindow`，**三步**（`LastStep = 2`）内容各自一块 `IsVisible` 绑
+`IsBasicStep` / `IsSubjectsStep` / `IsReviewStep`；套了模板时跳过第 2 步（`IsSubjectsStepVisible` 为假）。
+底部固定「取消 / 上一步 / 下一步（末步是「完成」）」，**末步那颗按钮只挂 `Click`**（要写盘 + 开窗口 + 关自己，
+光靠 Command 收不了尾），前几步才走 `NextCommand`；这颗按钮还绑了
+`IsEnabled="{Binding !HasStepError}"`——这一步没走通就点不动，左边那行红字负责解释原因。
+
+- **排布是纯逻辑，不在窗口里现写**：`Corkboard.Core/Exam/ExamSchedulePlanner.cs`。
+  `ExamPlanEntry` 存的是 **`DurationMinutes`（时长）而不是 End**——对照表里就地改时长，收卷时刻跟着算；
+  `End` 由 `static ResolveEnd(TimeOnly, int)` 给出（跨天夹 23:59）。`ExamPlanSubject` / `ExamPlanSlot` /
+  `ExamTimeSlot` / `ExamDurationPresets` 也都是 Core 里的独立纯类型，各自有单测（`ExamPlanTests.cs`）。
+- **时长预设**（`ExamDurationPresets.Resolve`，忽略大小写与首尾空格，认不出的退回 75）：
+  语文 150；数学、英语 120；物理、化学、生物、政治（含「思想政治」「道德与法治」）、历史、地理 75；
+  信息技术、通用技术、音乐 60。下拉里的快捷档是 30 / 60 / 75 / 120 / 150（`QuickMinutes`）。
+- **科目表只有一份**：向导第 2 步的科目来自作业板的 `IBoardService.Subjects`，界面上写明「科目来自作业板」；
+  作业板一个科目都没有时给「＋ 添加科目」，**在这里加的也直接写进 `IBoardService.Subjects` + `Save()`**，
+  不要另开第二套科目表。合卷（理综/文综）由多门合成一行，显示名用 `ExamPlanSubject.CombineSeparator`（`" · "`）拼。
+- ⚠️ **作息在界面上只有三个数**：`SlotsPerDay`（一天几场，1–6）/ `FirstStartDraft`（第一场几点开考）/
+  `BreakDraft`（两场之间歇多久），由 `ExamPlanSlotPresets.ForCount(count, firstStart, breakMinutes)` 摊成
+  `List<ExamPlanSlot>`（第 1 场 `Fixed`、其余全部 `AfterPrevious`）。
+  **不要再做「一行一场开考时刻」的表格**——用户明确说过「一天几场这里就只用设置一下就行了」，
+  而且作息页原来是单独一步，也按要求并进了「总览」。
+  用户手改过这三个数就置 `_slotsTouchedByUser = true`；只有这一位为假时，首次进总览才按
+  `ExamPlanSlotPresets.Recommend(PlanSubjects.Count)` 自动推荐（≤2 一场、≤4 两场、≤6 三场、≤8 四场、其余五场），
+  否则「我明明调好了，回去改个科目又被冲掉」。
+- **时段（上午/下午/晚上）由开考时刻推出**（`ExamTimeSlotPolicy.Resolve`：`<12:00` 上午、`12:00–18:00` 下午、
+  `≥18:00` 晚上），**不落盘**，只是显示层分组。
+- ⚠️ **改一场要带着后面一起动**（用户原话：「你上面还是 3 点钟，你下面 4 点钟不变成 5 点钟，你应该要从 4 点钟变成 5 点钟」）：
+  对照表里改开考时刻 → `ExamSchedulePlanner.SyncBreak(entries, index)` 把这一场与上一场的间隔记进
+  `ExamPlanEntry.BreakMinutes` → `Cascade(entries, index)` 把**同一天**后面每一场重算成「上一场收卷 + 自己的休息」；
+  改时长 → 直接 `Cascade`。`Cascade` **换天就停**（第二天第一场的时刻是独立锚点）。
+- **冲突只标红不拦截**（`ExamPlanEntry.HasConflict` / `ConflictReason`，文案 `Exam_Plan_Conflict_*`）：
+  三类是「跨到第二天」「比上一场收卷还早」「与看板上已有的考试撞了」。最后一种只在追加模式下出现，
+  靠 `ExamSchedulePlanner.PlanAfter(..., existing)` / `Refresh(entries, existing)` 传进去；
+  **选了「覆盖」就不再传已有考试**（`ExistingExams` 在 `ReplaceExisting` 时返回空），否则会拿马上要被删掉的考试判撞。
+- ⚠️ **对照表里就地改行时不要重建控件**：改完走 `ExamSchedulePlanner.Refresh` 重排，然后
+  `ReviewRows.Move(current, target)` **挪行**——重建会把用户正握着的 `TimePicker` 抽走。
+- **追加模式下要问「覆盖还是追加」**：`ReplaceExisting` / `WriteModeIndex`（只在 `IsAppendMode` 时显示下拉），
+  「覆盖」走 `IExamService.ReplaceAll(entries)`、「追加」走 `AddMany(entries)`。两者都**只落盘一次、只通知一次**，
+  **不要**循环调 `Add` / `Remove`（那会一条落盘一次、界面重建一次）。
+- **作息模板**（`Corkboard.Core/Exam/ExamSlotPreset.cs`，`data/exam/slot-presets.json`）：
+  总览页右上「存为作息模板」，内置 5 份（一天一场…一天五场，`IsBuiltIn`、Id 固定、删不掉），
+  用户存的同名忽略大小写就地覆盖。⚠️ **内置模板必须用 `ExamPlanSlotPresets.ForCount` 生成**——
+  界面上作息只有三个数，内置模板得能由这三个数还原，否则用户挑了「一天两场」下拉却匹配不上、看着像没生效
+  （原来那几份带 14:00 / 19:00 固定锚点的写法因此被换掉了）。`FindMatchingPreset` 按
+  「场数 + 每场 `FixedStart` / `StartMode` / `BreakMinutes`」逐项比对。
+  作息模板与考试模板分开存：前者脱离科目，只描述「一天怎么排」。
+
+### 考试模板（跨届复用）
+
+### 考试模板（跨届复用）
+
+- 模板里**只存「第几天几点考什么、考多久」，不存绝对日期**（`ExamPlanTemplateEntry.DayOffset`）——
+  套用时只问「这次第一天是哪天」，日期现算。存绝对日期的话模板过一个月就作废、跨月跨年还得手改
+  （用户原话是「只用把开始日期和结束日期改一下」，那就干脆让日期根本不进模板）。
+- 数据在 `data/exam/templates.json`（`ExamTemplateConfig` + `ExamTemplateService`）：
+  **一个文件装全部模板**，不像看板那样一块一个文件——模板是小对象、份数少，一个文件省掉索引。
+  模板与看板文件分开存：删掉一块看板不该把模板带走，反过来也一样。
+- 「另存为模板」在编辑窗口底部（`ExamBoardEditorViewModel.SaveAsTemplate(name)` → `ExamPlanTemplate.FromExams`，
+  日期换算成相对最早那天的 `DayOffset`）。**同名即覆盖**（`ExamTemplateService.Save` 按名字忽略大小写判重），
+  同一块看板反复存不会越堆越多。
+- 套用：向导第 1 步的「用模板」下拉（`ExamPlanWizardViewModel.SelectedTemplate`）——选了就**跳过科目与作息两步**
+  （步骤条那两颗胶囊跟着藏），直接出对照表；模板里的标题 / 副标题 / 颜色会预填到第 1 步。
+- 模板列表在设置 → 考试看板 → 考试安排 的最后一张卡，只显示名字与「共 N 场 · 跨 N 天」，
+  **不显示任何具体日期**（模板本来就不锁在某一年，显示日期只会误导）。
+
 ### 表格对齐
 
 - ⚠️ **表头 Grid 与数据行 Grid 必须用完全相同的 `ColumnDefinitions`**，操作列给**固定宽度**、表头补一个空列。
@@ -573,6 +646,29 @@ public partial class BoardSettingsConfig : ObservableObject
   窗口 code-behind 只负责捕获指针。⚠️ **窗口里不要自己写 `InitializeComponent()`**——那会顶掉 XAML 生成的同名方法，
   `x:Name` 字段恒为 null，按住一下就是空引用崩溃（这条踩过两次，`TrayMenuWindow` 一次、这里一次）。
 
+### 自动放映（到点自己全屏）
+
+- **参不参加由每块看板自己决定**：`ExamBoardDocument.AutoShowEnabled`（JSON 键 `auto_show_enabled`，**默认 `false`**）。
+  开关在「设置 → 考试看板 → 考试安排」的看板列表每行最前面（`ExamBoardItem.AutoShowEnabled` → `IExamService.SetAutoShow`）。
+  ⚠️ `SetAutoShow` **不换当前看板、也不发 `Changed`**：开关正被按着，列表一重建就把控件抽走了。
+- **全局参数在「设置 → 考试看板 → 自动放映」**（`PageInfo("settings.exam.autoplay")`，配置 `ExamAutoShowSettingsConfig`
+  挂在 `Config.ExamAutoShow`）：`LeadMinutes`（提前量，默认 10，夹 1–120）、`AlsoShowAfterStart`（**默认 `true`**：
+  软件中途启动、已经开考了也补弹一次）、`CloseDelayMinutes`（最后一场考完再放多久，默认 10，`0` = 收卷就收）。
+  数值走草稿 + 失焦提交，**不要双向绑配置**。
+- **规则全在 `Corkboard.Core/Exam/ExamAutoShowPolicy`**（纯函数，`Corkboard.Core.Tests/ExamAutoShowTests.cs` 钉死）：
+  放映期 = `[第一场开考 − 提前量, 最后一场收卷 + 延迟)`；`FindTrigger` 挑这一拍该弹的那一场，`IsFinished` 判该不该收，
+  `FindNextTrigger` 只给设置页状态卡用。边界**左闭右开**，与 `ExamStatusPolicy` 同一口径——
+  **别处不许再算一套「离考试还有几分钟」**。放映范围由考试本身决定，没考试的看板没有放映期，
+  所以不会「今天把开关打开、明天就开始放」。
+- **看门狗 `Corkboard/Services/Exam/ExamAutoShowHostedService`**（`BackgroundService`，15 秒一拍，`BuildHost` 里
+  `AddHostedService`）：时间一律 `NtpTimeService.NowLocal`，判定与开窗都在 UI 线程（`Dispatcher.UIThread.InvokeAsync`）。
+  弹之前若参演的看板不是当前那块，先 `IExamService.SelectBoard`——全屏看板显示的永远是「当前看板」。
+- **同一场只弹一次**（`_shownExamIds` 兜着）：用户长按退出之后不该被弹回来。`_sessionBoardId` 记着「哪一块是自动弹出来的」，
+  **只有它归看门狗收**——用户自己开的看板不能被当成放映结果关掉。最后一场考完（延迟到了）才
+  `App.CloseExamBoardWindow()` 并清空记录。
+- `App.axaml.cs` 为此补了两个静态成员：`IsExamBoardWindowOpen` 与 `CloseExamBoardWindow()`
+  （后者**先清字段再关窗**，看门狗下一拍就要读到「已关」）。设置页的「立即放映」只是直接调 `App.ShowExamBoardWindow()`，
+  **不动当前看板**。
 ### NTP 校时
 
 - 核心在 `Corkboard.Core/Time/`：`NtpPacket` / `NtpTimestamp` / `NtpClient`（UDP 123，异常一律转 `NtpSyncResult.Failure` 不抛）/
@@ -776,7 +872,7 @@ public partial class BoardSettingsConfig : ObservableObject
   `ResourceDictionary.ThemeDictionaries`（`BoardNoteCardBackground` / `BoardNoteCardBorder`，浅色白卡、
   深色比页面亮一档的深灰卡），**不要**退回 `Transparent` 底 + Fluent 半透明卡刷——浅色页面是浅灰 Mica、
   深色页面接近纯黑，同一个半透明色两边都跟背景糊在一起（用户反馈「区块分区不明显」）。
-  两种排布（单列 / 区块）**统一都是 1px 描边 + `CornerRadius=8` + `Padding=12`**；单列排布**不要**再覆写成「只剩一条底线」。
+  两种排布（**多列** / 区块）**统一都是 1px 描边 + `CornerRadius=8` + `Padding=12`**；多列排布**不要**再覆写成「只剩一条底线」。
 - **快捷标签**：`BoardSettingsConfig.QuickTags`（≤ 16 个，`MaxQuickTags`；设置 → 作业板 → 快捷标签里配，
   列表是**胶囊横排、多了自动换行**，和科目胶囊同一套做法，胶囊里带一颗小叉删标签）。布置作业时点选的是
   **结构化字段** `Note.Tags`（`Note.NormalizeTags` 去空白、忽略大小写去重），**不往正文里插字**；
@@ -803,7 +899,11 @@ public partial class BoardSettingsConfig : ObservableObject
 - **收纳**：标题栏按钮把主窗口收成屏幕角落的一颗浮钮（`BoardDockService` / `BoardDockWindow`），位置用九宫格
   `DockAnchor` + `DockOffsetX/Y`（离选中那条边的距离，正数朝屏幕内侧）+ `DockScalePercent`（60–200）；
   `BoardSettingsConfig.DockEnabled` 控制入口显不显示。
-- **清空作业板 = 把作业从当前页面收起来**：设置 → 作业板 → 清理，确认后直接 `IBoardService.ClearAll()`。
+- **「数据维护」里的两颗入口都是设置卡，不许裸放按钮**：`settings.board.automation` 页尾那张分区下，
+  「清空作业板」与「立即清理」各是一张 `fa:FASettingsExpander`（Header 名称、Description 一句话说明、Footer 按钮）。
+  早先「立即清理」是一颗光秃秃的 `Button` 直接摆在卡片外面，用户反馈「都不知道这个按钮是做什么用的」——
+  设置页里凡是「点一下就有副作用」的入口都要有一张卡承载名称与简介，别让用户靠猜。
+- **清空作业板 = 把作业从当前页面收起来**：设置 → 作业板 → 自动化与数据 → 数据维护，确认后直接 `IBoardService.ClearAll()`。
   备份功能（`BoardBackupService`、清理页那张「备份清单」卡）已按用户要求整套删除，**不要再加回来**。
   ⚠️ `ClearAll` 只给现在看得见的作业打 `CleanedAt` 标记（内部走 `CleanMany`）、落盘一次，作业仍留在
   `IBoardService.Notes` 里、文件照旧写在原来的日期文件中，科目/分类定义保留。用户明确要求「清空不是全部清空」，
@@ -851,6 +951,41 @@ public partial class BoardSettingsConfig : ObservableObject
     `ExportSortMode` 的 `FollowBoard` = 跟作业板当前排序，其余是固定排序（只改导出、不动板子）。
     旧的 `pdf_*` 键已随 PDF 一起删掉，留在 settings.json 里也不会被认、下一次落盘就清掉。
   - 依赖：`Corkboard.csproj` 显式引用 `SkiaSharp`（`WindowsClipboardImage` 用它把 PNG 解成 BGRA），已记进 `THIRD-PARTY-NOTICES.md`。
+- **自动保存为图片**（设置 → 作业板 → 自动化与数据 → 自动保存，**默认关**）：板子改完等 5 秒防抖，
+  把整块板面照「导出图片」的样子存成一张 PNG。纯逻辑在 `Corkboard.Core/Board/AutoSave/`
+  （`BoardAutoSaveMode`：`Daily = 0` / `EveryChange = 1`；`BoardAutoSavePolicy` 只管文件名、保留期与统计，
+  **不碰磁盘**），落盘与调度在 `Corkboard/Services/Board/BoardAutoSaveService.cs`（单例）。
+  - **两种保存时机**：`Daily` 文件名只带日期（`board-yyyy-MM-dd.png`），当天反复覆盖、一天只留最后一份；
+    `EveryChange` 文件名带时分秒（`board-yyyy-MM-dd_HH-mm-ss.png`），每次改动各留一张。
+    保留天数（`RetentionDays`，默认 7，夹在 1–365）到点删旧的，两种模式同一套剪枝：
+    **只认 `board-*.png`**（`BoardAutoSavePolicy.TryParseDate`），用户在同一个目录里放的别的图一张都不动。
+    `Daily` 模式额外做一次「同一天只留最新那张」，手改过文件名留下的同日后缀也收掉
+    （写入时间打平时优先留「只带日期」那个，否则刚存的正主会被当成旧的删掉）。
+  - **默认目录是软件自己的数据目录**：`BoardAutoSavePolicy.ResolveDefaultFolder()` =
+    `Utils.DataRoot/autosave`，**惰性创建**（`Folder` 配成空串就是这个默认值，别在启动时就把目录建出来）。
+    设置页只让用户从文件夹选择器挑或一键恢复默认，**不给手输**——手输一个打错的路径，表现是
+    「开了自动保存却什么都没存」，而失败只记日志。
+  - **触发有三条**：`IBoardService.Changed` → 5 秒防抖（`Schedule()`）；10 分钟一次的巡检只在 `Daily`
+    模式下补「今天还没有图」；设置页的「立即保存一张」走 `SaveNowAsync(manual: true)`——**不看开关**，
+    关着也能手动存一张留底。
+  - ⚠️ **`SaveNowAsync` 一次只让一张走完**（`_isSaving`）：防抖、巡检、手动三条路会撞在一起，
+    而渲染要在 UI 线程上临时把卡片按钮收起来再放回去，两张叠着会互相提前还原状态。
+  - ⚠️ **渲染器由页面注册**（`BoardPage` 的 `Loaded` 里 `RegisterRenderer`、`Unloaded` 里
+    `RegisterRenderer(null)`）：只有页面拿得到 `BoardContent` 那块控件。渲染前把
+    `BoardPageViewModel.IsExporting` 置真（`finally` 复位）——否则悬停才出现的编辑 / 删除按钮和拖动把手
+    会被一起画进图里（与手动导出同一条规矩）。页面不在可视树里 / 板子上没作业 / 正在回放时渲染器返回
+    `null`，服务就当这一轮跳过，**不报错、也不覆盖当天已有的那张图**。
+  - 写文件走「临时文件 + `File.Move(overwrite: true)`」原子替换；失败只在状态行留一句
+    `Settings_Board_AutoSave_Failed` 并记日志，不弹框（这是后台行为，打断用户写作业更糟）。
+  - 配置在 `BoardAutoSaveSettingsConfig`（`MainConfigModel.BoardAutoSave`，JSON 键 `board_auto_save`：
+    `enabled` / `mode` / `folder` / `retention_days`），`NormalizeLoaded` 里调 `Normalize()` 夹一次
+    枚举与保留天数。⚠️ 枚举按**数值**落盘（配置管道没有字符串枚举转换器），所以 `BoardAutoSaveMode`
+    只能往后追加成员，不能改已有数值。
+    ⚠️ `HasCustomFolder` 是纯推导值（由 `folder` 现算），**必须带 `[JsonIgnore]`**：不标就会在
+    settings.json 里多一个改不动、还可能跟 `folder` 对不上的字段。
+  - 单测在 `Corkboard.Core.Tests/BoardAutoSaveTests.cs`：文件名按模式生成、`TryParseDate` 认不出
+    别人的文件名、保留期剪枝的边界（当天算在窗口内）、`Daily` 同一天收成一张、夹取与统计，
+    以及 `has_custom_folder` **不进 JSON**。
 - **时空回放 = 按历史日志重放那一刻的板面**（不是「现存作业按创建时间累计」）：停靠点由
   `INoteHistoryStore.LoadAll()` 的事件经 `BoardHistory.BuildStops` 生成（同一本地秒的事件全部应用完
   才记 `NoteCount`），`BoardHistory.StateAt` 把事件重放到指定秒、返回那一刻 `CleanedAt is null` 的作业。

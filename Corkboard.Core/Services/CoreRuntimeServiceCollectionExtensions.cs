@@ -32,6 +32,8 @@ public static class CoreRuntimeServiceCollectionExtensions
 
         // 考试看板：考试安排（业务数据在 data/exam/）与 NTP 校时（看板时钟的时间源）。
         services.AddSingleton<IExamService, ExamService>();
+        services.AddSingleton<IExamTemplateService, ExamTemplateService>();
+        services.AddSingleton<IExamSlotPresetService, ExamSlotPresetService>();
         services.AddSingleton<NtpClient>();
         services.AddSingleton<NtpTimeService>();
         return services;

@@ -26,13 +26,14 @@ public class CloudSyncExclusionsTests
     }
     """;
 
-    /// <summary>开机自启、窗口尺寸位置、云同步自己的开关都不参与同步。</summary>
+    /// <summary>开机自启、窗口尺寸位置、自动保存目录、云同步自己的开关都不参与同步。</summary>
     [Theory]
     [InlineData("general.basic.autostart")]
     [InlineData("general.basic.main_window_width")]
     [InlineData("general.basic.main_window_position_x")]
     [InlineData("general.basic.main_window_opacity")]
     [InlineData("general.basic.settings_window_height")]
+    [InlineData("board_auto_save.folder")]
     [InlineData("cloud")]
     [InlineData("cloud.enabled")]
     public void IsExcluded_RejectsMachineSpecificPaths(string path)
@@ -47,6 +48,9 @@ public class CloudSyncExclusionsTests
     [InlineData("appearance.theme")]
     [InlineData("board_settings.sort_mode")]
     [InlineData("general.basic.show_startup_window")]
+    // 自动保存的开关与时机跟着账号走（只有目录是本机专属的）。
+    [InlineData("board_auto_save.enabled")]
+    [InlineData("board_auto_save.mode")]
     public void IsExcluded_KeepsNormalPaths(string path)
     {
         Assert.False(CloudSyncExclusions.IsExcluded(path));

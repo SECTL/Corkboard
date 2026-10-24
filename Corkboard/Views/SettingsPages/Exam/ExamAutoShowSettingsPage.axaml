@@ -1,0 +1,100 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fa="using:FluentAvalonia.UI.Controls"
+             xmlns:vm="using:Corkboard.ViewModels.SettingsPages.Exam"
+             xmlns:core="using:Corkboard.Core.Langs.Common"
+             xmlns:icons="using:Corkboard.Core.Icons"
+             mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="700"
+             x:Class="Corkboard.Views.SettingsPages.Exam.ExamAutoShowSettingsPage"
+             x:DataType="vm:ExamAutoShowSettingsPageViewModel">
+    <ScrollViewer>
+        <StackPanel Classes="page-container">
+            <TextBlock Margin="0 4 0 0"
+                       FontWeight="Normal"
+                       Text="{x:Static core:Resources.Settings_Exam_AutoShow_Title}"
+                       Theme="{StaticResource TitleTextBlockStyle}" />
+
+            <!--
+                放映状态：哪一场、什么时候会自己弹出来。最后一场考完（延迟到了）看门狗会自己把它收掉。
+                「立即放映」放在 Footer 上，因为它作用于整张卡（就是提前按一次自动放映）。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Exam_AutoShow_Status}"
+                                   Description="{x:Static core:Resources.Settings_Exam_AutoShow_StatusDescription}"
+                                   IsExpanded="True">
+                <fa:FASettingsExpander.Footer>
+                    <Button VerticalAlignment="Center" Command="{Binding PreviewCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock VerticalAlignment="Center"
+                                       FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                       Text="{x:Static icons:FluentIcons.FullScreenMaximizeFilled}" />
+                            <TextBlock VerticalAlignment="Center"
+                                       Text="{x:Static core:Resources.Settings_Exam_AutoShow_Preview}" />
+                        </StackPanel>
+                    </Button>
+                </fa:FASettingsExpander.Footer>
+
+                <StackPanel Spacing="4" Margin="0 4 0 0">
+                    <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" />
+                    <TextBlock FontSize="12"
+                               Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                               Text="{Binding BoardSummaryText}" />
+                </StackPanel>
+            </fa:FASettingsExpander>
+
+            <!--
+                提前量：开考前多少分钟把看板弹出来。上限两小时——再早就不是「快到考试了」。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Exam_AutoShow_Lead}"
+                                   Description="{x:Static core:Resources.Settings_Exam_AutoShow_LeadDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <StackPanel Orientation="Horizontal"
+                                VerticalAlignment="Center"
+                                Spacing="8">
+                        <NumericUpDown MinWidth="130"
+                                       Minimum="{Binding MinLeadMinutes}"
+                                       Maximum="{Binding MaxLeadMinutes}"
+                                       Increment="1"
+                                       FormatString="0"
+                                       Value="{Binding LeadMinutesDraft, Mode=TwoWay}"
+                                       LostFocus="OnEditorLostFocus" />
+                        <TextBlock VerticalAlignment="Center" Text="{x:Static core:Resources.Common_Minutes}" />
+                    </StackPanel>
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <!--
+                开考后补弹：软件是中途启动的、或者开考那一刻没在看电脑，默认仍然把看板铺出来
+                （不然「到点放映」这件事只在正好守着屏幕时才成立）。关掉就只提前弹。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Exam_AutoShow_AlsoShowAfterStart}"
+                                   Description="{x:Static core:Resources.Settings_Exam_AutoShow_AlsoShowAfterStartDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding Settings.AlsoShowAfterStart, Mode=TwoWay}" />
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <!--
+                考完延迟：最后一场收卷后还要在屏幕上停多久。默认 10 分钟，0 就是收卷即收。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Exam_AutoShow_CloseDelay}"
+                                   Description="{x:Static core:Resources.Settings_Exam_AutoShow_CloseDelayDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <StackPanel Orientation="Horizontal"
+                                VerticalAlignment="Center"
+                                Spacing="8">
+                        <NumericUpDown MinWidth="130"
+                                       Minimum="{Binding MinCloseDelayMinutes}"
+                                       Maximum="{Binding MaxCloseDelayMinutes}"
+                                       Increment="1"
+                                       FormatString="0"
+                                       Value="{Binding CloseDelayMinutesDraft, Mode=TwoWay}"
+                                       LostFocus="OnEditorLostFocus" />
+                        <TextBlock VerticalAlignment="Center" Text="{x:Static core:Resources.Common_Minutes}" />
+                    </StackPanel>
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

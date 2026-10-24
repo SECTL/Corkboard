@@ -18,7 +18,7 @@ public static class BoardBlockStyle
     /// <summary>最小宽度下限：比这更窄就不像「区块」了，换行也会变多。</summary>
     public const double MinMinItemWidth = 220;
 
-    /// <summary>最小宽度上限：再宽下去一屏只剩一块，和单列排布就没区别了。</summary>
+    /// <summary>最小宽度上限：再宽下去一屏只剩一块，和多列排布就没区别了。</summary>
     public const double MaxMinItemWidth = 600;
 
     /// <summary>

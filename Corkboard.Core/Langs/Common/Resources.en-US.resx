@@ -141,7 +141,7 @@
     <value>English</value>
   </data>
   <data name="Board_Layout_SingleColumn" xml:space="preserve">
-    <value>List</value>
+    <value>Columns</value>
   </data>
   <data name="Board_Layout_Block" xml:space="preserve">
     <value>Blocks</value>
@@ -328,7 +328,7 @@
     <value>Layout</value>
   </data>
   <data name="Settings_Board_LayoutDescription" xml:space="preserve">
-    <value>One centred column, or columns that fit the window</value>
+    <value>Blocks in a grid, or several narrow reading columns</value>
   </data>
   <data name="Settings_Board_SubjectReorderEnabled" xml:space="preserve">
     <value>Drag to reorder</value>
@@ -488,6 +488,9 @@
   </data>
   <data name="Settings_Board_CleanupRunNow" xml:space="preserve">
     <value>Clean up now</value>
+  </data>
+  <data name="Settings_Board_CleanupRunNowDescription" xml:space="preserve">
+    <value>Skips the schedule and clears overdue ones right away</value>
   </data>
   <data name="Settings_Board_CleanupLastResult" xml:space="preserve">
     <value>Last cleanup</value>
@@ -1529,6 +1532,12 @@
   <data name="Exam_Duration_HoursMinutes" xml:space="preserve">
     <value>{0} h {1} min</value>
   </data>
+  <data name="Exam_Duration_Seconds" xml:space="preserve">
+    <value>{0} s</value>
+  </data>
+  <data name="Exam_Duration_MinutesSeconds" xml:space="preserve">
+    <value>{0} min {1} s</value>
+  </data>
   <data name="Exam_Countdown_Days" xml:space="preserve">
     <value>in {0} days</value>
   </data>
@@ -1546,6 +1555,312 @@
   </data>
   <data name="Exam_PaperInfoSeparator" xml:space="preserve">
     <value> · </value>
+  </data>
+  <data name="Exam_Slot_Morning" xml:space="preserve">
+    <value>Morning</value>
+  </data>
+  <data name="Exam_Slot_Afternoon" xml:space="preserve">
+    <value>Afternoon</value>
+  </data>
+  <data name="Exam_Slot_Evening" xml:space="preserve">
+    <value>Evening</value>
+  </data>
+  <data name="Exam_Plan_DurationMinutes" xml:space="preserve">
+    <value>{0} min</value>
+  </data>
+  <data name="Exam_Plan_Conflict_CrossDay" xml:space="preserve">
+    <value>This one runs past midnight</value>
+  </data>
+  <data name="Exam_Plan_Conflict_Overlap" xml:space="preserve">
+    <value>Starts before the previous one ends</value>
+  </data>
+  <data name="Exam_Plan_Conflict_Existing" xml:space="preserve">
+    <value>Clashes with an exam already on the board</value>
+  </data>
+  <data name="Settings_Exam_Plan_PresetSingle" xml:space="preserve">
+    <value>One a day</value>
+  </data>
+  <data name="Settings_Exam_Plan_PresetTwo" xml:space="preserve">
+    <value>Two a day</value>
+  </data>
+  <data name="Settings_Exam_Plan_PresetFour" xml:space="preserve">
+    <value>Four a day</value>
+  </data>
+  <data name="Settings_Exam_Plan_PresetFive" xml:space="preserve">
+    <value>Five a day</value>
+  </data>
+    <data name="Settings_Exam_Plan_QuickButton" xml:space="preserve">
+    <value>Quick setup</value>
+  </data>
+  <data name="Settings_Exam_Plan_QuickButtonToolTip" xml:space="preserve">
+    <value>Fill a whole exam schedule from subjects and a daily routine</value>
+  </data>
+  <data name="Settings_Exam_Plan_WindowTitle" xml:space="preserve">
+    <value>Quick exam setup</value>
+  </data>
+  <data name="Settings_Exam_Plan_StepBasic" xml:space="preserve">
+    <value>Basics</value>
+  </data>
+  <data name="Settings_Exam_Plan_StepSubjects" xml:space="preserve">
+    <value>Subjects</value>
+  </data>
+    <data name="Settings_Exam_Plan_StepReview" xml:space="preserve">
+    <value>Review</value>
+  </data>
+  <data name="Settings_Exam_Plan_TitleDefault" xml:space="preserve">
+    <value>{0} Final Exams</value>
+  </data>
+  <data name="Settings_Exam_Plan_StepFormat" xml:space="preserve">
+    <value>Step {0} of {1} · {2}</value>
+  </data>
+    <data name="Settings_Exam_Plan_TitleLabel" xml:space="preserve">
+    <value>Board title</value>
+  </data>
+  <data name="Settings_Exam_Plan_TitlePlaceholder" xml:space="preserve">
+    <value>Leave empty to use the default name</value>
+  </data>
+  <data name="Settings_Exam_Plan_SubtitleLabel" xml:space="preserve">
+    <value>Subtitle</value>
+  </data>
+  <data name="Settings_Exam_Plan_SubtitlePlaceholder" xml:space="preserve">
+    <value>For example the countdown line</value>
+  </data>
+  <data name="Settings_Exam_Plan_SubtitleColor" xml:space="preserve">
+    <value>Subtitle colour</value>
+  </data>
+  <data name="Settings_Exam_Plan_SubtitleColorDefault" xml:space="preserve">
+    <value>Follow the theme</value>
+  </data>
+  <data name="Settings_Exam_Plan_FirstDay" xml:space="preserve">
+    <value>First day</value>
+  </data>
+  <data name="Settings_Exam_Plan_FirstDayHint" xml:space="preserve">
+    <value>Fills forward from here, one day at a time</value>
+  </data>
+  <data name="Settings_Exam_Plan_SubjectsTitle" xml:space="preserve">
+    <value>Which subjects are examined</value>
+  </data>
+  <data name="Settings_Exam_Plan_SubjectsSource" xml:space="preserve">
+    <value>Subjects come from the homework board</value>
+  </data>
+  <data name="Settings_Exam_Plan_SubjectsEmpty" xml:space="preserve">
+    <value>The homework board has no subjects yet</value>
+  </data>
+  <data name="Settings_Exam_Plan_SubjectsEmptyHint" xml:space="preserve">
+    <value>Add a few under Settings, Homework board, Subjects first</value>
+  </data>
+  <data name="Settings_Exam_Plan_AddSubject" xml:space="preserve">
+    <value>Add subject</value>
+  </data>
+  <data name="Settings_Exam_Plan_AddSubjectPlaceholder" xml:space="preserve">
+    <value>Name it, then press Enter</value>
+  </data>
+  <data name="Settings_Exam_Plan_Combine" xml:space="preserve">
+    <value>Combined paper</value>
+  </data>
+  <data name="Settings_Exam_Plan_CombineHint" xml:space="preserve">
+    <value>Pick several subjects to sit as one exam</value>
+  </data>
+  <data name="Settings_Exam_Plan_CombineTitle" xml:space="preserve">
+    <value>Which subjects sit together</value>
+  </data>
+  <data name="Settings_Exam_Plan_Duration" xml:space="preserve">
+    <value>Length</value>
+  </data>
+  <data name="Settings_Exam_Plan_OrderUp" xml:space="preserve">
+    <value>Move up</value>
+  </data>
+  <data name="Settings_Exam_Plan_OrderDown" xml:space="preserve">
+    <value>Move down</value>
+  </data>
+  <data name="Settings_Exam_Plan_Remove" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="Settings_Exam_Plan_SelectedCount" xml:space="preserve">
+    <value>{0} exams picked</value>
+  </data>
+  <data name="Settings_Exam_Plan_SlotsTitle" xml:space="preserve">
+    <value>Exams per day</value>
+  </data>
+    <data name="Settings_Exam_Plan_SlotsPreset" xml:space="preserve">
+    <value>Routine presets</value>
+  </data>
+                  <data name="Settings_Exam_Plan_ReviewTitle" xml:space="preserve">
+    <value>Here is the schedule</value>
+  </data>
+  <data name="Settings_Exam_Plan_ReviewEmpty" xml:space="preserve">
+    <value>Nothing has been scheduled yet</value>
+  </data>
+  <data name="Settings_Exam_Plan_ReviewEmptyHint" xml:space="preserve">
+    <value>Go back and pick a few subjects</value>
+  </data>
+  <data name="Settings_Exam_Plan_Summary" xml:space="preserve">
+    <value>{0} exams · {1} days · {2} to {3}</value>
+  </data>
+  <data name="Settings_Exam_Plan_ConflictCount" xml:space="preserve">
+    <value>{0} exams clash, look at the red rows</value>
+  </data>
+  <data name="Settings_Exam_Plan_ColumnIndex" xml:space="preserve">
+    <value>#</value>
+  </data>
+  <data name="Settings_Exam_Plan_ColumnDate" xml:space="preserve">
+    <value>Date</value>
+  </data>
+  <data name="Settings_Exam_Plan_ColumnSlot" xml:space="preserve">
+    <value>Slot</value>
+  </data>
+  <data name="Settings_Exam_Plan_ColumnSubject" xml:space="preserve">
+    <value>Subject</value>
+  </data>
+  <data name="Settings_Exam_Plan_ColumnTime" xml:space="preserve">
+    <value>Time</value>
+  </data>
+  <data name="Settings_Exam_Plan_ColumnDuration" xml:space="preserve">
+    <value>Length</value>
+  </data>
+  <data name="Settings_Exam_Plan_ColumnBreak" xml:space="preserve">
+    <value>Since last</value>
+  </data>
+  <data name="Settings_Exam_Plan_Previous" xml:space="preserve">
+    <value>Back</value>
+  </data>
+  <data name="Settings_Exam_Plan_Next" xml:space="preserve">
+    <value>Next</value>
+  </data>
+  <data name="Settings_Exam_Plan_Finish" xml:space="preserve">
+    <value>Done</value>
+  </data>
+  <data name="Settings_Exam_Plan_NeedSubject" xml:space="preserve">
+    <value>Pick at least one subject to continue</value>
+  </data>
+    <data name="Settings_Exam_Plan_AppendHint" xml:space="preserve">
+    <value>Added to this board, existing exams stay</value>
+  </data>
+  <data name="Settings_Exam_Plan_CreateHint" xml:space="preserve">
+    <value>Creates a new board and opens the editor</value>
+  </data>
+  <data name="Settings_Exam_Plan_Success" xml:space="preserve">
+    <value>Scheduled {0} exams</value>
+  </data>
+  <data name="Settings_Exam_Plan_TemplateLabel" xml:space="preserve">
+    <value>Use a template</value>
+  </data>
+  <data name="Settings_Exam_Plan_TemplatePlaceholder" xml:space="preserve">
+    <value>Pick one; subjects and slots come from it</value>
+  </data>
+  <data name="Settings_Exam_Plan_TemplateEmpty" xml:space="preserve">
+    <value>No template yet — plan once, then save it as a template</value>
+  </data>
+  <data name="Settings_Exam_Plan_TemplateHint" xml:space="preserve">
+    <value>Subjects and slots come from the template; just confirm the dates</value>
+  </data>
+  <data name="Settings_Exam_Plan_TemplateDefaultName" xml:space="preserve">
+    <value>Untitled template</value>
+  </data>
+  <data name="Settings_Exam_Plan_TemplateSummary" xml:space="preserve">
+    <value>{0} exams · {1} days</value>
+  </data>
+  <data name="Settings_Exam_Plan_SaveTemplate" xml:space="preserve">
+    <value>Save as template</value>
+  </data>
+  <data name="Settings_Exam_Plan_SaveTemplateToolTip" xml:space="preserve">
+    <value>Keep this schedule to reuse with another date</value>
+  </data>
+  <data name="Settings_Exam_Plan_SaveTemplateTitle" xml:space="preserve">
+    <value>Save as template</value>
+  </data>
+  <data name="Settings_Exam_Plan_SaveTemplateBody" xml:space="preserve">
+    <value>Name it; next term you only change the first day</value>
+  </data>
+  <data name="Settings_Exam_Plan_SaveTemplateName" xml:space="preserve">
+    <value>Template name</value>
+  </data>
+  <data name="Settings_Exam_Plan_SaveTemplateNamePlaceholder" xml:space="preserve">
+    <value>e.g. Final exams</value>
+  </data>
+  <data name="Settings_Exam_Plan_SaveTemplateDone" xml:space="preserve">
+    <value>Saved as template "{0}"</value>
+  </data>
+  <data name="Settings_Exam_Plan_SaveTemplateEmpty" xml:space="preserve">
+    <value>The board has no exams yet</value>
+  </data>
+  <data name="Settings_Exam_Plan_TemplateList" xml:space="preserve">
+    <value>Exam templates</value>
+  </data>
+  <data name="Settings_Exam_Plan_TemplateListDescription" xml:space="preserve">
+    <value>Saved schedules you can reuse with a new date</value>
+  </data>
+  <data name="Settings_Exam_Plan_TemplateListEmpty" xml:space="preserve">
+    <value>No templates yet — use the save-as-template button in the editor</value>
+  </data>
+  <data name="Settings_Exam_Plan_TemplateDelete" xml:space="preserve">
+    <value>Delete template</value>
+  </data>
+  <data name="Settings_Exam_Plan_TemplateDeleteTitle" xml:space="preserve">
+    <value>Delete this template</value>
+  </data>
+  <data name="Settings_Exam_Plan_TemplateDeleteBody" xml:space="preserve">
+    <value>Template "{0}" will be deleted; exams already on the board stay</value>
+  </data>
+  <data name="Settings_Exam_Plan_PresetThree" xml:space="preserve">
+    <value>Three a day</value>
+  </data>
+      <data name="Settings_Exam_Plan_SlotPresetDefaultName" xml:space="preserve">
+    <value>Untitled schedule</value>
+  </data>
+  <data name="Settings_Exam_Plan_SaveSlotPreset" xml:space="preserve">
+    <value>Save as a schedule template</value>
+  </data>
+  <data name="Settings_Exam_Plan_SaveSlotPresetToolTip" xml:space="preserve">
+    <value>Keep this schedule so you can pick it next time</value>
+  </data>
+  <data name="Settings_Exam_Plan_SaveSlotPresetTitle" xml:space="preserve">
+    <value>Save schedule</value>
+  </data>
+  <data name="Settings_Exam_Plan_SaveSlotPresetBody" xml:space="preserve">
+    <value>Give it a name and it shows up under schedule presets</value>
+  </data>
+  <data name="Settings_Exam_Plan_SaveSlotPresetName" xml:space="preserve">
+    <value>Template name</value>
+  </data>
+  <data name="Settings_Exam_Plan_SaveSlotPresetNamePlaceholder" xml:space="preserve">
+    <value>e.g. Two days, six exams</value>
+  </data>
+  <data name="Settings_Exam_Plan_SaveSlotPresetDone" xml:space="preserve">
+    <value>Saved schedule &quot;{0}&quot;</value>
+  </data>
+  <data name="Settings_Exam_Plan_SlotPresetDelete" xml:space="preserve">
+    <value>Delete this schedule template</value>
+  </data>
+  <data name="Settings_Exam_Plan_SlotPresetDeleteTitle" xml:space="preserve">
+    <value>Delete schedule template</value>
+  </data>
+  <data name="Settings_Exam_Plan_SlotPresetDeleteBody" xml:space="preserve">
+    <value>Schedule &quot;{0}&quot; will be deleted; exams already planned stay</value>
+  </data>
+  <data name="Settings_Exam_Plan_SubtitleDefault" xml:space="preserve">
+    <value>Stay calm and think clearly</value>
+  </data>
+  <data name="Settings_Exam_Plan_SlotPresetSummary" xml:space="preserve">
+    <value>{0} a day</value>
+  </data>
+    <data name="Settings_Exam_Plan_SlotsPerDay" xml:space="preserve">
+    <value>Slots a day</value>
+  </data>
+  <data name="Settings_Exam_Plan_FirstStart" xml:space="preserve">
+    <value>First start</value>
+  </data>
+  <data name="Settings_Exam_Plan_BreakBetween" xml:space="preserve">
+    <value>Break between</value>
+  </data>
+  <data name="Settings_Exam_Plan_WriteMode" xml:space="preserve">
+    <value>How to save</value>
+  </data>
+  <data name="Settings_Exam_Plan_WriteAppend" xml:space="preserve">
+    <value>Add after the exams already on the board</value>
+  </data>
+  <data name="Settings_Exam_Plan_WriteReplace" xml:space="preserve">
+    <value>Replace the exams on the board</value>
   </data>
   <data name="Menu_OpenExamBoard" xml:space="preserve">
     <value>Exam board</value>
@@ -1736,6 +2051,18 @@
   <data name="Settings_Exam_Display_ShowListInProgressDescription" xml:space="preserve">
     <value>By default only the clock shows during an exam</value>
   </data>
+  <data name="Settings_Exam_Display_WarningMinutes" xml:space="preserve">
+    <value>Turn the countdown red near the end</value>
+  </data>
+  <data name="Settings_Exam_Display_WarningMinutesDescription" xml:space="preserve">
+    <value>It turns red when less than this many minutes remain</value>
+  </data>
+  <data name="Settings_Exam_Display_RemainingSeconds" xml:space="preserve">
+    <value>Countdown to the second</value>
+  </data>
+  <data name="Settings_Exam_Display_RemainingSecondsDescription" xml:space="preserve">
+    <value>The last hour ticks down with seconds</value>
+  </data>
   <data name="Settings_Exam_Time_Title" xml:space="preserve">
     <value>Time sync</value>
   </data>
@@ -1825,6 +2152,54 @@
   </data>
   <data name="Settings_Exam_Schedule_Next" xml:space="preserve">
     <value>Next {0} · {1} {2}</value>
+  </data>
+  <data name="Settings_Exam_Schedule_BoardAutoShow" xml:space="preserve">
+    <value>This board plays automatically at exam time</value>
+  </data>
+  <data name="Settings_Exam_AutoShow_Title" xml:space="preserve">
+    <value>Auto play</value>
+  </data>
+  <data name="Settings_Exam_AutoShow_Status" xml:space="preserve">
+    <value>Playback status</value>
+  </data>
+  <data name="Settings_Exam_AutoShow_StatusDescription" xml:space="preserve">
+    <value>Opens the board on its own in time, then closes it</value>
+  </data>
+  <data name="Settings_Exam_AutoShow_Preview" xml:space="preserve">
+    <value>Play now</value>
+  </data>
+  <data name="Settings_Exam_AutoShow_NoBoard" xml:space="preserve">
+    <value>No board is set to auto play</value>
+  </data>
+  <data name="Settings_Exam_AutoShow_NoExam" xml:space="preserve">
+    <value>Boards set to auto play have no upcoming exam</value>
+  </data>
+  <data name="Settings_Exam_AutoShow_Next" xml:space="preserve">
+    <value>Next {0} · {1} · plays at {2}</value>
+  </data>
+  <data name="Settings_Exam_AutoShow_NextNow" xml:space="preserve">
+    <value>Next {0} · {1} · should be playing now</value>
+  </data>
+  <data name="Settings_Exam_AutoShow_BoardSummary" xml:space="preserve">
+    <value>{0} of {1} boards will auto play</value>
+  </data>
+  <data name="Settings_Exam_AutoShow_Lead" xml:space="preserve">
+    <value>Lead time</value>
+  </data>
+  <data name="Settings_Exam_AutoShow_LeadDescription" xml:space="preserve">
+    <value>How many minutes before an exam to open the board</value>
+  </data>
+  <data name="Settings_Exam_AutoShow_AlsoShowAfterStart" xml:space="preserve">
+    <value>Also play after the exam starts</value>
+  </data>
+  <data name="Settings_Exam_AutoShow_AlsoShowAfterStartDescription" xml:space="preserve">
+    <value>Still opens once if the app starts when the exam is on</value>
+  </data>
+  <data name="Settings_Exam_AutoShow_CloseDelay" xml:space="preserve">
+    <value>Close delay</value>
+  </data>
+  <data name="Settings_Exam_AutoShow_CloseDelayDescription" xml:space="preserve">
+    <value>How long the board stays up after the last exam</value>
   </data>
   <data name="Settings_Board_Content_Title" xml:space="preserve">
     <value>Content &amp; style</value>
@@ -1936,5 +2311,86 @@
   </data>
   <data name="Export_Table_SheetName" xml:space="preserve">
     <value>Board</value>
+  </data>
+  <data name="Settings_Board_AutoSave_Title" xml:space="preserve">
+    <value>Auto save</value>
+  </data>
+  <data name="Settings_Board_AutoSave" xml:space="preserve">
+    <value>Auto save as image</value>
+  </data>
+  <data name="Settings_Board_AutoSaveDescription" xml:space="preserve">
+    <value>Saves the board as an image a few seconds after you edit it</value>
+  </data>
+  <data name="Settings_Board_AutoSaveEnabled" xml:space="preserve">
+    <value>Turn on auto save</value>
+  </data>
+  <data name="Settings_Board_AutoSaveEnabledDescription" xml:space="preserve">
+    <value>Saves the whole board as an image after every edit</value>
+  </data>
+  <data name="Settings_Board_AutoSave_Mode" xml:space="preserve">
+    <value>When to save</value>
+  </data>
+  <data name="Settings_Board_AutoSave_ModeDescription" xml:space="preserve">
+    <value>One per day, or a new one for every change</value>
+  </data>
+  <data name="Settings_Board_AutoSave_ModeDaily" xml:space="preserve">
+    <value>One per day</value>
+  </data>
+  <data name="Settings_Board_AutoSave_ModeEveryChange" xml:space="preserve">
+    <value>Every change</value>
+  </data>
+  <data name="Settings_Board_AutoSave_Retention" xml:space="preserve">
+    <value>Keep for</value>
+  </data>
+  <data name="Settings_Board_AutoSave_RetentionDescription" xml:space="preserve">
+    <value>Images older than this many days are deleted</value>
+  </data>
+  <data name="Settings_Board_AutoSave_RetentionUnit" xml:space="preserve">
+    <value>days</value>
+  </data>
+  <data name="Settings_Board_AutoSave_Folder" xml:space="preserve">
+    <value>Save to</value>
+  </data>
+  <data name="Settings_Board_AutoSave_FolderDescription" xml:space="preserve">
+    <value>By default it stays inside the app's own data folder</value>
+  </data>
+  <data name="Settings_Board_AutoSave_FolderDefault" xml:space="preserve">
+    <value>Default</value>
+  </data>
+  <data name="Settings_Board_AutoSave_ChooseFolder" xml:space="preserve">
+    <value>Choose folder</value>
+  </data>
+  <data name="Settings_Board_AutoSave_OpenFolder" xml:space="preserve">
+    <value>Open folder</value>
+  </data>
+  <data name="Settings_Board_AutoSave_ResetFolder" xml:space="preserve">
+    <value>Use default</value>
+  </data>
+  <data name="Settings_Board_AutoSave_Status" xml:space="preserve">
+    <value>Last save</value>
+  </data>
+  <data name="Settings_Board_AutoSave_StatusDescription" xml:space="preserve">
+    <value>Where the latest image went, or save one right now</value>
+  </data>
+  <data name="Settings_Board_AutoSave_LastSavedNever" xml:space="preserve">
+    <value>Not saved yet</value>
+  </data>
+  <data name="Settings_Board_AutoSave_LastSavedFormat" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="Settings_Board_AutoSave_SaveNow" xml:space="preserve">
+    <value>Save now</value>
+  </data>
+  <data name="Settings_Board_AutoSave_StatCount" xml:space="preserve">
+    <value>Images</value>
+  </data>
+  <data name="Settings_Board_AutoSave_StatSize" xml:space="preserve">
+    <value>Size on disk</value>
+  </data>
+  <data name="Settings_Board_AutoSave_CountUnit" xml:space="preserve">
+    <value>images</value>
+  </data>
+  <data name="Settings_Board_AutoSave_Failed" xml:space="preserve">
+    <value>Auto save failed, check the save folder</value>
   </data>
 </root>

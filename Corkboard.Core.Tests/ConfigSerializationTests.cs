@@ -9,6 +9,7 @@ using Corkboard.Core.Models.SubConfigs.Board;
 using CR = Corkboard.Core.Langs.Common.Resources;
 
 using Corkboard.Core.Board;
+using Corkboard.Core.Board.AutoSave;
 using Corkboard.Core.Homework;
 using Corkboard.Core.Notes;
 using Corkboard.Core.Notes.Legacy;
@@ -211,6 +212,37 @@ public class ConfigSerializationTests
         Assert.Equal("我的作业", restored.BoardSettings.BoardName);
         Assert.Equal(BoardLayoutMode.Flow, restored.BoardSettings.LayoutMode);
         Assert.Equal(BoardSortMode.Subject, restored.BoardSettings.SortMode);
+    }
+
+    /// <summary>
+    ///     自动保存的配置段：键名 snake_case、枚举按数字落盘、默认关。
+    ///     <para>
+    ///         「枚举只能在末尾追加」这条对它同样成立——<c>mode</c> 写成 0/1，改顺序等于改配置格式。
+    ///     </para>
+    /// </summary>
+    [Fact]
+    public void BoardAutoSave_RoundTripsAsSnakeCaseAndDefaultsToOff()
+    {
+        var config = new MainConfigModel();
+        Assert.False(config.BoardAutoSave.Enabled);
+
+        config.BoardAutoSave.Enabled = true;
+        config.BoardAutoSave.Mode = BoardAutoSaveMode.EveryChange;
+        config.BoardAutoSave.Folder = @"D:\作业板存档";
+        config.BoardAutoSave.RetentionDays = 30;
+
+        var json = JsonSerializer.Serialize(config, ConfigServiceBase.JsonOptions);
+
+        Assert.Contains("\"board_auto_save\"", json);
+        Assert.Contains("\"enabled\": true", json);
+        Assert.Contains("\"mode\": 1", json);
+        Assert.Contains("\"retention_days\": 30", json);
+
+        var restored = JsonSerializer.Deserialize<MainConfigModel>(json, ConfigServiceBase.JsonOptions)!;
+        Assert.True(restored.BoardAutoSave.Enabled);
+        Assert.Equal(BoardAutoSaveMode.EveryChange, restored.BoardAutoSave.Mode);
+        Assert.Equal(@"D:\作业板存档", restored.BoardAutoSave.Folder);
+        Assert.Equal(30, restored.BoardAutoSave.RetentionDays);
     }
 
     [Fact]
