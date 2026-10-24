@@ -167,6 +167,8 @@ public partial class ExamPlanWizardViewModel : ViewModelBase
         {
             if (string.IsNullOrWhiteSpace(TitleDraft))
                 TitleDraft = string.Format(CR.Settings_Exam_Plan_TitleDefault, DateTime.Today.Year);
+            if (string.IsNullOrWhiteSpace(SubtitleDraft))
+                SubtitleDraft = CR.Settings_Exam_Plan_SubtitleDefault;
             return;
         }
 
@@ -398,7 +400,9 @@ public partial class ExamPlanWizardViewModel : ViewModelBase
                 TitleDraft = string.IsNullOrWhiteSpace(_template.Title)
                     ? string.Format(CR.Settings_Exam_Plan_TitleDefault, DateTime.Today.Year)
                     : _template.Title;
-                SubtitleDraft = _template.Subtitle;
+                SubtitleDraft = string.IsNullOrWhiteSpace(_template.Subtitle)
+                    ? CR.Settings_Exam_Plan_SubtitleDefault
+                    : _template.Subtitle;
             }
 
             FollowSubtitleThemeColor = _template.SubtitleColor is null;
