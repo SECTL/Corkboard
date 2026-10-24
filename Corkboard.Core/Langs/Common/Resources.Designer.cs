@@ -116,6 +116,8 @@ public static class Resources
     public static string Settings_Basic_WindowCornersDescription => ResourceManager.GetString(nameof(Settings_Basic_WindowCornersDescription), Culture)!;
     public static string Settings_Basic_CornerAssignButton => ResourceManager.GetString(nameof(Settings_Basic_CornerAssignButton), Culture)!;
     public static string Settings_Basic_CornerAssignButtonDescription => ResourceManager.GetString(nameof(Settings_Basic_CornerAssignButtonDescription), Culture)!;
+    public static string Settings_Basic_AllowAddNoteWhenLocked => ResourceManager.GetString(nameof(Settings_Basic_AllowAddNoteWhenLocked), Culture)!;
+    public static string Settings_Basic_AllowAddNoteWhenLockedDescription => ResourceManager.GetString(nameof(Settings_Basic_AllowAddNoteWhenLockedDescription), Culture)!;
     public static string Settings_Group_Board => ResourceManager.GetString(nameof(Settings_Group_Board), Culture)!;
     public static string Settings_Board_Title => ResourceManager.GetString(nameof(Settings_Board_Title), Culture)!;
     public static string Settings_Board_Name => ResourceManager.GetString(nameof(Settings_Board_Name), Culture)!;

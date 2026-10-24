@@ -288,6 +288,12 @@
   <data name="Settings_Basic_CornerAssignButtonDescription" xml:space="preserve">
     <value>A plus button in the corner for quick notes</value>
   </data>
+  <data name="Settings_Basic_AllowAddNoteWhenLocked" xml:space="preserve">
+    <value>Allow adding notes when locked</value>
+  </data>
+  <data name="Settings_Basic_AllowAddNoteWhenLockedDescription" xml:space="preserve">
+    <value>The corner assign button stays available when the window is locked (click-through)</value>
+  </data>
   <data name="Settings_Group_Board" xml:space="preserve">
     <value>Board</value>
   </data>

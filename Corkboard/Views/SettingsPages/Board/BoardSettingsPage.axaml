@@ -95,8 +95,8 @@
             </fa:FASettingsExpander>
 
             <!--
-                界面入口：标题栏右上角那排动作按钮 + 右下角的布置作业浮标。
-                嫌哪颗多余就关掉哪颗（用户要求）；两张卡合成一张是因为它们都是「界面上有哪些入口」。
+                界面入口：标题栏右上角那排动作按钮 + 右下角的布置作业浮标 + 锁定态下还能不能加作业。
+                嫌哪颗多余就关掉哪颗（用户要求）；三样合成一张卡是因为它们都是「界面上有哪些入口」。
                 直接双向绑配置：开关本身就是布尔、点了就落一次盘，不存在「一路动一路写」的问题。
                 「锁定窗口」那颗不在这里——它是穿透状态下唯一的解锁入口，必须常驻。
             -->
@@ -136,6 +136,13 @@
                 <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Basic_CornerAssignButton}">
                     <fa:FASettingsExpanderItem.Footer>
                         <ToggleSwitch IsChecked="{Binding Config.Basic.ShowCornerAssignButton, Mode=TwoWay}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+                <!-- 锁定（点击穿透）时也留着布置作业入口：锁着的时候点别处都穿透，只有这颗按钮还能点。 -->
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Basic_AllowAddNoteWhenLocked}"
+                                           Description="{x:Static core:Resources.Settings_Basic_AllowAddNoteWhenLockedDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ToggleSwitch IsChecked="{Binding Config.Basic.AllowAddNoteWhenLocked, Mode=TwoWay}" />
                     </fa:FASettingsExpanderItem.Footer>
                 </fa:FASettingsExpanderItem>
             </fa:FASettingsExpander>

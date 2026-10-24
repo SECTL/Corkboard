@@ -293,6 +293,12 @@
   <data name="Settings_Basic_CornerAssignButtonDescription" xml:space="preserve">
     <value>右下角浮一颗加号，顺手就能布置作业</value>
   </data>
+  <data name="Settings_Basic_AllowAddNoteWhenLocked" xml:space="preserve">
+    <value>锁定时也能添加作业</value>
+  </data>
+  <data name="Settings_Basic_AllowAddNoteWhenLockedDescription" xml:space="preserve">
+    <value>窗口锁定（点击穿透）时，右下角布置作业按钮仍然可用</value>
+  </data>
   <data name="Settings_Group_Board" xml:space="preserve">
     <value>作业板</value>
   </data>

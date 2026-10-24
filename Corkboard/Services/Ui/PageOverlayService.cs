@@ -35,6 +35,9 @@ public partial class PageOverlayService : ObservableObject
     [ObservableProperty] private bool _isOpen;
     [ObservableProperty] private object? _content;
 
+    /// <summary>弹层关闭时触发，两种模式（壳内自绘 / 独立窗口）都会触发。</summary>
+    public event EventHandler? Closed;
+
     /// <summary>
     ///     是否需要把弹层摊到独立顶层窗口里。由主窗口在应用/解除「置底到桌面」时写入，
     ///     因为只有它知道该能力是不是真的生效了（平台可能报不支持）。
@@ -60,6 +63,7 @@ public partial class PageOverlayService : ObservableObject
 
         IsOpen = false;
         Content = null;
+        Closed?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>
@@ -105,5 +109,8 @@ public partial class PageOverlayService : ObservableObject
         _window = null;
         window.Closed -= OnSeparateWindowClosed;
         window.OverlayContent = null;
+
+        // 用户直接关了独立窗口（点 X），也通知一下，与调用 Close() 走同一条事件。
+        Closed?.Invoke(this, EventArgs.Empty);
     }
 }

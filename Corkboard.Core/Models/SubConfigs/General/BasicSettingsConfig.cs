@@ -72,6 +72,13 @@ public partial class BasicSettingsConfig : ObservableObject
     /// </summary>
     [ObservableProperty] private bool _showCornerAssignButton;
 
+    /// <summary>
+    ///     窗口锁定（点击穿透）时仍显示布置作业按钮：开着点击穿透的情况下，
+    ///     右下角的布置作业按钮仍然显示、仍然可点（其余区域仍为穿透态）。
+    ///     默认关。用户可见文案见 <c>Settings_Basic_AllowAddNoteWhenLocked</c>。
+    /// </summary>
+    [ObservableProperty] private bool _allowAddNoteWhenLocked;
+
     // 与用户开关分开存放：关掉「记住窗口尺寸」时要保留上一次的尺寸。
     [ObservableProperty] private double _mainWindowWidth = 1200;
     [ObservableProperty] private double _mainWindowHeight = 800;
