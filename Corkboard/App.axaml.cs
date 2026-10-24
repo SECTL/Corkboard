@@ -257,8 +257,8 @@ public partial class App : Application
         // 主页面标题的默认文案；用户可以在作业板设置里改成别的名字。
         services.AddMainPage<BoardPage>(CR.Board_Title);
 
-        services.AddSettingsPageSeparator();
         // 顶层项顺序 = 注册顺序。「基础设置」之后紧跟「外观」，再往后才是「作业板」分组。
+        // 侧边栏顶部不再放分隔线（原来的 AddSettingsPageSeparator 已按用户要求删掉）。
         services.AddSettingsPage<BasicSettingsPage>(CR.Settings_Basic_Title);
         services.AddSettingsPage<AppearanceSettingsPage>(CR.Settings_Appearance_Title);
 
