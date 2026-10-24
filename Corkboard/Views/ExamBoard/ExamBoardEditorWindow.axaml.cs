@@ -4,6 +4,7 @@ using Avalonia.Interactivity;
 using FluentAvalonia.UI.Controls;
 using FluentAvalonia.UI.Windowing;
 using Corkboard.Core.Abstraction;
+using Corkboard.Services.Desktop;
 using Corkboard.ViewModels.ExamBoard;
 using CR = Corkboard.Core.Langs.Common.Resources;
 
@@ -26,6 +27,10 @@ public partial class ExamBoardEditorWindow : FAAppWindow
     {
         InitializeComponent();
         DataContext = IAppHost.GetService<ExamBoardEditorViewModel>();
+
+        // 和主窗口一样喂多尺寸 ICO：不设的话 Windows 会退回 Avalonia 自带的默认图标，
+        // 而这个窗口在任务栏里有按钮，图标必须是 Corkboard 自己的。见 AppIcon。
+        ((Window)this).Icon = AppIcon.LoadWindowIcon();
 
         Opened += (_, _) => ViewModel?.Attach();
         Closed += (_, _) =>

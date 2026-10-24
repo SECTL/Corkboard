@@ -102,12 +102,11 @@ public partial class MainWindow : FAAppWindow
         _isMainScope = scope != AppConsts.SettingsWindowScope;
         InitializeComponent();
 
-        // 临时实验：直接喂 ICO 流给基类 Window.Icon，验证 Avalonia 会按 DPI 取帧。
-        using (var icoStream = Avalonia.Platform.AssetLoader.Open(
-                   new Uri("avares://Corkboard/Assets/Icons/Corkboard.ico")))
-        {
-            ((Window)this).Icon = new WindowIcon(icoStream);
-        }
+        // 窗口图标（任务栏 / Alt+Tab / 标题栏）走**基类** Window.Icon，而且要给 ICO 字节：
+        // FAAppWindow 把 Icon 重新声明成了 IImage，Avalonia 拿到位图时只会按位图原始尺寸造一个
+        // HICON（母图 1254×1254），任务栏再把它硬缩到 36 像素，糊成一片；给 ICO 时 Avalonia
+        // 才会按 DPI 从容器里挑最接近的一帧（见 AppIcon）。
+        ((Window)this).Icon = AppIcon.LoadWindowIcon();
 
         TitleBar.Height = 48;
         TitleBar.ExtendsContentIntoTitleBar = true;

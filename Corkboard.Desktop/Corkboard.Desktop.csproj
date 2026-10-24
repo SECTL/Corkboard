@@ -11,7 +11,8 @@
             可执行文件图标（资源管理器 / 任务栏兜底）：与窗口、托盘共用 Corkboard 资产里的多尺寸 ICO。
             ICO 由同目录的母版 Corkboard.png 生成（16/20/24/32/40/48/64/128 BMP 32bpp + 256 PNG），
             换图标时母版和 ICO 要一起换，不要只改一边。
-            窗口自己还有 Window.Icon（MainWindow.axaml），任务栏取窗口图标优先。
+            运行期的窗口图标不用这份 ICO，而是 AppIcon.LoadWindowIcon() 从母版 PNG 现场拼出来的
+            （尺寸表见 IcoFile.DefaultFrameSizes，按 DPI 1:1 出帧）；任务栏取窗口图标优先，所以那份才决定任务栏清晰度。
         -->
         <ApplicationIcon>..\Corkboard\Assets\Icons\Corkboard.ico</ApplicationIcon>
         <!--
