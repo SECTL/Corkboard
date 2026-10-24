@@ -791,6 +791,14 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
     /// </summary>
     private void AddAssignmentButton_OnClick(object? sender, RoutedEventArgs e)
     {
+        OpenAddAssignmentForm();
+    }
+
+    /// <summary>
+    ///     打开布置作业表单。供 MainWindow 从锁定徽标的布置作业按钮调用（点击穿透状态下）。
+    /// </summary>
+    public void OpenAddAssignmentForm()
+    {
         // 回放期间看的是历史快照，此时不接受新建。
         if (Replay.IsActive)
             return;

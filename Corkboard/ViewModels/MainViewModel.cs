@@ -62,7 +62,9 @@ public partial class MainViewModel : ViewModelBase
 
     /// <summary>
     ///     主窗口右下角那颗「布置作业」浮标画不画：设置里打开之外，点击穿透锁住窗口时也一并隐藏
-    ///     （那时整窗收不到鼠标，浮标只是颗点不动的装饰，和标题栏右上角那一排同理）。
+    ///     （那时整窗收不到鼠标，浮标只是颗点不动的装饰）。
+    ///     开了「锁定时也能添加作业」时，改由独立的浮动窗口承载（CornerAssignFloatingWindow），
+    ///     主窗口里这颗还是藏起来，避免两态重叠。
     /// </summary>
     public bool ShowCornerAssignButton => Config.Basic.ShowCornerAssignButton && !Config.Basic.ClickThrough;
 
