@@ -102,7 +102,7 @@
         </Border>
 
         <!-- 正文：左表右表单。 -->
-        <Grid Grid.Row="1" ColumnDefinitions="*,360" ColumnSpacing="20" Margin="0,16,0,0">
+        <Grid Grid.Row="1" ColumnDefinitions="*,400" ColumnSpacing="20" Margin="0,16,0,0">
 
             <!-- 考试表 -->
             <Border Grid.Column="0"
@@ -220,42 +220,53 @@
                     <StackPanel Spacing="12">
                         <TextBlock FontWeight="SemiBold" Text="{Binding FormTitle}" />
 
-                        <StackPanel Spacing="4">
-                            <TextBlock Classes="editor-label" Text="{x:Static core:Resources.Settings_Exam_Schedule_Subject}" />
-                            <TextBox PlaceholderText="{x:Static core:Resources.Settings_Exam_Schedule_SubjectPlaceholder}"
+                        <!--
+                            字段一律「标签在左、控件在右」：TimePicker 与 NumericUpDown 的模板会把
+                            看得见的框画得比自己量出来的高度高一截，标签摞在控件上方就会被框盖住
+                            （用户反馈过「你有重叠」）。改成左右分列之后，这点高度偏差顶多压到本行
+                            自己的标签右边，不会压到字上。
+                        -->
+                        <Grid ColumnDefinitions="70,*"
+                              RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto"
+                              RowSpacing="14"
+                              ColumnSpacing="10">
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" Classes="editor-label"
+                                       VerticalAlignment="Center"
+                                       Text="{x:Static core:Resources.Settings_Exam_Schedule_Subject}" />
+                            <TextBox Grid.Row="0" Grid.Column="1"
+                                     PlaceholderText="{x:Static core:Resources.Settings_Exam_Schedule_SubjectPlaceholder}"
                                      Text="{Binding SubjectDraft, Mode=TwoWay}"
                                      KeyDown="OnFormKeyDown" />
-                        </StackPanel>
 
-                        <StackPanel Spacing="4">
-                            <TextBlock Classes="editor-label" Text="{x:Static core:Resources.Settings_Exam_Schedule_Date}" />
-                            <CalendarDatePicker HorizontalAlignment="Stretch"
+                            <TextBlock Grid.Row="1" Grid.Column="0" Classes="editor-label"
+                                       VerticalAlignment="Center"
+                                       Text="{x:Static core:Resources.Settings_Exam_Schedule_Date}" />
+                            <CalendarDatePicker Grid.Row="1" Grid.Column="1"
+                                                HorizontalAlignment="Stretch"
                                                 SelectedDate="{Binding DateDraft, Mode=TwoWay}" />
-                        </StackPanel>
 
-                        <Grid ColumnDefinitions="*,Auto,*" ColumnSpacing="10">
-                            <StackPanel Grid.Column="0" Spacing="4">
-                                <TextBlock Classes="editor-label" Text="{x:Static core:Resources.Settings_Exam_Schedule_Start}" />
-                                <TimePicker HorizontalAlignment="Stretch"
-                                            ClockIdentifier="24HourClock"
-                                            SelectedTime="{Binding StartDraft, Mode=TwoWay}" />
-                            </StackPanel>
-                            <TextBlock Grid.Column="1"
-                                       VerticalAlignment="Bottom"
-                                       Margin="0,0,0,8"
-                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                       Text="–" />
-                            <StackPanel Grid.Column="2" Spacing="4">
-                                <TextBlock Classes="editor-label" Text="{x:Static core:Resources.Settings_Exam_Schedule_End}" />
-                                <TimePicker HorizontalAlignment="Stretch"
-                                            ClockIdentifier="24HourClock"
-                                            SelectedTime="{Binding EndDraft, Mode=TwoWay}" />
-                            </StackPanel>
-                        </Grid>
+                            <TextBlock Grid.Row="2" Grid.Column="0" Classes="editor-label"
+                                       VerticalAlignment="Center"
+                                       Text="{x:Static core:Resources.Settings_Exam_Schedule_Start}" />
+                            <TimePicker Grid.Row="2" Grid.Column="1"
+                                        HorizontalAlignment="Stretch"
+                                        ClockIdentifier="24HourClock"
+                                        SelectedTime="{Binding StartDraft, Mode=TwoWay}" />
 
-                        <StackPanel Spacing="6">
-                            <TextBlock Classes="editor-label" Text="{x:Static core:Resources.Settings_Exam_Schedule_PaperInfo}" />
-                            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                            <TextBlock Grid.Row="3" Grid.Column="0" Classes="editor-label"
+                                       VerticalAlignment="Center"
+                                       Text="{x:Static core:Resources.Settings_Exam_Schedule_End}" />
+                            <TimePicker Grid.Row="3" Grid.Column="1"
+                                        HorizontalAlignment="Stretch"
+                                        ClockIdentifier="24HourClock"
+                                        SelectedTime="{Binding EndDraft, Mode=TwoWay}" />
+
+                            <TextBlock Grid.Row="4" Grid.Column="0" Classes="editor-label"
+                                       Margin="0,6,0,0"
+                                       VerticalAlignment="Top"
+                                       Text="{x:Static core:Resources.Settings_Exam_Schedule_PaperInfo}" />
+                            <Grid Grid.Row="4" Grid.Column="1" ColumnDefinitions="*,*,*" ColumnSpacing="8">
                                 <StackPanel Grid.Column="0" Spacing="2">
                                     <NumericUpDown Minimum="0"
                                                    Maximum="999"
@@ -290,17 +301,19 @@
                                                Text="{x:Static core:Resources.Settings_Exam_Schedule_QuestionCount}" />
                                 </StackPanel>
                             </Grid>
-                            <TextBlock FontSize="11"
-                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}"
-                                       Text="{x:Static core:Resources.Settings_Exam_Schedule_PaperInfoHint}" />
-                        </StackPanel>
 
-                        <StackPanel Spacing="4">
-                            <TextBlock Classes="editor-label" Text="{x:Static core:Resources.Settings_Exam_Schedule_Note}" />
-                            <TextBox PlaceholderText="{x:Static core:Resources.Settings_Exam_Schedule_NotePlaceholder}"
+                            <TextBlock Grid.Row="5" Grid.Column="0" Classes="editor-label"
+                                       VerticalAlignment="Center"
+                                       Text="{x:Static core:Resources.Settings_Exam_Schedule_Note}" />
+                            <TextBox Grid.Row="5" Grid.Column="1"
+                                     PlaceholderText="{x:Static core:Resources.Settings_Exam_Schedule_NotePlaceholder}"
                                      Text="{Binding NoteDraft, Mode=TwoWay}"
                                      KeyDown="OnFormKeyDown" />
-                        </StackPanel>
+                        </Grid>
+
+                        <TextBlock FontSize="11"
+                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}"
+                                   Text="{x:Static core:Resources.Settings_Exam_Schedule_PaperInfoHint}" />
 
                         <!-- 校验失败时只在这里出一行红字，不弹对话框。 -->
                         <TextBlock FontSize="12"

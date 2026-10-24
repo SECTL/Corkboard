@@ -114,28 +114,35 @@
                                                 Orientation="Horizontal"
                                                 Spacing="4"
                                                 VerticalAlignment="Center">
-                                        <Button Padding="10,4"
-                                                Click="OnEditBoardClick"
-                                                ToolTip.Tip="{x:Static core:Resources.Settings_Exam_Schedule_BoardEditToolTip}">
-                                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                                <TextBlock VerticalAlignment="Center"
-                                                           FontFamily="{DynamicResource FluentSystemIconsResizeable}"
-                                                           Text="{x:Static icons:FluentIcons.EditFilled}" />
-                                                <TextBlock VerticalAlignment="Center"
-                                                           Text="{x:Static core:Resources.Settings_Exam_Schedule_BoardEdit}" />
-                                            </StackPanel>
-                                        </Button>
-                                        <Button Background="Transparent"
+                                        <!--
+                                            三颗按钮一律图标、一律同尺寸：「编辑」原来带文字，跟另两颗图标按钮
+                                            宽度高度都不一样，一行看过去歪歪扭扭（用户反馈「按钮的大小不一样」）。
+                                        -->
+                                        <Button Width="34" Height="34"
+                                                Padding="0"
+                                                HorizontalContentAlignment="Center"
+                                                VerticalContentAlignment="Center"
+                                                FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                                Content="{x:Static icons:FluentIcons.EditFilled}"
+                                                ToolTip.Tip="{x:Static core:Resources.Settings_Exam_Schedule_BoardEditToolTip}"
+                                                Click="OnEditBoardClick" />
+                                        <Button Width="34" Height="34"
+                                                Padding="0"
+                                                HorizontalContentAlignment="Center"
+                                                VerticalContentAlignment="Center"
+                                                Background="Transparent"
                                                 BorderThickness="0"
-                                                Padding="8,4"
                                                 FontFamily="{DynamicResource FluentSystemIconsResizeable}"
                                                 Content="{x:Static icons:FluentIcons.PinFilled}"
-                                                IsVisible="{Binding !IsActive}"
+                                                IsEnabled="{Binding !IsActive}"
                                                 ToolTip.Tip="{x:Static core:Resources.Settings_Exam_Schedule_BoardActivate}"
                                                 Click="OnActivateBoardClick" />
-                                        <Button Background="Transparent"
+                                        <Button Width="34" Height="34"
+                                                Padding="0"
+                                                HorizontalContentAlignment="Center"
+                                                VerticalContentAlignment="Center"
+                                                Background="Transparent"
                                                 BorderThickness="0"
-                                                Padding="8,4"
                                                 FontFamily="{DynamicResource FluentSystemIconsResizeable}"
                                                 Content="{x:Static icons:FluentIcons.DeleteFilled}"
                                                 IsEnabled="{Binding $parent[ItemsControl].((vm:ExamScheduleSettingsPageViewModel)DataContext).CanDeleteBoard}"
