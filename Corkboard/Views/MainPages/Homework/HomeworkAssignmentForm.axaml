@@ -106,6 +106,28 @@
             <Setter Property="BorderBrush" Value="{DynamicResource SystemFillColorCriticalBrush}" />
             <Setter Property="BorderThickness" Value="1" />
         </Style>
+
+        <!--
+            顶栏右上的关闭钮：矮矮一颗透明按钮，平时只有淡灰的字形，指上去才浮一点底色。
+            它是拖动手势里的例外（顶栏整行能拖、这颗粒不行），所以必须够小、够边，
+            免得占掉太多拖动面。
+        -->
+        <Style Selector="Button.sheet-close">
+            <Setter Property="Width" Value="28" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.sheet-close:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+        </Style>
     </UserControl.Styles>
 
     <Panel>
@@ -113,6 +135,7 @@
             卡片：宽度有下限也有上限；高度上限按「看得见的宿主」算——壳内弹层用窗口内容区、
             独立窗口（SizeToContent）用屏幕工作区，都只占其 70%（见 code-behind 的 ApplySheetSizeLimits）。
             内容比上限还高时卡片自己滚动，不会把窗口一直撑下去，也不会长成一条竖长的板子。
+            卡片可以拖动，但拖动面只有顶栏那一行（见下面 SheetHeader）。
             ⚠️ 整张卡片标 WindowDragGesture.Suppress：卡片的手势归表单自己，壳的整窗长按拖动让出去
             （壳在弹层打开时本来就已让出，这里是显式声明，别删）。
         -->
@@ -124,11 +147,35 @@
             <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <StackPanel x:Name="SheetBody" Spacing="12">
                     <!--
-                        卡片没有标题栏：第一行就是表单标题（布置作业 / 编辑作业）。
-                        卡片本身不能拖动（弹层用来填内容，拖来拖去反而容易失手），
-                        能调的只有内容区右下角那个缩放手柄。
+                        顶栏：这是卡片上**唯一**的拖动面（拖动光标 + 提示都挂在这一行），
+                        其余地方按住是给输入控件用的，拖不动——整张卡片都能拖的时候标题行与留白太容易误拖，
+                        触屏更甚，用户对两种做法都提过意见。
+                        右端那颗「关闭」是键盘 / 触屏也好按的退出入口：底部「取消」在卡片很长时要滚下去才看得到，
+                        而回车默认走「保存」，想放弃时不该只有一颗要往下滚的按钮。
                     -->
-                    <TextBlock Classes="h2" Text="{Binding FormTitle}" />
+                    <Grid x:Name="SheetHeader"
+                          ColumnDefinitions="*,Auto"
+                          ColumnSpacing="8"
+                          Background="Transparent"
+                          Cursor="SizeAll"
+                          ToolTip.Tip="{x:Static core:Resources.Board_MoveSheet}">
+                        <TextBlock Grid.Column="0"
+                                   Classes="h2"
+                                   VerticalAlignment="Center"
+                                   Text="{Binding FormTitle}" />
+                        <Button Grid.Column="1"
+                                x:Name="CloseButton"
+                                Classes="sheet-close"
+                                VerticalAlignment="Center"
+                                ToolTip.Tip="{x:Static core:Resources.Common_Cancel}"
+                                Click="OnCloseButtonClick">
+                            <Path Data="M2,2 L10,10 M10,2 L2,10"
+                                  Stroke="{Binding $parent[Button].Foreground}"
+                                  StrokeThickness="1.2"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center" />
+                        </Button>
+                    </Grid>
 
                     <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
                         <!-- 内容形态切换：打字（富文本）/ 手写（画布）。

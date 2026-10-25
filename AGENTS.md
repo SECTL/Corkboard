@@ -181,11 +181,25 @@ public partial class BoardSettingsConfig : ObservableObject
   ⚠️ 卡片外面套着纵向 `ScrollViewer`、横向滚动关掉时它会用视口宽度去量内容，内容区再宽也撑不宽卡片，
   表现就是「拖大后卡片不跟着长、整框不居中」。拖手柄过程中、`FitContentAreaToLimit()` 末尾都要调一次。
   手写工具栏末尾的提示文案与空画布中间那句提示已按用户要求删掉，**不要再加回去**。
-- **布置作业表单的卡片不能拖动**（`HomeworkAssignmentForm`）：位置由弹层布局居中决定，标题行不要放拖动光标、
-  也不要「拖动移动卡片」提示；能调的只有右下角缩放手柄（尺寸上限见下一条）。
-  曾经做过「整卡拖动」（`SheetDragLimits` + `RenderTransform` 位移、置底形态改拖 `PageOverlayWindow`），
-  用户明确要求删掉：标题行与留白太容易误拖，触屏更甚。`SheetDragLimits` 纯逻辑与单测留在
-  `Corkboard.Core/Controls/` 不动，但表单不再用它。
+- **布置作业表单只有顶栏能拖动**（`HomeworkAssignmentForm` 的 `SheetHeader` + `OnHeaderPressed`）：
+  第一行是 `<Grid x:Name="SheetHeader">`——左边标题、右边一颗 28×28 的关闭钮，整行挂着
+  `Cursor="SizeAll"` 与「拖动移动卡片」提示，**这是卡片上唯一的拖动面**。别的行（表单行、内容区、
+  底部按钮行）按住都不拖：曾经做过「整张卡片都能拖」，用户明确要求删掉（标题行与留白太容易误拖，
+  触屏更甚）；反过来完全不让拖用户也不认（弹层挡住底下的板子时要能挪开）。所以是「只有顶栏能拖」这一档。
+  拖动实现仍然是 `SheetDragLimits` + `RenderTransform` 位移、置底形态改拖 `PageOverlayWindow`，
+  **不要退回整卡拖动**。两条踩过的坑：
+  - ⚠️ 拖动处理器挂在**表单自己**身上（`AddHandler(..., RoutingStrategies.Bubble)`），
+    不是挂在顶栏上——拖动期间事件只从捕获元素往上走，挂子元素上就一个都收不到（「按住拖不动」）。
+    `PointerCaptureLost` 用 `Direct | Bubble | Tunnel` 三种路由全写。
+  - ⚠️ **位移要用同一个坐标系**：按下时 `e.GetPosition(topLevel)`，移动时也要 `e.GetPosition(topLevel)`
+    减起点。用屏幕绝对坐标算增量会恒得 0（两个量都在顶层坐标系里，窗口还没动）。
+  - 顶栏右上那颗关闭钮与底部「取消」同一个命令（`CancelCommand`），弹出表单后不用滚到底就能退出。
+  - ⚠️ **打开表单时不要当场 `_editor.Focus()`**。`AttachedToVisualTree` 里那一发
+    `DispatcherPriority.Loaded` 的派发排在 `PointerPressed` 之前跑，会在用户按下的当口把键盘焦点
+    抢到编辑区，一次按下引发的焦点转移让这一轮指针输入作废——表现就是「不先点一下输入框，
+    取消 / 保存按钮点不动，点了输入框之后才正常」（用户报的就是这个），按住顶栏第一次也拖不动。
+    现在走 `ScheduleInitialFocus()`：只挂一发 `PointerPressed`（Tunnel + handledEventsToo），
+    等用户第一次真的点进表单，再 `DispatcherPriority.Input` 把焦点交给编辑区。
 - **弹层卡片的尺寸上限按「看得见的宿主」算**（`HomeworkAssignmentForm` + `SheetSizeLimits`）：
   宽度 = 设计上限（720）与「可用宽度 − 留边」取小；高度 = **可用高度 × 70%**（下限 320 托底）。
   基准优先取宿主窗口的内容区——卡片是居中的，只能占七成、上下各留一成半，窗口再大也不会长成
