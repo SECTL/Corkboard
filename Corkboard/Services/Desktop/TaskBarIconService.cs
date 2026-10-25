@@ -3,6 +3,9 @@ using Avalonia.Controls;
 using Avalonia.Platform;
 using Microsoft.Extensions.Logging;
 using Corkboard.Core;
+using Corkboard.Core.Abstraction;
+using Corkboard.Core.Models.SubConfigs.Board;
+using Corkboard.Core.Services.Config;
 using Corkboard.Platforms.Abstractions;
 using Corkboard.Views;
 using CR = Corkboard.Core.Langs.Common.Resources;
@@ -39,7 +42,8 @@ public sealed class TaskBarIconService : IDisposable
     private readonly PlatformCapabilities _capabilities;
     private readonly IPointerLocator _pointer;
     private readonly ILogger<TaskBarIconService> _logger;
-    private readonly IReadOnlyList<TrayMenuItem> _menuItems = CreateMenuItems();
+    private readonly MainConfigHandler _configHandler;
+    private BoardSettingsConfig _watchedBoardSettings;
     private TrayMenuWindow? _menuWindow;
     private TrayIcon? _trayIcon;
     private TrayIcons? _icons;
@@ -47,11 +51,19 @@ public sealed class TaskBarIconService : IDisposable
     public TaskBarIconService(
         PlatformCapabilities capabilities,
         IPointerLocator pointer,
-        ILogger<TaskBarIconService> logger)
+        ILogger<TaskBarIconService> logger,
+        MainConfigHandler configHandler)
     {
         _capabilities = capabilities;
         _pointer = pointer;
         _logger = logger;
+        _configHandler = configHandler;
+
+        // 「启用作业板」关掉之后主窗口在这条菜单里就不该还有入口（点了也是把板子叫回来，
+        // 与那个开关的意思直接冲突），所以菜单要跟着那个键重建。
+        _watchedBoardSettings = configHandler.Data.BoardSettings;
+        _watchedBoardSettings.PropertyChanged += OnBoardSettingsChanged;
+        configHandler.Reloaded += OnConfigReloaded;
     }
 
     /// <summary>托盘图标是否已创建。重复调用 <see cref="Initialize" /> 不会重复创建。</summary>
@@ -119,6 +131,9 @@ public sealed class TaskBarIconService : IDisposable
 
         CloseMenuWindow();
 
+        _watchedBoardSettings.PropertyChanged -= OnBoardSettingsChanged;
+        _configHandler.Reloaded -= OnConfigReloaded;
+
         if (trayIcon is null)
             return;
 
@@ -136,6 +151,43 @@ public sealed class TaskBarIconService : IDisposable
 
     /// <summary>托盘左键：贴着鼠标弹出菜单（与右键那份同一套条目）。</summary>
     private void OnTrayIconClicked(object? sender, EventArgs e) => ShowMenu();
+
+    /// <summary>「启用作业板」变了：原生菜单是启动时按当次条目建出来的快照，要重建一遍。</summary>
+    private void OnBoardSettingsChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is not (null or nameof(BoardSettingsConfig.BoardEnabled)))
+            return;
+
+        RefreshMenu();
+    }
+
+    /// <summary>从云端恢复设置会把配置对象整个换掉，手里那份旧的订阅要换下来。</summary>
+    private void OnConfigReloaded(object? sender, EventArgs e)
+    {
+        _watchedBoardSettings.PropertyChanged -= OnBoardSettingsChanged;
+        _watchedBoardSettings = _configHandler.Data.BoardSettings;
+        _watchedBoardSettings.PropertyChanged += OnBoardSettingsChanged;
+        RefreshMenu();
+    }
+
+    private void RefreshMenu()
+    {
+        var trayIcon = _trayIcon;
+        if (trayIcon is null)
+            return;
+
+        try
+        {
+            trayIcon.Menu = CreateNativeMenu();
+
+            // 已经弹出来的那份还是旧条目，直接收掉：它上面可能挂着一颗「显示主窗口」。
+            CloseMenuWindow();
+        }
+        catch (Exception exception)
+        {
+            _logger.LogDebug(exception, "刷新托盘菜单时出错。");
+        }
+    }
 
     /// <summary>
     ///     弹出左键菜单。位置由窗口自己按 <see cref="IPointerLocator" /> 给的鼠标坐标算；
@@ -158,7 +210,7 @@ public sealed class TaskBarIconService : IDisposable
                     _menuWindow = null;
             };
 
-            window.ShowMenu(_menuItems, anchor);
+            window.ShowMenu(CurrentMenuItems, anchor);
         }
         catch (Exception exception)
         {
@@ -185,25 +237,47 @@ public sealed class TaskBarIconService : IDisposable
         }
     }
 
-    /// <summary>
-    ///     托盘菜单的唯一定义：右键的原生菜单与左键的自绘菜单都从这里映射出去。
-    /// </summary>
-    private static IReadOnlyList<TrayMenuItem> CreateMenuItems() =>
-    [
-        new(CR.Menu_OpenMainWindow, static () => App.ShowMainWindow()),
-        new(CR.Menu_OpenExamBoard, static () => App.ShowExamBoardWindow()),
-        new(CR.Menu_OpenSettings, static () => App.ShowSettingsWindow()),
-        TrayMenuItem.Separator,
-        new(CR.Menu_RestartProgram, static () => App.Current.Restart()),
-        new(CR.Menu_ExitProgram, static () => _ = App.Current.StopAsync())
-    ];
+    /// <summary>托盘菜单的唯一定义：右键的原生菜单与左键的自绘菜单都从这里映射出去。</summary>
+    /// <remarks>
+    ///     <para>
+    ///         第一项照上游 SecRandom-C 的样子：图标 + 软件名，点下去直接进「关于」页
+    ///         ——托盘里点软件名，用户想看的通常就是「这是哪个版本」。
+    ///     </para>
+    ///     <para>
+    ///         「启用作业板」关着时不列「显示主窗口」：那个开关的意思就是不要作业板，
+    ///         菜单里再留一个把板子叫回来的入口，两边说法就打架了。考试看板与设置照旧。
+    ///     </para>
+    /// </remarks>
+    private static IReadOnlyList<TrayMenuItem> CreateMenuItems(bool boardEnabled)
+    {
+        var items = new List<TrayMenuItem>
+        {
+            new(GlobalConstants.AppName, static () => App.ShowSettingsWindow(AppConsts.SettingsAboutPageId),
+                ShowApplicationIcon: true),
+            TrayMenuItem.Separator
+        };
+
+        if (boardEnabled)
+            items.Add(new TrayMenuItem(CR.Menu_OpenMainWindow, static () => App.ShowMainWindow()));
+
+        items.Add(new TrayMenuItem(CR.Menu_OpenExamBoard, static () => App.ShowExamBoardWindow()));
+        items.Add(new TrayMenuItem(CR.Menu_OpenSettings, static () => App.ShowSettingsWindow()));
+        items.Add(TrayMenuItem.Separator);
+        items.Add(new TrayMenuItem(CR.Menu_RestartProgram, static () => App.Current.Restart()));
+        items.Add(new TrayMenuItem(CR.Menu_ExitProgram, static () => _ = App.Current.StopAsync()));
+
+        return items;
+    }
+
+    private IReadOnlyList<TrayMenuItem> CurrentMenuItems =>
+        CreateMenuItems(_configHandler.Data.BoardSettings.BoardEnabled);
 
     /// <summary>右键那份：交给平台弹的原生菜单。</summary>
     private NativeMenu CreateNativeMenu()
     {
         var menu = new NativeMenu();
 
-        foreach (var item in _menuItems)
+        foreach (var item in CurrentMenuItems)
         {
             if (item.IsSeparator)
             {
@@ -213,12 +287,21 @@ public sealed class TaskBarIconService : IDisposable
 
             var action = item.Action;
             var nativeItem = new NativeMenuItem { Header = item.Header };
+            if (item.ShowApplicationIcon)
+                nativeItem.Icon = CreateMenuIconSource();
             nativeItem.Click += (_, _) => action?.Invoke();
             menu.Items.Add(nativeItem);
         }
 
         return menu;
     }
+
+    /// <summary>
+    ///     原生菜单项的图标。<c>NativeMenuItem.Icon</c> 收的是 <see cref="Avalonia.Media.Imaging.Bitmap" />
+    ///     （与自绘那份 <see cref="MenuItem.Icon" /> 收控件内容不同），所以两边各取各的：
+    ///     这里给位图，自绘菜单那边包一层 <c>Image</c>。
+    /// </summary>
+    private static Avalonia.Media.Imaging.Bitmap CreateMenuIconSource() => AppIcon.LoadBitmap();
 
     /// <summary>
     ///     托盘图标与窗口图标共用一份 PNG 母图（<see cref="AppIcon" />），

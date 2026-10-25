@@ -1,0 +1,53 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:Corkboard.Core.Controls">
+    <!--
+        粘滞滚动控件的模板。移植自上游 SecRandom-C 的 Core/Controls/StickyScrollViewer.axaml。
+        结构就两层：
+          · 第 0 行一块固定高度的占位 Border —— 页头滚到底之后留在上面那一截；
+          · PART_Header 跨两行、VerticalAlignment=Top，Margin 取 RealHeaderHeight 的负值往上推；
+          · PART_MainScrollViewer 盖在第 1 行，内容顶上垫一块 SpaceAreaHeight 高的空块，
+            于是内容从页头底下穿过去，而不是被页头压住。
+    -->
+    <Style Selector="controls|StickyScrollViewer">
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Height="{TemplateBinding CollapsedHeight, Mode=OneWay}" />
+
+                    <ContentPresenter x:Name="PART_Header"
+                                      Grid.Row="0"
+                                      Grid.RowSpan="2"
+                                      VerticalAlignment="Top"
+                                      Content="{TemplateBinding HeaderContent}"
+                                      ContentTemplate="{TemplateBinding HeaderTemplate}"
+                                      Margin="{TemplateBinding RealHeaderHeight, Converter={x:Static controls:StickyScrollViewer.DoubleToHeaderMarginConverter}}" />
+
+                    <ScrollViewer x:Name="PART_MainScrollViewer"
+                                  Grid.Row="1"
+                                  Grid.RowSpan="1"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  VerticalScrollBarVisibility="Auto">
+                        <Grid x:Name="InnerGrid">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <Border Grid.Row="0" Height="{TemplateBinding SpaceAreaHeight, Mode=OneWay}" />
+
+                            <ContentPresenter Grid.Row="1"
+                                              Content="{TemplateBinding Content}"
+                                              ContentTemplate="{TemplateBinding ContentTemplate}" />
+                        </Grid>
+                    </ScrollViewer>
+                </Grid>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+</Styles>

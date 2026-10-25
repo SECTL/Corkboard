@@ -59,6 +59,18 @@
                 </fa:FASettingsExpander.Footer>
             </fa:FASettingsExpander>
 
+            <!--
+                重新运行首次设置：引导里那几项（语言 / 协议 / 作业板 / 主题 / 自启）都在设置里单列着，
+                这里只是再给一条「一次过一遍」的入口——不为了改某一项，而是给想重看协议、
+                或者接手别人机器时从头对一遍的人用。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Oobe_Reopen}"
+                                   Description="{x:Static core:Resources.Oobe_ReopenDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <Button Click="OnReopenOobeClick" Content="{x:Static core:Resources.Oobe_Reopen}" />
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
             <TextBlock Classes="section-title"
                        Text="{x:Static core:Resources.Settings_Section_Privacy}" />
 

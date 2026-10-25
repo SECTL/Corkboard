@@ -96,4 +96,16 @@ public static class FluentIcons
 
     /// <summary>「快速布置考试」入口（设置页的看板列表与编辑窗口顶部）。码位来自上游图标映射表 <c>wand_20_filled</c>。</summary>
     public const string WandFilled = "\uF42E";
+
+    /// <summary>关于页「鸣谢」那张卡。码位来自上游图标映射表 <c>heart_20_filled</c>。</summary>
+    public const string HeartFilled = "\uE970";
+
+    /// <summary>关于页的在线人数一项。码位来自上游图标映射表 <c>people_20_filled</c>。</summary>
+    public const string PeopleFilled = "\uECAA";
+
+    /// <summary>关于页贡献人员抽屉里的「刷新」按钮。码位来自上游图标映射表 <c>arrow_clockwise_20_filled</c>。</summary>
+    public const string ArrowClockwiseFilled = "\uE0B4";
+
+    /// <summary>关于页贡献人员抽屉里的「关闭」按钮。码位来自上游图标映射表 <c>dismiss_20_regular</c>。</summary>
+    public const string DismissRegular = "\uE671";
 }

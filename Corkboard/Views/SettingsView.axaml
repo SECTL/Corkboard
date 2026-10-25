@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:fa="using:FluentAvalonia.UI.Controls"
+             xmlns:controls="using:Corkboard.Core.Controls"
              xmlns:icons="using:Corkboard.Core.Icons"
              xmlns:lang="using:Corkboard.Langs.SettingsView"
              xmlns:views="using:Corkboard.Views"
@@ -101,9 +102,16 @@
                 页面标题不在这里：它必须和设置卡同属一个限宽容器，才会跟着卡片一起滚动、
                 左边缘也才对得齐（见各设置页根节点的 page-container 与 Core/Styles/StylesBase.axaml）。
                 壳层只挂导航内容。
+                外面套一层抽屉宿主：设置页里要「从右边滑出一块」的（目前是「关于」的贡献人员名单）
+                走它，页面自己画的话既盖不住左边的导航栏、也盖不住标题栏。
             -->
-            <fa:FAFrame x:Name="NavigationFrame"
-                        CacheSize="0" />
+            <controls:DrawerHost x:Name="NavigationDrawer"
+                                 DrawerPlacement="Right"
+                                 IsDrawerOpen="{Binding ViewModel.IsDrawerOpen, Mode=TwoWay}"
+                                 DrawerContent="{Binding ViewModel.DrawerContent}">
+                <fa:FAFrame x:Name="NavigationFrame"
+                            CacheSize="0" />
+            </controls:DrawerHost>
         </fa:FANavigationView>
     </Grid>
 </ContentPage>

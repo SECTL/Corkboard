@@ -717,6 +717,33 @@
   <data name="Settings_About_Runtime" xml:space="preserve">
     <value>运行时</value>
   </data>
+  <data name="Settings_About_Issues" xml:space="preserve">
+    <value>问题反馈</value>
+  </data>
+  <data name="Settings_About_Community" xml:space="preserve">
+    <value>QQ 群</value>
+  </data>
+  <data name="Settings_About_Acknowledgments" xml:space="preserve">
+    <value>鸣谢</value>
+  </data>
+  <data name="Settings_About_OnlineUsersDescription" xml:space="preserve">
+    <value>感谢各位用户的支持，您的使用就是对我们最大的鼓励</value>
+  </data>
+  <data name="Settings_About_OnlineUsersFormat" xml:space="preserve">
+    <value>{0} 人</value>
+  </data>
+  <data name="Settings_About_Contributors" xml:space="preserve">
+    <value>贡献人员</value>
+  </data>
+  <data name="Settings_About_ContributorsDescription" xml:space="preserve">
+    <value>查看为 Corkboard 提交过代码的 GitHub 贡献者</value>
+  </data>
+  <data name="Settings_About_ContributorCommits" xml:space="preserve">
+    <value>{0} 次提交</value>
+  </data>
+  <data name="Settings_About_ContributorsLoadFailed" xml:space="preserve">
+    <value>无法加载贡献者名单：{0}</value>
+  </data>
   <data name="Settings_Account_Title" xml:space="preserve">
     <value>账号</value>
   </data>
@@ -2442,5 +2469,190 @@
   </data>
   <data name="Settings_Board_AutoSave_Failed" xml:space="preserve">
     <value>自动保存失败，请检查保存位置</value>
+  </data>
+  <data name="Settings_Board_Enabled" xml:space="preserve">
+    <value>启用作业板</value>
+  </data>
+  <data name="Settings_Board_EnabledDescription" xml:space="preserve">
+    <value>关掉后主窗口不再出现，托盘与考试看板仍然可用</value>
+  </data>
+  <data name="Oobe_Title" xml:space="preserve">
+    <value>首次设置</value>
+  </data>
+  <data name="Oobe_Language" xml:space="preserve">
+    <value>选择界面语言</value>
+  </data>
+  <data name="Oobe_LanguageDescription" xml:space="preserve">
+    <value>整个界面跟着这里换，包括后面几步</value>
+  </data>
+  <data name="Oobe_WelcomeTitle" xml:space="preserve">
+    <value>欢迎使用 Corkboard</value>
+  </data>
+  <data name="Oobe_WelcomeDescription" xml:space="preserve">
+    <value>用几步把它调成你要的样子，这里选的每一项以后都能在设置里改</value>
+  </data>
+  <data name="Oobe_LegalTitle" xml:space="preserve">
+    <value>隐私政策与用户协议</value>
+  </data>
+  <data name="Oobe_LegalDescription" xml:space="preserve">
+    <value>继续之前请把下面两份都读一遍并勾选</value>
+  </data>
+  <data name="Oobe_PrivacyPolicyTitle" xml:space="preserve">
+    <value>隐私政策</value>
+  </data>
+  <data name="Oobe_PrivacyPolicyBody" xml:space="preserve">
+    <value>Corkboard 只收集让它正常运行和统计所必需的信息，全部如下。
+
+· 在线状态：启动后上报一个本机随机生成的设备标识与设备类型，用来统计同时在线人数。该标识与本机账号无关，也不含任何硬件信息。
+· 使用量：只累加启动次数、新增作业数、导出次数这三个增量的数字，不记录每条作业的内容。
+· 大致位置：由服务端按访问地址粗落到城市一级，客户端不上报 IP 或城市。
+· 账号：登录 SECTL 账号时凭据保存在本机，退出登录会一并清除。
+
+以上上报都能在「设置 → 基础设置」里改成匿名或彻底关闭。你的作业、设置与截图只存在本机磁盘上；云同步默认关闭，只有你登录并主动打开后才会上传。</value>
+  </data>
+  <data name="Oobe_PrivacyPolicyAccept" xml:space="preserve">
+    <value>我已阅读并同意隐私政策</value>
+  </data>
+  <data name="Oobe_EulaTitle" xml:space="preserve">
+    <value>用户协议</value>
+  </data>
+  <data name="Oobe_EulaBody" xml:space="preserve">
+    <value>Corkboard 以 GNU GPLv3 许可证发布，你可以按许可证允许的方式自由使用、修改与分发。
+
+· 这是一个用来记作业的桌面工具，按「现状」提供，不附带任何担保；对因使用它造成的作业遗漏或数据丢失不承担责任。
+· 请不要用它存放违法内容，也不要用它绕过学校的正当管理要求。
+· 程序可能随时修改、暂停或停止更新。
+· 本协议与隐私政策如有实质变化，会在下次启动时重新请你确认。
+
+继续使用即表示你已理解并接受上述内容。</value>
+  </data>
+  <data name="Oobe_EulaAccept" xml:space="preserve">
+    <value>我已阅读并同意用户协议</value>
+  </data>
+  <data name="Oobe_BoardTitle" xml:space="preserve">
+    <value>要哪块板子</value>
+  </data>
+  <data name="Oobe_BoardDescription" xml:space="preserve">
+    <value>两块板子各管一件事，先留着你用得上的</value>
+  </data>
+  <data name="Oobe_BoardEnabled" xml:space="preserve">
+    <value>启用作业板</value>
+  </data>
+  <data name="Oobe_BoardEnabledDescription" xml:space="preserve">
+    <value>关掉后主窗口不再出现，托盘与考试看板仍然可用</value>
+  </data>
+  <data name="Oobe_AppearanceTitle" xml:space="preserve">
+    <value>挑个顺眼的外观</value>
+  </data>
+  <data name="Oobe_AppearanceDescription" xml:space="preserve">
+    <value>主题跟着系统走还是固定一个，选完当场就能看到变化</value>
+  </data>
+  <data name="Oobe_Theme" xml:space="preserve">
+    <value>主题</value>
+  </data>
+  <data name="Oobe_ThemeDescription" xml:space="preserve">
+    <value>深色浅色还是跟着系统一起变</value>
+  </data>
+  <data name="Oobe_ThemeColor" xml:space="preserve">
+    <value>主题色</value>
+  </data>
+  <data name="Oobe_ThemeColorDescription" xml:space="preserve">
+    <value>按钮和选中状态用的那一个颜色</value>
+  </data>
+  <data name="Oobe_StartupTitle" xml:space="preserve">
+    <value>怎么启动它</value>
+  </data>
+  <data name="Oobe_StartupDescription" xml:space="preserve">
+    <value>开机就自己跑起来，还是等你点开再说</value>
+  </data>
+  <data name="Oobe_Autostart" xml:space="preserve">
+    <value>开机自启动</value>
+  </data>
+  <data name="Oobe_AutostartDescription" xml:space="preserve">
+    <value>登录系统后自动把它拉起来</value>
+  </data>
+  <data name="Oobe_AutostartFailed" xml:space="preserve">
+    <value>开机自启没设成功，已退回原来的选择</value>
+  </data>
+  <data name="Oobe_ShowStartupWindow" xml:space="preserve">
+    <value>启动时显示主窗口</value>
+  </data>
+  <data name="Oobe_ShowStartupWindowDescription" xml:space="preserve">
+    <value>关掉后只在托盘里待着，点图标才出来</value>
+  </data>
+  <data name="Oobe_CompleteTitle" xml:space="preserve">
+    <value>都设好了</value>
+  </data>
+  <data name="Oobe_CompleteDescription" xml:space="preserve">
+    <value>下面是这一次的选择，之后随时能在设置里再改</value>
+  </data>
+  <data name="Oobe_CompletedItems" xml:space="preserve">
+    <value>这一次的选择</value>
+  </data>
+  <data name="Oobe_CompletedLanguage" xml:space="preserve">
+    <value>界面语言</value>
+  </data>
+  <data name="Oobe_CompletedBoard" xml:space="preserve">
+    <value>板子</value>
+  </data>
+  <data name="Oobe_CompletedTheme" xml:space="preserve">
+    <value>外观</value>
+  </data>
+  <data name="Oobe_CompletedStartup" xml:space="preserve">
+    <value>启动</value>
+  </data>
+  <data name="Oobe_CompletedLegal" xml:space="preserve">
+    <value>协议</value>
+  </data>
+  <data name="Oobe_CompletedLegalValue" xml:space="preserve">
+    <value>已确认隐私政策与用户协议</value>
+  </data>
+  <data name="Oobe_BoardOn" xml:space="preserve">
+    <value>已启用</value>
+  </data>
+  <data name="Oobe_BoardOff" xml:space="preserve">
+    <value>已关闭</value>
+  </data>
+  <data name="Oobe_AutostartOn" xml:space="preserve">
+    <value>开机自启</value>
+  </data>
+  <data name="Oobe_AutostartOff" xml:space="preserve">
+    <value>不自动启动</value>
+  </data>
+  <data name="Oobe_Next" xml:space="preserve">
+    <value>下一步</value>
+  </data>
+  <data name="Oobe_Previous" xml:space="preserve">
+    <value>上一步</value>
+  </data>
+  <data name="Oobe_Finish" xml:space="preserve">
+    <value>开始使用</value>
+  </data>
+  <data name="Oobe_StepProgress" xml:space="preserve">
+    <value>第 {0} 步，共 {1} 步</value>
+  </data>
+  <data name="Oobe_ExitTitle" xml:space="preserve">
+    <value>还没设置完</value>
+  </data>
+  <data name="Oobe_ExitDescription" xml:space="preserve">
+    <value>现在关掉的话这次的选择都不会保存，下次启动会重新问你</value>
+  </data>
+  <data name="Oobe_Exit" xml:space="preserve">
+    <value>退出</value>
+  </data>
+  <data name="Oobe_ContinueSetup" xml:space="preserve">
+    <value>继续设置</value>
+  </data>
+  <data name="Oobe_ExitWindow" xml:space="preserve">
+    <value>关闭</value>
+  </data>
+  <data name="Oobe_ExitWindowDescription" xml:space="preserve">
+    <value>这次的选择已经存下了，可以随时在设置里再改</value>
+  </data>
+  <data name="Oobe_Reopen" xml:space="preserve">
+    <value>重新运行首次设置</value>
+  </data>
+  <data name="Oobe_ReopenDescription" xml:space="preserve">
+    <value>再从头过一遍语言、协议、作业板、主题与自启</value>
   </data>
 </root>

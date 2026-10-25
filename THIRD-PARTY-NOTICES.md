@@ -31,6 +31,7 @@ Corkboard 以 GNU GPLv3 发布（见 [LICENSE](../LICENSE)），再发布的衍�
 | `Corkboard/Assets/Fonts/MiSans/MiSans-*.ttf`（Thin / ExtraLight / Light / Normal / Regular / Medium / Demibold / Semibold / Bold / Heavy） | MiSans，小米科技有限责任公司（Xiaomi HyperOS 系统字体） | 《MiSans 字体知识产权许可协议》：免费商用；允许嵌入软件分发，但必须注明使用了 MiSans 字体，且不得对字体改编或二次开发、不得单独再分发或售卖字体文件 |
 | `Corkboard/Assets/Fonts/FluentSystemIcons-Resizable.ttf` | Microsoft Fluent System Icons | MIT |
 | `Corkboard/Assets/FluentSystemIcons-Resizable.json` | 同上（图标名 → 码位映射，供将来的源生成器使用） | MIT |
+| `Corkboard/Assets/Icons/AuthorAionflux.png`、`Corkboard/Assets/Icons/SECTLLogo.png` | SECTL 思拓创联（沿用上游 SecRandom-C 的同一份素材，只用在「关于」页的作者与组织标识上） | 随本项目一同以 GPLv3 分发 |
 
 图标字体与图标映射随包分发，用途仅限界面图标。
 

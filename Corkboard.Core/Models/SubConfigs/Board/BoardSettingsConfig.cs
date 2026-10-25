@@ -16,6 +16,16 @@ namespace Corkboard.Core.Models.SubConfigs.Board;
 public partial class BoardSettingsConfig : ObservableObject
 {
     /// <summary>
+    ///     是否启用作业板。关掉之后主窗口不再显示（托盘图标与考试看板入口照旧），
+    ///     相当于把这块板子整个收起来，只留下别的模块。
+    ///     <para>
+    ///         默认开——它只服务「我压根不用作业板」这一种情况。开关在引导窗口的「功能」那一步
+    ///         和「设置 → 作业板 → 常规」里都能改，两处写的是同一个键。
+    ///     </para>
+    /// </summary>
+    [ObservableProperty] private bool _boardEnabled = true;
+
+    /// <summary>
     ///     作业板名称。留空表示用本地化资源里的默认名（见 <see cref="ResolveBoardName" />），
     ///     所以升级界面语言后没自定义过名称的用户会跟着语言走。
     /// </summary>

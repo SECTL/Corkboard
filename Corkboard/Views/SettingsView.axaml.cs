@@ -44,6 +44,15 @@ public partial class SettingsView : ContentPage, IFANavigationPageFactory
     private bool _isDevelopmentAdornerAdded;
 
     /// <summary>
+    ///     窗口还没跑完首次导航时，外部（托盘菜单）要求的落地页先记在这儿，
+    ///     由 <see cref="OnLoadedForInitialNavigation" /> 一并导航过去。
+    /// </summary>
+    private string? _pendingPageId;
+
+    /// <summary>首次导航是否已经跑完（跑完之后 <see cref="NavigateToPage" /> 才自己投递）。</summary>
+    private bool _initialNavigationCompleted;
+
+    /// <summary>
     ///     当前设置界面实例。设置页（transient）需要它来请求重启提示，
     ///     因为提示按钮画在设置界面的标题栏上。
     /// </summary>
@@ -100,7 +109,9 @@ public partial class SettingsView : ContentPage, IFANavigationPageFactory
             () =>
             {
                 _navigationView?.UpdateLayout();
-                SelectNavigationItemById(AppConsts.DefaultSettingsPageId);
+                SelectNavigationItemById(_pendingPageId ?? AppConsts.DefaultSettingsPageId);
+                _initialNavigationCompleted = true;
+                _pendingPageId = null;
             },
             DispatcherPriority.Background);
     }
@@ -170,6 +181,67 @@ public partial class SettingsView : ContentPage, IFANavigationPageFactory
         if (info != null)
             Navigate(info, pushHistory: false);
     }
+
+    /// <summary>
+    ///     按页面 Id 导航（托盘菜单的「关于」入口用它）。找不到这个 Id 就保持当前页不变。
+    /// </summary>
+    /// <remarks>
+    ///     页面是键控 DI 里的 transient，首页的初始导航由 <see cref="OnLoadedForInitialNavigation" />
+    ///     推迟到布局之后，所以这里同样排到 Background 优先级，否则窗口刚建出来的那一拍
+    ///     <c>FANavigationView</c> 还没实例化选中项容器，选择动画会把自己无限重投递、把 UI 线程饿死。
+    ///     <para>
+    ///         窗口还没跑完初始导航时要先记下来交给初始导航：否则两条 Background 消息谁先谁后没谱，
+    ///         「打开关于页」会被紧接着的「回到默认页」盖掉（实测托盘第一次点进来停在「通用」）。
+    ///     </para>
+    /// </remarks>
+    public void NavigateToPage(string? pageId)
+    {
+        if (string.IsNullOrWhiteSpace(pageId))
+            return;
+
+        var info = PagesRegistryService.SettingsItems.FirstOrDefault(item => item.Id == pageId);
+        if (info is null)
+            return;
+
+        // 初始导航还没跑完：交给它，别自己再投一条会跟它抢顺序的消息。
+        if (!_initialNavigationCompleted)
+        {
+            _pendingPageId = pageId;
+            return;
+        }
+
+        Dispatcher.UIThread.Post(
+            () =>
+            {
+                _navigationView?.UpdateLayout();
+                Navigate(info, pushHistory: false);
+            },
+            DispatcherPriority.Background);
+    }
+
+    #region 抽屉
+
+    /// <summary>
+    ///     从右边滑出一块内容（关于页的贡献人员名单用它）。
+    /// </summary>
+    /// <remarks>
+    ///     抽屉画在设置壳上而不是页面里：页面在 <c>FAFrame</c> 的内容区里，
+    ///     它自己画的浮层既盖不住左边的设置导航、也盖不住标题栏，看起来就不像模态。
+    /// </remarks>
+    public void OpenDrawer(object content)
+    {
+        ViewModel.DrawerContent = content;
+        ViewModel.IsDrawerOpen = true;
+    }
+
+    /// <summary>收起抽屉。关掉之后顺手把内容清掉，免得下一页打开时残留上一次的列表。</summary>
+    public void CloseDrawer()
+    {
+        ViewModel.IsDrawerOpen = false;
+        ViewModel.DrawerContent = null;
+    }
+
+    #endregion
 
     private void Navigate(PageInfo info, bool pushHistory)
     {

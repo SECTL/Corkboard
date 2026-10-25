@@ -1,0 +1,391 @@
+<faWindowing:FAAppWindow xmlns="https://github.com/avaloniaui"
+                         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                         xmlns:faWindowing="using:FluentAvalonia.UI.Windowing"
+                         xmlns:vm="using:Corkboard.ViewModels"
+                         xmlns:vms="using:Corkboard.ViewModels.SettingsPages"
+                         xmlns:core="using:Corkboard.Core.Langs.Common"
+                         mc:Ignorable="d" d:DesignWidth="860" d:DesignHeight="680"
+                         x:Class="Corkboard.Views.FirstRunOobeWindow"
+                         x:DataType="vm:FirstRunOobeViewModel"
+                         Title="{x:Static core:Resources.Oobe_Title}"
+                         Width="860" Height="680"
+                         MinWidth="720" MinHeight="560"
+                         CanResize="True"
+                         WindowStartupLocation="CenterScreen">
+    <!--
+        首次运行引导（OOBE）：语言 → 协议 → 板子 → 外观 → 启动 → 汇总。
+
+        为什么是独立窗口：引导发生在主窗口之前（主窗口可能是关掉的、也可能因为「启用作业板」为假
+        根本不该出现），做成页面就得先有壳，顺序反了。
+
+        步骤切换用「各步各一块、按 IsVisible 显隐」，不用 Carousel：
+        协议改版时只有一步（见 FirstRunOobeViewModel.BuildSteps），Carousel 的索引与步骤表
+        还得再对一遍，显隐没有这个对不齐的可能。
+    -->
+    <faWindowing:FAAppWindow.Styles>
+        <Style Selector="TextBlock.oobe-title">
+            <Setter Property="FontSize" Value="20" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style Selector="TextBlock.oobe-lead">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style Selector="TextBlock.oobe-section">
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="TextBlock.oobe-hint">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style Selector="SelectableTextBlock.oobe-body">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="LineHeight" Value="21" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style Selector="Border.oobe-card">
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="18,16" />
+        </Style>
+        <Style Selector="Border.oobe-row">
+            <Setter Property="BorderBrush" Value="{DynamicResource DividerStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="0,0,0,1" />
+            <Setter Property="Padding" Value="0,10" />
+        </Style>
+        <Style Selector="TextBlock.oobe-summary-key">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        </Style>
+        <Style Selector="TextBlock.oobe-summary-value">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        </Style>
+    </faWindowing:FAAppWindow.Styles>
+
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <!-- 顶部：应用图标 + 名称 + 这一轮走到第几步。 -->
+        <Border Grid.Row="0"
+                Padding="28,18,28,16"
+                Background="{DynamicResource LayerOnMicaBaseAltFillColorDefaultBrush}"
+                BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
+                BorderThickness="0,0,0,1">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                    <Image Width="32" Height="32" Source="{Binding AppIcon}" />
+                    <TextBlock VerticalAlignment="Center"
+                               Classes="oobe-title"
+                               Text="{x:Static core:Resources.App_Title}" />
+                </StackPanel>
+                <TextBlock Grid.Column="1"
+                           VerticalAlignment="Center"
+                           Classes="oobe-lead"
+                           IsVisible="{Binding HasMultipleSteps}"
+                           Text="{Binding StepProgress}" />
+            </Grid>
+        </Border>
+
+        <!-- 正文：每一步一块，只有当前那一步可见。 -->
+        <Grid Grid.Row="1" Margin="28,20,28,8">
+
+            <!-- ========== 第 1 步：欢迎 + 选语言 ========== -->
+            <ScrollViewer IsVisible="{Binding IsWelcomeStep}" VerticalScrollBarVisibility="Auto">
+                <StackPanel MaxWidth="560" Spacing="18" VerticalAlignment="Top">
+                    <Image Width="88"
+                           Height="88"
+                           HorizontalAlignment="Center"
+                           Margin="0,12,0,0"
+                           Source="{Binding AppIcon}" />
+                    <TextBlock HorizontalAlignment="Center"
+                               Classes="oobe-title"
+                               Text="{x:Static core:Resources.Oobe_WelcomeTitle}"
+                               TextAlignment="Center" />
+                    <TextBlock HorizontalAlignment="Center"
+                               Classes="oobe-lead"
+                               Text="{x:Static core:Resources.Oobe_WelcomeDescription}"
+                               TextAlignment="Center" />
+
+                    <!-- 语言放第一步：后面几步的文案当场就跟着换（换了语言要重启，引导会重来一遍）。 -->
+                    <Border Classes="oobe-card">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                            <StackPanel Spacing="3" VerticalAlignment="Center">
+                                <TextBlock Text="{x:Static core:Resources.Oobe_Language}" />
+                                <TextBlock Classes="oobe-hint" Text="{x:Static core:Resources.Oobe_LanguageDescription}" />
+                            </StackPanel>
+                            <ComboBox Grid.Column="1"
+                                      MinWidth="180"
+                                      VerticalAlignment="Center"
+                                      ItemsSource="{Binding LanguageOptions}"
+                                      SelectedItem="{Binding SelectedLanguage, Mode=TwoWay}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="vms:LanguageOption">
+                                        <TextBlock Text="{Binding DisplayName}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- ========== 第 2 步：隐私政策与用户协议 ========== -->
+            <ScrollViewer IsVisible="{Binding IsLegalStep}" VerticalScrollBarVisibility="Auto">
+                <StackPanel Spacing="14">
+                    <StackPanel Spacing="4">
+                        <TextBlock Classes="oobe-title" Text="{x:Static core:Resources.Oobe_LegalTitle}" />
+                        <TextBlock Classes="oobe-lead" Text="{x:Static core:Resources.Oobe_LegalDescription}" />
+                    </StackPanel>
+
+                    <!-- 默认收起：正文不短，但都能展开读；勾选框跟在正文后面，读完顺手勾。 -->
+                    <Expander HorizontalAlignment="Stretch" IsExpanded="False">
+                        <Expander.Header>
+                            <TextBlock Classes="oobe-section" Text="{x:Static core:Resources.Oobe_PrivacyPolicyTitle}" />
+                        </Expander.Header>
+                        <ScrollViewer MaxHeight="220" VerticalScrollBarVisibility="Auto">
+                            <SelectableTextBlock Classes="oobe-body"
+                                                 Text="{x:Static core:Resources.Oobe_PrivacyPolicyBody}" />
+                        </ScrollViewer>
+                    </Expander>
+
+                    <Expander HorizontalAlignment="Stretch" IsExpanded="False">
+                        <Expander.Header>
+                            <TextBlock Classes="oobe-section" Text="{x:Static core:Resources.Oobe_EulaTitle}" />
+                        </Expander.Header>
+                        <ScrollViewer MaxHeight="220" VerticalScrollBarVisibility="Auto">
+                            <SelectableTextBlock Classes="oobe-body"
+                                                 Text="{x:Static core:Resources.Oobe_EulaBody}" />
+                        </ScrollViewer>
+                    </Expander>
+
+                    <Border Classes="oobe-card">
+                        <StackPanel Spacing="10">
+                            <CheckBox Content="{x:Static core:Resources.Oobe_PrivacyPolicyAccept}"
+                                      IsChecked="{Binding AcceptedPrivacyPolicy, Mode=TwoWay}" />
+                            <CheckBox Content="{x:Static core:Resources.Oobe_EulaAccept}"
+                                      IsChecked="{Binding AcceptedEula, Mode=TwoWay}" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- ========== 第 3 步：要哪块板子 ========== -->
+            <ScrollViewer IsVisible="{Binding IsBoardStep}" VerticalScrollBarVisibility="Auto">
+                <StackPanel Spacing="14">
+                    <StackPanel Spacing="4">
+                        <TextBlock Classes="oobe-title" Text="{x:Static core:Resources.Oobe_BoardTitle}" />
+                        <TextBlock Classes="oobe-lead" Text="{x:Static core:Resources.Oobe_BoardDescription}" />
+                    </StackPanel>
+
+                    <Border Classes="oobe-card">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                            <StackPanel Spacing="3" VerticalAlignment="Center">
+                                <TextBlock Text="{x:Static core:Resources.Oobe_BoardEnabled}" />
+                                <TextBlock Classes="oobe-hint"
+                                           Text="{x:Static core:Resources.Oobe_BoardEnabledDescription}" />
+                            </StackPanel>
+                            <ToggleSwitch Grid.Column="1"
+                                          VerticalAlignment="Center"
+                                          IsChecked="{Binding Board.BoardEnabled, Mode=TwoWay}" />
+                        </Grid>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- ========== 第 4 步：外观 ========== -->
+            <ScrollViewer IsVisible="{Binding IsAppearanceStep}" VerticalScrollBarVisibility="Auto">
+                <StackPanel Spacing="14">
+                    <StackPanel Spacing="4">
+                        <TextBlock Classes="oobe-title" Text="{x:Static core:Resources.Oobe_AppearanceTitle}" />
+                        <TextBlock Classes="oobe-lead" Text="{x:Static core:Resources.Oobe_AppearanceDescription}" />
+                    </StackPanel>
+
+                    <Border Classes="oobe-card">
+                        <StackPanel Spacing="16">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                <StackPanel Spacing="3" VerticalAlignment="Center">
+                                    <TextBlock Text="{x:Static core:Resources.Oobe_Theme}" />
+                                    <TextBlock Classes="oobe-hint" Text="{x:Static core:Resources.Oobe_ThemeDescription}" />
+                                </StackPanel>
+                                <ComboBox Grid.Column="1"
+                                          MinWidth="180"
+                                          VerticalAlignment="Center"
+                                          ItemsSource="{Binding ThemeOptions}"
+                                          SelectedItem="{Binding SelectedTheme, Mode=TwoWay}">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate x:DataType="vms:ThemeOption">
+                                            <TextBlock Text="{Binding DisplayName}" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </Grid>
+
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                <StackPanel Spacing="3" VerticalAlignment="Center">
+                                    <TextBlock Text="{x:Static core:Resources.Oobe_ThemeColor}" />
+                                    <TextBlock Classes="oobe-hint"
+                                               Text="{x:Static core:Resources.Oobe_ThemeColorDescription}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1"
+                                            Orientation="Horizontal"
+                                            Spacing="8"
+                                            VerticalAlignment="Center">
+                                    <!-- 「跟随系统」时把取色器整块藏起来，不留一个点不动的控件。 -->
+                                    <ColorPicker VerticalAlignment="Center"
+                                                 IsAlphaEnabled="False"
+                                                 IsVisible="{Binding IsCustomThemeColor}"
+                                                 Color="{Binding ThemeColorDraft, Mode=TwoWay}" />
+                                    <ComboBox MinWidth="180"
+                                              ItemsSource="{Binding ThemeColorModeOptions}"
+                                              SelectedItem="{Binding SelectedThemeColorMode, Mode=TwoWay}">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate x:DataType="vms:ThemeColorModeOption">
+                                                <TextBlock Text="{Binding DisplayName}" />
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- ========== 第 5 步：怎么启动它 ========== -->
+            <ScrollViewer IsVisible="{Binding IsStartupStep}" VerticalScrollBarVisibility="Auto">
+                <StackPanel Spacing="14">
+                    <StackPanel Spacing="4">
+                        <TextBlock Classes="oobe-title" Text="{x:Static core:Resources.Oobe_StartupTitle}" />
+                        <TextBlock Classes="oobe-lead" Text="{x:Static core:Resources.Oobe_StartupDescription}" />
+                    </StackPanel>
+
+                    <Border Classes="oobe-card">
+                        <StackPanel Spacing="16">
+                            <!-- 平台没实现开机自启时整行隐藏，不给一个点不动的开关。 -->
+                            <Grid ColumnDefinitions="*,Auto"
+                                  ColumnSpacing="16"
+                                  IsVisible="{Binding IsAutostartSupported}">
+                                <StackPanel Spacing="3" VerticalAlignment="Center">
+                                    <TextBlock Text="{x:Static core:Resources.Oobe_Autostart}" />
+                                    <TextBlock Classes="oobe-hint"
+                                               Text="{x:Static core:Resources.Oobe_AutostartDescription}" />
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1"
+                                              VerticalAlignment="Center"
+                                              IsChecked="{Binding Autostart, Mode=TwoWay}" />
+                            </Grid>
+
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                <StackPanel Spacing="3" VerticalAlignment="Center">
+                                    <TextBlock Text="{x:Static core:Resources.Oobe_ShowStartupWindow}" />
+                                    <TextBlock Classes="oobe-hint"
+                                               Text="{x:Static core:Resources.Oobe_ShowStartupWindowDescription}" />
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="1"
+                                              VerticalAlignment="Center"
+                                              IsChecked="{Binding ShowStartupWindow, Mode=TwoWay}" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- ========== 第 6 步：汇总 ========== -->
+            <ScrollViewer IsVisible="{Binding IsCompleteStep}" VerticalScrollBarVisibility="Auto">
+                <StackPanel Spacing="14">
+                    <StackPanel Spacing="4">
+                        <TextBlock Classes="oobe-title" Text="{x:Static core:Resources.Oobe_CompleteTitle}" />
+                        <TextBlock Classes="oobe-lead" Text="{x:Static core:Resources.Oobe_CompleteDescription}" />
+                    </StackPanel>
+
+                    <Border Classes="oobe-card">
+                        <StackPanel>
+                            <TextBlock Margin="0,0,0,6"
+                                       Classes="oobe-section"
+                                       Text="{x:Static core:Resources.Oobe_CompletedItems}" />
+
+                            <Border Classes="oobe-row">
+                                <Grid ColumnDefinitions="180,*" ColumnSpacing="16">
+                                    <TextBlock Classes="oobe-summary-key" Text="{x:Static core:Resources.Oobe_CompletedLanguage}" />
+                                    <TextBlock Grid.Column="1"
+                                               Classes="oobe-summary-value"
+                                               Text="{Binding CompletedLanguageText}" />
+                                </Grid>
+                            </Border>
+                            <Border Classes="oobe-row">
+                                <Grid ColumnDefinitions="180,*" ColumnSpacing="16">
+                                    <TextBlock Classes="oobe-summary-key" Text="{x:Static core:Resources.Oobe_CompletedBoard}" />
+                                    <TextBlock Grid.Column="1"
+                                               Classes="oobe-summary-value"
+                                               Text="{Binding CompletedBoardText}" />
+                                </Grid>
+                            </Border>
+                            <Border Classes="oobe-row">
+                                <Grid ColumnDefinitions="180,*" ColumnSpacing="16">
+                                    <TextBlock Classes="oobe-summary-key" Text="{x:Static core:Resources.Oobe_CompletedTheme}" />
+                                    <TextBlock Grid.Column="1"
+                                               Classes="oobe-summary-value"
+                                               Text="{Binding CompletedThemeText}" />
+                                </Grid>
+                            </Border>
+                            <Border Classes="oobe-row">
+                                <Grid ColumnDefinitions="180,*" ColumnSpacing="16">
+                                    <TextBlock Classes="oobe-summary-key" Text="{x:Static core:Resources.Oobe_CompletedStartup}" />
+                                    <TextBlock Grid.Column="1"
+                                               Classes="oobe-summary-value"
+                                               Text="{Binding CompletedStartupText}" />
+                                </Grid>
+                            </Border>
+                            <Border Padding="0,10,0,0">
+                                <Grid ColumnDefinitions="180,*" ColumnSpacing="16">
+                                    <TextBlock Classes="oobe-summary-key" Text="{x:Static core:Resources.Oobe_CompletedLegal}" />
+                                    <TextBlock Grid.Column="1"
+                                               Classes="oobe-summary-value"
+                                               Text="{Binding CompletedLegalText}" />
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+
+        <!-- 底部：左边是失败提示，右边是上一步 / 下一步（最后一步是「开始使用」）。 -->
+        <Border Grid.Row="2"
+                Padding="28,14,28,18"
+                BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
+                BorderThickness="0,1,0,0">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                <TextBlock VerticalAlignment="Center"
+                           FontSize="12"
+                           Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                           IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                           Text="{Binding ErrorMessage}"
+                           TextWrapping="Wrap" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <Button MinWidth="96"
+                            IsVisible="{Binding CanGoPrevious}"
+                            Command="{Binding PreviousCommand}"
+                            Content="{x:Static core:Resources.Oobe_Previous}" />
+                    <!-- 这一步没完成（协议没勾）时禁掉，两个勾选框就在上面解释原因。
+                         ⚠️ 这里只挂 Click、**不要再加 Command**：加了之后一次点击会先走命令翻页、
+                         再走 Click 里那句 NextCommand.Execute，一步跨两页（踩过）。 -->
+                    <Button MinWidth="120"
+                            Classes="accent"
+                            IsEnabled="{Binding CanGoNext}"
+                            Content="{Binding NextText}"
+                            Click="OnNextClick" />
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</faWindowing:FAAppWindow>

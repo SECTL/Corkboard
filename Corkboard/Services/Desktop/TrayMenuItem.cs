@@ -16,7 +16,12 @@ namespace Corkboard.Services.Desktop;
 /// </remarks>
 /// <param name="Header">菜单项文案；分隔线为 <see langword="null" />。</param>
 /// <param name="Action">点下去要做的事；分隔线为 <see langword="null" />。</param>
-public sealed record TrayMenuItem(string? Header, Action? Action)
+/// <param name="ShowApplicationIcon">
+///     这一项左边要不要画应用图标（照上游 SecRandom-C：最上面那项是「图标 + 软件名」，
+///     点一下进关于页）。真值由两份映射各自去取图标——菜单表本身不碰位图，
+///     否则这张表一旦在 UI 线程之外被构造就会踩到资源加载。
+/// </param>
+public sealed record TrayMenuItem(string? Header, Action? Action, bool ShowApplicationIcon = false)
 {
     /// <summary>一条分隔线。</summary>
     public static TrayMenuItem Separator { get; } = new(null, null);

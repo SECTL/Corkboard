@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
@@ -24,10 +25,12 @@ using Corkboard.Core.Exam;
 using Corkboard.Core.Extensions.Registry;
 using Corkboard.Core.Icons;
 using Corkboard.Core.Models;
+using Corkboard.Core.Models.SubConfigs.Board;
 using Corkboard.Core.Models.SubConfigs.General;
 using Corkboard.Core.Models.SubConfigs.Personalized;
 using Corkboard.Core.Services;
 using Corkboard.Core.Services.Config;
+using Corkboard.Core.Services.FirstRun;
 using Corkboard.Core.Services.Fonts;
 using Corkboard.Platforms;
 using Corkboard.Platforms.Abstractions;
@@ -80,11 +83,19 @@ public partial class App : Application
 {
     private static MainWindow? _mainWindow;
     private static MainWindow? _settingsWindow;
+    private static FirstRunOobeWindow? _oobeWindow;
     private static ExamBoardWindow? _examBoardWindow;
     private static ExamBoardEditorWindow? _examBoardEditorWindow;
     private static ExamPlanWizardWindow? _examPlanWizardWindow;
     private static IClassicDesktopStyleApplicationLifetime? _desktopLifetime;
     private static Task? _hostStartupTask;
+
+    /// <summary>正在盯「启用作业板」的那份配置（云端恢复设置会把配置对象整个换掉，所以要跟着换）。</summary>
+    private static MainConfigHandler? _watchedConfigHandler;
+
+    /// <summary>上述配置里的作业板子配置。</summary>
+    private static BoardSettingsConfig? _watchedBoardSettings;
+
     private MainConfigModel _startupSettings = new();
     private bool _isStopping;
 
@@ -128,12 +139,27 @@ public partial class App : Application
             desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
             desktop.Exit += (_, _) => AppStopping?.Invoke(this, EventArgs.Empty);
 
-            // 「启动时显示主窗口」：关掉时**不把窗口交给生命周期**，Avalonia 就不会在 StartCore 里
-            // 自动显示它（比先显示再隐藏稳妥：开机自启不该闪一下窗口）。窗口仍然建好放 _mainWindow，
-            // 托盘一点就补上 MainWindow 并显示。
-            var mainWindow = CreateMainWindow(AppConsts.MainWindowScope);
-            if (_startupSettings.Basic.ShowStartupWindow)
-                desktop.MainWindow = mainWindow;
+            // 首次运行引导（OOBE）：要引导时**不建主窗口**，先把引导铺出来。
+            // 顺序不能反——引导里能关掉作业板，那时主窗口根本不该出现；而且引导要抢在
+            // 任何窗口之前显示，否则会先闪一下主界面。
+            if (IAppHost.TryGetService<FirstRunOobeService>() is { IsRequired: true })
+            {
+                ShowOobeWindow();
+            }
+            else
+            {
+                // 「启动时显示主窗口」：关掉时**不把窗口交给生命周期**，Avalonia 就不会在 StartCore 里
+                // 自动显示它（比先显示再隐藏稳妥：开机自启不该闪一下窗口）。窗口仍然建好放 _mainWindow，
+                // 托盘一点就补上 MainWindow 并显示。
+                // 「启用作业板」关掉时干脆不建：这时主窗口没有任何入口（托盘里那一项也藏着），
+                // 建出来只会白跑一遍页面与 ViewModel 的装配。
+                if (_startupSettings.BoardSettings.BoardEnabled)
+                {
+                    var mainWindow = CreateMainWindow(AppConsts.MainWindowScope);
+                    if (_startupSettings.Basic.ShowStartupWindow)
+                        desktop.MainWindow = mainWindow;
+                }
+            }
 
             // 托盘图标要在 UI 线程、平台渲染就绪之后创建；失败只写日志，不阻断启动。
             IAppHost.TryGetService<TaskBarIconService>()?.Initialize();
@@ -237,6 +263,7 @@ public partial class App : Application
 
         // ViewModel 与页面。AddMainPage/AddSettingsPage 同时写导航注册表和键控 DI，两者必须成对。
         services.AddTransient<MainViewModel>();
+        services.AddTransient<FirstRunOobeViewModel>();
         services.AddTransient<SettingsViewModel>();
         services.AddTransient<BoardPageViewModel>();
         services.AddTransient<HomeworkAssignmentFormViewModel>();
@@ -315,6 +342,9 @@ public partial class App : Application
             // 开机自启是系统集成：启动时按配置重新写一遍（用户可能在别处删掉了自启项）。
             EnsureAutostartIntegration();
 
+            // 「启用作业板」是全局开关：设置页里一拨，主窗口就该当场收掉或叫回来。
+            WatchBoardEnabled();
+
             // 自动保存是「构造即开工」的单例（构造函数里起防抖与补存循环），
             // 这里主动取一次：页面还没建出来时它也在跑，跨天之后补存今天那张不会漏。
             IAppHost.TryGetService<BoardAutoSaveService>();
@@ -333,9 +363,18 @@ public partial class App : Application
             if (args.Contains("--open-settings", StringComparer.OrdinalIgnoreCase))
                 ShowSettingsWindow();
 
+            // 同上：带 --open-about 时直接落到「关于」页，方便对页头版式截图。
+            if (args.Contains("--open-about", StringComparer.OrdinalIgnoreCase))
+                ShowSettingsWindow(AppConsts.SettingsAboutPageId);
+
             // 同上：带 --open-exam-board 时直接铺开全屏考试看板，方便对版式截图。
             if (args.Contains("--open-exam-board", StringComparer.OrdinalIgnoreCase))
                 ShowExamBoardWindow();
+
+            // 同上：带 --open-oobe 时直接铺开首次运行引导，方便对版式截图（不改任何配置，
+            // 退出时同正常引导一样走「没走完就退出」）。
+            if (args.Contains("--open-oobe", StringComparer.OrdinalIgnoreCase))
+                ShowOobeWindow();
         }
         catch (Exception exception)
         {
@@ -362,6 +401,79 @@ public partial class App : Application
             IAppHost.TryGetService<ILogger<App>>()
                 ?.LogWarning("无法恢复开机自启设置，已回滚：{Error}", error);
         }
+    }
+
+    /// <summary>
+    ///     盯住「启用作业板」这一个键：关掉时把主窗口收起来（进程留在托盘里），打开时把它叫回来。
+    ///     <para>
+    ///         之所以放在 App 而不是设置页：这个开关在引导里、设置页里都能改，还可能从云端恢复设置时
+    ///     被整个覆盖（配置对象会换一份，所以还要跟着 <see cref="ConfigHandlerBase{T}.Reloaded" /> 换订阅）。
+    ///         一处监听，两条入口写的是同一个键，行为就不会分叉。
+    ///     </para>
+    /// </summary>
+    private static void WatchBoardEnabled()
+    {
+        if (_watchedConfigHandler is not null)
+            return;
+
+        var handler = IAppHost.TryGetService<MainConfigHandler>();
+        if (handler is null)
+            return;
+
+        _watchedConfigHandler = handler;
+        handler.Reloaded += OnConfigReloadedForBoardEnabled;
+
+        _watchedBoardSettings = handler.Data.BoardSettings;
+        _watchedBoardSettings.PropertyChanged += OnBoardSettingsChanged;
+    }
+
+    private static void OnConfigReloadedForBoardEnabled(object? sender, EventArgs e)
+    {
+        if (_watchedBoardSettings is { } previous)
+            previous.PropertyChanged -= OnBoardSettingsChanged;
+
+        _watchedBoardSettings = _watchedConfigHandler?.Data.BoardSettings;
+        if (_watchedBoardSettings is { } current)
+            current.PropertyChanged += OnBoardSettingsChanged;
+    }
+
+    /// <summary>PropertyName 为空表示「所有属性都可能变了」，按「变了」处理。</summary>
+    private static void OnBoardSettingsChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is not (null or nameof(BoardSettingsConfig.BoardEnabled)))
+            return;
+
+        ApplyBoardEnabled(_watchedConfigHandler?.Data.BoardSettings.BoardEnabled ?? true);
+    }
+
+    /// <summary>
+    ///     作业板开关的实际效果：关掉就把主窗口收掉（<see cref="MainWindow.HideForDock" /> 那套——
+    ///     连同锁定徽标、右下角浮标一起收，留一个藏起来却还在管浮钮的主窗口最麻烦），
+    ///     打开就把窗口显示回来。
+    ///     <para>
+    ///         窗口不销毁：作业板是常驻对象，来回拨开关不该每次都重建一遍视图与 ViewModel。
+    ///     </para>
+    /// </summary>
+    private static void ApplyBoardEnabled(bool enabled)
+    {
+        // 引导正开着时不动主窗口：用户此刻是在「先选」而不是「已经在用」，
+        // 中途拨一下开关就把主窗口铺出来，会盖在引导上面。
+        if (_oobeWindow is { IsVisible: true })
+            return;
+
+        if (enabled)
+        {
+            // 只有「用户本来就该看到主窗口」时才自动叫回来：关掉「启动时显示主窗口」的人
+            // 不想因为拨一下作业板开关就蹦出一个窗口。
+            if (IAppHost.TryGetService<MainConfigHandler>() is { } handler
+                && !handler.Data.Basic.ShowStartupWindow)
+                return;
+
+            ShowMainWindow();
+            return;
+        }
+
+        _mainWindow?.HideForDock();
     }
 
     private static async Task RestoreAccountSessionAsync()
@@ -553,6 +665,91 @@ public partial class App : Application
         };
     }
 
+    /// <summary>
+    ///     打开首次运行引导窗口。引导走完之后按配置决定要不要把主窗口显示出来。
+    /// </summary>
+    /// <param name="exitOnCancel">
+    ///     点 × 并确认之后要不要把整个程序退掉。首次启动时传真（半套配置留在后台没有意义），
+    ///     用户从设置里主动再跑一遍时传假（只关这个窗口，别把他正在做的事一起关掉）。
+    /// </param>
+    /// <remarks>
+    ///     <para>
+    ///         引导窗口**不交给生命周期**（不设 <c>desktop.MainWindow</c>）：它是一次性流程，
+    ///         交给生命周期会让「关掉它」看起来像「关掉了程序」。进程靠
+    ///         <see cref="ShutdownMode.OnExplicitShutdown" /> 常驻，退出由窗口自己走
+    ///         <see cref="StopAsync" />。
+    ///     </para>
+    ///     <para>
+    ///         用户从设置页点「重新运行首次设置」也会走这里：这时已经走过引导、也已经有主窗口了，
+    ///         所以收尾时不能再建一个主窗口，只把原来那个叫回来。
+    ///     </para>
+    /// </remarks>
+    public static void ShowOobeWindow(bool exitOnCancel = true)
+    {
+        if (_oobeWindow is { } existing)
+        {
+            ShowAndActivate(existing);
+            return;
+        }
+
+        FirstRunOobeViewModel viewModel;
+        try
+        {
+            viewModel = IAppHost.GetService<FirstRunOobeViewModel>();
+        }
+        catch (Exception exception)
+        {
+            // 取不到 VM 说明 DI 还没就绪（只可能发生在启动早期）：引导缺席不该让整个应用起不来，
+            // 记一笔然后照常进主界面。
+            IAppHost.TryGetService<ILogger<App>>()?.LogError(exception, "无法创建首次运行引导，跳过。");
+            return;
+        }
+
+        var window = new FirstRunOobeWindow(viewModel, exitOnCancel);
+        _oobeWindow = window;
+
+        // 只有首次启动那次才把「走完 → 建主窗口」接下来：从设置页重跑时主窗口已经有了，
+        // 再走一遍 OnOobeCompleted 会把它重新显示出来，跟用户当下的意图无关。
+        if (exitOnCancel)
+            window.SetupCompleted += (_, _) => OnOobeCompleted();
+
+        window.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(_oobeWindow, window))
+                _oobeWindow = null;
+        };
+
+        ShowAndActivate(window);
+    }
+
+    /// <summary>
+    ///     引导收尾：关掉作业板时什么都不开（进程留在托盘里），否则把主窗口按「启动时显示」的
+    ///     开关决定要不要显示。
+    /// </summary>
+    private static void OnOobeCompleted()
+    {
+        var handler = IAppHost.TryGetService<MainConfigHandler>();
+        var basic = handler?.Data.Basic;
+        var boardEnabled = handler?.Data.BoardSettings.BoardEnabled ?? true;
+
+        if (!boardEnabled)
+        {
+            // 作业板关着：连窗口都不建——建了也没有可看的东西，用户要的是「只有托盘」。
+            // 之后从托盘点「显示主窗口」时再按当时的配置现建。
+            return;
+        }
+
+        if (basic is { ShowStartupWindow: false })
+        {
+            // 建好放字段里但不显示：主窗口是常驻对象，托盘一点就要立刻回来，
+            // 那时再建会重新走一遍 ViewModel 装配。
+            _mainWindow ??= CreateMainWindow(AppConsts.MainWindowScope);
+            return;
+        }
+
+        ShowMainWindow();
+    }
+
     public static MainWindow CreateMainWindow(string scope)
     {
         var window = new MainWindow(scope)
@@ -623,8 +820,24 @@ public partial class App : Application
 
     public static void ShowSettingsWindow()
     {
+        ShowSettingsWindow(null);
+    }
+
+    /// <summary>
+    ///     打开设置窗口，并（可选）直接翻到某一页。
+    /// </summary>
+    /// <param name="pageId">要打开的设置页 Id（如 <c>settings.about</c>）；为空就停在默认页。</param>
+    /// <remarks>
+    ///     窗口已经开着时也要翻页：托盘菜单的「关于」入口在设置窗口重复点击时必须能到达，
+    ///     否则用户点第二次什么都没有发生。
+    /// </remarks>
+    public static void ShowSettingsWindow(string? pageId)
+    {
         var window = _settingsWindow ??= CreateMainWindow(AppConsts.SettingsWindowScope);
         ShowAndActivate(window);
+
+        if (!string.IsNullOrWhiteSpace(pageId) && window.Content is SettingsView view)
+            view.NavigateToPage(pageId);
     }
 
     /// <summary>

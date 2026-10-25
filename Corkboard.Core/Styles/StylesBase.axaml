@@ -22,6 +22,9 @@
         应用层 Styles.axaml 通过 StyleInclude 引入这个文件。
     -->
     <StyleInclude Source="/Styles/NavigationBackButton.axaml" />
+    <!-- 关于页那套页头与侧边抽屉（移植自上游 SecRandom-C）。 -->
+    <StyleInclude Source="/Styles/StickyScrollViewer.axaml" />
+    <StyleInclude Source="/Styles/DrawerHost.axaml" />
 
     <!--
         设置页统一容器：页面根 StackPanel 挂 Classes="page-container"，

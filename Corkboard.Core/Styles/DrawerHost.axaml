@@ -1,0 +1,95 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:Corkboard.Core.Controls">
+    <!--
+        抽屉宿主的模板。移植自上游 SecRandom-C 的 Core/Controls/DrawerHost.axaml。
+        三层：正文内容 / 遮罩（半透明，吃掉点击）/ 抽屉卡片（宽 = 内容实测宽度，
+        关闭时被推到侧边外，开合靠 Canvas.Left|Right 与 Opacity 两条过渡一起走）。
+    -->
+    <Style Selector="controls|DrawerHost">
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Panel ClipToBounds="True">
+                    <ContentPresenter Content="{TemplateBinding Content}"
+                                      ContentTemplate="{TemplateBinding ContentTemplate}"
+                                      Focusable="{Binding !IsDrawerOpen, RelativeSource={RelativeSource TemplatedParent}}" />
+
+                    <!--
+                        遮罩：关闭时不吃命中测试（IsHitTestVisible 绑 IsDrawerOpen），
+                        打开时才拦截点击并把抽屉收起来。
+                    -->
+                    <Border x:Name="PART_IgnoreLayer"
+                            Opacity="0"
+                            Focusable="False"
+                            IsHitTestVisible="{TemplateBinding IsDrawerOpen}"
+                            Background="{DynamicResource SmokeFillColorDefaultBrush}"
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Stretch">
+                        <Border.Transitions>
+                            <Transitions>
+                                <DoubleTransition Property="Opacity" Duration="0:0:0.25" Easing="0,0 0,1" />
+                            </Transitions>
+                        </Border.Transitions>
+                    </Border>
+
+                    <Canvas x:Name="DrawerCanvas"
+                            Width="{TemplateBinding ActualDrawerWidth}"
+                            VerticalAlignment="Stretch"
+                            ClipToBounds="False"
+                            IsHitTestVisible="{TemplateBinding IsDrawerOpen}">
+                        <Border x:Name="PART_DrawerContentBorder"
+                                Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+                                BoxShadow="0 0 8 #33000000"
+                                Height="{Binding Bounds.Height, RelativeSource={RelativeSource TemplatedParent}}"
+                                Focusable="{Binding IsDrawerOpen, RelativeSource={RelativeSource TemplatedParent}}"
+                                IsEnabled="{Binding IsDrawerOpen, RelativeSource={RelativeSource TemplatedParent}}"
+                                Opacity="0">
+                            <Border.Transitions>
+                                <Transitions>
+                                    <DoubleTransition Property="Canvas.Left" Duration="0:0:0.25" Easing="0,0 0,1" />
+                                    <DoubleTransition Property="Canvas.Right" Duration="0:0:0.25" Easing="0,0 0,1" />
+                                    <DoubleTransition Property="Opacity" Duration="0:0:0.25" Easing="0,0 0,1" />
+                                </Transitions>
+                            </Border.Transitions>
+
+                            <ContentPresenter Content="{TemplateBinding DrawerContent}"
+                                              ContentTemplate="{TemplateBinding DrawerContentTemplate}" />
+                        </Border>
+                    </Canvas>
+                </Panel>
+            </ControlTemplate>
+        </Setter>
+    </Style>
+
+    <!-- 抽屉靠哪一边：Canvas 容器自己贴边。 -->
+    <Style Selector="controls|DrawerHost:drawer-left /template/ Canvas#DrawerCanvas">
+        <Setter Property="HorizontalAlignment" Value="Left" />
+    </Style>
+    <Style Selector="controls|DrawerHost:drawer-right /template/ Canvas#DrawerCanvas">
+        <Setter Property="HorizontalAlignment" Value="Right" />
+    </Style>
+
+    <!-- 打开：遮罩与抽屉都露出来。 -->
+    <Style Selector="controls|DrawerHost[IsDrawerOpen=True] /template/ Border#PART_IgnoreLayer">
+        <Setter Property="Opacity" Value="1" />
+    </Style>
+    <Style Selector="controls|DrawerHost[IsDrawerOpen=True] /template/ Border#PART_DrawerContentBorder">
+        <Setter Property="Opacity" Value="1" />
+    </Style>
+
+    <!-- 关闭：抽屉推到侧边外面（宽度取实际量到的值，不能写死 320）。 -->
+    <Style Selector="controls|DrawerHost:drawer-left[IsDrawerOpen=False] /template/ Border#PART_DrawerContentBorder">
+        <Setter Property="Canvas.Left"
+                Value="{Binding ActualDrawerWidth, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static controls:DrawerHost.NegativeDoubleConverter}}" />
+    </Style>
+    <Style Selector="controls|DrawerHost:drawer-left[IsDrawerOpen=True] /template/ Border#PART_DrawerContentBorder">
+        <Setter Property="Canvas.Left" Value="0" />
+    </Style>
+    <Style Selector="controls|DrawerHost:drawer-right[IsDrawerOpen=False] /template/ Border#PART_DrawerContentBorder">
+        <Setter Property="Canvas.Right"
+                Value="{Binding ActualDrawerWidth, RelativeSource={RelativeSource TemplatedParent}, Converter={x:Static controls:DrawerHost.NegativeDoubleConverter}}" />
+    </Style>
+    <Style Selector="controls|DrawerHost:drawer-right[IsDrawerOpen=True] /template/ Border#PART_DrawerContentBorder">
+        <Setter Property="Canvas.Right" Value="0" />
+    </Style>
+</Styles>

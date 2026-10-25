@@ -3,20 +3,153 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:fa="using:FluentAvalonia.UI.Controls"
+             xmlns:controls="using:Corkboard.Core.Controls"
              xmlns:vm="using:Corkboard.ViewModels.SettingsPages"
              xmlns:core="using:Corkboard.Core.Langs.Common"
              xmlns:icons="using:Corkboard.Core.Icons"
-             mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="450"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="Corkboard.Views.SettingsPages.About.AboutSettingsPage"
              x:DataType="vm:AboutSettingsPageViewModel">
-    <ScrollViewer>
-        <StackPanel Classes="page-container">
-            <!-- 页标题画在 page-container 里：它才和设置卡同宽、同左边缘，并随卡片一起滚动。 -->
-            <TextBlock Margin="0 4 0 0"
-                       FontWeight="Normal"
-                       Text="{x:Static core:Resources.Settings_About_Title}"
-                       Theme="{StaticResource TitleTextBlockStyle}" />
+    <UserControl.Resources>
+        <!--
+            贡献人员名单：塞进设置壳的右侧抽屉（DrawerHost）里显示。
+            放在页面资源里是为了让按钮的 Click 处理器还能落在本页 code-behind 上；
+            打开前由 code-behind 把 DataContext 指向本页的 ViewModel。
+        -->
+        <ScrollViewer x:Key="ContributorsDrawer" Width="320">
+            <StackPanel Margin="16" Spacing="8">
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Text="{x:Static core:Resources.Settings_About_Contributors}"
+                               Theme="{StaticResource SubtitleTextBlockStyle}"
+                               VerticalAlignment="Center" />
 
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                        <Button Theme="{StaticResource TransparentButton}"
+                                IsEnabled="{Binding CanRefreshContributors}"
+                                ToolTip.Tip="{x:Static core:Resources.Common_Refresh}"
+                                Click="RefreshContributors_OnClick">
+                            <TextBlock Text="{x:Static icons:FluentIcons.ArrowClockwiseFilled}"
+                                       FontFamily="{DynamicResource FluentSystemIconsResizeable}" />
+                        </Button>
+                        <Button Theme="{StaticResource TransparentButton}"
+                                ToolTip.Tip="{x:Static core:Resources.Common_Close}"
+                                Click="CloseDrawer_OnClick">
+                            <TextBlock Text="{x:Static icons:FluentIcons.DismissRegular}"
+                                       FontFamily="{DynamicResource FluentSystemIconsResizeable}" />
+                        </Button>
+                    </StackPanel>
+                </Grid>
+
+                <TextBlock Text="{x:Static core:Resources.Settings_About_ContributorsDescription}"
+                           TextWrapping="Wrap"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+
+                <!-- 拉名单失败时把原因留在抽屉里，不弹对话框打断阅读。 -->
+                <TextBlock Text="{Binding ContributorsError}"
+                           TextWrapping="Wrap"
+                           Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                           IsVisible="{Binding ContributorsError, Converter={x:Static ObjectConverters.IsNotNull}}" />
+
+                <ItemsControl ItemsSource="{Binding Contributors}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Spacing="4" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:GitHubContributor">
+                            <Button HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Stretch"
+                                    Margin="0"
+                                    Padding="4"
+                                    Background="Transparent"
+                                    CommandParameter="{Binding ProfileUrl}"
+                                    Click="OpenContributorProfile_OnClick"
+                                    ToolTip.Tip="{Binding ProfileUrl}">
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                                    <!--
+                                        头像两层圆框：外层画描边，内层裁圆。
+                                        图没下来时只剩底色，不会出现一个空方框。
+                                    -->
+                                    <Border Width="36" Height="36"
+                                            CornerRadius="18"
+                                            ClipToBounds="True"
+                                            Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                            BorderBrush="{DynamicResource ControlElevationBorderBrush}"
+                                            BorderThickness="1">
+                                        <Border Width="34" Height="34"
+                                                CornerRadius="17"
+                                                ClipToBounds="True">
+                                            <Image Source="{Binding Avatar}" Stretch="UniformToFill" />
+                                        </Border>
+                                    </Border>
+
+                                    <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Login}"
+                                                   FontWeight="SemiBold"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding ContributionText}"
+                                                   FontSize="12"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                    </StackPanel>
+
+                                    <TextBlock Grid.Column="2"
+                                               Text="{x:Static icons:FluentIcons.OpenFilled}"
+                                               FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                               Margin="0 0 8 0"
+                                               VerticalAlignment="Center" />
+                                </Grid>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+    </UserControl.Resources>
+
+    <!--
+        页头是一整块会随滚动收起的区域（移植自上游 SecRandom-C 的 StickyScrollViewer）：
+        往下滚时它整体上移、逐渐淡出，滚到只剩 CollapsedHeight 那一截就把标题钉在上面。
+        设置壳不画页面标题，所以标题画在这里、跟着页头走。
+    -->
+    <controls:StickyScrollViewer CollapsedHeight="58">
+        <controls:StickyScrollViewer.HeaderContent>
+            <Grid>
+                <!--
+                    海报：`Assets/Banners` 里放了图才会显示（目前只留了目录与文件名约定）。
+                    往下滚时整块按 StickyScrollViewer 给出的值淡出——标题不参与淡出，
+                    它要一直钉在粘滞区里。
+                    上游在这块背后还叠了两团径向渐变做氛围光；等真有海报图、确认配色之后再补，
+                    现在补了只会是一层没有依托的色块。
+                -->
+                <Panel MaxHeight="300"
+                       IsVisible="{Binding HasBanner}"
+                       Opacity="{Binding $self.(controls:StickyScrollViewer.HeaderFadingOpacity)}">
+                    <Border Background="Transparent" HorizontalAlignment="Center" MaxWidth="{StaticResource PageContainerWidth}">
+                        <Border.OpacityMask>
+                            <LinearGradientBrush StartPoint="0%, 0%" EndPoint="100%, 0%">
+                                <GradientStop Offset="0.0" Color="#80ffffff" />
+                                <GradientStop Offset="0.08" Color="#ffffffff" />
+                                <GradientStop Offset="0.92" Color="#ffffffff" />
+                                <GradientStop Offset="1.0" Color="#80ffffff" />
+                            </LinearGradientBrush>
+                        </Border.OpacityMask>
+                        <Image Source="{Binding BannerSource}" Stretch="Uniform" />
+                    </Border>
+                </Panel>
+
+                <!-- 标题：海报在时压在它底部，没有海报时就是页头本身。 -->
+                <Border Margin="12 16 18 0" MaxWidth="{StaticResource PageContainerWidth}">
+                    <TextBlock Margin="0 8"
+                               FontWeight="Normal"
+                               VerticalAlignment="Bottom"
+                               Text="{x:Static core:Resources.Settings_About_Title}"
+                               Theme="{StaticResource TitleTextBlockStyle}" />
+                </Border>
+            </Grid>
+        </controls:StickyScrollViewer.HeaderContent>
+
+        <StackPanel Classes="page-container">
             <!-- 应用信息：名字、简介、版本、协议、常用链接。 -->
             <fa:FASettingsExpander Header="{Binding AppName}"
                                    Description="{x:Static core:Resources.Settings_About_Description}"
@@ -40,7 +173,7 @@
                     <fa:FASettingsExpanderItem.Footer>
                         <WrapPanel>
                             <WrapPanel.Styles>
-                                <!-- 两个链接挨着放，收紧默认内边距免得挤成两行。 -->
+                                <!-- 几个链接挨着放，收紧默认内边距免得挤成好几行。 -->
                                 <Style Selector="HyperlinkButton">
                                     <Setter Property="Padding" Value="4" />
                                     <Setter Property="Margin" Value="2" />
@@ -49,6 +182,14 @@
                             <HyperlinkButton Command="{Binding OpenUriCommand}"
                                              CommandParameter="https://github.com/SECTL/Corkboard">
                                 <TextBlock Text="{x:Static core:Resources.Settings_About_Repository}" />
+                            </HyperlinkButton>
+                            <HyperlinkButton Command="{Binding OpenUriCommand}"
+                                             CommandParameter="https://github.com/SECTL/Corkboard/issues">
+                                <TextBlock Text="{x:Static core:Resources.Settings_About_Issues}" />
+                            </HyperlinkButton>
+                            <HyperlinkButton Command="{Binding OpenUriCommand}"
+                                             CommandParameter="https://qm.qq.com/q/iWcfaPHn7W">
+                                <TextBlock Text="{x:Static core:Resources.Settings_About_Community}" />
                             </HyperlinkButton>
                             <HyperlinkButton Command="{Binding OpenUriCommand}"
                                              CommandParameter="https://sectl.cn">
@@ -63,6 +204,10 @@
             <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_About_Author}"
                                    Description="{x:Static core:Resources.Settings_About_AuthorDescription}"
                                    IsExpanded="True">
+                <fa:FASettingsExpander.IconSource>
+                    <fa:FAImageIconSource Source="/Assets/Icons/AuthorAionflux.png" />
+                </fa:FASettingsExpander.IconSource>
+
                 <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_About_Bilibili}"
                                            Description="{x:Static core:Resources.Settings_About_BilibiliDescription}"
                                            IsClickEnabled="True"
@@ -87,6 +232,9 @@
 
                 <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_About_Organization}"
                                            Description="{x:Static core:Resources.Settings_About_OrganizationDescription}">
+                    <fa:FASettingsExpanderItem.IconSource>
+                        <fa:FAImageIconSource Source="/Assets/Icons/SECTLLogo.png" />
+                    </fa:FASettingsExpanderItem.IconSource>
                     <fa:FASettingsExpanderItem.Footer>
                         <HyperlinkButton Command="{Binding OpenUriCommand}"
                                          CommandParameter="https://sectl.cn">
@@ -96,12 +244,42 @@
                 </fa:FASettingsExpanderItem>
             </fa:FASettingsExpander>
 
+            <!-- 鸣谢：在线人数与贡献人员。 -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_About_Acknowledgments}"
+                                   IsExpanded="True">
+                <fa:FASettingsExpander.IconSource>
+                    <fa:FAFontIconSource Glyph="{x:Static icons:FluentIcons.HeartFilled}"
+                                         FontFamily="{DynamicResource FluentSystemIconsResizeable}" />
+                </fa:FASettingsExpander.IconSource>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_About_OnlineUsers}"
+                                           Description="{x:Static core:Resources.Settings_About_OnlineUsersDescription}">
+                    <fa:FASettingsExpanderItem.IconSource>
+                        <fa:FAFontIconSource Glyph="{x:Static icons:FluentIcons.PeopleFilled}"
+                                             FontFamily="{DynamicResource FluentSystemIconsResizeable}" />
+                    </fa:FASettingsExpanderItem.IconSource>
+                    <fa:FASettingsExpanderItem.Footer>
+                        <TextBlock VerticalAlignment="Center" Text="{Binding OnlineUsersText}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_About_Contributors}"
+                                           Description="{x:Static core:Resources.Settings_About_ContributorsDescription}"
+                                           IsClickEnabled="True"
+                                           Click="Contributors_OnClick">
+                    <fa:FASettingsExpanderItem.ActionIconSource>
+                        <fa:FAFontIconSource Glyph="{x:Static icons:FluentIcons.OpenFilled}"
+                                             FontFamily="{DynamicResource FluentSystemIconsResizeable}" />
+                    </fa:FASettingsExpanderItem.ActionIconSource>
+                </fa:FASettingsExpanderItem>
+            </fa:FASettingsExpander>
+
             <!-- 版本信息：报问题时把这几行抄下来就够定位了。 -->
             <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_About_VersionInfo}"
                                    IsExpanded="True">
                 <Grid Margin="0 4 0 0"
                       ColumnDefinitions="Auto,*"
-                      RowDefinitions="Auto,Auto,Auto,Auto,Auto"
+                      RowDefinitions="Auto,Auto,Auto,Auto"
                       ColumnSpacing="12" RowSpacing="4">
                     <TextBlock Grid.Row="0" Grid.Column="0" Text="{x:Static core:Resources.Settings_About_Version}" />
                     <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Version}" TextWrapping="Wrap" />
@@ -114,11 +292,8 @@
 
                     <TextBlock Grid.Row="3" Grid.Column="0" Text="{x:Static core:Resources.Settings_About_Runtime}" />
                     <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Runtime}" TextWrapping="Wrap" />
-
-                    <TextBlock Grid.Row="4" Grid.Column="0" Text="{x:Static core:Resources.Settings_About_OnlineUsers}" />
-                    <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding OnlineUsersCount}" TextWrapping="Wrap" />
                 </Grid>
             </fa:FASettingsExpander>
         </StackPanel>
-    </ScrollViewer>
+    </controls:StickyScrollViewer>
 </UserControl>

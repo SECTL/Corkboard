@@ -23,6 +23,22 @@
                        Theme="{StaticResource TitleTextBlockStyle}" />
 
             <!--
+                启用作业板：关掉之后作业板整个功能收起来——主窗口不再出现（托盘与考试看板照常），
+                这是「只想用考试看板」或「暂时不想看到桌面上的板子」时的开关。
+                引导里也有同一项，两处写的是同一个键。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_Enabled}"
+                                   Description="{x:Static core:Resources.Settings_Board_EnabledDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <!--
+                        开关只写配置：主窗口的收起 / 叫回来由 App 订阅这个键统一处理
+                        （见 App.ApplyBoardEnabled），设置页不自己去开窗关窗。
+                    -->
+                    <ToggleSwitch IsChecked="{Binding Board.BoardEnabled, Mode=TwoWay}" />
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <!--
                 作业板名称：不用按回车——停手 400ms 会自动提交（见 ViewModel 的 OnBoardNameDraftChanged），
                 回车与失焦则立刻提交。这个名字同时是主窗口标题。
             -->

@@ -73,6 +73,16 @@ public partial class BasicSettingsPage : UserControl
         }.ShowAsync(topLevel);
     }
 
+    /// <summary>
+    ///     重新走一遍首次设置。引导本身是独立窗口，这里只负责把它叫出来——
+    ///     已经在开会自己激活，不会再叠第二个。
+    ///     <para>
+    ///     这里 <c>exitOnCancel: false</c>：用户是主动重跑的，中途关掉引导只关那个窗口，
+    ///     不能把整个程序（连同他正在调设置的这个窗口）一起退掉。
+    ///     </para>
+    /// </summary>
+    private void OnReopenOobeClick(object? sender, RoutedEventArgs e) => App.ShowOobeWindow(exitOnCancel: false);
+
     private void InitializeComponent()
     {
         AvaloniaXamlLoader.Load(this);

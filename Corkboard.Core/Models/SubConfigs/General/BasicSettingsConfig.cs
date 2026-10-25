@@ -154,6 +154,17 @@ public partial class BasicSettingsConfig : ObservableObject
     [ObservableProperty] private int _mainWindowScreenHeight;
 
     // 隐藏配置项：首次运行引导与协议确认状态。
+    //
+    // 这几个键只由引导窗口写（见 Corkboard.Core.Services.FirstRun.FirstRunOobeService）：
+    // GuideCompleted 为假 = 这一份配置从没走过引导，启动时先把引导窗口铺出来；
+    // 两个版本号用来在协议改版后只补「法律」那一步，不重跑整段引导。
+
+    /// <summary>引导是否已经走完。配置备份里带着它，恢复备份后不会重跑引导。</summary>
     [ObservableProperty] private bool _guideCompleted;
+
+    /// <summary>用户确认过的用户协议版本（0 = 没确认过）。</summary>
     [ObservableProperty] private int _acceptedEulaVersion;
+
+    /// <summary>用户确认过的隐私政策版本（0 = 没确认过）。</summary>
+    [ObservableProperty] private int _acceptedPrivacyPolicyVersion;
 }

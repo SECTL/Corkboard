@@ -14,4 +14,7 @@ public static class AppConsts
 
     /// <summary>设置界面默认页面 Id。</summary>
     public const string DefaultSettingsPageId = "settings.general.basic";
+
+    /// <summary>「关于」页 Id：托盘菜单顶上那项直接跳到它。</summary>
+    public const string SettingsAboutPageId = "settings.about";
 }

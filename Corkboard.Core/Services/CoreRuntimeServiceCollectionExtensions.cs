@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Corkboard.Core.Abstraction;
 using Corkboard.Core.Services.Config;
+using Corkboard.Core.Services.FirstRun;
 using Corkboard.Core.Services.Logging;
 using Corkboard.Core.Board;
 using Corkboard.Core.Board.History;
@@ -24,6 +25,9 @@ public static class CoreRuntimeServiceCollectionExtensions
 
         services.AddSingleton<ConfigServiceBase, FileConfigService>();
         services.AddSingleton<MainConfigHandler>();
+
+        // 首次运行引导（OOBE）：只判定「这次启动要不要引导」以及收尾时记下「已走过」。
+        services.AddSingleton<FirstRunOobeService>();
         services.AddSingleton<INoteStore, NoteStore>();
         services.AddSingleton<HomeworkSectionCatalog>();
         services.AddSingleton<INoteHistoryStore, NoteHistoryStore>();

@@ -712,6 +712,33 @@
   <data name="Settings_About_Runtime" xml:space="preserve">
     <value>Runtime</value>
   </data>
+  <data name="Settings_About_Issues" xml:space="preserve">
+    <value>Report an Issue</value>
+  </data>
+  <data name="Settings_About_Community" xml:space="preserve">
+    <value>QQ Group</value>
+  </data>
+  <data name="Settings_About_Acknowledgments" xml:space="preserve">
+    <value>Acknowledgments</value>
+  </data>
+  <data name="Settings_About_OnlineUsersDescription" xml:space="preserve">
+    <value>Thank you for your support; your use of the board is the greatest encouragement we could receive</value>
+  </data>
+  <data name="Settings_About_OnlineUsersFormat" xml:space="preserve">
+    <value>{0} online</value>
+  </data>
+  <data name="Settings_About_Contributors" xml:space="preserve">
+    <value>Contributors</value>
+  </data>
+  <data name="Settings_About_ContributorsDescription" xml:space="preserve">
+    <value>View the GitHub contributors who have committed code to Corkboard</value>
+  </data>
+  <data name="Settings_About_ContributorCommits" xml:space="preserve">
+    <value>{0} commits</value>
+  </data>
+  <data name="Settings_About_ContributorsLoadFailed" xml:space="preserve">
+    <value>Unable to load the contributors list: {0}</value>
+  </data>
   <data name="Settings_Account_Title" xml:space="preserve">
     <value>Account</value>
   </data>
@@ -2437,5 +2464,190 @@
   </data>
   <data name="Settings_Board_AutoSave_Failed" xml:space="preserve">
     <value>Auto save failed, check the save folder</value>
+  </data>
+  <data name="Settings_Board_Enabled" xml:space="preserve">
+    <value>Enable homework board</value>
+  </data>
+  <data name="Settings_Board_EnabledDescription" xml:space="preserve">
+    <value>Turning it off hides the main window; the tray and the exam board still work</value>
+  </data>
+  <data name="Oobe_Title" xml:space="preserve">
+    <value>First-time setup</value>
+  </data>
+  <data name="Oobe_Language" xml:space="preserve">
+    <value>Choose your language</value>
+  </data>
+  <data name="Oobe_LanguageDescription" xml:space="preserve">
+    <value>The whole app follows this, including the steps after it</value>
+  </data>
+  <data name="Oobe_WelcomeTitle" xml:space="preserve">
+    <value>Welcome to Corkboard</value>
+  </data>
+  <data name="Oobe_WelcomeDescription" xml:space="preserve">
+    <value>A few steps to make it yours; everything here can be changed later in Settings</value>
+  </data>
+  <data name="Oobe_LegalTitle" xml:space="preserve">
+    <value>Privacy policy and terms of use</value>
+  </data>
+  <data name="Oobe_LegalDescription" xml:space="preserve">
+    <value>Read both notes below and tick them before you continue</value>
+  </data>
+  <data name="Oobe_PrivacyPolicyTitle" xml:space="preserve">
+    <value>Privacy policy</value>
+  </data>
+  <data name="Oobe_PrivacyPolicyBody" xml:space="preserve">
+    <value>Corkboard collects only what it needs to work and to count itself. Here is the whole list.
+
+· Online status: on launch it reports a device id generated randomly on this machine plus the device type, so we can count how many people are online. That id is not tied to your account and carries no hardware details.
+· Usage counters: only three incrementing numbers — launches, notes added, exports. The content of your notes is never recorded.
+· Rough location: the server maps the request address to a city-level region. The client never sends your IP or city.
+· Account: when you sign in with a SECTL account the credentials stay on this machine and are wiped on sign-out.
+
+All of the reporting above can be made anonymous or switched off entirely in Settings → Basic. Your notes, settings and screenshots live only on your own disk; cloud sync is off by default and only uploads after you sign in and turn it on.</value>
+  </data>
+  <data name="Oobe_PrivacyPolicyAccept" xml:space="preserve">
+    <value>I have read and agree to the privacy policy</value>
+  </data>
+  <data name="Oobe_EulaTitle" xml:space="preserve">
+    <value>Terms of use</value>
+  </data>
+  <data name="Oobe_EulaBody" xml:space="preserve">
+    <value>Corkboard is released under the GNU GPLv3, so you may use, modify and redistribute it as that licence allows.
+
+· This is a desktop tool for keeping track of homework. It comes as is, without any warranty, and is not responsible for missed homework or lost data.
+· Please do not use it for unlawful content, or to get around your school's legitimate rules.
+· The program may be changed, paused or discontinued at any time.
+· If these terms or the privacy policy change in substance, you will be asked to confirm again on the next launch.
+
+Continuing to use it means you understand and accept the above.</value>
+  </data>
+  <data name="Oobe_EulaAccept" xml:space="preserve">
+    <value>I have read and agree to the terms of use</value>
+  </data>
+  <data name="Oobe_BoardTitle" xml:space="preserve">
+    <value>Which boards do you need</value>
+  </data>
+  <data name="Oobe_BoardDescription" xml:space="preserve">
+    <value>Each board does one job; keep what you actually use</value>
+  </data>
+  <data name="Oobe_BoardEnabled" xml:space="preserve">
+    <value>Enable homework board</value>
+  </data>
+  <data name="Oobe_BoardEnabledDescription" xml:space="preserve">
+    <value>Turning it off hides the main window; the tray and the exam board still work</value>
+  </data>
+  <data name="Oobe_AppearanceTitle" xml:space="preserve">
+    <value>Pick a look you like</value>
+  </data>
+  <data name="Oobe_AppearanceDescription" xml:space="preserve">
+    <value>Follow the system or pin one theme; changes show up right away</value>
+  </data>
+  <data name="Oobe_Theme" xml:space="preserve">
+    <value>Theme</value>
+  </data>
+  <data name="Oobe_ThemeDescription" xml:space="preserve">
+    <value>Light, dark, or follow the system</value>
+  </data>
+  <data name="Oobe_ThemeColor" xml:space="preserve">
+    <value>Accent colour</value>
+  </data>
+  <data name="Oobe_ThemeColorDescription" xml:space="preserve">
+    <value>The colour used for buttons and selection</value>
+  </data>
+  <data name="Oobe_StartupTitle" xml:space="preserve">
+    <value>How it starts</value>
+  </data>
+  <data name="Oobe_StartupDescription" xml:space="preserve">
+    <value>Run on its own at sign-in, or wait until you open it</value>
+  </data>
+  <data name="Oobe_Autostart" xml:space="preserve">
+    <value>Start with the system</value>
+  </data>
+  <data name="Oobe_AutostartDescription" xml:space="preserve">
+    <value>Launch it automatically after you sign in</value>
+  </data>
+  <data name="Oobe_AutostartFailed" xml:space="preserve">
+    <value>Could not set autostart; the previous choice was kept</value>
+  </data>
+  <data name="Oobe_ShowStartupWindow" xml:space="preserve">
+    <value>Show the main window on launch</value>
+  </data>
+  <data name="Oobe_ShowStartupWindowDescription" xml:space="preserve">
+    <value>Off keeps it in the tray until you click the icon</value>
+  </data>
+  <data name="Oobe_CompleteTitle" xml:space="preserve">
+    <value>All set</value>
+  </data>
+  <data name="Oobe_CompleteDescription" xml:space="preserve">
+    <value>Here is what you picked; you can change any of it in Settings</value>
+  </data>
+  <data name="Oobe_CompletedItems" xml:space="preserve">
+    <value>Your choices</value>
+  </data>
+  <data name="Oobe_CompletedLanguage" xml:space="preserve">
+    <value>Language</value>
+  </data>
+  <data name="Oobe_CompletedBoard" xml:space="preserve">
+    <value>Boards</value>
+  </data>
+  <data name="Oobe_CompletedTheme" xml:space="preserve">
+    <value>Appearance</value>
+  </data>
+  <data name="Oobe_CompletedStartup" xml:space="preserve">
+    <value>Startup</value>
+  </data>
+  <data name="Oobe_CompletedLegal" xml:space="preserve">
+    <value>Terms</value>
+  </data>
+  <data name="Oobe_CompletedLegalValue" xml:space="preserve">
+    <value>Privacy policy and terms of use accepted</value>
+  </data>
+  <data name="Oobe_BoardOn" xml:space="preserve">
+    <value>Enabled</value>
+  </data>
+  <data name="Oobe_BoardOff" xml:space="preserve">
+    <value>Off</value>
+  </data>
+  <data name="Oobe_AutostartOn" xml:space="preserve">
+    <value>Starts with the system</value>
+  </data>
+  <data name="Oobe_AutostartOff" xml:space="preserve">
+    <value>Starts manually</value>
+  </data>
+  <data name="Oobe_Next" xml:space="preserve">
+    <value>Next</value>
+  </data>
+  <data name="Oobe_Previous" xml:space="preserve">
+    <value>Back</value>
+  </data>
+  <data name="Oobe_Finish" xml:space="preserve">
+    <value>Start using it</value>
+  </data>
+  <data name="Oobe_StepProgress" xml:space="preserve">
+    <value>Step {0} of {1}</value>
+  </data>
+  <data name="Oobe_ExitTitle" xml:space="preserve">
+    <value>Not finished yet</value>
+  </data>
+  <data name="Oobe_ExitDescription" xml:space="preserve">
+    <value>Closing now discards these choices, and you will be asked again on the next launch</value>
+  </data>
+  <data name="Oobe_Exit" xml:space="preserve">
+    <value>Quit</value>
+  </data>
+  <data name="Oobe_ContinueSetup" xml:space="preserve">
+    <value>Keep setting up</value>
+  </data>
+  <data name="Oobe_ExitWindow" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="Oobe_ExitWindowDescription" xml:space="preserve">
+    <value>The choices are already saved and can be changed in settings any time</value>
+  </data>
+  <data name="Oobe_Reopen" xml:space="preserve">
+    <value>Run first-time setup again</value>
+  </data>
+  <data name="Oobe_ReopenDescription" xml:space="preserve">
+    <value>Go through language, terms, board, theme and startup once more</value>
   </data>
 </root>

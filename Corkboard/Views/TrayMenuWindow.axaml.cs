@@ -4,6 +4,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Markup.Xaml;
+using Avalonia.Media;
 using Corkboard.Platforms.Abstractions;
 using Corkboard.Services.Desktop;
 
@@ -35,6 +36,9 @@ public partial class TrayMenuWindow : Window
 {
     /// <summary>菜单与鼠标之间的留白（设备无关像素），免得菜单正好压在指针上。</summary>
     private const double CursorGapDip = 4;
+
+    /// <summary>菜单里应用图标的边长（设备无关像素），按 Fluent 菜单的行高给。</summary>
+    private const double MenuIconSize = 16;
 
     private bool _closing;
 
@@ -110,6 +114,10 @@ public partial class TrayMenuWindow : Window
             var action = item.Action;
             var menuItem = new MenuItem { Header = item.Header };
 
+            // 顶上那项「图标 + 软件名」：图标用和窗口/托盘同一个母图，缩到菜单行高那么大。
+            if (item.ShowApplicationIcon)
+                menuItem.Icon = CreateMenuIcon();
+
             // 先关菜单再做事：退出/重启这类动作会把整个应用带走，窗口留着也没意义。
             menuItem.Click += (_, _) =>
             {
@@ -120,6 +128,18 @@ public partial class TrayMenuWindow : Window
             host.Items.Add(menuItem);
         }
     }
+
+    /// <summary>
+    ///     菜单里那个应用图标。<see cref="MenuItem.Icon" /> 收的是控件内容，所以包一层 <see cref="Image" />；
+    ///     尺寸按菜单行高给（16 DIP），再大只会把行撑高。
+    /// </summary>
+    private static Image CreateMenuIcon() => new()
+    {
+        Source = AppIcon.LoadBitmap(),
+        Width = MenuIconSize,
+        Height = MenuIconSize,
+        Stretch = Stretch.Uniform
+    };
 
     /// <summary>
     ///     把菜单摆到锚点旁边并夹进屏幕工作区。<b>必须在 <see cref="Window.Show" /> 之后调</b>：
