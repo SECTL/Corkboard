@@ -180,7 +180,7 @@ public sealed class TaskBarIconService : IDisposable
         {
             trayIcon.Menu = CreateNativeMenu();
 
-            // 已经弹出来的那份还是旧条目，直接收掉：它上面可能挂着一颗「显示主窗口」。
+            // 已经弹出来的那份还是旧条目，直接收掉：它上面可能挂着一颗「显示作业板」。
             CloseMenuWindow();
         }
         catch (Exception exception)
@@ -188,6 +188,15 @@ public sealed class TaskBarIconService : IDisposable
             _logger.LogDebug(exception, "刷新托盘菜单时出错。");
         }
     }
+
+    /// <summary>
+    ///     对外的那一个刷新入口：主窗口显示 / 藏起来 / 最小化 / 收纳展开之后都要叫一次。
+    ///     <para>
+    ///         右键那份是启动时按当次条目建出来的**快照**——「显示作业板」还是「隐藏作业板」
+    ///         取决于主窗口此刻在不在屏幕上，状态变了却不重建，菜单就会一直挂着旧的那一句。
+    ///     </para>
+    /// </summary>
+    public void NotifyBoardVisibilityChanged() => RefreshMenu();
 
     /// <summary>
     ///     弹出左键菜单。位置由窗口自己按 <see cref="IPointerLocator" /> 给的鼠标坐标算；
@@ -244,11 +253,17 @@ public sealed class TaskBarIconService : IDisposable
     ///         ——托盘里点软件名，用户想看的通常就是「这是哪个版本」。
     ///     </para>
     ///     <para>
-    ///         「启用作业板」关着时不列「显示主窗口」：那个开关的意思就是不要作业板，
+    ///         作业板那一项是<b>一颗开关</b>：板子在屏幕上时写「隐藏作业板」、点下去收起来；
+    ///         不在屏幕上（藏起来 / 最小化 / 收进浮钮）时写「显示作业板」、点下去叫回来。
+    ///         文案不能写死成一句——只给「显示」的话用户没法从托盘把板子收掉，
+    ///         只给「隐藏」则收掉之后就再也叫不回来（主窗口没有任务栏按钮）。
+    ///     </para>
+    ///     <para>
+    ///         「启用作业板」关着时整项不列：那个开关的意思就是不要作业板，
     ///         菜单里再留一个把板子叫回来的入口，两边说法就打架了。考试看板与设置照旧。
     ///     </para>
     /// </remarks>
-    private static IReadOnlyList<TrayMenuItem> CreateMenuItems(bool boardEnabled)
+    private static IReadOnlyList<TrayMenuItem> CreateMenuItems(bool boardEnabled, bool boardShown)
     {
         var items = new List<TrayMenuItem>
         {
@@ -258,7 +273,11 @@ public sealed class TaskBarIconService : IDisposable
         };
 
         if (boardEnabled)
-            items.Add(new TrayMenuItem(CR.Menu_OpenMainWindow, static () => App.ShowMainWindow()));
+        {
+            items.Add(boardShown
+                ? new TrayMenuItem(CR.Menu_HideMainWindow, static () => App.HideMainWindow())
+                : new TrayMenuItem(CR.Menu_OpenMainWindow, static () => App.ShowMainWindow()));
+        }
 
         items.Add(new TrayMenuItem(CR.Menu_OpenExamBoard, static () => App.ShowExamBoardWindow()));
         items.Add(new TrayMenuItem(CR.Menu_OpenSettings, static () => App.ShowSettingsWindow()));
@@ -270,7 +289,7 @@ public sealed class TaskBarIconService : IDisposable
     }
 
     private IReadOnlyList<TrayMenuItem> CurrentMenuItems =>
-        CreateMenuItems(_configHandler.Data.BoardSettings.BoardEnabled);
+        CreateMenuItems(_configHandler.Data.BoardSettings.BoardEnabled, App.IsMainWindowShown);
 
     /// <summary>右键那份：交给平台弹的原生菜单。</summary>
     private NativeMenu CreateNativeMenu()

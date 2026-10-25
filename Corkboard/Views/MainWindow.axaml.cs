@@ -170,6 +170,7 @@ public partial class MainWindow : FAAppWindow
         // 不保证，两处都同步一次，谁后到谁把位置定下来）。
         SyncLockBadge();
         SyncCornerAssignButton();
+        NotifyBoardVisibilityChanged();
     }
 
     /// <summary>
@@ -343,6 +344,9 @@ public partial class MainWindow : FAAppWindow
         SyncLockBadge();
         SyncCornerAssignButton();
 
+        // 托盘菜单里那一项在「显示作业板 / 隐藏作业板」之间切换，最小化也算不在屏幕上。
+        NotifyBoardVisibilityChanged();
+
         // 最小化时 Windows 会把窗口的分层扩展样式（WS_EX_LAYERED / WS_EX_TRANSPARENT）摘掉，
         // 还原后它们不会自己回来。结果是：配置里仍写着「开启点击穿透 + 不透明度」、锁定徽标也照旧
         // 显示「已锁」，但主窗口其实又能被点、也恢复成完全不透明了——界面在说一件事、窗口在做另一件事。
@@ -357,6 +361,21 @@ public partial class MainWindow : FAAppWindow
         // 最小化不算用户的尺寸选择，跳过这一轮。
         if (WindowState != WindowState.Minimized)
             QueueSizeSave(basic);
+    }
+
+    /// <summary>
+    ///     让托盘菜单重算那一项「显示作业板 / 隐藏作业板」。
+    ///     <para>
+    ///         主窗口显隐、最小化、收纳展开都不改配置，托盘那份原生菜单却是启动时建出来的快照，
+    ///         不主动叫一声就会一直挂着旧文案。设置窗口不参与（它没有这一项）。
+    ///     </para>
+    /// </summary>
+    private void NotifyBoardVisibilityChanged()
+    {
+        if (!_isMainScope)
+            return;
+
+        IAppHost.TryGetService<TaskBarIconService>()?.NotifyBoardVisibilityChanged();
     }
 
     private void QueueSizeSave(BasicSettingsConfig basic)
@@ -644,6 +663,9 @@ public partial class MainWindow : FAAppWindow
         ReleaseDesktopBottom();
         ReleaseBasicSettingsWatcher();
         ReleaseOverlayWatcher();
+
+        // 窗口真的没了（不是收纳藏起来），托盘那一项要退回「显示作业板」。
+        NotifyBoardVisibilityChanged();
     }
 
     private void ApplyPinToDesktop()
@@ -709,6 +731,9 @@ public partial class MainWindow : FAAppWindow
             cornerBtn.Hide();
 
         Hide();
+
+        // 板子从屏幕上没了，托盘那一项要变成「显示作业板」。
+        NotifyBoardVisibilityChanged();
     }
 
     /// <summary>
@@ -735,6 +760,9 @@ public partial class MainWindow : FAAppWindow
         ApplyWindowOpacity();
         SyncLockBadge();
         SyncCornerAssignButton();
+
+        // 板子回到屏幕上了，托盘那一项要变成「隐藏作业板」。
+        NotifyBoardVisibilityChanged();
     }
 
     #endregion

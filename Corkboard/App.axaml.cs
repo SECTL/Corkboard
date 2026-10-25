@@ -780,7 +780,44 @@ public partial class App : Application
     }
 
     /// <summary>
-    ///     把作业板叫回来：托盘左键、托盘菜单「显示主窗口」以及别处对主窗口的显示请求都走这里。
+    ///     作业板此刻在不在屏幕上。托盘菜单靠它决定那一项是「显示作业板」还是「隐藏作业板」。
+    ///     <para>
+    ///         收纳（<see cref="BoardDockService.IsDocked" />）、藏起来、最小化都算「不在」——
+    ///         三种状态下用户看到的都是「没有板子」，菜单就不该再说「隐藏」。
+    ///     </para>
+    /// </summary>
+    public static bool IsMainWindowShown
+    {
+        get
+        {
+            if (_mainWindow is not { IsVisible: true } window)
+                return false;
+
+            if (window.WindowState == WindowState.Minimized)
+                return false;
+
+            return IAppHost.TryGetService<BoardDockService>() is not { IsDocked: true };
+        }
+    }
+
+    /// <summary>
+    ///     把作业板从屏幕上收掉（托盘菜单的「隐藏作业板」）。
+    ///     <para>
+    ///         走 <see cref="MainWindow.HideForDock" />：窗口只是藏起来、不销毁，位置还在原处，
+    ///         顺带把锁定徽标与右下角浮标一起收掉——只藏主窗口会把这两颗独立窗口留在屏幕上当孤儿。
+    ///     </para>
+    /// </summary>
+    public static void HideMainWindow()
+    {
+        // 已经在收纳浮钮里了：板子本来就不在屏幕上，别再动它（否则会把浮钮的状态搅乱）。
+        if (IAppHost.TryGetService<BoardDockService>() is { IsDocked: true })
+            return;
+
+        _mainWindow?.HideForDock();
+    }
+
+    /// <summary>
+    ///     把作业板叫回来：托盘左键、托盘菜单「显示作业板」以及别处对主窗口的显示请求都走这里。
     ///     <para>
     ///         收纳（「设置 → 作业板 → 收纳」把板子收成屏幕角落一颗浮钮）状态下要**展开**板子：
     ///         先让 <see cref="BoardDockService.Expand" /> 收掉浮钮再显示窗口，

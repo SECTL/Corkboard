@@ -26,7 +26,10 @@
     <value>Settings</value>
   </data>
   <data name="Menu_OpenMainWindow" xml:space="preserve">
-    <value>Show main window</value>
+    <value>Show board</value>
+  </data>
+  <data name="Menu_HideMainWindow" xml:space="preserve">
+    <value>Hide board</value>
   </data>
   <data name="Menu_OpenSettings" xml:space="preserve">
     <value>Open settings</value>

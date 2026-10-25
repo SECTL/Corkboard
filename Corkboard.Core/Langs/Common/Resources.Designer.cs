@@ -52,6 +52,7 @@ public static class Resources
     public static string Settings_Exam_AutoShow_SwitchBoardDescription => ResourceManager.GetString(nameof(Settings_Exam_AutoShow_SwitchBoardDescription), Culture)!;
     public static string Feat_Settings => ResourceManager.GetString(nameof(Feat_Settings), Culture)!;
     public static string Menu_OpenMainWindow => ResourceManager.GetString(nameof(Menu_OpenMainWindow), Culture)!;
+    public static string Menu_HideMainWindow => ResourceManager.GetString(nameof(Menu_HideMainWindow), Culture)!;
     public static string Menu_OpenSettings => ResourceManager.GetString(nameof(Menu_OpenSettings), Culture)!;
     public static string Menu_RestartProgram => ResourceManager.GetString(nameof(Menu_RestartProgram), Culture)!;
     public static string Menu_ExitProgram => ResourceManager.GetString(nameof(Menu_ExitProgram), Culture)!;
