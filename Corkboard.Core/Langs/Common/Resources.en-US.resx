@@ -2487,13 +2487,13 @@
     <value>Welcome to Corkboard</value>
   </data>
   <data name="Oobe_WelcomeDescription" xml:space="preserve">
-    <value>A few steps to make it yours; everything here can be changed later in Settings</value>
+    <value>One step to accept the terms, one to pick a few settings, and all of it stays editable in Settings</value>
   </data>
   <data name="Oobe_LegalTitle" xml:space="preserve">
     <value>Privacy policy and terms of use</value>
   </data>
   <data name="Oobe_LegalDescription" xml:space="preserve">
-    <value>Read both notes below and tick them before you continue</value>
+    <value>Expand and read both notes below, then tick your agreement</value>
   </data>
   <data name="Oobe_PrivacyPolicyTitle" xml:space="preserve">
     <value>Privacy policy</value>
@@ -2527,11 +2527,32 @@ Continuing to use it means you understand and accept the above.</value>
   <data name="Oobe_EulaAccept" xml:space="preserve">
     <value>I have read and agree to the terms of use</value>
   </data>
-  <data name="Oobe_BoardTitle" xml:space="preserve">
-    <value>Which boards do you need</value>
+    <data name="Oobe_SettingsTitle" xml:space="preserve">
+    <value>Make it yours</value>
   </data>
-  <data name="Oobe_BoardDescription" xml:space="preserve">
-    <value>Each board does one job; keep what you actually use</value>
+  <data name="Oobe_SettingsDescription" xml:space="preserve">
+    <value>Look, board and startup all live on this page; changes apply right away and stay editable in Settings</value>
+  </data>
+  <data name="Oobe_StartupSummaryFormat" xml:space="preserve">
+    <value>{0}; {1}. That is how it will start after you finish</value>
+  </data>
+  <data name="Oobe_StartupAutoStart" xml:space="preserve">
+    <value>starts with the system</value>
+  </data>
+  <data name="Oobe_StartupManualStart" xml:space="preserve">
+    <value>you open it yourself</value>
+  </data>
+  <data name="Oobe_StartupShowWindow" xml:space="preserve">
+    <value>opens the main window on launch</value>
+  </data>
+  <data name="Oobe_StartupTrayOnly" xml:space="preserve">
+    <value>stays in the tray until you click it</value>
+  </data>
+  <data name="Oobe_ResourcesTitle" xml:space="preserve">
+    <value>Project resources</value>
+  </data>
+  <data name="Oobe_BoardTitle" xml:space="preserve">
+    <value>Homework board</value>
   </data>
   <data name="Oobe_BoardEnabled" xml:space="preserve">
     <value>Enable homework board</value>
@@ -2540,10 +2561,7 @@ Continuing to use it means you understand and accept the above.</value>
     <value>Turning it off hides the main window; the tray and the exam board still work</value>
   </data>
   <data name="Oobe_AppearanceTitle" xml:space="preserve">
-    <value>Pick a look you like</value>
-  </data>
-  <data name="Oobe_AppearanceDescription" xml:space="preserve">
-    <value>Follow the system or pin one theme; changes show up right away</value>
+    <value>Appearance</value>
   </data>
   <data name="Oobe_Theme" xml:space="preserve">
     <value>Theme</value>
@@ -2560,9 +2578,6 @@ Continuing to use it means you understand and accept the above.</value>
   <data name="Oobe_StartupTitle" xml:space="preserve">
     <value>How it starts</value>
   </data>
-  <data name="Oobe_StartupDescription" xml:space="preserve">
-    <value>Run on its own at sign-in, or wait until you open it</value>
-  </data>
   <data name="Oobe_Autostart" xml:space="preserve">
     <value>Start with the system</value>
   </data>
@@ -2577,45 +2592,6 @@ Continuing to use it means you understand and accept the above.</value>
   </data>
   <data name="Oobe_ShowStartupWindowDescription" xml:space="preserve">
     <value>Off keeps it in the tray until you click the icon</value>
-  </data>
-  <data name="Oobe_CompleteTitle" xml:space="preserve">
-    <value>All set</value>
-  </data>
-  <data name="Oobe_CompleteDescription" xml:space="preserve">
-    <value>Here is what you picked; you can change any of it in Settings</value>
-  </data>
-  <data name="Oobe_CompletedItems" xml:space="preserve">
-    <value>Your choices</value>
-  </data>
-  <data name="Oobe_CompletedLanguage" xml:space="preserve">
-    <value>Language</value>
-  </data>
-  <data name="Oobe_CompletedBoard" xml:space="preserve">
-    <value>Boards</value>
-  </data>
-  <data name="Oobe_CompletedTheme" xml:space="preserve">
-    <value>Appearance</value>
-  </data>
-  <data name="Oobe_CompletedStartup" xml:space="preserve">
-    <value>Startup</value>
-  </data>
-  <data name="Oobe_CompletedLegal" xml:space="preserve">
-    <value>Terms</value>
-  </data>
-  <data name="Oobe_CompletedLegalValue" xml:space="preserve">
-    <value>Privacy policy and terms of use accepted</value>
-  </data>
-  <data name="Oobe_BoardOn" xml:space="preserve">
-    <value>Enabled</value>
-  </data>
-  <data name="Oobe_BoardOff" xml:space="preserve">
-    <value>Off</value>
-  </data>
-  <data name="Oobe_AutostartOn" xml:space="preserve">
-    <value>Starts with the system</value>
-  </data>
-  <data name="Oobe_AutostartOff" xml:space="preserve">
-    <value>Starts manually</value>
   </data>
   <data name="Oobe_Next" xml:space="preserve">
     <value>Next</value>

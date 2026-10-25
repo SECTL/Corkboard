@@ -2492,13 +2492,13 @@
     <value>欢迎使用 Corkboard</value>
   </data>
   <data name="Oobe_WelcomeDescription" xml:space="preserve">
-    <value>用几步把它调成你要的样子，这里选的每一项以后都能在设置里改</value>
+    <value>接下来用两步认一下条款、顺手把几项设置定下来，哪一项以后都还能在设置里改</value>
   </data>
   <data name="Oobe_LegalTitle" xml:space="preserve">
     <value>隐私政策与用户协议</value>
   </data>
   <data name="Oobe_LegalDescription" xml:space="preserve">
-    <value>继续之前请把下面两份都读一遍并勾选</value>
+    <value>继续之前请把下面两份都展开读一遍，再勾选同意；两份内容随时能在帮助里重看</value>
   </data>
   <data name="Oobe_PrivacyPolicyTitle" xml:space="preserve">
     <value>隐私政策</value>
@@ -2532,11 +2532,32 @@
   <data name="Oobe_EulaAccept" xml:space="preserve">
     <value>我已阅读并同意用户协议</value>
   </data>
-  <data name="Oobe_BoardTitle" xml:space="preserve">
-    <value>要哪块板子</value>
+    <data name="Oobe_SettingsTitle" xml:space="preserve">
+    <value>把它调成你要的样子</value>
   </data>
-  <data name="Oobe_BoardDescription" xml:space="preserve">
-    <value>两块板子各管一件事，先留着你用得上的</value>
+  <data name="Oobe_SettingsDescription" xml:space="preserve">
+    <value>外观、作业板与启动项都在这张页上，选完当场生效，以后在设置里也能改</value>
+  </data>
+  <data name="Oobe_StartupSummaryFormat" xml:space="preserve">
+    <value>{0}，{1}，点「完成」之后就这么办</value>
+  </data>
+  <data name="Oobe_StartupAutoStart" xml:space="preserve">
+    <value>开机自启</value>
+  </data>
+  <data name="Oobe_StartupManualStart" xml:space="preserve">
+    <value>开机后要手动打开</value>
+  </data>
+  <data name="Oobe_StartupShowWindow" xml:space="preserve">
+    <value>启动时显示主窗口</value>
+  </data>
+  <data name="Oobe_StartupTrayOnly" xml:space="preserve">
+    <value>启动后先待在托盘里</value>
+  </data>
+  <data name="Oobe_ResourcesTitle" xml:space="preserve">
+    <value>项目资源</value>
+  </data>
+  <data name="Oobe_BoardTitle" xml:space="preserve">
+    <value>作业板</value>
   </data>
   <data name="Oobe_BoardEnabled" xml:space="preserve">
     <value>启用作业板</value>
@@ -2545,10 +2566,7 @@
     <value>关掉后主窗口不再出现，托盘与考试看板仍然可用</value>
   </data>
   <data name="Oobe_AppearanceTitle" xml:space="preserve">
-    <value>挑个顺眼的外观</value>
-  </data>
-  <data name="Oobe_AppearanceDescription" xml:space="preserve">
-    <value>主题跟着系统走还是固定一个，选完当场就能看到变化</value>
+    <value>外观</value>
   </data>
   <data name="Oobe_Theme" xml:space="preserve">
     <value>主题</value>
@@ -2563,10 +2581,7 @@
     <value>按钮和选中状态用的那一个颜色</value>
   </data>
   <data name="Oobe_StartupTitle" xml:space="preserve">
-    <value>怎么启动它</value>
-  </data>
-  <data name="Oobe_StartupDescription" xml:space="preserve">
-    <value>开机就自己跑起来，还是等你点开再说</value>
+    <value>启动</value>
   </data>
   <data name="Oobe_Autostart" xml:space="preserve">
     <value>开机自启动</value>
@@ -2582,45 +2597,6 @@
   </data>
   <data name="Oobe_ShowStartupWindowDescription" xml:space="preserve">
     <value>关掉后只在托盘里待着，点图标才出来</value>
-  </data>
-  <data name="Oobe_CompleteTitle" xml:space="preserve">
-    <value>都设好了</value>
-  </data>
-  <data name="Oobe_CompleteDescription" xml:space="preserve">
-    <value>下面是这一次的选择，之后随时能在设置里再改</value>
-  </data>
-  <data name="Oobe_CompletedItems" xml:space="preserve">
-    <value>这一次的选择</value>
-  </data>
-  <data name="Oobe_CompletedLanguage" xml:space="preserve">
-    <value>界面语言</value>
-  </data>
-  <data name="Oobe_CompletedBoard" xml:space="preserve">
-    <value>板子</value>
-  </data>
-  <data name="Oobe_CompletedTheme" xml:space="preserve">
-    <value>外观</value>
-  </data>
-  <data name="Oobe_CompletedStartup" xml:space="preserve">
-    <value>启动</value>
-  </data>
-  <data name="Oobe_CompletedLegal" xml:space="preserve">
-    <value>协议</value>
-  </data>
-  <data name="Oobe_CompletedLegalValue" xml:space="preserve">
-    <value>已确认隐私政策与用户协议</value>
-  </data>
-  <data name="Oobe_BoardOn" xml:space="preserve">
-    <value>已启用</value>
-  </data>
-  <data name="Oobe_BoardOff" xml:space="preserve">
-    <value>已关闭</value>
-  </data>
-  <data name="Oobe_AutostartOn" xml:space="preserve">
-    <value>开机自启</value>
-  </data>
-  <data name="Oobe_AutostartOff" xml:space="preserve">
-    <value>不自动启动</value>
   </data>
   <data name="Oobe_Next" xml:space="preserve">
     <value>下一步</value>

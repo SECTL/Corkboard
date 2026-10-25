@@ -10,7 +10,7 @@ using CR = Corkboard.Core.Langs.Common.Resources;
 namespace Corkboard.Views;
 
 /// <summary>
-///     首次运行引导（OOBE）窗口。六个步骤的内容与状态都在 <see cref="FirstRunOobeViewModel" /> 里，
+///     首次运行引导（OOBE）窗口。三个步骤（欢迎 / 协议 / 设置）的内容与状态都在 <see cref="FirstRunOobeViewModel" /> 里，
 ///     这里只负责三件窗口才有的事：点「下一步」推进 / 收尾并通知 App、语言改了要重启、
 ///     以及点 × 时先问一句「真的先不设了？」。
 /// </summary>

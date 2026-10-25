@@ -11,13 +11,15 @@ using Corkboard.Core.Models.SubConfigs.Personalized;
 using Corkboard.Core.Services.Config;
 using Corkboard.Core.Services.FirstRun;
 using Corkboard.Platforms.Abstractions;
+using Corkboard.Services.Desktop;
 using Corkboard.ViewModels.SettingsPages;
 using CR = Corkboard.Core.Langs.Common.Resources;
 
 namespace Corkboard.ViewModels;
 
 /// <summary>
-///     首次运行引导（OOBE）窗口的 ViewModel：语言 / 协议 / 作业板 / 外观 / 启动 / 汇总。
+///     首次运行引导（OOBE）窗口的 ViewModel。整段引导是三步：
+///     欢迎（含语言）→ 隐私政策与用户协议 → 外观、作业板与启动项，最后在第三步点「完成」进主界面。
 /// </summary>
 /// <remarks>
 ///     <para>
@@ -25,8 +27,12 @@ namespace Corkboard.ViewModels;
 ///         在设置里看到的就是同一份值，没有第二套状态。
 ///     </para>
 ///     <para>
-///         走哪几步由 <see cref="FirstRunOobeService.Requirement" /> 决定：整段引导是六步，
+///         走哪几步由 <see cref="FirstRunOobeService.Requirement" /> 决定：整段引导是三步，
 ///         协议改版后只补「协议」一步（见 <see cref="BuildSteps" />）。
+///     </para>
+///     <para>
+///         第三步没有单独的「汇总页」：选择项就地摆着、随时还能改，底栏那一句
+///         <see cref="CompletionSummary" /> 只说「点完成之后会发生什么」。
 ///     </para>
 /// </remarks>
 public partial class FirstRunOobeViewModel : ObservableObject
@@ -36,6 +42,7 @@ public partial class FirstRunOobeViewModel : ObservableObject
 
     private readonly IAutostartService _autostart;
     private readonly MainConfigHandler _configHandler;
+    private readonly IExternalLauncher _launcher;
     private readonly FirstRunOobeService _oobe;
     private readonly IReadOnlyList<OobeStepKind> _steps;
 
@@ -45,11 +52,13 @@ public partial class FirstRunOobeViewModel : ObservableObject
     public FirstRunOobeViewModel(
         MainConfigHandler configHandler,
         FirstRunOobeService oobe,
-        IAutostartService autostart)
+        IAutostartService autostart,
+        IExternalLauncher launcher)
     {
         _configHandler = configHandler;
         _oobe = oobe;
         _autostart = autostart;
+        _launcher = launcher;
 
         _steps = BuildSteps(oobe.Requirement);
         _selectedStep = 0;
@@ -79,6 +88,10 @@ public partial class FirstRunOobeViewModel : ObservableObject
     /// <summary>底栏那行红字：目前只有「开机自启没设成功」会用到。</summary>
     [ObservableProperty] private string? _errorMessage;
 
+    // ---------------------------------------------------------------------------------------
+    // 欢迎页：语言
+    // ---------------------------------------------------------------------------------------
+
     /// <summary>语言下拉项的来源：只有中文和英文，显示名固定用各自的写法。</summary>
     public IReadOnlyList<LanguageOption> LanguageOptions { get; } =
     [
@@ -106,6 +119,10 @@ public partial class FirstRunOobeViewModel : ObservableObject
     /// <summary>语言改了：由窗口重启一次应用（引导会以新语言重新开始）。</summary>
     public event EventHandler? LanguageChangeRequested;
 
+    // ---------------------------------------------------------------------------------------
+    // 外观
+    // ---------------------------------------------------------------------------------------
+
     /// <summary>主题模式下拉项。</summary>
     public IReadOnlyList<ThemeOption> ThemeOptions { get; } =
     [
@@ -132,7 +149,6 @@ public partial class FirstRunOobeViewModel : ObservableObject
             Appearance.Theme = value.Mode;
             ApplyAppearance();
             OnPropertyChanged();
-            OnPropertyChanged(nameof(CompletedThemeText));
         }
     }
 
@@ -149,7 +165,6 @@ public partial class FirstRunOobeViewModel : ObservableObject
             ApplyAppearance();
             OnPropertyChanged();
             OnPropertyChanged(nameof(IsCustomThemeColor));
-            OnPropertyChanged(nameof(CompletedThemeText));
         }
     }
 
@@ -173,6 +188,10 @@ public partial class FirstRunOobeViewModel : ObservableObject
             ScheduleThemeColorCommit(value);
         }
     }
+
+    // ---------------------------------------------------------------------------------------
+    // 启动与板子
+    // ---------------------------------------------------------------------------------------
 
     /// <summary>当前平台是否实现了开机自启：没实现的平台整行隐藏（不留一个点不动的开关）。</summary>
     public bool IsAutostartSupported => _autostart.IsSupported;
@@ -203,7 +222,7 @@ public partial class FirstRunOobeViewModel : ObservableObject
             }
 
             OnPropertyChanged();
-            OnPropertyChanged(nameof(CompletedStartupText));
+            OnPropertyChanged(nameof(CompletionSummary));
         }
     }
 
@@ -221,6 +240,21 @@ public partial class FirstRunOobeViewModel : ObservableObject
         }
     }
 
+    /// <summary>启动时要不要主窗口，取决于「启用了作业板」与「启动时显示主窗口」两个开关。</summary>
+    public bool IsBoardEnabled
+    {
+        get => Board.BoardEnabled;
+        set
+        {
+            if (value == Board.BoardEnabled)
+                return;
+
+            Board.BoardEnabled = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(CompletionSummary));
+        }
+    }
+
     // ---------------------------------------------------------------------------------------
     // 步骤
     // ---------------------------------------------------------------------------------------
@@ -229,15 +263,13 @@ public partial class FirstRunOobeViewModel : ObservableObject
 
     public bool IsLegalStep => IsStep(OobeStepKind.Legal);
 
-    public bool IsBoardStep => IsStep(OobeStepKind.Board);
+    /// <summary>最后一步：外观、作业板与启动项都在这张页上。</summary>
+    public bool IsSettingsStep => IsStep(OobeStepKind.Settings);
 
-    public bool IsAppearanceStep => IsStep(OobeStepKind.Appearance);
+    /// <summary>欢迎页上不显示「上一步」那类翻页按钮，只留一颗大的「下一步」。</summary>
+    public bool IsCompletionActionVisible => !IsWelcomeStep;
 
-    public bool IsStartupStep => IsStep(OobeStepKind.Startup);
-
-    public bool IsCompleteStep => IsStep(OobeStepKind.Complete);
-
-    /// <summary>只有一步时（协议改版的补确认）不画「第几步」与上一步。</summary>
+    /// <summary>只有一步时（协议改版的补确认）不画「第几步」。</summary>
     public bool HasMultipleSteps => _steps.Count > 1;
 
     public bool CanGoPrevious => SelectedStep > 0;
@@ -255,21 +287,35 @@ public partial class FirstRunOobeViewModel : ObservableObject
     /// </summary>
     public bool CanGoNext => !IsLegalStep || (AcceptedPrivacyPolicy && AcceptedEula);
 
+    /// <summary>
+    ///     底栏左边那一句：说明点「完成」之后会发生什么。写的都是当下真实的开关值，
+    ///     不罗列刚才选过的东西（那些还在上面的卡片里摆着，随时能改）。
+    /// </summary>
+    public string CompletionSummary
+    {
+        get
+        {
+            var where = Basic.ShowStartupWindow ? CR.Oobe_StartupShowWindow : CR.Oobe_StartupTrayOnly;
+            var start = Basic.Autostart ? CR.Oobe_StartupAutoStart : CR.Oobe_StartupManualStart;
+            return string.Format(CultureInfo.CurrentCulture, CR.Oobe_StartupSummaryFormat, start, where);
+        }
+    }
+
     // ---------------------------------------------------------------------------------------
-    // 汇总（最后一步那一页）
+    // 资源链接（最后一步那排链接）
     // ---------------------------------------------------------------------------------------
 
-    public string CompletedLanguageText => SelectedLanguage.DisplayName;
+    [RelayCommand]
+    private void OpenUri(string? uri)
+    {
+        // 打不开就说明链路自己不支持：不报错、不弹框，引导里没必要为一条外链打断用户。
+        if (!string.IsNullOrWhiteSpace(uri))
+            _launcher.TryOpenUri(uri);
+    }
 
-    public string CompletedBoardText => Board.BoardEnabled ? CR.Oobe_BoardOn : CR.Oobe_BoardOff;
-
-    public string CompletedThemeText => IsCustomThemeColor
-        ? $"{SelectedTheme.DisplayName} · {FormatColor(Appearance.ThemeColor)}"
-        : SelectedTheme.DisplayName;
-
-    public string CompletedStartupText => Basic.Autostart ? CR.Oobe_AutostartOn : CR.Oobe_AutostartOff;
-
-    public string CompletedLegalText => CR.Oobe_CompletedLegalValue;
+    // ---------------------------------------------------------------------------------------
+    // 翻页
+    // ---------------------------------------------------------------------------------------
 
     [RelayCommand]
     private void Next()
@@ -330,10 +376,7 @@ public partial class FirstRunOobeViewModel : ObservableObject
             [
                 OobeStepKind.Welcome,
                 OobeStepKind.Legal,
-                OobeStepKind.Board,
-                OobeStepKind.Appearance,
-                OobeStepKind.Startup,
-                OobeStepKind.Complete
+                OobeStepKind.Settings
             ];
     }
 
@@ -346,22 +389,14 @@ public partial class FirstRunOobeViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(IsWelcomeStep));
         OnPropertyChanged(nameof(IsLegalStep));
-        OnPropertyChanged(nameof(IsBoardStep));
-        OnPropertyChanged(nameof(IsAppearanceStep));
-        OnPropertyChanged(nameof(IsStartupStep));
-        OnPropertyChanged(nameof(IsCompleteStep));
+        OnPropertyChanged(nameof(IsSettingsStep));
+        OnPropertyChanged(nameof(IsCompletionActionVisible));
         OnPropertyChanged(nameof(CanGoPrevious));
         OnPropertyChanged(nameof(IsLastStep));
         OnPropertyChanged(nameof(NextText));
         OnPropertyChanged(nameof(StepProgress));
         OnPropertyChanged(nameof(CanGoNext));
-
-        // 汇总页退出再进来时值可能已经变了，进来那一刻重新读一遍。
-        OnPropertyChanged(nameof(CompletedLanguageText));
-        OnPropertyChanged(nameof(CompletedBoardText));
-        OnPropertyChanged(nameof(CompletedThemeText));
-        OnPropertyChanged(nameof(CompletedStartupText));
-        OnPropertyChanged(nameof(CompletedLegalText));
+        OnPropertyChanged(nameof(CompletionSummary));
     }
 
     partial void OnAcceptedPrivacyPolicyChanged(bool value)
@@ -395,15 +430,9 @@ public partial class FirstRunOobeViewModel : ObservableObject
             {
                 Appearance.ThemeColor = draft;
                 ApplyAppearance();
-                OnPropertyChanged(nameof(CompletedThemeText));
             }
         };
         _themeColorCommitTimer.Start();
-    }
-
-    private static string FormatColor(Color color)
-    {
-        return $"#{color.R:X2}{color.G:X2}{color.B:X2}";
     }
 }
 
@@ -412,8 +441,5 @@ public enum OobeStepKind
 {
     Welcome = 0,
     Legal = 1,
-    Board = 2,
-    Appearance = 3,
-    Startup = 4,
-    Complete = 5
+    Settings = 2
 }
