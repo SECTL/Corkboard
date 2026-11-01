@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Chrome;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -15,6 +16,7 @@ using Corkboard.Core.Controls;
 using Corkboard.Core.Board;
 using Corkboard.Core.Enums.Configs;
 using Corkboard.Core.Helpers;
+using Corkboard.Core.Models.SubConfigs.General;
 using Corkboard.Core.Services;
 using Corkboard.Services.Board;
 using Corkboard.Services.Ui;
@@ -130,6 +132,43 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
     /// </summary>
     private bool IsWindowFixed => ViewModel.Config.Basic.WindowFixed;
 
+    /// <summary>
+    ///     标题栏在系统眼里的「窗口角色」跟着锁定态走：<b>这才是锁定后窗口还能被拖走的真正原因</b>。
+    ///     <para>
+    ///         主窗口把内容铺进了标题栏（<c>TitleBar.ExtendsContentIntoTitleBar = true</c>），
+    ///         Avalonia 的 Win32 后端因此走「自绘标题栏」那条路：<c>WM_NCHITTEST</c> 时按命中元素上溯，
+    ///         取第一个非 <c>None</c> 的 <see cref="WindowDecorationsElementRole" />，
+    ///         <c>TitleBar</c> 直接换算成 <c>HTCAPTION</c>（见 <c>WindowImpl.CustomCaptionProc</c> 的
+    ///         <c>HitTestVisual</c>）——<b>那一下由 Windows 自己接手拖窗口，托管代码一个字都收不到</b>，
+    ///         所以 <see cref="IsWindowFixed" /> 那道判断挡不住它，锁着也照拖。
+    ///     </para>
+    ///     <para>
+    ///         锁定时把这条带子标成 <see cref="WindowDecorationsElementRole.User" />（换算成 <c>HTCLIENT</c>），
+    ///         系统就把它当普通客户区，按下照旧走托管的那条拖动路径，再由 <see cref="IsWindowFixed" /> 拒掉；
+    ///         解锁时改回 <c>TitleBar</c>，交给系统原生拖动（置底到桌面那种子窗口形态下原生拖动不生效，
+    ///         托管那条路径还在，两边不冲突）。
+    ///     </para>
+    ///     <para>
+    ///         ⚠️ 只改这一处不够、也不许改成「永远 User」：原生 caption 还负责双击最大化等系统行为，
+    ///         解锁态要继续留着。XAML 里那行 <c>ElementRole="TitleBar"</c> 是初始值，这里按锁定态覆盖它。
+    ///     </para>
+    /// </summary>
+    private void UpdateTitleBarChromeRole()
+    {
+        if (_titleBar is null)
+            return;
+
+        var role = IsWindowFixed ? WindowDecorationsElementRole.User : WindowDecorationsElementRole.TitleBar;
+        if (WindowDecorationProperties.GetElementRole(_titleBar) != role)
+            WindowDecorationProperties.SetElementRole(_titleBar, role);
+    }
+
+    private void OnBasicSettingsChangedForTitleBar(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is null or nameof(BasicSettingsConfig.WindowFixed))
+            UpdateTitleBarChromeRole();
+    }
+
     public MainView()
     {
         Current = this;
@@ -144,6 +183,11 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
         _titleBar = this.FindControl<Border>("TitleBar");
         _moreButton = this.FindControl<Button>("MoreButton");
         _replayCalendarPopup = this.FindControl<Popup>("ReplayCalendarPopup");
+
+        // 标题栏的「窗口角色」得跟着锁定态走，否则锁着的时候系统还会原生拖窗口，
+        // 见 UpdateTitleBarChromeRole。
+        UpdateTitleBarChromeRole();
+        ViewModel.Config.Basic.PropertyChanged += OnBasicSettingsChangedForTitleBar;
 
         if (_replayCalendarPopup is { } calendarPopup)
         {
@@ -179,6 +223,7 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
             Overlay.PropertyChanged -= OnOverlayChanged;
             Overlay.ReleaseHost(OverlayHost);
             Replay.PropertyChanged -= OnReplayChanged;
+            ViewModel.Config.Basic.PropertyChanged -= OnBasicSettingsChangedForTitleBar;
 
             if (_replayCalendar is not null)
             {

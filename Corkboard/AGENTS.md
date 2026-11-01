@@ -66,6 +66,14 @@
   `MainView` 里判固定一律走 `IsWindowFixed`（`OnWindowEdgeGuard` / `OnPointerPressedForDrag` /
   `TryStartWindowResize` / `UpdateResizeCursor` 四处），固定时连边缘热区与双向箭头光标一起收掉，
   **不要在别处再判一遍配置**（那样会出现「锁着还拖得动」）。
+  ⚠️ **光靠 `IsWindowFixed` 挡不住原生拖动**：主窗口 `TitleBar.ExtendsContentIntoTitleBar = true`，
+  Avalonia 的 Win32 后端在 `WM_NCHITTEST` 时按命中元素取 `WindowDecorationProperties.ElementRole`，
+  `TitleBar` 直接换算成 `HTCAPTION`（`WindowImpl.CustomCaptionProc.HitTestVisual`），
+  **那一下由 Windows 自己拖窗口，托管处理器收不到**——曾经因此「锁着照样能把窗口拖走」。
+  所以 `MainView.UpdateTitleBarChromeRole()` 跟着锁定态切换标题栏的 role：锁着切成
+  `WindowDecorationsElementRole.User`（= `HTCLIENT`，走托管路径再被 `IsWindowFixed` 拒掉），
+  解锁切回 `TitleBar`（保留双击最大化等系统行为）。**别把它固定成 `User`、也别删这段同步**
+  （`MainView` 构造里订阅 `Config.Basic.PropertyChanged`，`Unloaded` 里退订）。
   ⚠️ **别再往这颗锁上加花样**：点击穿透、`window_lock_mode`（锁点下去做什么）、长按整窗拖动都已整体下架，
   想加回任何一档都先跟用户确认；老配置里那几个键反序列化时静默忽略，没有迁移代码，**也别为兼容加回来**。
 - **主窗口置底时，主窗口之外那几颗浮钮也一起沉到桌面层**（`Corkboard/Services/Desktop/FloatingWindowLayer.cs`）：
