@@ -1,11 +1,38 @@
 root = true
 
-# EdgeTtsSharp is compiled from its upstream submodule. Its nullable annotations and
-# legacy naming are not maintained by this project, so suppress only its known diagnostics.
-[vendors/EdgeTtsSharp/**/*.cs]
-dotnet_diagnostic.CS8600.severity = none
-dotnet_diagnostic.CS8603.severity = none
-dotnet_diagnostic.CS8618.severity = none
-dotnet_diagnostic.CS8625.severity = none
-dotnet_diagnostic.CS8981.severity = none
-dotnet_diagnostic.CA2200.severity = none
+# 本文件只约束编辑器与 dotnet format 的排版，不改变编译结果。
+# 之前整份文件都在给 [vendors/EdgeTtsSharp/**] 做诊断豁免，那个子模块已经移除，
+# 于是全仓库等于没有编码约定——这里换成对整个仓库生效的基础约定。
+
+[*]
+charset = utf-8
+end_of_line = crlf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+# 这几种文件在本仓库里是 2 空格缩进。
+[*.{resx,json,yaml,yml,props,targets,csproj,sln}]
+indent_size = 2
+
+# Markdown 里行尾两个空格是硬换行，不能裁。
+[*.md]
+trim_trailing_whitespace = false
+
+[*.cs]
+# 现状就是 file-scoped namespace + System 指令在前，写成建议值，不升级成警告。
+dotnet_sort_system_directives_first = true
+dotnet_style_namespace_match_folder = false
+csharp_style_namespace_declarations = file_scoped:suggestion
+csharp_using_directive_placement = outside_namespace:suggestion
+csharp_new_line_before_open_brace = all
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_expression_bodied_methods = when_on_single_line:suggestion
+csharp_style_prefer_primary_constructors = false:suggestion
+dotnet_style_qualification_for_field = false:suggestion
+dotnet_style_qualification_for_property = false:suggestion
+
+# 设置页的 XAML 与本仓库一样用 4 空格嵌套。
+[*.{axaml,xaml}]
+indent_size = 4

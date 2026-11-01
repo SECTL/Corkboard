@@ -2,7 +2,23 @@
     <PropertyGroup>
         <!-- 全仓库唯一的 Avalonia 版本锚点；工程文件里一律写 $(AvaloniaVersion)。 -->
         <AvaloniaVersion>12.1.1</AvaloniaVersion>
+        <!-- 所有工程同一套语言/框架设置，工程文件里不要再重复。 -->
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
         <!-- 验证与发布产物不进 SDK 默认 Compile 项。 -->
         <DefaultItemExcludes>$(DefaultItemExcludes);artifacts/**;publish/**</DefaultItemExcludes>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <!--
+            版本默认值必须在这里给，不能留给 Global.props：Global.props 是给头程序集做条件求值的，
+            排在工程正文之后；而 SDK 的 Microsoft.NET.DefaultAssemblyInfo.targets 更早就把空 Version
+            填成了 1.0.0，等 Global.props 的「Version 为空」条件再判就永远不成立，版本会掉成 1.0.0。
+            Directory.Build.props 是 SDK 最先导入的文件，放在这里才抢在默认值前面。
+            头程序集（EnableGitInfoGenerator = true）另外由 git describe 覆盖，不受这里影响。
+        -->
+        <Version Condition="'$(Version)' == ''">0.1.0</Version>
+        <InformationalVersion Condition="'$(InformationalVersion)' == ''">$(Version)</InformationalVersion>
     </PropertyGroup>
 </Project>

@@ -1,0 +1,10 @@
+<Project>
+    <!--
+        Global.props 在这里导入：SDK 在工程正文之后才 Import Directory.Build.targets，
+        而 Global.props 里「按 EnableGitInfoGenerator 决定要不要生成程序集信息」的判据，
+        正是头程序集在自己正文里置真的那个属性——提前导会读到空值，头程序集就会和
+        AssemblyInfo.cs 抢同一个特性（CS0579）。
+        以前是 12 个工程各写一行 Import，Launcher 漏了那一行，程序集版本一直掉在 1.0.0。
+    -->
+    <Import Project="$(MSBuildThisFileDirectory)Global.props" />
+</Project>

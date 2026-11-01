@@ -1,10 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net10.0</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <PackageId>Corkboard.Core</PackageId>
         <Description>Corkboard 核心层：领域服务、配置与日志运行时、可复用 Avalonia 控件与样式，以及暴露给插件/应用层的服务契约。</Description>
         <Authors>SECTL</Authors>
@@ -53,6 +49,5 @@
         </Compile>
     </ItemGroup>
 
-    <Import Project="..\Global.props" />
 
 </Project>

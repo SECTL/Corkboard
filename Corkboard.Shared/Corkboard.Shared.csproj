@@ -1,9 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net10.0</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
         <PackageId>Corkboard.Shared</PackageId>
         <Description>Corkboard 跨工程共享契约：配置基类、中性数据模型、路径工具。这里不允许出现 UI 与运行时依赖。</Description>
         <Authors>SECTL</Authors>
@@ -16,6 +13,5 @@
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     </ItemGroup>
 
-    <Import Project="..\Global.props" />
 
 </Project>

@@ -10,11 +10,11 @@
         <GitVersion>false</GitVersion>
         <EnableGitInfoGenerator Condition="'$(EnableGitInfoGenerator)' == ''">false</EnableGitInfoGenerator>
         <!--
-            非头程序集（Shared/Core/平台/测试）用 SDK 生成的程序集信息，版本取下面的 Version。
+            非头程序集（Shared/Core/平台/测试）用 SDK 生成的程序集信息。
+            Version / InformationalVersion 的默认值在 Directory.Build.props 里给——这里排在工程正文
+            之后，那时 SDK 已经把空 Version 填成 1.0.0，「为空才赋 0.1.0」的条件再也不会成立。
         -->
         <GenerateAssemblyInfo Condition="'$(EnableGitInfoGenerator)' != 'true'">true</GenerateAssemblyInfo>
-        <Version Condition="'$(Version)' == ''">0.1.0</Version>
-        <InformationalVersion Condition="'$(InformationalVersion)' == ''">$(Version)</InformationalVersion>
         <!--
             头程序集（真正的可执行入口）把版本交给 git：关掉 SDK 的程序集信息生成，
             改由根 AssemblyInfo.cs + SecRandom.SimpleGitInfoGenerator 写入
@@ -26,7 +26,6 @@
         <NullabilityInfoContextSupport>True</NullabilityInfoContextSupport>
         <ErrorOnDuplicatePublishOutputFiles>False</ErrorOnDuplicatePublishOutputFiles>
         <CheckEolWorkloads>false</CheckEolWorkloads>
-        <DefaultItemExcludes>$(DefaultItemExcludes);artifacts/**;publish/**</DefaultItemExcludes>
     </PropertyGroup>
 
     <PropertyGroup>
