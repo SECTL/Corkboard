@@ -95,8 +95,7 @@
                 <Border Classes="step-chip" Classes.active="{Binding IsBasicStep}">
                     <TextBlock Text="{x:Static core:Resources.Settings_Exam_Plan_StepBasic}" />
                 </Border>
-                <Border Classes="step-chip" Classes.active="{Binding IsSubjectsStep}"
-                        IsVisible="{Binding IsSubjectsStepVisible}">
+                <Border Classes="step-chip" Classes.active="{Binding IsSubjectsStep}">
                     <TextBlock Text="{x:Static core:Resources.Settings_Exam_Plan_StepSubjects}" />
                 </Border>
                 <Border Classes="step-chip" Classes.active="{Binding IsReviewStep}">
@@ -118,7 +117,11 @@
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="20">
                         <StackPanel Grid.Column="0" Spacing="4">
                             <TextBlock Classes="wizard-label" Text="{x:Static core:Resources.Settings_Exam_Plan_TitleLabel}" />
-                            <TextBox PlaceholderText="{x:Static core:Resources.Settings_Exam_Plan_TitlePlaceholder}"
+                            <!--
+                                灰字提示就是「留空会变成什么」：留空落盘时 ResolveTitle() 回退到默认名。
+                                这里直接绑那条资源，别再单独写一份文案——两份迟早会对不上。
+                            -->
+                            <TextBox PlaceholderText="{x:Static core:Resources.Exam_Board_DefaultTitle}"
                                      Text="{Binding TitleDraft, Mode=TwoWay}"
                                      IsEnabled="{Binding IsCreateMode}" />
                         </StackPanel>
@@ -156,8 +159,9 @@
                     </StackPanel>
 
                     <!--
-                        模板：选一份就跳过「科目」「作息」两步，直接出对照表。
-                        模板里存的是「第几天几点考什么」，所以只要上面那个第一天是对的就行。
+                        模板：选一份就把「科目与顺序、各科时长、一天几场 / 第一场几点 / 歇多久」带进来，
+                        以及模板里存的标题与副标题。⚠️ **只是带一份草稿**，不是锁死：
+                        后面两步照走，任何一项都能改，改完照常写进看板（用户明确要求过这一点）。
                     -->
                     <StackPanel Spacing="4" HorizontalAlignment="Left">
                         <TextBlock Classes="wizard-label" Text="{x:Static core:Resources.Settings_Exam_Plan_TemplateLabel}" />
@@ -237,7 +241,7 @@
                         <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="8">
                             <TextBlock VerticalAlignment="Center"
                                        FontWeight="SemiBold"
-                                       Text="{x:Static core:Resources.Settings_Exam_Plan_Duration}" />
+                                       Text="{x:Static core:Resources.Settings_Exam_Plan_SubjectOrder}" />
                             <TextBlock Grid.Column="1"
                                        VerticalAlignment="Center"
                                        Classes="wizard-hint"
@@ -259,6 +263,12 @@
                                        Text="{x:Static core:Resources.Settings_Exam_Plan_CombineHint}" />
                         </StackPanel>
 
+                        <!--
+                            ⚠️ 这一行**没有时长下拉框**：用户明确要求「不选模板、勾科目这一步不用选时长，
+                            后面有」。时长按科目自动带出（语文 150、数学英语 120、物化生政史地 75…），
+                            要改就去第 3 步的总览表里改那一行——那里改了同一天后面的场次还会自动顺延。
+                            这里只把带出来的时长写出来给用户看（只读）。
+                        -->
                         <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
                             <ItemsControl ItemsSource="{Binding PlanSubjects}">
                                 <ItemsControl.ItemTemplate>
@@ -269,16 +279,10 @@
                                                 <TextBlock Grid.Column="1"
                                                            Classes="wizard-cell subject"
                                                            Text="{Binding DisplayName}" />
-                                                <ComboBox Grid.Column="2"
-                                                          Width="120"
-                                                          ItemsSource="{Binding DurationOptions}"
-                                                          SelectedItem="{Binding SelectedDuration, Mode=TwoWay}">
-                                                    <ComboBox.ItemTemplate>
-                                                        <DataTemplate x:DataType="vm:DurationOption">
-                                                            <TextBlock Text="{Binding Text}" />
-                                                        </DataTemplate>
-                                                    </ComboBox.ItemTemplate>
-                                                </ComboBox>
+                                                <TextBlock Grid.Column="2"
+                                                           VerticalAlignment="Center"
+                                                           Classes="wizard-hint"
+                                                           Text="{Binding DurationText}" />
                                                 <!-- 上移：箭头必须真朝上（U+E44F）。 -->
                                                 <Button Grid.Column="3"
                                                         Classes="row-action"
@@ -305,7 +309,8 @@
 
                         <TextBlock Grid.Row="3"
                                    Classes="wizard-hint"
-                                   Text="{x:Static core:Resources.Settings_Exam_Plan_CombineHint}" />
+                                   Text="{x:Static core:Resources.Settings_Exam_Plan_DurationHint}"
+                                   TextWrapping="Wrap" />
                     </Grid>
                 </Border>
             </Grid>

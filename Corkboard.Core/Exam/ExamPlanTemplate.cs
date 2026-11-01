@@ -104,6 +104,41 @@ public partial class ExamPlanTemplate : ObservableObject
             .Select(entry => entry.ToEntry(firstDay))
     ];
 
+    /// <summary>
+    ///     把模板的作息还原成「一天几场 / 第一场几点 / 两场之间歇多久」这三个数（快速布置向导第 3 步用）。
+    ///     <para>
+    ///         向导界面上作息只有这三个数（见 <see cref="ExamPlanSlotPresets.ForCount" />），模板里存的却是
+    ///         逐场的时刻；要让它「跟着模板走」就得先还原成这三个数。取的是**第 1 天**：模板本来就是
+    ///         按同一个作息一天天摊出来的，后面那些天是重复，不用一起看。
+    ///     </para>
+    ///     <para>没有场次时返回 <see langword="null" />（调用方保持原样，不要把作息清成 0）。</para>
+    /// </summary>
+    public ExamPlanSlotShape? ResolveSlotShape()
+    {
+        if (Entries.Count == 0)
+            return null;
+
+        var firstOffset = Entries.Min(entry => entry.DayOffset);
+        var firstDay = Entries
+            .Where(entry => entry.DayOffset == firstOffset)
+            .OrderBy(entry => entry.Start)
+            .ToList();
+
+        if (firstDay.Count == 0)
+            return null;
+
+        // 休息时长只能从「第 2 场开考 − 第 1 场收卷」反推：模板里不存休息，存的是逐场时刻。
+        // ⚠️ 一天只有一场时没有「第 2 场」可量，此时退回默认值——界面上这个数本来也不生效。
+        var breakMinutes = ExamPlanSlot.DefaultBreakMinutes;
+        if (firstDay.Count > 1)
+        {
+            var firstEnd = ExamPlanEntry.ResolveEnd(firstDay[0].Start, firstDay[0].DurationMinutes);
+            breakMinutes = ExamPlanSlot.ClampBreak((int)(firstDay[1].Start - firstEnd).TotalMinutes);
+        }
+
+        return new ExamPlanSlotShape(firstDay.Count, firstDay[0].Start, breakMinutes);
+    }
+
     /// <summary>拷一份（模板管理里「以某份为底改一份」用）。</summary>
     public ExamPlanTemplate Clone() => new()
     {

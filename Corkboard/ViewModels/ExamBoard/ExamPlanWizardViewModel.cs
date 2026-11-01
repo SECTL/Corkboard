@@ -69,10 +69,11 @@ public partial class ExamPlanWizardViewModel : ViewModelBase
     private Guid? _resultBoardId;
 
     /// <summary>
-    ///     这次是按模板排的：非空时第 2、3 步跳过，直接由模板算出对照表。
+    ///     这次是从哪份模板起步的（不选模板时为 <see langword="null" />）。
     ///     <para>
-    ///         模板里存的是「第几天几点考什么、考多久」（见 <see cref="ExamPlanTemplateEntry" />），
-    ///         所以套用时只需要一个「这次的第一天」，其它全现算——模板因此可以一直用下去。
+    ///         它只影响两件事：① 选中模板那一刻把草稿灌进第 2、3 步（见 <see cref="ApplyTemplateDraft" />）；
+    ///         ② 进总览时**不按科目数自动推荐作息**（作息得跟着模板走）。
+    ///         排布本身跟手动排走同一条路，模板不接管那张表。
     ///     </para>
     /// </summary>
     private ExamPlanTemplate? _template;
@@ -166,21 +167,20 @@ public partial class ExamPlanWizardViewModel : ViewModelBase
     {
         if (IsCreateMode)
         {
-            if (string.IsNullOrWhiteSpace(TitleDraft))
-                TitleDraft = string.Format(CR.Settings_Exam_Plan_TitleDefault, DateTime.Today.Year);
-            if (string.IsNullOrWhiteSpace(SubtitleDraft))
-                SubtitleDraft = CR.Settings_Exam_Plan_SubtitleDefault;
+            // 新建模式下两个框**一律留空**，默认名不写进框里，只作为灰字提示显示
+            // （PlaceholderText 就是「留空会变成什么」：标题 → Exam_Board_DefaultTitle）。
+            // 之前预填「2026 年期末考试」是替用户做决定：排完一场考试发现看板名跟内容对不上，
+            // 还得回来改一遍；而留空本来就会落成默认名（ExamBoardDocument.ResolveTitle）。
+            TitleDraft = string.Empty;
+            SubtitleDraft = string.Empty;
             return;
         }
 
+        // 追加模式：这两个框是只读的，作用只是让用户看清「这一批要加到哪块看板上去」，
+        // 所以跟随当前看板；看板自己没填就照样留空，不替它编一个默认名。
         var board = _examService.ActiveBoard;
-        var title = board?.Title?.Trim();
-        TitleDraft = string.IsNullOrEmpty(title)
-            ? string.Format(CR.Settings_Exam_Plan_TitleDefault, DateTime.Today.Year)
-            : title;
-
-        var subtitle = board?.Subtitle?.Trim();
-        SubtitleDraft = string.IsNullOrEmpty(subtitle) ? CR.Settings_Exam_Plan_SubtitleDefault : subtitle;
+        TitleDraft = board?.Title?.Trim() ?? string.Empty;
+        SubtitleDraft = board?.Subtitle?.Trim() ?? string.Empty;
     }
 
     /// <summary>追加模式：标题 / 副标题改的是**已经存在的**看板，不该在这一步再问一遍。</summary>
@@ -257,21 +257,22 @@ public partial class ExamPlanWizardViewModel : ViewModelBase
     public bool IsLastStep => StepIndex >= LastStep;
 
     /// <summary>
-    ///     这次是按模板排的：科目与作息两步跳过（模板里已经有了）。
+    ///     这次是按模板排的：模板把科目、时长、作息与标题**预填**进来，但三步照走。
     ///     <para>
-    ///         界面上那两颗步骤胶囊跟着藏起来，免得用户点不进去还以为坏了。
+    ///         ⚠️ 早先的版本在这里把第 2、3 步整个跳过（模板态只走「基本信息 → 总览」两步）。
+    ///         用户看过之后明确要求反过来：**模板只是起点**——顶部那些设置（标题 / 副标题 / 第一天 /
+    ///         一天几场 / 第一场几点 / 歇多久）还得照常生效并跟着模板走，之后用户改了也得算数。
+    ///         所以模板现在只在 <see cref="OnSelectedTemplateChanged" /> 里灌一份草稿，
+    ///         之后的流程与手动排**完全一样**，改哪儿都参与重排。
     ///     </para>
     /// </summary>
     public bool IsTemplateMode => _template is not null;
 
-    /// <summary>没套模板时走三步，套了模板就只有「基本信息 → 总览」两步。</summary>
-    public bool IsSubjectsStepVisible => !IsTemplateMode;
-
-    /// <summary>步骤条上的「第 2 步 / 共 3 步 · 考哪些科目」。</summary>
+    /// <summary>步骤条上的「第 2 步 / 共 3 步 · 考哪些科目」。套模板时步数不变（见 <see cref="IsTemplateMode" />）。</summary>
     public string StepText => string.Format(
         CR.Settings_Exam_Plan_StepFormat,
-        IsTemplateMode ? (StepIndex == 0 ? 1 : 2) : StepIndex + 1,
-        IsTemplateMode ? 2 : LastStep + 1,
+        StepIndex + 1,
+        LastStep + 1,
         StepName(StepIndex));
 
     /// <summary>右下角那颗主按钮的文字：最后一步是「完成」，其它是「下一步」。</summary>
@@ -309,12 +310,13 @@ public partial class ExamPlanWizardViewModel : ViewModelBase
         if (IsLastStep)
             return;
 
-        // 套了模板就没有「选科目」这一步——模板里已经定死了，直接进总览。
-        var next = IsTemplateMode && StepIndex == 0 ? LastStep : StepIndex + 1;
+        // 三步一律走完：套了模板也一样（模板只是把第 2 步的科目与时长、第 3 步的作息预填好，用户还能改）。
+        var next = StepIndex + 1;
 
         // 第一次进总览：按已选科目数摆一份合适的作息。科目多的考试（6 门、9 门）
         // 排成一天一场会拖成一个多星期，默认值就该跟着科目数走，而不是写死「一天两场」。
-        if (next == LastStep && !_slotsTouchedByUser)
+        // ⚠️ 套模板时**不许**在这里推荐：作息是模板带进来的，一推荐就把模板的作息冲掉了。
+        if (next == LastStep && !_slotsTouchedByUser && !IsTemplateMode)
             ApplyRecommendedSlots();
 
         StepIndex = next;
@@ -331,7 +333,7 @@ public partial class ExamPlanWizardViewModel : ViewModelBase
         if (!CanGoPrevious)
             return;
 
-        StepIndex = IsTemplateMode && StepIndex == LastStep ? 0 : StepIndex - 1;
+        StepIndex--;
     }
 
     #endregion
@@ -385,7 +387,10 @@ public partial class ExamPlanWizardViewModel : ViewModelBase
     /// <summary>可选模板（「用模板快速布置」那条路）。</summary>
     public ObservableCollection<TemplateOption> TemplateOptions { get; }
 
-    /// <summary>当前选中的模板；选了就跳过科目与作息两步。</summary>
+    /// <summary>
+    ///     当前选中的模板。选中它**只是把一份草稿灌进第 2、3 步**（科目与顺序、各科时长、
+    ///     一天几场 / 第一场几点 / 歇多久），之后用户可以随便改，改完照常写进看板。
+    /// </summary>
     [ObservableProperty]
     private TemplateOption? _selectedTemplate;
 
@@ -397,25 +402,9 @@ public partial class ExamPlanWizardViewModel : ViewModelBase
         _template = value?.Template;
 
         if (_template is not null)
-        {
-            // 模板自带标题 / 副标题：新建看板时预填，用户还能改。
-            if (IsCreateMode)
-            {
-                TitleDraft = string.IsNullOrWhiteSpace(_template.Title)
-                    ? string.Format(CR.Settings_Exam_Plan_TitleDefault, DateTime.Today.Year)
-                    : _template.Title;
-                SubtitleDraft = string.IsNullOrWhiteSpace(_template.Subtitle)
-                    ? CR.Settings_Exam_Plan_SubtitleDefault
-                    : _template.Subtitle;
-            }
-
-            FollowSubtitleThemeColor = _template.SubtitleColor is null;
-            if (_template.SubtitleColor is { } color)
-                SubtitleColorDraft = color;
-        }
+            ApplyTemplateDraft(_template);
 
         OnPropertyChanged(nameof(IsTemplateMode));
-        OnPropertyChanged(nameof(IsSubjectsStepVisible));
         OnPropertyChanged(nameof(StepText));
         OnPropertyChanged(nameof(StepError));
         OnPropertyChanged(nameof(HasStepError));
@@ -423,6 +412,134 @@ public partial class ExamPlanWizardViewModel : ViewModelBase
         // 已经在对照表那一屏：换模板当场重排。
         if (IsReviewStep)
             RebuildPlan();
+    }
+
+    /// <summary>
+    ///     把一份模板灌成草稿：顶部那几个设置（标题 / 副标题 / 副标题颜色）与第 2、3 步的内容都摆成模板的样子。
+    ///     <para>
+    ///         ⚠️ **只摆草稿，不接管排布**：灌完之后向导走的就是普通的「科目 + 作息」那条路
+    ///         （见 <see cref="RebuildPlan" />），所以用户改科目、改时长、改作息都会真的生效——
+    ///         这正是用户要的「上面那些要跟随模板走，用户调整之后这些内容也要可以变」。
+    ///         如果这里改成「模板态直接照模板逐场摊开」，那这张表就再也不受上面那几个数控制了。
+    ///     </para>
+    ///     <para>
+    ///         作息由模板的场次**还原成三个数**（一天几场 / 第一场几点开考 / 每场之间歇多久），
+    ///         于是模板的作息会原样出现在第 3 步那几个控件上，用户看得见、也调得动。
+    ///     </para>
+    /// </summary>
+    private void ApplyTemplateDraft(ExamPlanTemplate template)
+    {
+        // 标题 / 副标题：新建看板时预填（模板里没存就留空，留空 = 用默认名 / 不显示副标题）。
+        // 追加模式下这两个框是只读的，写的是当前看板的标题，所以不动它。
+        if (IsCreateMode)
+        {
+            TitleDraft = template.Title?.Trim() ?? string.Empty;
+            SubtitleDraft = template.Subtitle?.Trim() ?? string.Empty;
+        }
+
+        FollowSubtitleThemeColor = template.SubtitleColor is null;
+        if (template.SubtitleColor is { } color)
+            SubtitleColorDraft = color;
+
+        ApplyTemplateSubjects(template);
+        ApplyTemplateSlots(template);
+    }
+
+    /// <summary>
+    ///     把模板里的科目按「第几天、几点」的顺序摊回第 2 步的考试顺序。
+    ///     <para>
+    ///         合卷的那几场（显示名里带分隔符的「物理 · 化学」）还原成一行合卷，
+    ///         时长照抄模板——用户当初就是把那两门存成一条的。
+    ///     </para>
+    /// </summary>
+    private void ApplyTemplateSubjects(ExamPlanTemplate template)
+    {
+        foreach (var item in PlanSubjects)
+            item.Changed -= OnPlanSubjectChanged;
+
+        PlanSubjects.Clear();
+
+        foreach (var entry in template.Entries
+                     .OrderBy(entry => entry.DayOffset)
+                     .ThenBy(entry => entry.Start))
+        {
+            var subjects = ResolveTemplateSubjects(entry);
+            if (subjects.Count == 0)
+                continue;
+
+            var item = new ExamPlanSubjectItem(subjects, entry.DurationMinutes);
+            item.Changed += OnPlanSubjectChanged;
+            PlanSubjects.Add(item);
+        }
+
+        AddMissingBoardSubjects(template);
+        RefreshSubjectState();
+    }
+
+    /// <summary>
+    ///     模板里的一场对应哪些作业板科目：从「物理 · 化学」这种显示名按合卷分隔符拆开。
+    /// </summary>
+    private static List<string> ResolveTemplateSubjects(ExamPlanTemplateEntry entry) =>
+    [
+        .. entry.Subject.Split(ExamPlanSubject.CombineSeparator, StringSplitOptions.RemoveEmptyEntries)
+            .Select(name => name.Trim())
+            .Where(name => name.Length > 0)
+    ];
+
+    /// <summary>
+    ///     模板里的科目作业板可能没有（换了一届、或者模板是从别处拷来的）：缺的几个补进作业板科目表，
+    ///     否则左边那个勾选列表里就找不到它们，看着像「模板没生效」。
+    /// </summary>
+    private void AddMissingBoardSubjects(ExamPlanTemplate template)
+    {
+        var missing = template.Entries
+            .SelectMany(ResolveTemplateSubjects)
+            .Where(name => !_boardService.Subjects.Contains(name, StringComparer.OrdinalIgnoreCase))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (missing.Count == 0)
+            return;
+
+        foreach (var name in missing)
+            _boardService.Subjects.Add(name);
+
+        _boardService.Save();
+        ReloadBoardSubjects();
+        SyncBoardSelection();
+    }
+
+    /// <summary>
+    ///     模板的作息还原成第 3 步那三个数（一天几场 / 第一场几点 / 歇多久）。
+    ///     取哪一天、怎么算间隔都由 Core 的 <see cref="ExamPlanTemplate.ResolveSlotShape" /> 决定，这里只负责写回界面。
+    /// </summary>
+    private void ApplyTemplateSlots(ExamPlanTemplate template)
+    {
+        if (template.ResolveSlotShape() is not { } shape)
+            return;
+
+        var wasSyncing = _isSyncing;
+        _isSyncing = true;
+        try
+        {
+            SlotsPerDay = Math.Clamp(shape.SlotCount, MinSlotsPerDay, MaxSlotsPerDay);
+            FirstStartDraft = shape.FirstStart.ToTimeSpan();
+            BreakDraft = shape.BreakMinutes;
+        }
+        finally
+        {
+            _isSyncing = wasSyncing;
+        }
+
+        // 同步态里赋的值不会触发那几个 partial 回调，界面上得手动通知一遍（同 ApplyShape）。
+        OnPropertyChanged(nameof(SlotsPerDayDraft));
+        OnPropertyChanged(nameof(FirstStartDraft));
+        OnPropertyChanged(nameof(BreakDraft));
+
+        // ⚠️ 模板带来的作息算「用户定过的」：不这样的话，进总览时会按科目数再推荐一次，
+        // 把模板里「一天几场」直接冲掉（用户要的就是这几个数跟着模板走）。
+        _slotsTouchedByUser = true;
+        SyncPresetSelection();
     }
 
     /// <summary>重新读一遍模板清单（窗口打开时、另存为模板之后）。</summary>
@@ -629,17 +746,7 @@ public partial class ExamPlanWizardViewModel : ViewModelBase
         if (_isSyncing)
             return;
 
-        // 科目行里改了什么（时长、勾选）：在总览页就按新时长重排一次。
-        if (IsReviewStep && item.DurationMinutes > 0)
-            RebuildPlan();
-
-        if (item.IsChecked)
-        {
-            // 勾选只是为了「合卷」，不参与排布，不用重排。
-            OnPropertyChanged(nameof(CanCombine));
-            return;
-        }
-
+        // 勾选只是为了「合卷」，不参与排布，不用重排（时长在第 3 步那张表里改，见 OnRowDurationChanged）。
         OnPropertyChanged(nameof(CanCombine));
     }
 
@@ -973,28 +1080,9 @@ public partial class ExamPlanWizardViewModel : ViewModelBase
 
         var firstDay = DateOnly.FromDateTime(FirstDayDraft ?? DateTime.Today);
 
-        // 套了模板：科目、时长、作息全在模板里，直接把「第几天几点」摊到这次的日期上。
-        // 冲突照旧要重算一遍——模板本身没错，但可能跟看板上已有的考试撞上。
-        if (_template is not null)
-        {
-            _entries =
-            [
-                .. _template.CreateEntries(firstDay)
-                    .Select(entry => new ExamPlanEntry
-                    {
-                        Date = entry.Date,
-                        Start = entry.StartTime,
-                        DurationMinutes = Math.Max(1, (int)entry.Duration.TotalMinutes),
-                        Subject = entry.Subject,
-                        SubjectKeys = [.. entry.ResolveSubjectKeys]
-                    })
-            ];
-
-            ExamSchedulePlanner.Refresh(_entries, ExistingExams);
-            RebuildReviewRows();
-            return;
-        }
-
+        // ⚠️ 这里**没有**「套了模板」的分支：模板在 ApplyTemplateDraft 里已经化成草稿
+        // （科目顺序 + 各科时长 + 那三个作息数），所以模板与手动排走同一条路。
+        // 早先这里直接照模板逐场摊开，结果就是「顶部那几个数改了也不生效」（用户明确要过相反的）。
         var subjects = PlanSubjects
             .Select(item => new ExamPlanSubject(item.Subjects, item.DurationMinutes))
             .ToList();
@@ -1317,28 +1405,16 @@ public partial class BoardSubjectOption(string name, Action<BoardSubjectOption> 
     }
 }
 
-/// <summary>时长下拉里的一项。</summary>
-public sealed class DurationOption(int minutes)
-{
-    public int Minutes { get; } = ExamDurationPresets.Clamp(minutes);
-
-    public string Text => ExamDurationPresets.Describe(Minutes);
-
-    public override string ToString() => Text;
-}
-
 /// <summary>「这次要考的科目」里的一行：一个科目，或者几门合成的合卷。</summary>
 public partial class ExamPlanSubjectItem : ObservableObject
 {
     public ExamPlanSubjectItem(IEnumerable<string> subjects, int durationMinutes)
     {
         Subjects = [.. subjects];
-        DurationOptions = [];
         DurationMinutes = ExamDurationPresets.Clamp(durationMinutes);
-        RebuildDurationOptions();
     }
 
-    /// <summary>行里变了（时长、勾选）：向导据此重排 / 重算「能不能合卷」。</summary>
+    /// <summary>行里变了（勾选）：向导据此重算「能不能合卷」。</summary>
     public event Action<ExamPlanSubjectItem>? Changed;
 
     /// <summary>绑定的科目（合卷时多个）。</summary>
@@ -1350,10 +1426,14 @@ public partial class ExamPlanSubjectItem : ObservableObject
     /// <summary>这是合卷。</summary>
     public bool IsCombined => Subjects.Count > 1;
 
-    /// <summary>时长下拉的可选项：五个快捷档 + 当前值（合卷算出来的 225 之类也得能显示）。</summary>
-    public ObservableCollection<DurationOption> DurationOptions { get; }
-
-    /// <summary>时长（分钟）。</summary>
+    /// <summary>
+    ///     时长（分钟）。
+    ///     <para>
+    ///         ⚠️ 第 2 步**不给时长下拉框**：勾上科目就按 <see cref="ExamDurationPresets" /> 的预设带出来
+    ///         （语文 150、数学英语 120、物化生政史地 75……），合卷按各科累加。用户说了「这一步不用选时长，
+    ///         后面有」——真要改就在第 3 步的总览表里改那一行的时长，那里改了同一天后面的场次会自动顺延。
+    ///     </para>
+    /// </summary>
     [ObservableProperty]
     private int _durationMinutes;
 
@@ -1361,58 +1441,10 @@ public partial class ExamPlanSubjectItem : ObservableObject
     [ObservableProperty]
     private bool _isChecked;
 
-    [ObservableProperty]
-    private DurationOption? _selectedDuration;
-
-    /// <summary>正在重建下拉项：期间不去改 <see cref="DurationMinutes" />，否则会自己咬自己。</summary>
-    private bool _isRebuildingOptions;
-
-    partial void OnSelectedDurationChanged(DurationOption? value)
-    {
-        if (_isRebuildingOptions || value is null || value.Minutes == DurationMinutes)
-            return;
-
-        DurationMinutes = value.Minutes;
-        Changed?.Invoke(this);
-    }
-
-    partial void OnDurationMinutesChanged(int value)
-    {
-        if (_isRebuildingOptions || DurationOptions.Any(option => option.Minutes == value))
-            return;
-
-        RebuildDurationOptions();
-    }
-
     partial void OnIsCheckedChanged(bool value) => Changed?.Invoke(this);
 
-    private void RebuildDurationOptions()
-    {
-        var previous = SelectedDuration?.Minutes ?? DurationMinutes;
-
-        var wanted = ExamDurationPresets.QuickMinutes
-            .Append(DurationMinutes)
-            .Append(previous)
-            .Distinct()
-            .OrderBy(minutes => minutes)
-            .ToList();
-
-        _isRebuildingOptions = true;
-        try
-        {
-            DurationOptions.Clear();
-            foreach (var minutes in wanted)
-                DurationOptions.Add(new DurationOption(minutes));
-
-            SelectedDuration = DurationOptions.FirstOrDefault(option => option.Minutes == previous)
-                               ?? DurationOptions.FirstOrDefault(option => option.Minutes == DurationMinutes)
-                               ?? DurationOptions[0];
-        }
-        finally
-        {
-            _isRebuildingOptions = false;
-        }
-    }
+    /// <summary>这一行的时长说明（「120 分钟」）——只读，给界面上显示用。</summary>
+    public string DurationText => ExamDurationPresets.Describe(DurationMinutes);
 }
 
 /// <summary>作息预设下拉里的一项：内置那几份与用户存的作息模板都包成它。</summary>

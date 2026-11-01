@@ -61,6 +61,23 @@ public sealed class ExamPlanSlot
 }
 
 /// <summary>
+///     「一天几场 / 第一场几点 / 两场之间歇多久」这三个数——快速布置向导第 3 步界面上能调的全部作息。
+///     <para>
+///         模板、作息预设、界面三者之间靠它来回换算：模板还原成它（<see cref="ExamPlanTemplate.ResolveSlotShape" />），
+///         它再摊成逐场作息（<see cref="ExamPlanSlotPresets.ForCount" />）。
+///     </para>
+/// </summary>
+/// <param name="SlotCount">一天几场。</param>
+/// <param name="FirstStart">第一场开考时刻。</param>
+/// <param name="BreakMinutes">两场之间歇多久（分钟）。</param>
+public sealed record ExamPlanSlotShape(int SlotCount, TimeOnly FirstStart, int BreakMinutes)
+{
+    /// <summary>按这三个数摊成逐场作息。</summary>
+    public IReadOnlyList<ExamPlanSlot> Create() =>
+        ExamPlanSlotPresets.ForCount(SlotCount, FirstStart, ExamPlanSlot.ClampBreak(BreakMinutes));
+}
+
+/// <summary>
 ///     常见的作息预设。用户点一下就能拿到一天一场 / 两场 / 四场 / 五场的排法，
 ///     之后再逐行改时刻与休息。
 /// </summary>

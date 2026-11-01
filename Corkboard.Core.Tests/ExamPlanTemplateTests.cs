@@ -243,6 +243,97 @@ public class ExamPlanTemplateTests
     }
 
     [Fact]
+    public void ResolveSlotShape_ReadsTheFirstDayOnly()
+    {
+        // 模板按同一个作息一天天摊出来：第 1 天两场（08:00 考 150、14:00 考 120），第 2 天不再参考。
+        var shape = BuildSample().ResolveSlotShape();
+
+        Assert.NotNull(shape);
+        Assert.Equal(2, shape.SlotCount);
+        Assert.Equal(new TimeOnly(8, 0), shape.FirstStart);
+
+        // 歇多久 = 第 2 场开考 − 第 1 场收卷 = 14:00 − 10:30 = 210 分钟（夹进 0–240 仍成立）。
+        Assert.Equal(210, shape.BreakMinutes);
+    }
+
+    [Fact]
+    public void ResolveSlotShape_OneSlotUsesTheDefaultBreak()
+    {
+        var template = new ExamPlanTemplate
+        {
+            Entries = [new ExamPlanTemplateEntry { DayOffset = 0, Start = new TimeOnly(9, 0), DurationMinutes = 120, Subject = "语文" }]
+        };
+
+        var shape = template.ResolveSlotShape();
+
+        Assert.NotNull(shape);
+        Assert.Equal(1, shape.SlotCount);
+        Assert.Equal(new TimeOnly(9, 0), shape.FirstStart);
+        Assert.Equal(ExamPlanSlot.DefaultBreakMinutes, shape.BreakMinutes);
+    }
+
+    [Fact]
+    public void ResolveSlotShape_IgnoresLaterDaysWhenTheFirstDayIsShort()
+    {
+        // 第 1 天只有一场、第 2 天两场：一天几场按第 1 天算（1），不能把第 2 天的也数进来。
+        var template = new ExamPlanTemplate
+        {
+            Entries =
+            [
+                new ExamPlanTemplateEntry { DayOffset = 0, Start = new TimeOnly(8, 0), DurationMinutes = 150, Subject = "语文" },
+                new ExamPlanTemplateEntry { DayOffset = 1, Start = new TimeOnly(8, 0), DurationMinutes = 120, Subject = "数学" },
+                new ExamPlanTemplateEntry { DayOffset = 1, Start = new TimeOnly(10, 30), DurationMinutes = 75, Subject = "物理" }
+            ]
+        };
+
+        Assert.Equal(1, template.ResolveSlotShape()!.SlotCount);
+    }
+
+    [Fact]
+    public void ResolveSlotShape_EmptyTemplateReturnsNull()
+    {
+        Assert.Null(new ExamPlanTemplate().ResolveSlotShape());
+    }
+
+    [Fact]
+    public void ResolveSlotShape_RoundTripsThroughForCount()
+    {
+        // 用户排好一天三场（07:30 开考、每场之间歇 25 分钟）再存成模板，套回来时那三个数得能还出来。
+        // ForCount 摊出来的是**逐场时刻**：第 1 场 07:30，后面几场接在上一场收卷 + 25 分钟之后。
+        var first = new TimeOnly(7, 30);
+        var slots = ExamPlanSlotPresets.ForCount(3, first, 25);
+
+        var template = new ExamPlanTemplate
+        {
+            Entries = [.. slots.Select((slot, index) => new ExamPlanTemplateEntry
+            {
+                DayOffset = 0,
+                Start = slotIndexStart(slots, index),
+                DurationMinutes = 60,
+                Subject = $"科目{index}"
+            })]
+        };
+
+        var shape = template.ResolveSlotShape();
+
+        Assert.NotNull(shape);
+        Assert.Equal(3, shape.SlotCount);
+        Assert.Equal(first, shape.FirstStart);
+        Assert.Equal(25, shape.BreakMinutes);
+
+        // ForCount 本身不给第 2、3 场算绝对时刻（它们挂着「接上一场」的模式），
+        // 所以这里替它摊一次：第 N 场 = 上一场开考 + 上一场时长 + 休息。
+        static TimeOnly slotIndexStart(IReadOnlyList<ExamPlanSlot> slots, int index)
+        {
+            var cursor = slots[0].FixedStart;
+            for (var i = 1; i <= index; i++)
+                cursor = cursor.AddMinutes(60 + slots[i].BreakMinutes);
+
+            return cursor;
+        }
+    }
+
+    [Fact]
     public void Save_InsertNewTemplateAtTheFront()
     {
         var service = new ExamTemplateService(new InMemoryConfigService());
