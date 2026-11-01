@@ -1,5 +1,6 @@
 using System;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
 using Corkboard.Core.Abstraction;
 using Corkboard.Core.Attributes;
@@ -23,6 +24,9 @@ public partial class DisplayWidgetsSettingsPage : UserControl
     ///     换城市抽屉的内容放在 <see cref="UserControl.Resources" /> 里（键名与 XAML 里的一致）。
     /// </summary>
     private const string CityPickerDrawerKey = "CityPickerDrawer";
+
+    /// <summary>类别浮层（<see cref="Popup" />）的 x:Name，与 XAML 里的一致。</summary>
+    private const string CategoryPopupKey = "QuoteCategoryPopup";
 
     public DisplayWidgetsSettingsPage()
     {
@@ -53,7 +57,10 @@ public partial class DisplayWidgetsSettingsPage : UserControl
         if (ViewModel is { } viewModel)
             viewModel.CityPicked -= OnCityPicked;
 
-        // 附加查询串是草稿属性，离开页面时补一次提交（失焦时也会提一次）。
+        // 这几个都是草稿属性（间隔、屏蔽词、附加查询串），离开页面时统一补一次提交。
+        ViewModel?.CommitQuoteRefresh();
+        ViewModel?.CommitWeatherRefresh();
+        ViewModel?.CommitQuoteBlockedWordsCommand.Execute(null);
         ViewModel?.CommitQuoteExtraQuery();
 
         // 抽屉挂在设置壳上，离开这一页不能把它留在那儿盖住下一张页面。
@@ -61,6 +68,21 @@ public partial class DisplayWidgetsSettingsPage : UserControl
     }
 
     private void OnQuoteExtraQueryLostFocus(object? sender, RoutedEventArgs e) => ViewModel?.CommitQuoteExtraQuery();
+
+    private void OnQuoteRefreshLostFocus(object? sender, RoutedEventArgs e) => ViewModel?.CommitQuoteRefresh();
+
+    private void OnWeatherRefreshLostFocus(object? sender, RoutedEventArgs e) => ViewModel?.CommitWeatherRefresh();
+
+    /// <summary>
+    ///     类别那颗按钮：点开 / 收起浮层里的复选框（和「窗口与收纳」页的九宫格同一个写法）。
+    ///     ⚠️ 用 <see cref="Popup" /> 而不是 <c>Button.Flyout</c>：Flyout 的内容在独立弹窗里，
+    ///     DataContext 不跟着按钮走，勾选框会写不进配置。
+    /// </summary>
+    private void OnQuoteCategoryPickerClick(object? sender, RoutedEventArgs e)
+    {
+        if (this.FindControl<Popup>(CategoryPopupKey) is { } popup)
+            popup.IsOpen = !popup.IsOpen;
+    }
 
     /// <summary>「换城市」：把城市搜索塞进设置壳的右侧抽屉（与「关于」页的贡献人员名单同一个宿主）。</summary>
     private void ChangeCity_OnClick(object? sender, RoutedEventArgs e)

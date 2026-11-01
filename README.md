@@ -87,6 +87,8 @@ Corkboard 是常驻桌面的看板应用
 
 感谢每一位为 Corkboard 提交代码、报告问题、完善文档和提供反馈的贡献者。头像由 GitHub 贡献者数据动态生成，点击可前往 [GitHub 贡献者页面](https://github.com/SECTL/Corkboard/graphs/contributors) 查看完整统计
 
+特别感谢 [@MF-Dust](https://github.com/MF-Dust)：看板模式一言的「手动调节刷新间隔、类别改用下拉框选择、屏蔽词、来源与作者开关」这四项设计来自他提交的 [PR #2](https://github.com/SECTL/Corkboard/pull/2)，本仓库在他那份实现的基础上改写进了既有一言组件
+
 想一起改这份代码，先看 [贡献指南](CONTRIBUTING.md)（构建、测试与目录约定），首次提 PR 时按 [贡献者许可协议（CLA）](CLA.md) 在 PR 里签署即可
 
 ## 支持与社区

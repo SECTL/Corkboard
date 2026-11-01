@@ -65,6 +65,22 @@ public partial class WidgetsSettingsConfig : ObservableObject
     /// </summary>
     [ObservableProperty] private int _quoteRefreshMinutes = DefaultQuoteRefreshMinutes;
 
+    /// <summary>
+    ///     屏蔽词：<b>每行一个</b>，正文、出处、作者任意一处包含就整句不要（换一条再试）。
+    ///     <para>
+    ///         官方 v1 没有「排除关键词」的参数，只能拿回来自己判；判掉之后的处理在
+    ///         <c>QuoteService</c>（重取有限次，拿不到就继续显示上一条），
+    ///         拆词与匹配规则在 <see cref="QuoteBlocklist" />（纯逻辑、有单测）。
+    ///     </para>
+    /// </summary>
+    [ObservableProperty] private string _quoteBlockedWords = "";
+
+    /// <summary>在一言下面显示出处（<c>from</c>）。默认开。</summary>
+    [ObservableProperty] private bool _quoteShowSource = true;
+
+    /// <summary>在一言下面显示作者（<c>from_who</c>）。默认开。</summary>
+    [ObservableProperty] private bool _quoteShowAuthor = true;
+
     // ── 天气 ────────────────────────────────────────────────
 
     /// <summary>在看板模式里显示天气。默认开。</summary>
@@ -127,6 +143,9 @@ public partial class WidgetsSettingsConfig : ObservableObject
             : Math.Clamp(QuoteRefreshMinutes, MinRefreshMinutes, MaxRefreshMinutes);
 
         QuoteExtraQuery = QuoteExtraQuery?.Trim() ?? "";
+
+        // 屏蔽词按「一行一个」落盘：去空行、去重、超上限截断都在 QuoteBlocklist 里。
+        QuoteBlockedWords = QuoteBlocklist.Normalize(QuoteBlockedWords);
 
         WeatherRefreshMinutes = Math.Clamp(WeatherRefreshMinutes, MinRefreshMinutes, MaxRefreshMinutes);
 

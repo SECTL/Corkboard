@@ -3253,16 +3253,49 @@
     <value>这几项由界面管，填了也不会用：{0}</value>
   </data>
   <data name="Settings_Widgets_QuoteRefresh" xml:space="preserve">
-    <value>换的时机</value>
+    <value>多久换一条</value>
   </data>
   <data name="Settings_Widgets_QuoteRefreshDescription" xml:space="preserve">
-    <value>每次打开看板都换，或者隔一阵换一条</value>
+    <value>填 0 就每次打开都换，其余按分钟算</value>
   </data>
-  <data name="Settings_Widgets_RefreshOnOpen" xml:space="preserve">
-    <value>每次打开看板都换一条</value>
+  <data name="Settings_Widgets_QuoteRefreshUnit" xml:space="preserve">
+    <value>分钟</value>
   </data>
-  <data name="Settings_Widgets_RefreshEveryMinutes" xml:space="preserve">
-    <value>每 {0} 分钟换一条</value>
+  <data name="Settings_Widgets_QuoteCategoriesAll" xml:space="preserve">
+    <value>全部类别</value>
+  </data>
+  <data name="Settings_Widgets_QuoteCategoriesSummary" xml:space="preserve">
+    <value>{0} 等 {1} 类</value>
+  </data>
+  <data name="Settings_Widgets_QuoteBlocked" xml:space="preserve">
+    <value>屏蔽词</value>
+  </data>
+  <data name="Settings_Widgets_QuoteBlockedDescription" xml:space="preserve">
+    <value>每行一个词，含这些词的整句不显示</value>
+  </data>
+  <data name="Settings_Widgets_QuoteBlockedPlaceholder" xml:space="preserve">
+    <value>一行一个词</value>
+  </data>
+  <data name="Settings_Widgets_QuoteBlockedSave" xml:space="preserve">
+    <value>保存屏蔽词</value>
+  </data>
+  <data name="Settings_Widgets_QuoteBlockedSummary" xml:space="preserve">
+    <value>现在屏蔽 {0} 个词</value>
+  </data>
+  <data name="Settings_Widgets_QuoteBlockedEmpty" xml:space="preserve">
+    <value>还没填屏蔽词</value>
+  </data>
+  <data name="Settings_Widgets_QuoteMeta" xml:space="preserve">
+    <value>出处与作者</value>
+  </data>
+  <data name="Settings_Widgets_QuoteMetaDescription" xml:space="preserve">
+    <value>一言底下那一行小字，两段可以只留一段</value>
+  </data>
+  <data name="Settings_Widgets_QuoteShowSource" xml:space="preserve">
+    <value>显示来源</value>
+  </data>
+  <data name="Settings_Widgets_QuoteShowAuthor" xml:space="preserve">
+    <value>显示作者</value>
   </data>
   <data name="Settings_Widgets_QuoteInternational" xml:space="preserve">
     <value>用海外接口</value>
@@ -3422,9 +3455,6 @@
   </data>
   <data name="Settings_Display_Group" xml:space="preserve">
     <value>看板模式</value>
-  </data>
-  <data name="Settings_Widgets_WeatherEveryMinutes" xml:space="preserve">
-    <value>每 {0} 分钟刷一次</value>
   </data>
   <data name="Settings_Widgets_WeatherCitySelected" xml:space="preserve">
     <value>现在是：{0}</value>

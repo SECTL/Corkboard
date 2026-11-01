@@ -1071,8 +1071,19 @@ public static class Resources
     public static string Settings_Widgets_QuoteIgnored => ResourceManager.GetString(nameof(Settings_Widgets_QuoteIgnored), Culture)!;
     public static string Settings_Widgets_QuoteRefresh => ResourceManager.GetString(nameof(Settings_Widgets_QuoteRefresh), Culture)!;
     public static string Settings_Widgets_QuoteRefreshDescription => ResourceManager.GetString(nameof(Settings_Widgets_QuoteRefreshDescription), Culture)!;
-    public static string Settings_Widgets_RefreshOnOpen => ResourceManager.GetString(nameof(Settings_Widgets_RefreshOnOpen), Culture)!;
-    public static string Settings_Widgets_RefreshEveryMinutes => ResourceManager.GetString(nameof(Settings_Widgets_RefreshEveryMinutes), Culture)!;
+    public static string Settings_Widgets_QuoteRefreshUnit => ResourceManager.GetString(nameof(Settings_Widgets_QuoteRefreshUnit), Culture)!;
+    public static string Settings_Widgets_QuoteCategoriesAll => ResourceManager.GetString(nameof(Settings_Widgets_QuoteCategoriesAll), Culture)!;
+    public static string Settings_Widgets_QuoteCategoriesSummary => ResourceManager.GetString(nameof(Settings_Widgets_QuoteCategoriesSummary), Culture)!;
+    public static string Settings_Widgets_QuoteBlocked => ResourceManager.GetString(nameof(Settings_Widgets_QuoteBlocked), Culture)!;
+    public static string Settings_Widgets_QuoteBlockedDescription => ResourceManager.GetString(nameof(Settings_Widgets_QuoteBlockedDescription), Culture)!;
+    public static string Settings_Widgets_QuoteBlockedPlaceholder => ResourceManager.GetString(nameof(Settings_Widgets_QuoteBlockedPlaceholder), Culture)!;
+    public static string Settings_Widgets_QuoteBlockedSave => ResourceManager.GetString(nameof(Settings_Widgets_QuoteBlockedSave), Culture)!;
+    public static string Settings_Widgets_QuoteBlockedSummary => ResourceManager.GetString(nameof(Settings_Widgets_QuoteBlockedSummary), Culture)!;
+    public static string Settings_Widgets_QuoteBlockedEmpty => ResourceManager.GetString(nameof(Settings_Widgets_QuoteBlockedEmpty), Culture)!;
+    public static string Settings_Widgets_QuoteMeta => ResourceManager.GetString(nameof(Settings_Widgets_QuoteMeta), Culture)!;
+    public static string Settings_Widgets_QuoteMetaDescription => ResourceManager.GetString(nameof(Settings_Widgets_QuoteMetaDescription), Culture)!;
+    public static string Settings_Widgets_QuoteShowSource => ResourceManager.GetString(nameof(Settings_Widgets_QuoteShowSource), Culture)!;
+    public static string Settings_Widgets_QuoteShowAuthor => ResourceManager.GetString(nameof(Settings_Widgets_QuoteShowAuthor), Culture)!;
     public static string Settings_Widgets_QuoteInternational => ResourceManager.GetString(nameof(Settings_Widgets_QuoteInternational), Culture)!;
     public static string Settings_Widgets_QuoteInternationalDescription => ResourceManager.GetString(nameof(Settings_Widgets_QuoteInternationalDescription), Culture)!;
     public static string Settings_Widgets_Weather => ResourceManager.GetString(nameof(Settings_Widgets_Weather), Culture)!;
@@ -1146,8 +1157,6 @@ public static string Settings_Widgets_ShowWeatherFeelsLike => ResourceManager.Ge
 public static string Settings_Widgets_ShowWeatherTomorrow => ResourceManager.GetString(nameof(Settings_Widgets_ShowWeatherTomorrow), Culture)!;
 
     public static string Settings_Display_Group => ResourceManager.GetString(nameof(Settings_Display_Group), Culture)!;
-
-    public static string Settings_Widgets_WeatherEveryMinutes => ResourceManager.GetString(nameof(Settings_Widgets_WeatherEveryMinutes), Culture)!;
 
     public static string Settings_Widgets_WeatherCitySelected => ResourceManager.GetString(nameof(Settings_Widgets_WeatherCitySelected), Culture)!;
 

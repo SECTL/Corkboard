@@ -43,16 +43,9 @@ public partial class DisplayWidgetsSettingsPageViewModel : ViewModelBase
         _weatherService = weatherService;
 
         QuoteCategoryItems = BuildCategoryItems();
-        QuoteRefreshChoices = BuildChoices([0, 5, 10, 15, 30, 60, 120, 240, 480, 1440], minutes => minutes == 0
-            ? CR.Settings_Widgets_RefreshOnOpen
-            : string.Format(CR.Settings_Widgets_RefreshEveryMinutes, minutes));
-        WeatherRefreshChoices = BuildChoices([15, 30, 60, 120, 240, 480, 1440], minutes =>
-            string.Format(CR.Settings_Widgets_WeatherEveryMinutes, minutes));
-
-        SelectedQuoteRefresh = FindChoice(QuoteRefreshChoices, Widgets.QuoteRefreshMinutes);
-        SelectedWeatherRefresh = FindChoice(WeatherRefreshChoices, Widgets.WeatherRefreshMinutes);
 
         SelectedCity = null;
+        RefreshDrafts();
         RefreshDerivedTexts();
 
         // 清空 / 填结果都会改「有没有结果」，让抽屉里那截列表自己跟着显隐。
@@ -64,9 +57,8 @@ public partial class DisplayWidgetsSettingsPageViewModel : ViewModelBase
 
     public ObservableCollection<QuoteCategoryItem> QuoteCategoryItems { get; }
 
-    public ObservableCollection<WidgetRefreshChoice> QuoteRefreshChoices { get; }
-
-    public ObservableCollection<WidgetRefreshChoice> WeatherRefreshChoices { get; }
+    /// <summary>类别下拉框按钮上那行字（「全部类别」/「动画」/「动画 等 3 类」）。</summary>
+    public string CategoriesSummary => BuildCategoriesSummary();
 
     public ObservableCollection<XiaomiCity> CityResults { get; } = [];
 
@@ -92,9 +84,19 @@ public partial class DisplayWidgetsSettingsPageViewModel : ViewModelBase
     public string CurrentCityText =>
         string.IsNullOrWhiteSpace(Widgets.WeatherCityName) ? CR.Settings_Widgets_WeatherCityPlaceholder : Widgets.WeatherCityName;
 
-    [ObservableProperty] private WidgetRefreshChoice? _selectedQuoteRefresh;
+    /// <summary>
+    ///     一言刷新间隔的草稿（NumericUpDown 只认 <see cref="decimal" />）：
+    ///     微调 / 手输都只改草稿，失焦或离开页面才写配置——`ConfigHandlerBase` 每变一次属性就落一次盘。
+    /// </summary>
+    [ObservableProperty] private decimal _quoteRefreshDraft;
 
-    [ObservableProperty] private WidgetRefreshChoice? _selectedWeatherRefresh;
+    /// <summary>天气刷新间隔的草稿，规则同上。</summary>
+    [ObservableProperty] private decimal _weatherRefreshDraft;
+
+    /// <summary>
+    ///     屏蔽词草稿（每行一个词）：点「保存屏蔽词」或离开页面才落盘，不逐字写 <c>settings.json</c>。
+    /// </summary>
+    [ObservableProperty] private string _quoteBlockedWordsDraft = string.Empty;
 
     [ObservableProperty] private string _cityQuery = string.Empty;
 
@@ -148,20 +150,42 @@ public partial class DisplayWidgetsSettingsPageViewModel : ViewModelBase
     /// <summary>附加查询串是草稿：每敲一个字符就落一次盘不合适，失焦 / 回车才写。</summary>
     [ObservableProperty] private string _quoteExtraQueryDraft = string.Empty;
 
-    partial void OnSelectedQuoteRefreshChanged(WidgetRefreshChoice? value)
+    /// <summary>
+    ///     一言刷新间隔提交：夹回合法区间写进配置。
+    ///     <c>0</c> 是「每次打开看板都换一条」这一档，只有一言有；其余最小 5 分钟（官方 QPS 2）。
+    /// </summary>
+    public void CommitQuoteRefresh()
     {
-        if (value is null)
-            return;
+        var minutes = (int)Math.Clamp(QuoteRefreshDraft, 0, WidgetsSettingsConfig.MaxRefreshMinutes);
+        if (minutes is > 0 and < WidgetsSettingsConfig.MinRefreshMinutes)
+            minutes = WidgetsSettingsConfig.MinRefreshMinutes;
 
-        Widgets.QuoteRefreshMinutes = value.Minutes;
+        Widgets.QuoteRefreshMinutes = minutes;
+        QuoteRefreshDraft = minutes;
     }
 
-    partial void OnSelectedWeatherRefreshChanged(WidgetRefreshChoice? value)
+    /// <summary>天气刷新间隔提交：没有「每次打开都换」这一档，一律夹在 5–1440 分钟。</summary>
+    public void CommitWeatherRefresh()
     {
-        if (value is null)
-            return;
+        var minutes = (int)Math.Clamp(WeatherRefreshDraft,
+            WidgetsSettingsConfig.MinRefreshMinutes, WidgetsSettingsConfig.MaxRefreshMinutes);
 
-        Widgets.WeatherRefreshMinutes = value.Minutes;
+        Widgets.WeatherRefreshMinutes = minutes;
+        WeatherRefreshDraft = minutes;
+    }
+
+    /// <summary>
+    ///     屏蔽词提交（「保存屏蔽词」按钮、失焦、离开页面三处都调这个）：
+    ///     先收拾成「一行一个词」，再写配置，顺手刷新底下那句计数。
+    /// </summary>
+    [RelayCommand]
+    private void CommitQuoteBlockedWords()
+    {
+        var normalized = QuoteBlocklist.Normalize(QuoteBlockedWordsDraft);
+        Widgets.QuoteBlockedWords = normalized;
+        QuoteBlockedWordsDraft = normalized;
+
+        RefreshDerivedTexts();
     }
 
     partial void OnSelectedCityChanged(XiaomiCity? value)
@@ -268,8 +292,7 @@ public partial class DisplayWidgetsSettingsPageViewModel : ViewModelBase
     public void Reload()
     {
         QuoteExtraQueryDraft = Widgets.QuoteExtraQuery;
-        SelectedQuoteRefresh = FindChoice(QuoteRefreshChoices, Widgets.QuoteRefreshMinutes);
-        SelectedWeatherRefresh = FindChoice(WeatherRefreshChoices, Widgets.WeatherRefreshMinutes);
+        RefreshDrafts();
 
         foreach (var item in QuoteCategoryItems)
             item.IsSelected = Widgets.QuoteCategories.HasFlag(item.Category);
@@ -281,6 +304,33 @@ public partial class DisplayWidgetsSettingsPageViewModel : ViewModelBase
 
         RefreshDerivedTexts();
     }
+
+    /// <summary>
+    ///     把配置里的「间隔」与「屏蔽词」搬进草稿：构造期与每次进页面（<see cref="Reload" />）各调一次。
+    ///     草稿不跟着配置变化走——别处改了配置，要重进这一页才看得到。
+    /// </summary>
+    private void RefreshDrafts()
+    {
+        QuoteRefreshDraft = Widgets.QuoteRefreshMinutes;
+        WeatherRefreshDraft = Widgets.WeatherRefreshMinutes;
+        QuoteBlockedWordsDraft = Widgets.QuoteBlockedWords;
+    }
+
+    /// <summary>屏蔽词草稿每变一次只重算下面那句计数——落盘要等按钮或离页，逐字写文件不合适。</summary>
+    partial void OnQuoteBlockedWordsDraftChanged(string value)
+    {
+        OnPropertyChanged(nameof(BlockedWordsSummary));
+        OnPropertyChanged(nameof(HasBlockedWords));
+    }
+
+    /// <summary>「现在屏蔽 3 个词」/「还没有屏蔽词」：让用户知道那段文本被认成了几行。</summary>
+    public string BlockedWordsSummary =>
+        QuoteBlocklist.Parse(QuoteBlockedWordsDraft) is { Count: > 0 } words
+            ? string.Format(CR.Settings_Widgets_QuoteBlockedSummary, words.Count)
+            : CR.Settings_Widgets_QuoteBlockedEmpty;
+
+    /// <summary>有没有屏蔽词（摘要那行的强调色、清空按钮的可用性都看它）。</summary>
+    public bool HasBlockedWords => QuoteBlocklist.Parse(QuoteBlockedWordsDraft).Count > 0;
 
     private void RefreshDerivedTexts()
     {
@@ -297,6 +347,11 @@ public partial class DisplayWidgetsSettingsPageViewModel : ViewModelBase
         OnPropertyChanged(nameof(HasIgnoredQueryHint));
         OnPropertyChanged(nameof(WeatherStatusText));
         OnPropertyChanged(nameof(CurrentCityText));
+
+        // 这两行是从草稿/勾选算出来的，配置被重新读过之后也要跟着刷一遍。
+        OnPropertyChanged(nameof(BlockedWordsSummary));
+        OnPropertyChanged(nameof(HasBlockedWords));
+        OnPropertyChanged(nameof(CategoriesSummary));
     }
 
     private ObservableCollection<QuoteCategoryItem> BuildCategoryItems()
@@ -326,8 +381,13 @@ public partial class DisplayWidgetsSettingsPageViewModel : ViewModelBase
         foreach (var item in items)
             item.PropertyChanged += (_, args) =>
             {
-                if (args.PropertyName == nameof(QuoteCategoryItem.IsSelected))
-                    Widgets.QuoteCategories = CollectCategories();
+                if (args.PropertyName != nameof(QuoteCategoryItem.IsSelected))
+                    return;
+
+                Widgets.QuoteCategories = CollectCategories();
+
+                // 下拉框按钮上那行字跟着勾选变（「全部类别」/「动画 等 3 类」）。
+                OnPropertyChanged(nameof(CategoriesSummary));
             };
 
         return items;
@@ -343,11 +403,22 @@ public partial class DisplayWidgetsSettingsPageViewModel : ViewModelBase
         return flags == QuoteCategory.None ? QuoteCategory.All : flags;
     }
 
-    private static ObservableCollection<WidgetRefreshChoice> BuildChoices(IEnumerable<int> minutes, Func<int, string> label) =>
-        new(minutes.Select(value => new WidgetRefreshChoice(value, label(value))));
+    /// <summary>
+    ///     下拉框按钮上那行字：全勾（或不勾，语义都是「不限」）写「全部类别」，
+    ///     只勾一个就写类别名，勾多个写「第一个 等 N 类」。
+    /// </summary>
+    private string BuildCategoriesSummary()
+    {
+        var selected = QuoteCategoryItems.Where(item => item.IsSelected).ToList();
 
-    private static WidgetRefreshChoice? FindChoice(IEnumerable<WidgetRefreshChoice> choices, int minutes) =>
-        choices.FirstOrDefault(choice => choice.Minutes == minutes);
+        return selected.Count switch
+        {
+            0 => CR.Settings_Widgets_QuoteCategoriesAll,
+            1 => selected[0].Name,
+            _ when selected.Count == QuoteCategoryItems.Count => CR.Settings_Widgets_QuoteCategoriesAll,
+            _ => string.Format(CR.Settings_Widgets_QuoteCategoriesSummary, selected[0].Name, selected.Count)
+        };
+    }
 }
 
 /// <summary>一言类别的一个勾选项（类别是 Flags，界面上拆成一行行复选框）。</summary>
@@ -359,6 +430,3 @@ public partial class QuoteCategoryItem(QuoteCategory category, string name) : Ob
 
     [ObservableProperty] private bool _isSelected;
 }
-
-/// <summary>刷新间隔的一条备选：0 分钟表示「每次打开都换一条」。</summary>
-public sealed record WidgetRefreshChoice(int Minutes, string Label);

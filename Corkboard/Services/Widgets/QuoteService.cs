@@ -18,6 +18,11 @@ namespace Corkboard.Services.Widgets;
 ///         3) <b>失败保留上一条</b>——取不到就继续显示上一句，从来没有成功过则整行不画。
 ///     </para>
 ///     <para>
+///         <b>屏蔽词</b>在拿到句子之后自己判（官方 v1 没有排除关键词的参数，见
+///         <see cref="QuoteBlocklist" />）：命中就换一条再试，最多 <see cref="MaxAttempts" /> 次；
+///         全被挡住时保留上一条——宁可屏幕上还是旧句子，也不把用户明确不想看的内容画上去。
+///     </para>
+///     <para>
 ///         它是单例（窗口开开关关共用一份缓存），订阅与计时器一概没有：拉取时机由窗口决定，
 ///         别在这里再挂一个后台轮询，那样会和「打开时刷新」叠成双倍请求。
 ///     </para>
@@ -29,6 +34,12 @@ public sealed class QuoteService
 
     /// <summary>两次请求之间的最小间隔（QPS 2 的保守值）。</summary>
     private static readonly TimeSpan MinRequestGap = TimeSpan.FromSeconds(30);
+
+    /// <summary>被屏蔽词挡掉时最多要几次（含第一次）：再多就是在接口上刷请求了。</summary>
+    private const int MaxAttempts = 3;
+
+    /// <summary>重取之间的间隔：官方国内节点 QPS 2，隔开半秒就落在 2 次/秒以内。</summary>
+    private static readonly TimeSpan BlockedRetryGap = TimeSpan.FromMilliseconds(500);
 
     private readonly MainConfigHandler _configHandler;
     private readonly IHttpClientFactory _httpClientFactory;
@@ -73,7 +84,8 @@ public sealed class QuoteService
             return HitokotoQuote.Empty;
 
         var options = settings.BuildQuoteOptions();
-        var signature = BuildSignature(options, settings.QuoteRefreshMinutes);
+        var blockedWords = QuoteBlocklist.Parse(settings.QuoteBlockedWords);
+        var signature = BuildSignature(options, settings.QuoteRefreshMinutes, blockedWords);
 
         lock (_gate)
         {
@@ -112,16 +124,30 @@ public sealed class QuoteService
                 timeout.CancelAfter(RequestTimeout);
 
                 var client = _httpClientFactory.CreateClient();
-                var json = await client.GetStringAsync(uri, timeout.Token).ConfigureAwait(false);
 
-                if (HitokotoQuoteParser.TryParse(json, out var quote) && quote is not null)
+                // 命中屏蔽词就换一条再试（有限次，间隔半秒）；全被挡住时保留上一条。
+                for (var attempt = 0; attempt < MaxAttempts; attempt++)
                 {
+                    if (attempt > 0)
+                        await Task.Delay(BlockedRetryGap, timeout.Token).ConfigureAwait(false);
+
+                    var json = await client.GetStringAsync(uri, timeout.Token).ConfigureAwait(false);
+
+                    if (!HitokotoQuoteParser.TryParse(json, out var quote) || quote is null)
+                    {
+                        _logger.LogDebug("一言返回了无法解析的内容，保留上一条");
+                        break;
+                    }
+
+                    if (QuoteBlocklist.IsBlocked(quote, blockedWords))
+                    {
+                        _logger.LogDebug("一言命中屏蔽词，换一条再试（第 {Attempt} 次）", attempt + 1);
+                        continue;
+                    }
+
                     _current = quote;
-                    _lastSuccess = now;
-                }
-                else
-                {
-                    _logger.LogDebug("一言返回了无法解析的内容，保留上一条");
+                    _lastSuccess = _time.NowLocal;
+                    break;
                 }
             }
             catch (OperationCanceledException)
@@ -159,7 +185,7 @@ public sealed class QuoteService
     }
 
     /// <summary>选项指纹：用来判断「用户改了设置，缓存该作废」。</summary>
-    private static string BuildSignature(HitokotoQueryOptions options, int refreshMinutes) =>
+    private static string BuildSignature(HitokotoQueryOptions options, int refreshMinutes, IReadOnlyList<string> blockedWords) =>
         string.Create(CultureInfo.InvariantCulture,
-            $"{options.Categories}|{options.MinLength}|{options.MaxLength}|{options.ExtraQuery}|{options.UseInternationalEndpoint}|{refreshMinutes}");
+            $"{options.Categories}|{options.MinLength}|{options.MaxLength}|{options.ExtraQuery}|{options.UseInternationalEndpoint}|{refreshMinutes}|{string.Join('\n', blockedWords)}");
 }

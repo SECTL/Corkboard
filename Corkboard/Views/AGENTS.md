@@ -93,6 +93,20 @@
   `SettingsView.Current?.OpenDrawer(...)`（与「关于」页的贡献人员名单同一个宿主），挑定城市后由 VM 的
   `CityPicked` 事件收回、Esc / 点遮罩走宿主自己的路。**不要在页面里自绘一层遮罩 + 卡片**
   （用户原话「不要自创这个抽屉」）：页面自绘的盖不住左侧导航与标题栏，也拿不到宿主的滑出动画。
+- **一言那四项读的是「设计」，实现留在既有一言组件里**（借鉴外部贡献者的 PR #2，但没搬他另起的那套
+  `Core/Services/Hitokoto/`）：① 刷新间隔是**手输数值框**（`NumericUpDown` 绑 VM 的 `QuoteRefreshDraft`
+  / `WeatherRefreshDraft` 草稿，失焦与离页提交；一言填 0 = 每次打开都换，1–4 会被夹成 5；天气 5–1440）
+  ——原来那几个固定档的 `ComboBox`（`QuoteRefreshChoices` / `WidgetRefreshChoice`）已删；
+  ② 11 个类别勾选框收进**一颗按钮 + `Popup` 浮层**（`QuoteCategoryPickerButton` /
+  `QuoteCategoryPopup`，按钮文字是 `CategoriesSummary`），⚠️ 用 `Popup` 不用 `Button.Flyout`
+  （Flyout 里 DataContext 不继承，勾选框会静默写不进配置——与「窗口与收纳」页九宫格同一个坑）；
+  ③ 屏蔽词（`WidgetsSettingsConfig.QuoteBlockedWords`，每行一个）在拿到句子之后自己判，
+  规则是 Core 的 `Corkboard.Core/Widgets/Quote/QuoteBlocklist`（`Parse` / `Normalize` / `IsBlocked`，
+  正文与出处与作者任一处包含即命中、不区分大小写、条数上限 200），`QuoteService` 命中就换一条、
+  最多 3 次、全被挡住保留上一条；屏蔽词也进了选项指纹，改完立即作废缓存；
+  ④ `QuoteShowSource` / `QuoteShowAuthor` 两个开关只改展示：`DisplayBoardViewModel.RefreshStatic()`
+  拿 `_lastQuote` 重拼 `QuoteMeta`，**不重新请求接口**。文案键是 `Settings_Widgets_QuoteBlocked*` /
+  `QuoteMeta*` / `QuoteShowSource|Author` / `QuoteCategoriesAll|Summary` / `QuoteRefreshUnit`。
 - **设置页用的是「设置卡 + 设置项行」这套组件**（用户明确要求，照「作业板」设置页）：外层一张
   `fa:FASettingsExpander`（Header 名称、Description 一句话简介），设置项多的一整段收在卡里、**默认收起**，
   里面一行一项用 `fa:FASettingsExpanderItem`（Content 名称、Description 简介、Footer 控件）；

@@ -135,13 +135,10 @@
 
     <UserControl.Styles>
         <!--
-            下拉框：页面上所有 ComboBox 都长一个样（宽度、圆角内边距交给控件自己），
-            免得同一页里几个下拉框宽窄不一。⚠️ 别去改 Core 的全局 ComboBox 样式。
+            页面上已经没有下拉框了：一言的类别换成了一颗按钮 + 浮层复选框，两处刷新间隔都换成
+            可手输的 NumericUpDown（下拉框给不了「手动调节」）。原来那条 `ComboBox { MinWidth=160 }`
+            因此是空样式，删掉；将来真要再放下拉框，宽度就在控件上写。
         -->
-        <Style Selector="ComboBox">
-            <Setter Property="MinWidth" Value="160" />
-            <Setter Property="VerticalAlignment" Value="Center" />
-        </Style>
     </UserControl.Styles>
 
     <ScrollViewer>
@@ -159,22 +156,58 @@
                     <ToggleSwitch IsChecked="{Binding Widgets.QuoteEnabled, Mode=TwoWay}" />
                 </fa:FASettingsExpander.Footer>
 
+                <!--
+                    类别：平时只显示一颗像下拉框的按钮（「全部类别」/「动画 等 3 类」），点开才在浮层里
+                    展开复选框。11 个勾选框常驻太占面积（用户要求「勾选框的话使用设置下拉框」），
+                    而官方 v1 的类别就是「可多选」，所以浮层里仍是复选框，不是单选列表。
+
+                    ⚠️ 用 Popup 而不是 Button.Flyout：Flyout 的内容在独立弹窗里，DataContext 不跟着
+                    按钮走，勾选框会静默写不进配置（「窗口与收纳」页的九宫格踩过同一个坑）。
+                    Popup 声明在同一个可视树里，DataContext 正常继承。
+                -->
                 <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Widgets_QuoteCategories}"
                                            Description="{x:Static core:Resources.Settings_Widgets_QuoteCategoriesDescription}"
                                            IsEnabled="{Binding Widgets.QuoteEnabled}">
                     <fa:FASettingsExpanderItem.Footer>
-                        <ItemsControl ItemsSource="{Binding QuoteCategoryItems}" MaxWidth="420">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <WrapPanel Orientation="Horizontal" />
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="vm:QuoteCategoryItem">
-                                    <CheckBox Content="{Binding Name}" IsChecked="{Binding IsSelected, Mode=TwoWay}" />
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                        <Panel>
+                            <Button x:Name="QuoteCategoryPickerButton"
+                                    MinWidth="180"
+                                    HorizontalContentAlignment="Stretch"
+                                    Click="OnQuoteCategoryPickerClick">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                    <TextBlock VerticalAlignment="Center" Text="{Binding CategoriesSummary}" />
+                                    <TextBlock Grid.Column="1"
+                                               VerticalAlignment="Center"
+                                               FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                               Text="{x:Static icons:FluentIcons.ChevronDownFilled}" />
+                                </Grid>
+                            </Button>
+
+                            <Popup x:Name="QuoteCategoryPopup"
+                                   PlacementTarget="{Binding #QuoteCategoryPickerButton}"
+                                   Placement="BottomEdgeAlignedRight"
+                                   IsLightDismissEnabled="True">
+                                <Border Background="{DynamicResource SolidBackgroundFillColorQuarternaryBrush}"
+                                        BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Padding="12">
+                                    <ItemsControl ItemsSource="{Binding QuoteCategoryItems}" MaxWidth="320">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel Orientation="Horizontal" />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:QuoteCategoryItem">
+                                                <CheckBox Content="{Binding Name}"
+                                                          IsChecked="{Binding IsSelected, Mode=TwoWay}" />
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Border>
+                            </Popup>
+                        </Panel>
                     </fa:FASettingsExpanderItem.Footer>
                 </fa:FASettingsExpanderItem>
 
@@ -215,18 +248,75 @@
                     </fa:FASettingsExpanderItem.Footer>
                 </fa:FASettingsExpanderItem>
 
+                <!--
+                    刷新间隔：手输 / 微调都行（用户要求「时间手动调节」，原来只有几个固定档的下拉框）。
+                    0 = 每次打开看板都换一条，其余按分钟算；填 1–4 会被夹成 5（官方 QPS 2）。
+                -->
                 <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Widgets_QuoteRefresh}"
                                            Description="{x:Static core:Resources.Settings_Widgets_QuoteRefreshDescription}"
                                            IsEnabled="{Binding Widgets.QuoteEnabled}">
                     <fa:FASettingsExpanderItem.Footer>
-                        <ComboBox ItemsSource="{Binding QuoteRefreshChoices}"
-                                  SelectedItem="{Binding SelectedQuoteRefresh, Mode=TwoWay}">
-                            <ComboBox.ItemTemplate>
-                                <DataTemplate x:DataType="vm:WidgetRefreshChoice">
-                                    <TextBlock Text="{Binding Label}" />
-                                </DataTemplate>
-                            </ComboBox.ItemTemplate>
-                        </ComboBox>
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <NumericUpDown Value="{Binding QuoteRefreshDraft, Mode=TwoWay}"
+                                           Minimum="0"
+                                           Maximum="1440"
+                                           Increment="5"
+                                           FormatString="0"
+                                           Width="140"
+                                           LostFocus="OnQuoteRefreshLostFocus" />
+                            <TextBlock Text="{x:Static core:Resources.Settings_Widgets_QuoteRefreshUnit}"
+                                       VerticalAlignment="Center"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        </StackPanel>
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <!--
+                    屏蔽词：官方 v1 没有「排除关键词」这个参数，只能在拿回来之后自己判一遍
+                    （规则在 Core 的 QuoteBlocklist，命中正文 / 出处 / 作者任意一处就整句不要）。
+                    命中就再要一条、最多试三次，全被挡住就继续显示上一条。
+                    ⚠️ 文本是草稿：逐字写 settings.json 不合适，点按钮或离开页面才落盘。
+                -->
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Widgets_QuoteBlocked}"
+                                           Description="{x:Static core:Resources.Settings_Widgets_QuoteBlockedDescription}"
+                                           IsEnabled="{Binding Widgets.QuoteEnabled}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <StackPanel Spacing="6" Width="280">
+                            <TextBox Text="{Binding QuoteBlockedWordsDraft, Mode=TwoWay}"
+                                     AcceptsReturn="True"
+                                     TextWrapping="Wrap"
+                                     MinHeight="64"
+                                     MaxHeight="140"
+                                     PlaceholderText="{x:Static core:Resources.Settings_Widgets_QuoteBlockedPlaceholder}" />
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                <TextBlock Grid.Column="0"
+                                           VerticalAlignment="Center"
+                                           Text="{Binding BlockedWordsSummary}"
+                                           FontSize="12"
+                                           TextWrapping="Wrap"
+                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                                <Button Grid.Column="1"
+                                        Content="{x:Static core:Resources.Settings_Widgets_QuoteBlockedSave}"
+                                        Command="{Binding CommitQuoteBlockedWordsCommand}" />
+                            </Grid>
+                        </StackPanel>
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <!--
+                    出处与作者：看板底下那一行「—— 出处 · 作者」由这两颗开关决定画哪一段。
+                    改完只重拼文字、不重新请求接口（DisplayBoardViewModel.RefreshStatic 里做的）。
+                -->
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Widgets_QuoteMeta}"
+                                           Description="{x:Static core:Resources.Settings_Widgets_QuoteMetaDescription}"
+                                           IsEnabled="{Binding Widgets.QuoteEnabled}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <StackPanel Spacing="4">
+                            <CheckBox Content="{x:Static core:Resources.Settings_Widgets_QuoteShowSource}"
+                                      IsChecked="{Binding Widgets.QuoteShowSource, Mode=TwoWay}" />
+                            <CheckBox Content="{x:Static core:Resources.Settings_Widgets_QuoteShowAuthor}"
+                                      IsChecked="{Binding Widgets.QuoteShowAuthor, Mode=TwoWay}" />
+                        </StackPanel>
                     </fa:FASettingsExpanderItem.Footer>
                 </fa:FASettingsExpanderItem>
 
@@ -302,14 +392,20 @@
                                            IsEnabled="{Binding Widgets.WeatherEnabled}">
                     <fa:FASettingsExpanderItem.Footer>
                         <StackPanel Spacing="4" HorizontalAlignment="Right">
-                            <ComboBox ItemsSource="{Binding WeatherRefreshChoices}"
-                                      SelectedItem="{Binding SelectedWeatherRefresh, Mode=TwoWay}">
-                                <ComboBox.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:WidgetRefreshChoice">
-                                        <TextBlock Text="{Binding Label}" />
-                                    </DataTemplate>
-                                </ComboBox.ItemTemplate>
-                            </ComboBox>
+                            <!-- 天气的间隔也改成手输（同一页两种控件会看着别扭），没有「每次打开都刷」这一档。 -->
+                            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center"
+                                        HorizontalAlignment="Right">
+                                <NumericUpDown Value="{Binding WeatherRefreshDraft, Mode=TwoWay}"
+                                               Minimum="5"
+                                               Maximum="1440"
+                                               Increment="5"
+                                               FormatString="0"
+                                               Width="140"
+                                               LostFocus="OnWeatherRefreshLostFocus" />
+                                <TextBlock Text="{x:Static core:Resources.Settings_Widgets_QuoteRefreshUnit}"
+                                           VerticalAlignment="Center"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
                             <TextBlock Text="{Binding WeatherStatusText}"
                                        FontSize="12"
                                        TextWrapping="Wrap"

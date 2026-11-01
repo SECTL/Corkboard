@@ -74,6 +74,12 @@ public partial class DisplayBoardViewModel : ViewModelBase
     /// <summary>最近一次拿到的那份天气：改「显示哪几块」时靠它重算，不必为改配置再请求一次。</summary>
     private WeatherSnapshot? _lastWeather;
 
+    /// <summary>
+    ///     最近一次拿到的那条一言：改「显示来源 / 显示作者」时靠它重拼底下那行出处，
+    ///     同样不必为改一个开关再请求一次接口。
+    /// </summary>
+    private HitokotoQuote _lastQuote = HitokotoQuote.Empty;
+
     /// <summary>天气图标按文件名缓存（同一张图只解码一次；单例式静态表，窗口开开关关共用）。</summary>
     private static readonly Dictionary<string, Bitmap> WeatherIconCache = new(StringComparer.Ordinal);
 
@@ -542,6 +548,11 @@ public partial class DisplayBoardViewModel : ViewModelBase
         ClockFontFeatures = TabularFigures.ForClock(Config.Appearance.Font);
 
         var widgets = Config.Widgets;
+
+        // 「显示来源 / 显示作者」只改展示：拿手里那条句子按新开关重拼一遍，不重新请求。
+        if (!string.IsNullOrEmpty(QuoteText))
+            QuoteMeta = BuildQuoteMeta(_lastQuote, widgets.QuoteShowSource, widgets.QuoteShowAuthor);
+
         ShowQuote = widgets.QuoteEnabled && !string.IsNullOrEmpty(QuoteText);
         ShowQuoteMeta = ShowQuote && !string.IsNullOrEmpty(QuoteMeta);
 
@@ -794,8 +805,11 @@ public partial class DisplayBoardViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(quote.Text))
             return;
 
+        _lastQuote = quote;
         QuoteText = quote.Text;
-        QuoteMeta = BuildQuoteMeta(quote);
+
+        var widgets = Config.Widgets;
+        QuoteMeta = BuildQuoteMeta(quote, widgets.QuoteShowSource, widgets.QuoteShowAuthor);
     }
 
     /// <summary>
@@ -859,10 +873,13 @@ public partial class DisplayBoardViewModel : ViewModelBase
     private static Uri WeatherIconUri(string name) => new($"avares://Corkboard/Assets/Weather/{name}.png");
 
     /// <summary>拼「—— 出处 · 作者」那一行：两个都没有就返回空串，界面上不画。</summary>
-    private static string BuildQuoteMeta(HitokotoQuote quote)
+    /// <param name="quote">当前这一条一言。</param>
+    /// <param name="showSource">设置里开没开「显示来源」。</param>
+    /// <param name="showAuthor">设置里开没开「显示作者」。</param>
+    private static string BuildQuoteMeta(HitokotoQuote quote, bool showSource, bool showAuthor)
     {
-        var source = quote.Source?.Trim();
-        var author = quote.Author?.Trim();
+        var source = showSource ? quote.Source?.Trim() : null;
+        var author = showAuthor ? quote.Author?.Trim() : null;
         var hasSource = !string.IsNullOrEmpty(source);
         var hasAuthor = !string.IsNullOrEmpty(author);
 

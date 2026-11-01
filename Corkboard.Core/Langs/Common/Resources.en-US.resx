@@ -3255,16 +3255,49 @@ Continuing to use it means you understand and accept the above.</value>
     <value>These are managed here: {0}</value>
   </data>
   <data name="Settings_Widgets_QuoteRefresh" xml:space="preserve">
-    <value>Refresh</value>
+    <value>Refresh every</value>
   </data>
   <data name="Settings_Widgets_QuoteRefreshDescription" xml:space="preserve">
-    <value>Every time the board opens, or on a timer</value>
+    <value>0 means a new one each time the board opens</value>
   </data>
-  <data name="Settings_Widgets_RefreshOnOpen" xml:space="preserve">
-    <value>A new one each time the board opens</value>
+  <data name="Settings_Widgets_QuoteRefreshUnit" xml:space="preserve">
+    <value>minutes</value>
   </data>
-  <data name="Settings_Widgets_RefreshEveryMinutes" xml:space="preserve">
-    <value>Every {0} minutes</value>
+  <data name="Settings_Widgets_QuoteCategoriesAll" xml:space="preserve">
+    <value>All categories</value>
+  </data>
+  <data name="Settings_Widgets_QuoteCategoriesSummary" xml:space="preserve">
+    <value>{0} and {1} categories</value>
+  </data>
+  <data name="Settings_Widgets_QuoteBlocked" xml:space="preserve">
+    <value>Blocked words</value>
+  </data>
+  <data name="Settings_Widgets_QuoteBlockedDescription" xml:space="preserve">
+    <value>One per line, quotes containing them are skipped</value>
+  </data>
+  <data name="Settings_Widgets_QuoteBlockedPlaceholder" xml:space="preserve">
+    <value>One word per line</value>
+  </data>
+  <data name="Settings_Widgets_QuoteBlockedSave" xml:space="preserve">
+    <value>Save blocked words</value>
+  </data>
+  <data name="Settings_Widgets_QuoteBlockedSummary" xml:space="preserve">
+    <value>Blocking {0} words</value>
+  </data>
+  <data name="Settings_Widgets_QuoteBlockedEmpty" xml:space="preserve">
+    <value>No blocked words yet</value>
+  </data>
+  <data name="Settings_Widgets_QuoteMeta" xml:space="preserve">
+    <value>Source and author</value>
+  </data>
+  <data name="Settings_Widgets_QuoteMetaDescription" xml:space="preserve">
+    <value>The small line under the quote, keep either part</value>
+  </data>
+  <data name="Settings_Widgets_QuoteShowSource" xml:space="preserve">
+    <value>Show the source</value>
+  </data>
+  <data name="Settings_Widgets_QuoteShowAuthor" xml:space="preserve">
+    <value>Show the author</value>
   </data>
   <data name="Settings_Widgets_QuoteInternational" xml:space="preserve">
     <value>Use the overseas endpoint</value>
@@ -3424,9 +3457,6 @@ Continuing to use it means you understand and accept the above.</value>
   </data>
   <data name="Settings_Display_Group" xml:space="preserve">
     <value>Display mode</value>
-  </data>
-  <data name="Settings_Widgets_WeatherEveryMinutes" xml:space="preserve">
-    <value>Every {0} minutes</value>
   </data>
   <data name="Settings_Widgets_WeatherCitySelected" xml:space="preserve">
     <value>Now showing: {0}</value>
