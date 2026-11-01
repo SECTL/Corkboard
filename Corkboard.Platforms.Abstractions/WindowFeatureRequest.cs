@@ -8,7 +8,8 @@ public enum WindowFeatures
     ToolWindow = 1 << 1,
     SkipTaskSwitcher = 1 << 2,
     NoActivate = 1 << 3,
-    ClickThrough = 1 << 4,
+
+    // 1 << 4 是已停用的能力位，留空号给以后的能力；其余位一律不顺移。
     ExcludeFromCapture = 1 << 5,
 
     /// <summary>

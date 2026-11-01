@@ -12,7 +12,6 @@ public sealed class MacOsWindowFeatureService : IWindowFeatureService
 
     public WindowFeatures SupportedFeatures => WindowFeatures.Topmost |
                                                 WindowFeatures.ToolWindow |
-                                                WindowFeatures.ClickThrough |
                                                 WindowFeatures.WindowOpacity;
 
     public WindowFeatureApplyResult Apply(PlatformWindowHandle window, WindowFeatureRequest request)
@@ -43,19 +42,6 @@ public sealed class MacOsWindowFeatureService : IWindowFeatureService
             else
             {
                 failed |= WindowFeatures.Topmost;
-                detail ??= failure;
-            }
-        }
-
-        if ((requested & WindowFeatures.ClickThrough) != 0)
-        {
-            if (TrySendBooleanOrInteger(window.Value, "setIgnoresMouseEvents:", request.Enabled ? 1 : 0, out var failure))
-            {
-                applied |= WindowFeatures.ClickThrough;
-            }
-            else
-            {
-                failed |= WindowFeatures.ClickThrough;
                 detail ??= failure;
             }
         }

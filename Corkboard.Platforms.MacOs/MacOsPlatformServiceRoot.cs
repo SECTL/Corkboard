@@ -16,7 +16,6 @@ public sealed class MacOsPlatformServiceRoot : IPlatformServiceRoot
         SupportsTopmost: true,
         SupportsTaskSwitcherExclusion: false,
         SupportsNoActivate: false,
-        SupportsClickThrough: true,
         SupportsCaptureExclusion: false,
         SupportsTrayIcon: true,
 
@@ -33,4 +32,10 @@ public sealed class MacOsPlatformServiceRoot : IPlatformServiceRoot
 
     /// <summary>macOS 侧没有取全局指针的实现；托盘菜单用不到它（左键菜单由状态栏项自己弹）。</summary>
     public IPointerLocator Pointer { get; } = UnsupportedPointerLocator.Instance;
+
+    /// <summary>
+    ///     协议必须声明在应用包的 <c>Info.plist</c> 里，运行中的进程改不了自己的 Info.plist，
+    ///     所以这里报不支持，设置页整张卡隐藏。
+    /// </summary>
+    public IUrlSchemeRegistrar UrlSchemes { get; } = UnsupportedUrlSchemeRegistrar.Instance;
 }

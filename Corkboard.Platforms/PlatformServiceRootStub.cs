@@ -20,6 +20,8 @@ public sealed class PlatformServiceRootStub : IPlatformServiceRoot, IWindowFeatu
 
     public IPointerLocator Pointer => UnsupportedPointerLocator.Instance;
 
+    public IUrlSchemeRegistrar UrlSchemes => UnsupportedUrlSchemeRegistrar.Instance;
+
     public global::Corkboard.Platforms.Abstractions.WindowFeatures SupportedFeatures =>
         global::Corkboard.Platforms.Abstractions.WindowFeatures.None;
 

@@ -19,7 +19,6 @@ public sealed class LinuxPlatformServiceRoot : IPlatformServiceRoot
         SupportsTopmost: IsX11Session,
         SupportsTaskSwitcherExclusion: IsX11Session,
         SupportsNoActivate: false,
-        SupportsClickThrough: false,
         SupportsCaptureExclusion: false,
         SupportsTrayIcon: true,
 
@@ -36,4 +35,7 @@ public sealed class LinuxPlatformServiceRoot : IPlatformServiceRoot
 
     /// <summary>Linux 侧没有取全局指针的实现；托盘菜单用不到它（左键菜单由托盘宿主自己弹）。</summary>
     public IPointerLocator Pointer { get; } = UnsupportedPointerLocator.Instance;
+
+    /// <summary>写桌面项 + <c>xdg-mime</c> 设默认处理程序，都是用户级操作，不需要 root。</summary>
+    public IUrlSchemeRegistrar UrlSchemes { get; } = new LinuxUrlSchemeRegistrar();
 }

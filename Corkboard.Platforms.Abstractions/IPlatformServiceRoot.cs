@@ -19,4 +19,10 @@ public interface IPlatformServiceRoot
     ///     调用方退回兜底位置（托盘菜单不能因此打不开）。
     /// </summary>
     IPointerLocator Pointer { get; }
+
+    /// <summary>
+    ///     自定义 URL 协议注册实现。没有实现的平台返回不支持的空实现，
+    ///     设置页据此整张卡隐藏（不留一个点不动的开关）。
+    /// </summary>
+    IUrlSchemeRegistrar UrlSchemes { get; }
 }

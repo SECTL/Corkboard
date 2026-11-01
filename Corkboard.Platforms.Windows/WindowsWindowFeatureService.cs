@@ -7,7 +7,6 @@ namespace Corkboard.Platforms.Windows;
 public sealed class WindowsWindowFeatureService : IWindowFeatureService
 {
     private const int GwlExStyle = -20;
-    private const long WsExTransparent = 0x00000020L;
     private const long WsExToolWindow = 0x00000080L;
     private const long WsExAppWindow = 0x00040000L;
     private const long WsExLayered = 0x00080000L;
@@ -58,8 +57,7 @@ public sealed class WindowsWindowFeatureService : IWindowFeatureService
     private const long WsChild = 0x40000000L;
     private const WindowFeatures StyleFeatures = WindowFeatures.ToolWindow |
                                                 WindowFeatures.SkipTaskSwitcher |
-                                                WindowFeatures.NoActivate |
-                                                WindowFeatures.ClickThrough;
+                                                WindowFeatures.NoActivate;
     private static readonly nint HwndTopmost = new(-1);
     private static readonly nint HwndNotopmost = new(-2);
 
@@ -67,8 +65,9 @@ public sealed class WindowsWindowFeatureService : IWindowFeatureService
     private readonly ConcurrentDictionary<nint, WindowFeatures> _enabledFeatures = [];
 
     /// <summary>
-    ///     每个窗口当前的不透明度。<b>点击穿透与不透明度共用 <c>WS_EX_LAYERED</c></b>：
-    ///     两条路径谁后动都要用同一份 alpha 重设分层属性，否则会互相把对方的设置抹掉。
+    ///     每个窗口当前的不透明度。分层窗口的 <c>WS_EX_LAYERED</c> 就按这份值维护：
+    ///     不透明度那条路与扩展样式那条路谁后动，都要用同一份 alpha 重设分层属性，
+    ///     否则会互相把对方的设置抹掉（只设样式不设属性，窗口会整体不显示）。
     /// </summary>
     private readonly ConcurrentDictionary<nint, double> _windowOpacity = [];
 
@@ -76,7 +75,6 @@ public sealed class WindowsWindowFeatureService : IWindowFeatureService
                                                 WindowFeatures.ToolWindow |
                                                 WindowFeatures.SkipTaskSwitcher |
                                                 WindowFeatures.NoActivate |
-                                                WindowFeatures.ClickThrough |
                                                 WindowFeatures.WindowOpacity |
                                                 WindowFeatures.DesktopBottom |
                                                 WindowFeatures.RoundedCorners |
@@ -167,8 +165,7 @@ public sealed class WindowsWindowFeatureService : IWindowFeatureService
             // 关闭该能力（Enabled = false）等价于恢复完全不透明：配置里没有「关掉不透明度」这种状态，
             // 1.0 就是不透明，平台这里统一成同一个值，免得两处各判一次。
             var opacity = request.Enabled ? request.Opacity : 1.0;
-            var clickThrough = (desired & WindowFeatures.ClickThrough) != 0;
-            if (TrySetWindowOpacity(window.Value, opacity, clickThrough, out var failure))
+            if (TrySetWindowOpacity(window.Value, opacity, out var failure))
             {
                 applied |= WindowFeatures.WindowOpacity;
                 TrackWindowOpacity(window.Value, opacity);
@@ -183,7 +180,7 @@ public sealed class WindowsWindowFeatureService : IWindowFeatureService
         var requestedStyles = requested & StyleFeatures;
         if (requestedStyles != WindowFeatures.None)
         {
-            // 点击穿透那一路也要重设分层属性：它可能跟不透明度共用 WS_EX_LAYERED，
+            // 改扩展样式时窗口可能正开着不透明度（那也共用 WS_EX_LAYERED），
             // 只改样式不补 alpha 会把不透明度抹掉（反过来，只设样式不设属性窗口会整体不显示）。
             if (TrySetExtendedStyles(window.Value, desired, GetTrackedOpacity(window.Value), out var failure))
                 applied |= requestedStyles;
@@ -251,7 +248,7 @@ public sealed class WindowsWindowFeatureService : IWindowFeatureService
     /// <summary>
     ///     圆角分两条路：普通顶层窗口交给 DWM 的 <c>DWMWA_WINDOW_CORNER_PREFERENCE</c>——
     ///     它由系统合成器画，边缘有抗锯齿、弧度是平滑的；
-    ///     分层窗口（不透明度 / 点击穿透共用 <c>WS_EX_LAYERED</c>）与置底后的桌面子窗口，DWM 不给圆角，
+    ///     分层窗口（开了不透明度时的 <c>WS_EX_LAYERED</c>）与置底后的桌面子窗口，DWM 不给圆角，
     ///     退回裁窗口区域（<see cref="SetWindowRgn" />）。区域是 1 位掩码，边缘必然是锯齿的，
     ///     所以只在 DWM 那条路走不通时才用。
     ///     <para>
@@ -396,8 +393,7 @@ public sealed class WindowsWindowFeatureService : IWindowFeatureService
 
     /// <summary>
     ///     记下窗口当前的不透明度。等于 1.0 时把记录清掉（1.0 就是默认值，不需要记），
-    ///     免得窗口销毁后残留在表里（句柄会被系统复用）。点击穿透要继续分层不受影响：
-    ///     那条路自己就会把 <c>WS_EX_LAYERED</c> 加上。
+    ///     免得窗口销毁后残留在表里（句柄会被系统复用）。
     /// </summary>
     private void TrackWindowOpacity(nint window, double opacity)
     {
@@ -431,13 +427,12 @@ public sealed class WindowsWindowFeatureService : IWindowFeatureService
     /// <summary>
     ///     设置窗口整体不透明度。走分层窗口的均匀 alpha：
     ///     <list type="bullet">
-    ///         <item>先把 <c>WS_EX_LAYERED</c> 加上（Avalonia 自己不会加，所以不会被它覆盖）；</item>
-    ///         <item>再写 alpha；<b>两步缺一不可</b>——只设样式不写分层属性，窗口在 Windows 上整体不显示；</item>
-    ///         <item><paramref name="keepLayered" /> 为真表示点击穿透正开着，那 <c>WS_EX_LAYERED</c> 必须留着，
-    ///         所以这一路只改 alpha、不摘样式。</item>
+    ///         <item>按不透明度决定要不要 <c>WS_EX_LAYERED</c>（Avalonia 自己不会加，所以不会被它覆盖）；</item>
+    ///         <item>要分层就写 alpha；<b>两步缺一不可</b>——只设样式不写分层属性，窗口在 Windows 上整体不显示；</item>
+    ///         <item>恢复完全不透明时顺手把分层样式摘掉，窗口回到默认形态。</item>
     ///     </list>
     /// </summary>
-    private static bool TrySetWindowOpacity(nint window, double opacity, bool keepLayered, out string? failure)
+    private static bool TrySetWindowOpacity(nint window, double opacity, out string? failure)
     {
         try
         {
@@ -450,8 +445,8 @@ public sealed class WindowsWindowFeatureService : IWindowFeatureService
                 return false;
             }
 
-            // 不透明且不需要穿透时就把分层样式摘掉，让窗口回到默认形态；否则留着并重设 alpha。
-            var needsLayered = keepLayered || clamped < 1.0;
+            // 不透明时把分层样式摘掉，让窗口回到默认形态；否则留着并重设 alpha。
+            var needsLayered = clamped < 1.0;
             var updated = SetFlag(style, WsExLayered, needsLayered);
             if (updated != style)
             {
@@ -553,12 +548,9 @@ public sealed class WindowsWindowFeatureService : IWindowFeatureService
                 updated &= ~WsExAppWindow;
             updated = SetFlag(updated, WsExNoActivate, (desired & WindowFeatures.NoActivate) != 0);
 
-            // 点击穿透要 WS_EX_LAYERED + WS_EX_TRANSPARENT；半透明窗口也要 WS_EX_LAYERED。
-            // 两者共用这个样式，所以这里按「谁需要」一起算，再补一次分层属性（见 TrySetWindowOpacity）。
-            var clickThrough = (desired & WindowFeatures.ClickThrough) != 0;
-            var needsLayered = clickThrough || ClampOpacity(opacity) < 1.0;
+            // 半透明窗口要 WS_EX_LAYERED；这里按同一份不透明度算，再补一次分层属性（见 TrySetWindowOpacity）。
+            var needsLayered = ClampOpacity(opacity) < 1.0;
             updated = SetFlag(updated, WsExLayered, needsLayered);
-            updated = SetFlag(updated, WsExTransparent, clickThrough);
 
             if (updated != style)
             {
@@ -571,7 +563,7 @@ public sealed class WindowsWindowFeatureService : IWindowFeatureService
                 }
             }
 
-            // 开了穿透但没设过 alpha 的话，窗口会整体不显示（分层窗口必须有分层属性）。
+            // 开了分层但没设过 alpha 的话，窗口会整体不显示（分层窗口必须有分层属性）。
             if (needsLayered && !TryApplyLayeredAttributes(window, opacity, out failure))
                 return false;
 
