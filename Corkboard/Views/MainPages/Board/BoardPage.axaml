@@ -62,7 +62,7 @@
                     <!--
                         作业内容是富文本（HTML 片段），默认字号/颜色由控件补成行内样式。
                         列表里用不能选中、也不接收指针的控件而不是 SelectableTextBlock：
-                        后者会吃掉指针手势，跟壳的整窗长按拖动、区块拖动排序打架。
+                        后者会吃掉指针手势，跟区块拖动排序打架。
                     -->
                     <controls:RichTextBlock IsVisible="{Binding ShowHtml}"
                                             IsHitTestVisible="False"
@@ -105,7 +105,7 @@
                 </StackPanel>
                 <!--
                     浮层：两颗按钮贴着这条作业的右上角，叠在内容上面、不参与布局。
-                    底色用半透明卡片色，压在文字上方也看得清；回放 / 穿透时 CanModify=false，
+                    底色用半透明卡片色，压在文字上方也看得清；回放 / 窗口解锁时 CanModify=false，
                     ShowActions 恒为 false，永远不冒出来。
                 -->
                 <Border HorizontalAlignment="Right"
@@ -158,14 +158,11 @@
                     <!--
                         区块标题行整条都是拖动面：左边是排序手柄字形，右边是科目名。
                         按下即接管指针，挪动超过阈值就换位置、松手落盘——**不需要长按**：
-                        手柄本身就是「抓这里拖」的意思，而且 500ms 长按正好和壳的整窗长按拖动
-                        撞车（判定条件一样，同一次按住会被判成两件事）。
+                        手柄本身就是「抓这里拖」的意思。
                         手柄只有一个小字形，用户根本找不到也不好按，所以整条标题行都能抓。
-                        ⚠️ 这棵树必须标 WindowDragGesture.Suppress：壳的整窗长按拖动要让出去。
                     -->
                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="4"
                           Background="Transparent"
-                          controls:WindowDragGesture.Suppress="True"
                           PointerPressed="OnReorderPressed">
                         <Border Grid.Column="0"
                                 Classes="sort-handle"
@@ -301,7 +298,7 @@
 
         <!--
             右上角的导出图片按钮：平时透明，悬停才浅浅显一下，免得在板子上多一个「按钮块」。
-            点击穿透开着或板上没有作业时整颗隐藏（见 ViewModel.CanExportImage）。
+            板上没有作业时整颗隐藏（见 ViewModel.CanExportImage）。
         -->
         <Style Selector="Button.board-export">
             <Setter Property="Background" Value="Transparent" />
@@ -341,6 +338,7 @@
             显式写死也免得平台默认值变了之后，面板拿到的是无限宽度、整排挤成一行。
         -->
         <ScrollViewer Grid.Row="1"
+                      x:Name="BoardScrollViewer"
                       HorizontalScrollBarVisibility="Disabled">
             <!--
                 这块 StackPanel 就是「板子上的内容」：导出图片导的是它（不是视口、更不是整窗），

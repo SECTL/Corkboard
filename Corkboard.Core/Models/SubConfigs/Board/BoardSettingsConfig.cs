@@ -68,8 +68,8 @@ public partial class BoardSettingsConfig : ObservableObject
     ///     标题栏右上角那几个动作按钮各显示不显示。默认全开；用户嫌哪颗多余就关掉哪颗
     ///     （「设置 → 作业板 → 顶部按钮」）。这些都是界面偏好，不影响数据。
     ///     <para>
-    ///         ⚠️ 「锁定窗口」那颗不在这里管：它是点击穿透状态下唯一的解锁入口，
-    ///         藏掉就再也点不回来了，必须常驻。
+    ///         ⚠️ 「锁定窗口」那颗不在这里管：它是把窗口钉在原地的唯一入口，
+    ///         藏掉就再也锁不回去，必须常驻。
     ///     </para>
     /// </summary>
     [ObservableProperty] private bool _showTitleBarSettings = true;
@@ -88,6 +88,15 @@ public partial class BoardSettingsConfig : ObservableObject
 
     /// <summary>收纳按钮：还要 <see cref="DockEnabled" /> 也开着才显示。</summary>
     [ObservableProperty] private bool _showTitleBarDock = true;
+
+    /// <summary>
+    ///     看板模式入口：标题栏上那颗「看板模式」，点一下直接铺全屏（与托盘菜单、<c>corkboard://display</c> 同一个动作）。
+    ///     <para>
+    ///         默认开——用户要的就是「点一下就看板」，别让人先去设置里找开关。
+    ///         它是只读动作（不碰板子内容），所以跟设置 / 导出 / 收纳一样，解锁态也照旧显示。
+    ///     </para>
+    /// </summary>
+    [ObservableProperty] private bool _showTitleBarDisplay = true;
 
     /// <summary>
     ///     是否按下面的规则自动清理过期作业。关掉之后只剩设置页里的「立即清理」这一个入口。

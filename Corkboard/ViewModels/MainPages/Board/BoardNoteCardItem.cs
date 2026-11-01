@@ -16,7 +16,7 @@ namespace Corkboard.ViewModels.MainPages.Board;
 ///         手写作业（<see cref="IsHandwriting" />）不画富文本，改画只读的
 ///         <c>HandwritingPreview</c>：<see cref="Handwriting" /> 是落盘的笔迹文本，
 ///         <see cref="HandwritingAspect" /> 是画布高宽比（控件按它定高，笔迹不变形）。
-///         两种内容都只读、都不接收指针，免得跟整窗长按拖动、区块拖动排序打架。
+///         两种内容都只读、都不接收指针，免得跟区块拖动排序打架。
 ///     </para>
 ///     <para>
 ///         <see cref="CanModify" /> 在构建时就定下来（回放期间为 <c>false</c>）；
@@ -84,7 +84,7 @@ public sealed partial class BoardNoteCardItem : ObservableObject
 
     public double NoteTagFontSize { get; }
 
-    /// <summary>这条作业现在能不能改（回放中 / 点击穿透时为 false，两颗按钮永远不冒出来）。</summary>
+    /// <summary>这条作业现在能不能改（回放中 / 窗口解锁着时为 false，两颗按钮永远不冒出来）。</summary>
     public bool CanModify { get; }
 
     public string DueText { get; }

@@ -1,0 +1,384 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:Corkboard.ViewModels.DisplayBoard"
+        xmlns:board="using:Corkboard.Views.MainPages.Board"
+        xmlns:bg="using:Corkboard.Views.Common"
+        xmlns:core="using:Corkboard.Core.Langs.Common"
+        xmlns:icons="using:Corkboard.Core.Icons"
+        mc:Ignorable="d" d:DesignWidth="1600" d:DesignHeight="900"
+        x:Class="Corkboard.Views.DisplayBoard.DisplayBoardWindow"
+        x:DataType="vm:DisplayBoardViewModel"
+        Title="{x:Static core:Resources.Settings_Display_Title}"
+        WindowDecorations="None"
+        WindowState="FullScreen"
+        ShowInTaskbar="False"
+        Cursor="{Binding Cursor}"
+        Background="{DynamicResource SolidBackgroundFillColorBaseBrush}">
+    <!--
+        全屏看板模式。
+
+        为什么是一个独立的全屏窗口、而不是作业板的一层遮罩：
+        1) 要占满整块屏幕、盖住任务栏，只有 WindowState=FullScreen 能做到；
+        2) 作业板主窗口可能是「置底到桌面」的挂件形态，遮罩根本铺不满屏幕；
+        3) 展示时这块屏幕是给别人看的，主窗口那些按钮、拖动、置底状态一个都不该跟着露出来。
+
+        时钟**固定在左上角**（用户要求「时间的显示位置不能改」），网格固定两行：
+        第 0 行是顶栏（`Auto,*,Auto` 三格：时钟占第一格、天气占对面那格），
+        第 1 行是作业区，跨满三列。所以时钟字号怎么变都只影响顶栏高度，
+        作业区始终是从顶栏下面一直铺到屏幕下沿——不会出现「顶上空一大片、作业挤成一条缝」。
+
+        RowSpacing 是顶栏与作业区之间的间隔：日期那行本来就贴着作业卡片，
+        间距太小看着「挤在一起」（用户反馈过「日期距离作业又太近了」），
+        所以在这里给两行之间留出固定的 28。⚠️ 别改成给日期加下边距——
+        日期在 Viewbox 里，那边距会跟着字号一起被缩放。
+    -->
+    <Window.Styles>
+        <!-- 左下角长按退出的热区：与考试看板同一套观感。 -->
+        <Style Selector="Border.exit-hint">
+            <Setter Property="Width" Value="64" />
+            <Setter Property="Height" Value="64" />
+            <Setter Property="CornerRadius" Value="32" />
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorTransparentBrush}" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Border.exit-hint:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+        </Style>
+        <Style Selector="Border.exit-hint.holding">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+        </Style>
+        <Style Selector="Border.exit-hint TextBlock.icon">
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+        </Style>
+        <Style Selector="Border.exit-hint:pointerover TextBlock.icon">
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        </Style>
+
+        <!--
+            「小秒」那一档的尾巴配色：秒数是主时间的尾巴，用次要色把它压下去。
+            （「大秒」那一档根本不画这一只尾巴——秒已经在主时间那一串里了，见下面那个 TextBlock。）
+        -->
+        <Style Selector="TextBlock.clock-seconds">
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        </Style>
+    </Window.Styles>
+
+    <Grid>
+        <!--
+            背景层：垫在所有内容最底下，自身不吃指针事件。
+            设置里选「跟随主题」时它什么都不画，窗口自己的底色照旧透上来。
+        -->
+        <bg:BoardBackgroundLayer x:Name="BackgroundLayer" Settings="{Binding Settings}" />
+
+        <Grid Margin="56,40,56,32" RowDefinitions="Auto,*" ColumnDefinitions="Auto,*,Auto"
+              RowSpacing="28">
+
+            <!--
+                左上角那一块大时钟。位置**写死在这里**（第 0 行第 0 列、贴左贴下）——
+                以前有个「版式（左上 / 顶部 / 右上 / 只有作业）」的设置项，用户要求去掉
+                （「时间的显示位置不能改，只能显示到左上角」），所以不再走绑定。
+
+                ⚠️ 外面这层 Viewbox 不是装饰：字号能调到 480，而 480 号的「21:42」比整块屏幕还宽，
+                会被格子裁成「21:4…」（用户反馈过「时钟显示不全」）。MaxWidth 由窗口在尺寸变化时写进来，
+                StretchDirection="DownOnly" 保证只在放不下时按比例缩小、放得下时一个像素都不动。
+
+                Margin 绑 ClockGutter：补 12 的左边距，让大钟、日期与最下面那行考试倒计时的左边缘
+                跟作业卡片的左边缘对上（作业板页面自己的内容还带 12 的内边距，见 BoardPage.axaml）。
+                ⚠️ 这个缩进加在最外层这个 StackPanel 上、**不能**加进 Viewbox 里面——
+                里面的边距会跟着 Viewbox 一起被缩放，字号一大就跑偏。
+                （外层这一圈容器是为了在时钟下面再接一行考试倒计时：那一行有自己的字号，不该被 Viewbox 缩放。）
+            -->
+            <StackPanel Grid.Row="0"
+                        Grid.Column="0"
+                        Margin="{Binding ClockGutter}"
+                        Spacing="6"
+                        HorizontalAlignment="Left"
+                        VerticalAlignment="Bottom">
+                <Viewbox IsVisible="{Binding ShowClock}"
+                         MaxWidth="{Binding ClockMaxWidth}"
+                         Stretch="Uniform"
+                         StretchDirection="DownOnly"
+                         HorizontalAlignment="Left">
+                    <StackPanel Spacing="4">
+                    <!--
+                        主时间与秒数：**默认就是一整串「21:42:07」**，跟考试看板上那个钟一个写法。
+                        ⚠️ 别把秒拆成并排的第二个 TextBlock 拼过来：那样冒号没了（拼出「04:03 47」），
+                        而且并排那一截不带这里的 FontWeight，两截一粗一细，看着就是两个东西。
+                        拆开只用于「小秒」那一档（下面那只尾巴，字号缩到四成、与主时间同一个字重）。
+                    -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                        <TextBlock Text="{Binding ClockMain}"
+                                   FontSize="{Binding ClockFontSize}"
+                                   FontFeatures="{Binding ClockFontFeatures}"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                        <!--
+                            「小秒」那一档的尾巴：冒号留在主时间那一串末尾，这里只画「07」。
+                            字重跟主时间对齐（同样的 SemiBold），否则两截粗细不一样。
+                            「大秒」那一档整只都不画（IsVisible 绑 ShowClockSecondsTail）。
+                        -->
+                        <TextBlock Text="{Binding ClockSeconds}"
+                                   IsVisible="{Binding ShowClockSecondsTail}"
+                                   Classes="clock-seconds"
+                                   FontSize="{Binding ClockSecondsFontSize}"
+                                   FontFeatures="{Binding ClockFontFeatures}"
+                                   FontWeight="SemiBold"
+                                   Margin="{Binding ClockSecondsMargin}"
+                                   VerticalAlignment="Bottom" />
+                        <!-- 12 小时制时那颗「下午 / PM」：与秒数同样缩成尾巴，24 小时制不显示。 -->
+                        <TextBlock Text="{Binding ClockPeriod}"
+                                   IsVisible="{Binding ShowClockPeriod}"
+                                   FontSize="{Binding ClockSecondsFontSize}"
+                                   Margin="8,0,0,6"
+                                   VerticalAlignment="Bottom"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding ClockDate}"
+                               IsVisible="{Binding ShowDate}"
+                               FontSize="{Binding ClockDateFontSize}"
+                               HorizontalAlignment="Left"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                </StackPanel>
+                </Viewbox>
+
+                <!--
+                    日期下面那一行「下一场考试还有多久」（设置 → 看板模式 → 显示内容 → 考试倒计时）。
+                    内容来自考试看板的当前看板，判据与措辞全在 Core（ExamStatusPolicy / ExamTimeFormatter），
+                    所以跟全屏考试看板说的是同一句话。
+                    ⚠️ 它在 Viewbox **外面**：字号是独立一档、不跟着时钟缩放；左边与大钟、日期同一条竖线
+                    （缩进来自外层 StackPanel 上的 ClockGutter）。
+                -->
+                <TextBlock Text="{Binding ExamCountdownText}"
+                           IsVisible="{Binding ShowExamCountdown}"
+                           MaxWidth="{Binding ClockMaxWidth}"
+                           FontSize="{Binding ExamCountdownFontSize}"
+                           TextTrimming="CharacterEllipsis"
+                           HorizontalAlignment="Left"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            </StackPanel>
+
+            <!--
+                右上角那块天气。分两排：上面是「图标 + 大字温度 + 天气现象」，
+                下面是城市 / 今天高低 / 湿度 / 空气质量这些小字。
+                每一块都能在设置里单独关掉，所以每一块各自带 IsVisible；
+                任何一块都没有时整块不画（ShowWeather）。
+                时钟占左 / 中 / 右那一格且底边对齐，两块不会撞。
+            -->
+            <StackPanel Grid.Row="0"
+                        Grid.Column="1"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Top"
+                        IsVisible="{Binding ShowWeather}"
+                        Spacing="2">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+                    <Image Source="{Binding WeatherIcon}"
+                           IsVisible="{Binding ShowWeatherIcon}"
+                           Width="{Binding WeatherIconSize}"
+                           Height="{Binding WeatherIconSize}"
+                           RenderOptions.BitmapInterpolationMode="HighQuality" />
+                    <StackPanel VerticalAlignment="Center" Spacing="0">
+                        <TextBlock Text="{Binding WeatherTemperatureText}"
+                                   IsVisible="{Binding ShowWeatherTemperature}"
+                                   FontSize="{Binding WeatherFontSize}"
+                                   FontWeight="SemiBold"
+                                   HorizontalAlignment="Right"
+                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                        <TextBlock Text="{Binding WeatherConditionText}"
+                                   IsVisible="{Binding ShowWeatherCondition}"
+                                   FontSize="{Binding WeatherConditionFontSize}"
+                                   HorizontalAlignment="Right"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- 下面那排小字：一项都没有时整排不画，不留一条空行。 -->
+                <StackPanel Orientation="Horizontal"
+                            HorizontalAlignment="Right"
+                            IsVisible="{Binding ShowWeatherFacts}"
+                            Spacing="14">
+                    <TextBlock Text="{Binding WeatherCityText}"
+                               IsVisible="{Binding ShowWeatherCity}"
+                               FontSize="{Binding WeatherFactFontSize}"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    <TextBlock Text="{Binding WeatherRangeText}"
+                               IsVisible="{Binding ShowWeatherRange}"
+                               FontSize="{Binding WeatherFactFontSize}"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    <TextBlock Text="{Binding WeatherHumidityText}"
+                               IsVisible="{Binding ShowWeatherHumidity}"
+                               FontSize="{Binding WeatherFactFontSize}"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    <TextBlock Text="{Binding WeatherAqiText}"
+                               IsVisible="{Binding ShowWeatherAqi}"
+                               FontSize="{Binding WeatherFactFontSize}"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    <TextBlock Text="{Binding WeatherFeelsLikeText}"
+                               IsVisible="{Binding ShowWeatherFeelsLike}"
+                               FontSize="{Binding WeatherFactFontSize}"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    <TextBlock Text="{Binding WeatherTomorrowText}"
+                               IsVisible="{Binding ShowWeatherTomorrow}"
+                               FontSize="{Binding WeatherFactFontSize}"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                </StackPanel>
+            </StackPanel>
+
+            <!-- 作业区：直接嵌作业板页面，编辑 / 删除 / 拖拽排序 / 富文本渲染全都白拿一份。 -->
+            <Grid x:Name="BoardHost"
+                  Grid.Row="{Binding BoardRow}"
+                  Grid.RowSpan="{Binding BoardRowSpan}"
+                  Grid.Column="{Binding BoardColumn}"
+                  Grid.ColumnSpan="{Binding BoardColumnSpan}"
+                  IsVisible="{Binding ShowBoard}">
+                <board:BoardPage x:Name="EmbeddedBoard" />
+
+                <!--
+                    作业锁着（设置里关掉了「允许编辑作业」与「允许布置作业」）时挂一颗小锁：
+                    以前点作业毫无反应，看着像界面坏了；现在至少知道是「不让改」。
+
+                    放在右下角：卡片右上角是编辑 / 删除按钮的位置，退出图标在左下角，
+                    只有右下角不会跟别的可点区域重叠。
+                -->
+                <Border IsVisible="{Binding ShowLockIcon}"
+                        HorizontalAlignment="Right"
+                        VerticalAlignment="Bottom"
+                        Margin="0,0,12,12"
+                        Padding="8"
+                        CornerRadius="10"
+                        Background="{DynamicResource SubtleFillColorSecondaryBrush}"
+                        ToolTip.Tip="{Binding LockTip}">
+                    <TextBlock Text="{x:Static icons:FluentIcons.LockClosedFilled}"
+                               FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                               FontSize="20"
+                               Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                </Border>
+            </Grid>
+        </Grid>
+
+        <!--
+            「时钟」和「作业」都被关掉时，屏幕上本来就什么都不剩。
+            以前就是一块纯空白，看着像软件卡死；现在给一句提示，至少知道去哪儿改。
+        -->
+        <TextBlock Text="{Binding EmptyStateText}"
+                   IsVisible="{Binding ShowEmptyState}"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"
+                   MaxWidth="760"
+                   TextAlignment="Center"
+                   TextWrapping="Wrap"
+                   FontSize="24"
+                   Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+
+        <!--
+            屏幕底部居中那一行一言（设置里开了才画）。
+            左右各留 96 的内边距：左下角是长按退出（24 + 64 = 88）、右下角是布置作业（24 + 56 = 80），
+            再留一点空档，长句两端不会被那两颗压住。
+            ⚠️ 它的高度会被窗口 code-behind 量走（<c>UpdateBoardBottomInset</c>），作业区底部照着它留边界，
+            作业卡片不会滚到这一行字底下——写死的数字只有这份 Margin，别再在 C# 里抄一遍。
+        -->
+        <StackPanel x:Name="QuoteBar"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Bottom"
+                    Margin="96,0,96,20"
+                    MaxWidth="1280"
+                    Spacing="2"
+                    IsVisible="{Binding ShowQuote}">
+            <TextBlock Text="{Binding QuoteText}"
+                       FontSize="{Binding QuoteFontSize}"
+                       TextAlignment="Center"
+                       TextWrapping="Wrap"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            <TextBlock Text="{Binding QuoteMeta}"
+                       IsVisible="{Binding ShowQuoteMeta}"
+                       FontSize="{Binding QuoteFontSize}"
+                       TextAlignment="Center"
+                       TextWrapping="Wrap"
+                       Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+        </StackPanel>
+
+        <!--
+            屏幕底部那一行常驻操作：左边长按退出、右边「布置作业」，两颗在一条水平线上。
+
+            退出：按住 2 秒才退出，中途松手就取消——避免误触把全屏关掉。
+
+            「布置作业」的加号在**右下角**、纵向跟长按退出对齐（用户先要求「放到跟退出按钮同一行里面去」，
+            又说「在同一行也不要靠左呀，靠右下角」）：行是同一行，但位置贴着右下角，
+            跟退出按钮一左一右分居屏幕两端，中间那条一言不受挤压。
+            以前它单独浮在作业区 Grid 的右下角，会跟卡片的滚动区抢指针——挪到窗口这一层就没这问题。
+            ⚠️ 这两颗都属于窗口角落，所以挂在**窗口根网格**上、不是作业区那个 Grid 里——
+            作业区会随「只看今天到期」等过滤变宽变窄，角落按钮不该跟着跑。
+            加号开不开由 ShowAssignButton 决定（作业区关掉、或设置里关了「允许布置作业」就不画）。
+            ⚠️ 纵向对齐靠内边距配平，别改成「同一行容器靠两端」——那样退出按钮会被拽离左下角。
+        -->
+        <Border Classes="exit-hint"
+                Classes.holding="{Binding IsHolding}"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Bottom"
+                Margin="24,0,0,16"
+                ToolTip.Tip="{x:Static core:Resources.Display_ExitHint}"
+                PointerPressed="OnExitHintPointerPressed"
+                PointerReleased="OnExitHintPointerReleased"
+                PointerCaptureLost="OnExitHintCaptureLost">
+            <Grid Width="64" Height="64">
+                <Ellipse Width="52" Height="52"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center"
+                         IsVisible="{Binding IsHolding}"
+                         Stroke="{DynamicResource ControlStrokeColorDefaultBrush}"
+                         StrokeThickness="3" />
+                <Arc Width="52" Height="52"
+                     HorizontalAlignment="Center"
+                     VerticalAlignment="Center"
+                     StartAngle="-90"
+                     SweepAngle="{Binding HoldSweepAngle}"
+                     IsVisible="{Binding IsHolding}"
+                     Stroke="{Binding HoldRingBrush}"
+                     StrokeThickness="3"
+                     StrokeLineCap="Round" />
+                <TextBlock Classes="icon"
+                           Text="{x:Static icons:FluentIcons.ArrowExitFilled}"
+                           FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                           FontSize="{Binding ExitIconSize}"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center" />
+            </Grid>
+        </Border>
+
+        <!--
+            「布置作业」：右下角，纵向跟长按退出对齐（退出 64 高 + 下边距 16，中心离底 48；
+            这里 56 高 + 下边距 20，中心也是 48）。点开就是同一个 HomeworkAssignmentForm 弹层
+            （弹层宿主已经在这扇窗上注册，见 DisplayBoardWindow.axaml.cs 里的 CreateHost，
+            不会跑到被挡住的主窗口去）。
+        -->
+        <Button Width="56"
+                Height="56"
+                Padding="0"
+                CornerRadius="16"
+                Classes="accent"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Bottom"
+                Margin="0,0,24,20"
+                IsVisible="{Binding ShowAssignButton}"
+                ToolTip.Tip="{Binding AssignTip}"
+                Click="OnAddAssignmentClick">
+            <TextBlock Text="{x:Static icons:FluentIcons.AddFilled}"
+                       FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                       FontSize="22"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center" />
+        </Button>
+
+        <!--
+            弹层宿主（全屏里点「编辑作业」弹出来的表单）。
+            ⚠️ 必须画在这扇窗里：弹层服务只有一个，默认画在作业板主窗口上，
+            那样全屏里点编辑会「什么都不发生」——表单跑到被这块全屏挡住的窗口上去了。
+        -->
+        <Border x:Name="OverlayScrim" Classes="scrim" IsVisible="False">
+            <ContentControl x:Name="OverlayContentHost"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center" />
+        </Border>
+    </Grid>
+</Window>

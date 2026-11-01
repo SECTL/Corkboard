@@ -1,0 +1,304 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Corkboard.ViewModels.SettingsPages.Display"
+             xmlns:core="using:Corkboard.Core.Langs.Common"
+             xmlns:icons="using:Corkboard.Core.Icons"
+             xmlns:fa="using:FluentAvalonia.UI.Controls"
+             mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="1200"
+             x:Class="Corkboard.Views.SettingsPages.Display.DisplaySettingsPage"
+             x:DataType="vm:DisplaySettingsPageViewModel">
+    <!--
+        看板模式设置页。
+
+        版式照「作业板」设置页那套设置卡（用户要求的）：
+        **外层是 `fa:FASettingsExpander`（Header 名称、Description 简介），
+        里面一行一项用 `fa:FASettingsExpanderItem`**（左名称简介、右 Footer 控件）。
+        设置项多的一整段收在一张卡里、默认收起，点标题才展开；只有一项的卡直接把控件放 Footer
+        （FluentAvalonia 就不画折叠箭头了）。
+        这一页自己的控件只有两样特别：字号是滑块并在拖动时弹预览浮窗、
+        时段是「一行一段」的小编辑器。
+        **不要去改 Core 里的全局设置卡样式**。
+        ⚠️ 这里**没有**「时钟放在哪」这一项：时钟固定显示在左上角（用户要求
+        「时间的显示位置不能改」），所以那一组分段按钮连同样式一起删掉了，别再搬回来。
+    -->
+    <UserControl.Styles>
+        <!-- 数值文本（「96 号」）：定宽右对齐，拖动时数字变宽不会把滑块推来推去。 -->
+        <Style Selector="TextBlock.slider-value">
+            <Setter Property="MinWidth" Value="56" />
+            <Setter Property="Margin" Value="8,0,0,0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextAlignment" Value="Right" />
+        </Style>
+
+        <!-- 卡片内容里的补充说明（时段的失效提醒）。 -->
+        <Style Selector="TextBlock.card-hint">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Margin" Value="0,0,0,8" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+
+        <!-- 星期几那颗小圆片：选中就是强调色反白，没选就是一层浅底。 -->
+        <Style Selector="ToggleButton.day-chip">
+            <Setter Property="Width" Value="30" />
+            <Setter Property="Height" Value="30" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="15" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="ToggleButton.day-chip:checked">
+            <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextOnAccentFillColorPrimaryBrush}" />
+        </Style>
+        <Style Selector="ToggleButton.day-chip:checked /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+        </Style>
+
+        <!-- 一段时段：浅底圆角一坨，和上下一段分开，删的那颗按钮贴右边。 -->
+        <Style Selector="Border.slot-row">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="12" />
+        </Style>
+    </UserControl.Styles>
+
+    <ScrollViewer>
+        <StackPanel Classes="page-container">
+            <!--
+                页标题：只这一行，与其它设置页（作业板那一组）完全一致——
+                字号来自 TitleTextBlockStyle，字重压回 Normal，**下面不再挂副标题**。
+            -->
+            <TextBlock Margin="0 4 0 0"
+                       FontWeight="Normal"
+                       Text="{x:Static core:Resources.Settings_Display_Content_Title}"
+                       Theme="{StaticResource TitleTextBlockStyle}" />
+
+            <!-- ══ 现在什么样：开没开、今天还弹不弹 ══
+                 这张卡默认展开：它就是一句话的状态，收起来用户还得点一下才看得见。
+                 ⚠️ 这里**只说现在**，不预告「今天几点自动打开」——下一段时段可能在后天，
+                 那种预告会让人以为今天还会自己弹出来（用户反馈过，已删）。 -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Display_Status}"
+                                   Description="{x:Static core:Resources.Settings_Display_StatusDescription}"
+                                   IsExpanded="True">
+                <StackPanel Spacing="6">
+                    <TextBlock Text="{Binding StatusTitle}" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding NothingVisibleWarning}"
+                               IsVisible="{Binding ShowNothingVisibleWarning}"
+                               Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                               TextWrapping="Wrap" />
+                    <Button Content="{Binding SuppressTodayText}"
+                            Command="{Binding SuppressTodayCommand}"
+                            IsVisible="{Binding ShowSuppressToday}"
+                            IsEnabled="{Binding CanSuppressToday}"
+                            HorizontalAlignment="Left" />
+                </StackPanel>
+            </fa:FASettingsExpander>
+
+            <!-- ══ 显示什么：几项开关 + 作业展示范围，收在一张卡里 ══ -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Display_DisplayCard}">
+                <!--
+                    ⚠️ 「显示时钟 / 显示日期」原本是两颗开关，「显示秒 / 秒和时间一样大」也是两颗——
+                    用户要求同一类别的合并成一个下拉（「不要什么什么都是开关」），这里就是那两个下拉。
+                    配置仍然是原来的布尔字段（ShowClock / ShowDate / ShowSeconds / BigSeconds），
+                    换算在 VM 的 SelectedClockDate / SelectedSeconds 里做，JSON 键一个都没动。
+                -->
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Display_ClockDate}"
+                                           Description="{x:Static core:Resources.Settings_Display_ClockDateDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ComboBox MinWidth="150"
+                                  ItemsSource="{Binding ClockDateChoices}"
+                                  SelectedItem="{Binding SelectedClockDate, Mode=TwoWay}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:DisplayChoice">
+                                    <TextBlock Text="{Binding Name}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Display_SecondsMode}"
+                                           Description="{x:Static core:Resources.Settings_Display_SecondsModeDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ComboBox MinWidth="150"
+                                  ItemsSource="{Binding SecondsChoices}"
+                                  SelectedItem="{Binding SelectedSeconds, Mode=TwoWay}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:DisplayChoice">
+                                    <TextBlock Text="{Binding Name}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+                <!--
+                    ⚠️ 「显示作业」与「展示哪些作业」原来是一颗开关 + 一个下拉，用户要求合成**一个下拉**：
+                    说到底就是「作业区怎么显示」这一件事的三档（全部 / 只看今天要交的 / 不显示）。
+                    配置仍然是原来的两个字段（ShowBoard + BoardScope），换算在 VM 的
+                    SelectedBoardDisplay / CurrentBoardDisplay 里做，JSON 键一个都没动。
+                -->
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Display_BoardDisplay}"
+                                           Description="{x:Static core:Resources.Settings_Display_BoardDisplayDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ComboBox MinWidth="150"
+                                  ItemsSource="{Binding BoardDisplayChoices}"
+                                  SelectedItem="{Binding SelectedBoardDisplay, Mode=TwoWay}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:DisplayChoice">
+                                    <TextBlock Text="{Binding Name}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+                <!--
+                    考试倒计时：读考试看板那块板子上的「下一场」，挂在日期下面（用户要求的位置）。
+                    这里只是一个开关，取数与措辞都由考试域算，所以没有额外参数可配——
+                    阈值与「要不要秒」跟着「设置 → 考试看板 → 显示」里那两项走。
+                -->
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Display_ExamCountdown}"
+                                           Description="{x:Static core:Resources.Settings_Display_ExamCountdownDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ToggleSwitch IsChecked="{Binding Settings.ShowExamCountdown, Mode=TwoWay}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+                <!--
+                    布置作业与编辑作业是两个开关（用户要求分开）：屏幕上能不能**新增**一条，
+                    与能不能改 / 删已经有的，展示时常常是两回事（比如「可以加作业，但不许动别人的」）。
+                -->
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Display_AllowAssign}"
+                                           Description="{x:Static core:Resources.Settings_Display_AllowAssignDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ToggleSwitch IsChecked="{Binding Settings.AllowAssign, Mode=TwoWay}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Display_Editable}"
+                                           Description="{x:Static core:Resources.Settings_Display_EditableDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ToggleSwitch IsChecked="{Binding Settings.Editable, Mode=TwoWay}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+            </fa:FASettingsExpander>
+
+            <!-- ══ 钟面怎么写：12 / 24 小时制，日期那行的写法 ══ -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Display_ClockFormat}"
+                                   Description="{x:Static core:Resources.Settings_Display_ClockFormatDescription}">
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Display_DateFormat}"
+                                           Description="{x:Static core:Resources.Settings_Display_DateFormatDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ComboBox MinWidth="150"
+                                  ItemsSource="{Binding DateStyleChoices}"
+                                  SelectedItem="{Binding SelectedDateStyle, Mode=TwoWay}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:DisplayChoice">
+                                    <TextBlock Text="{Binding Name}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Display_DateCalendar}"
+                                           Description="{x:Static core:Resources.Settings_Display_DateCalendarDescription}"
+                                           IsEnabled="{Binding Settings.ShowDate}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ComboBox MinWidth="150"
+                                  ItemsSource="{Binding DateCalendarChoices}"
+                                  SelectedItem="{Binding SelectedDateCalendar, Mode=TwoWay}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:DisplayChoice">
+                                    <TextBlock Text="{Binding Name}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+                <fa:FASettingsExpander.Footer>
+                    <ComboBox MinWidth="150"
+                              ItemsSource="{Binding ClockFormatChoices}"
+                              SelectedItem="{Binding SelectedClockFormat, Mode=TwoWay}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:DisplayChoice">
+                                <TextBlock Text="{Binding Name}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <!--
+                ══ 字号：三项滑块，收在一张卡里；拖动时弹预览浮窗 ══
+                ⚠️ 行必须交给 FASettingsExpander **自己的** items 宿主（`ItemsSource` + `ItemTemplate`），
+                别在外面套一层 ItemsControl：它继承自 HeaderedItemsControl，行是它生成的容器
+                （`FASettingsExpanderItem.IsContainerFromTemplate` 认的就是这条路径）。套一层自己的
+                ItemsControl，行就不算它的容器了，卡片给行准备的那套底色不生效，
+                行会退回控件默认底色、比卡片亮一块（用户反馈过「这个设置项的底色不对」）。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Display_FontCard}"
+                                   ItemsSource="{Binding FontItems}">
+                <fa:FASettingsExpander.ItemTemplate>
+                    <DataTemplate x:DataType="vm:DisplaySliderItem">
+                            <fa:FASettingsExpanderItem Content="{Binding Name}"
+                                                       Description="{Binding Description}">
+                                <fa:FASettingsExpanderItem.Footer>
+                                    <Grid ColumnDefinitions="Auto,Auto" VerticalAlignment="Center">
+                                        <Slider x:Name="SizeSlider"
+                                                Width="220"
+                                                Minimum="{Binding Minimum}"
+                                                Maximum="{Binding Maximum}"
+                                                Value="{Binding SliderValue, Mode=TwoWay}"
+                                                TickFrequency="1"
+                                                IsSnapToTickEnabled="True" />
+                                        <TextBlock Grid.Column="1" Classes="slider-value" Text="{Binding ValueText}" />
+
+                                        <!--
+                                            拖动预览浮窗：照考试看板「看板字号」那页的做法。
+                                            ⚠️ IsHitTestVisible=False 是必须的——浮窗一吃指针，拖到一半就断。
+                                        -->
+                                        <Popup IsOpen="{Binding IsPreviewVisible}"
+                                               PlacementTarget="{Binding #SizeSlider}"
+                                               Placement="Top"
+                                               VerticalOffset="-8"
+                                               IsLightDismissEnabled="False"
+                                               IsHitTestVisible="False">
+                                            <Border Background="{DynamicResource SolidBackgroundFillColorQuarternaryBrush}"
+                                                    BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                                                    BorderThickness="1"
+                                                    CornerRadius="8"
+                                                    Padding="16,12"
+                                                    MaxWidth="360">
+                                                <StackPanel Spacing="8">
+                                                    <Border Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}"
+                                                            CornerRadius="6"
+                                                            Padding="12,8"
+                                                            MaxHeight="140"
+                                                            ClipToBounds="True"
+                                                            HorizontalAlignment="Left">
+                                                        <TextBlock FontSize="{Binding PreviewFontSize}"
+                                                                   FontWeight="{Binding PreviewFontWeight}"
+                                                                   Text="{Binding SampleText}"
+                                                                   TextWrapping="Wrap"
+                                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                                    </Border>
+                                                    <TextBlock Text="{x:Static core:Resources.Settings_Display_PreviewScaled}"
+                                                               IsVisible="{Binding IsPreviewScaled}"
+                                                               FontSize="12"
+                                                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                                </StackPanel>
+                                            </Border>
+                                        </Popup>
+                                    </Grid>
+                                </fa:FASettingsExpanderItem.Footer>
+                            </fa:FASettingsExpanderItem>
+                    </DataTemplate>
+                </fa:FASettingsExpander.ItemTemplate>
+            </fa:FASettingsExpander>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

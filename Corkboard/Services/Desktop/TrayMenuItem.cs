@@ -26,6 +26,15 @@ public sealed record TrayMenuItem(string? Header, Action? Action, bool ShowAppli
     /// <summary>一条分隔线。</summary>
     public static TrayMenuItem Separator { get; } = new(null, null);
 
+    /// <summary>
+    ///     子菜单（有内容时这一项就成了一个可展开的分类，本身不带 <see cref="Action" />）。
+    ///     两份映射都照这个递归——左键那份建 <c>MenuItem</c>、右键那份建 <c>NativeMenuItem.Menu</c>。
+    /// </summary>
+    public IReadOnlyList<TrayMenuItem>? Children { get; init; }
+
     /// <summary>这一项是不是分隔线。</summary>
-    public bool IsSeparator => Action is null;
+    public bool IsSeparator => Action is null && Children is not { Count: > 0 };
+
+    /// <summary>这一项是不是「可展开的分类」。</summary>
+    public bool IsSubmenu => Children is { Count: > 0 };
 }

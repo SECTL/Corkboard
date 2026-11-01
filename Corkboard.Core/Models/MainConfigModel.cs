@@ -6,6 +6,8 @@ using Corkboard.Core.Models.SubConfigs.Exam;
 using Corkboard.Core.Models.SubConfigs.Export;
 using Corkboard.Core.Models.SubConfigs.General;
 using Corkboard.Core.Models.SubConfigs.Personalized;
+using Corkboard.Core.Models.SubConfigs.Display;
+using Corkboard.Core.Models.SubConfigs.Widgets;
 using Corkboard.Core.Models.SubConfigs.Update;
 using Corkboard.Shared;
 using Corkboard.Shared.Abstraction;
@@ -43,6 +45,15 @@ public partial class MainConfigModel : ConfigBase
     /// <summary>NTP 校时设置。看板时钟用它，其它界面不受影响。</summary>
     [ObservableProperty] private NtpSettingsConfig _ntp = new();
 
+    /// <summary>
+    ///     看板模式（全屏大时钟 + 作业）：显示什么、怎么排、到点自己进出。
+    ///     它不属于作业板也不属于考试看板，是独立的一块基础功能。
+    /// </summary>
+    [ObservableProperty] private DisplaySettingsConfig _display = new();
+
+    /// <summary>看板模式上的「一言」与「天气」两行字：开关、类别、城市、刷新间隔。</summary>
+    [ObservableProperty] private WidgetsSettingsConfig _widgets = new();
+
     [JsonIgnore] public override string ConfigFilePath => Utils.GetFilePath("config", "settings.json");
 
     /// <summary>
@@ -59,9 +70,12 @@ public partial class MainConfigModel : ConfigBase
         ExportSettings.Normalize();
         UpdateSettings.Normalize();
         General.PrivacySettings.Normalize();
+        General.CrashRecovery.Normalize();
         ExamBoard.Normalize();
         ExamAutoShow.Normalize();
         Ntp.Normalize();
+        Display.Normalize();
+        Widgets.Normalize();
     }
 
     [JsonIgnore]
@@ -79,6 +93,20 @@ public partial class MainConfigModel : ConfigBase
         {
             if (value is not null)
                 General.Basic = value;
+        }
+    }
+
+    /// <summary>
+    ///     只写属性：把旧版本顶层的 <c>study</c> 段读成看板模式的配置
+    ///     （功能还叫「自习模式」时键名是 <c>study</c>，现在落盘写 <c>display</c>）。
+    /// </summary>
+    [JsonPropertyName("study")]
+    public DisplaySettingsConfig LegacyDisplayOnLoad
+    {
+        set
+        {
+            if (value is not null)
+                Display = value;
         }
     }
 }

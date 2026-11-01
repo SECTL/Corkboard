@@ -109,7 +109,9 @@ public partial class BoardPage : UserControl
 
         // 自动存档要的那张图只能由页面渲：内容容器在这里，收起卡片按钮也得靠这里的 ViewModel。
         // 在 Loaded 里挂、Unloaded 里摘——页面进了可视树才渲得出东西，构造期挂着也没用。
-        Loaded += (_, _) => _autoSave.RegisterRenderer(RenderBoardPngAsync);
+        // ⚠️ 带上 owner（this）：全屏展示窗口里还嵌着第二块板子，两份渲染器要各记各的账，
+        // 否则后关的那一块（Unloaded 传 null）会把先开的那个一起抹掉。
+        Loaded += (_, _) => _autoSave.RegisterRenderer(this, RenderBoardPngAsync);
 
         // 页面是 transient 的，离开可视树时必须断开对单例服务和配置的订阅；
         // 拖动中留下的指针捕获、落位动画的计时器也要在这里收掉（见 EndReorder / StopSlides）。
@@ -118,11 +120,104 @@ public partial class BoardPage : UserControl
             EndReorder(commit: false);
             StopSlides();
             ViewModel?.Detach();
-            _autoSave.RegisterRenderer(null);
+            _autoSave.RegisterRenderer(this, null);
         };
     }
 
     private BoardPageViewModel? ViewModel => DataContext as BoardPageViewModel;
+
+    /// <summary>
+    ///     这块板子是不是「只让看不让改」的（全屏看板模式关掉「允许编辑作业」时用）。
+    ///     <para>
+    ///         只影响<b>这一块</b>板子：全屏窗口里嵌的那块是 transient 的独立实例，
+    ///         把主窗口那块一起锁住不是用户要的。
+    ///     </para>
+    /// </summary>
+    public bool IsReadOnlyHost
+    {
+        get => ViewModel?.IsReadOnly ?? false;
+        set
+        {
+            if (ViewModel is { } viewModel)
+                viewModel.IsReadOnly = value;
+        }
+    }
+
+    /// <summary>
+    ///     宿主只显示「今天要交的」（全屏看板模式的展示策略）。同样只影响这一块板子。
+    /// </summary>
+    public bool ShowDueTodayOnlyHost
+    {
+        get => ViewModel?.ShowDueTodayOnly ?? false;
+        set
+        {
+            if (ViewModel is { } viewModel)
+                viewModel.ShowDueTodayOnly = value;
+        }
+    }
+
+    /// <summary>
+    ///     宿主给的空状态文案（全屏展示时换一句「今天没有要交的作业」）；
+    ///     <see langword="null" /> 表示用作业板自己那句。
+    /// </summary>
+    public string? EmptyHintOverrideHost
+    {
+        get => ViewModel?.EmptyHintOverride;
+        set
+        {
+            if (ViewModel is { } viewModel)
+                viewModel.EmptyHintOverride = value;
+        }
+    }
+
+    /// <summary>
+    ///     作业列表的滚动条。全屏看板模式要一屏一屏自动往下轮播，而那个 <see cref="ScrollViewer" />
+    ///     在页面内部（外面拿不到可视树），所以在这里留一个只读口子。
+    /// </summary>
+    /// <remarks>
+    ///     ⚠️ 这里必须走 <see cref="StyledElement.FindControl{T}(string)" />，不能用 <c>x:Name</c> 生成的字段：
+    ///     这个页面自己写了 <c>InitializeComponent()</c>（<see cref="AvaloniaXamlLoader.Load" />），
+    ///     生成器那条赋值语句就不会跑，字段恒为 <see langword="null" />——表现是「看板模式永远不轮播」。
+    /// </remarks>
+    public ScrollViewer? NotesScroller => this.FindControl<ScrollViewer>("BoardScrollViewer");
+
+    /// <summary>
+    ///     各区块卡片（<c>Border.note</c>）的顶边，换算成「滚动内容坐标」按升序给出。
+    ///     看板模式自动翻页拿它当对齐边界——每翻一页，最上面那张卡片总是完整的，不会被从中间切开。
+    ///     <para>
+    ///         只量<b>当前排布</b>那一套容器（多列 / 区块两套 <c>ItemsControl</c> 同时只显示一套，
+    ///         另一套量出来的位置没意义），所以按「可见且高度大于 0」筛一遍。没挂树、量不出来时给空表。
+    ///     </para>
+    /// </summary>
+    public IReadOnlyList<double> GetSectionAnchors()
+    {
+        if (NotesScroller is not { } scroller || _boardContent is not { } content)
+            return [];
+
+        var offset = scroller.Offset.Y;
+        var anchors = new List<double>();
+        CollectAnchors(content);
+
+        anchors.Sort();
+        return anchors;
+
+        // 页面自己的可视树是扁的：区块卡片的顶边直接量到底，别指望 ItemsControl 那边有现成的行高。
+        void CollectAnchors(Visual parent)
+        {
+            foreach (var child in parent.GetVisualChildren())
+            {
+                if (child is Border { IsVisible: true, Bounds.Height: > 0 } border
+                    && border.Classes.Contains("note")
+                    && border.TranslatePoint(new Point(0, 0), scroller) is { } point)
+                {
+                    // TranslatePoint 给的是视口坐标，加上当前偏移才是内容坐标。
+                    anchors.Add(point.Y + offset);
+                }
+
+                CollectAnchors(child);
+            }
+        }
+    }
 
     /// <summary>
     ///     编辑入口：复用「布置作业」那份表单，打开时把这条作业填进去，确定即写回。
@@ -214,7 +309,7 @@ public partial class BoardPage : UserControl
     ///     <para>
     ///         流程：问格式（设置里关掉「询问导出格式」就不问）→ 图片直接保存 / 复制，
     ///         表格直接写成 xlsx。回放里也允许导出（导的是当前看到的历史快照）；
-    ///         点击穿透时按钮整颗隐藏，这里只做兜底。
+    ///         窗口解锁着时也允许——导出只读不写，入口在遮罩外面的标题栏上。
     ///     </para>
     ///     <para>
     ///         成功与失败都只给一条几秒后消失的轻提示，不弹窗；用户在选择器里取消什么都不做。
@@ -225,7 +320,7 @@ public partial class BoardPage : UserControl
         if (_boardContent is null || ViewModel is not { } viewModel)
             return;
 
-        if (viewModel.Config.Basic.ClickThrough || !viewModel.HasNotes)
+        if (!viewModel.HasNotes)
             return;
 
         if (TopLevel.GetTopLevel(this) is not { } topLevel)
@@ -398,9 +493,8 @@ public partial class BoardPage : UserControl
     /// <summary>
     ///     区块标题行按下：立刻接管指针，挪动超过阈值就开始换位置。
     ///     <para>
-    ///         刻意**不等长按**：手柄本身就是「抓这里拖」的意思，而且 500ms 长按正好和壳的
-    ///     整窗长按拖动撞车（两边判定条件一样，同一次按住会被判成两件事）。
-    ///     标题行整条都标了 <see cref="WindowDragGesture.SuppressProperty" />，壳不会来抢。
+    ///         刻意**不等长按**：手柄本身就是「抓这里拖」的意思。壳层只在标题栏接手势，
+    ///         不会来抢区块标题行这一下。
     ///     </para>
     ///     <para>
     ///         指针捕获挂**页面**上，不挂手柄：区块一换位置，ItemsControl 就可能把容器连同

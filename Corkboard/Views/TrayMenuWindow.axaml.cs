@@ -22,7 +22,7 @@ namespace Corkboard.Views;
 ///         <see cref="PlatformCapabilities.SupportsTrayMenuOnLeftClick" />。
 ///     </para>
 ///     <para>
-///         为什么是独立窗口：主窗口可能根本看不见（收纳成浮钮、或「启动时显示主窗口」关着），
+///         为什么是独立窗口：主窗口可能根本看不见（收纳成浮钮、或「启动时显示作业板」关着），
 ///         挂在主窗口视觉树里的弹层/菜单会跟着一起没掉。窗口本身透明、无边框、不进任务栏、置顶，
 ///         菜单卡片由 <c>MenuFlyoutPresenter</c> 自己的模板画——与右键那份原生菜单同一套样式。
 ///     </para>
@@ -104,29 +104,40 @@ public partial class TrayMenuWindow : Window
         host.Items.Clear();
 
         foreach (var item in items)
+            host.Items.Add(CreateMenuEntry(item));
+    }
+
+    /// <summary>
+    ///     把菜单表里的一项变成控件。分类（带子菜单的）递归展开成子项，
+    ///     点击统一「先关菜单再做事」——退出 / 重启这类动作会把整个应用带走，窗口留着也没意义。
+    /// </summary>
+    private Control CreateMenuEntry(TrayMenuItem item)
+    {
+        if (item.IsSeparator)
+            return new Separator();
+
+        var menuItem = new MenuItem { Header = item.Header };
+
+        // 顶上那项「图标 + 软件名」：图标用和窗口/托盘同一个母图，缩到菜单行高那么大。
+        if (item.ShowApplicationIcon)
+            menuItem.Icon = CreateMenuIcon();
+
+        if (item.IsSubmenu)
         {
-            if (item.IsSeparator)
-            {
-                host.Items.Add(new Separator());
-                continue;
-            }
+            foreach (var child in item.Children!)
+                menuItem.Items.Add(CreateMenuEntry(child));
 
-            var action = item.Action;
-            var menuItem = new MenuItem { Header = item.Header };
-
-            // 顶上那项「图标 + 软件名」：图标用和窗口/托盘同一个母图，缩到菜单行高那么大。
-            if (item.ShowApplicationIcon)
-                menuItem.Icon = CreateMenuIcon();
-
-            // 先关菜单再做事：退出/重启这类动作会把整个应用带走，窗口留着也没意义。
-            menuItem.Click += (_, _) =>
-            {
-                CloseMenu();
-                action?.Invoke();
-            };
-
-            host.Items.Add(menuItem);
+            return menuItem;
         }
+
+        var action = item.Action;
+        menuItem.Click += (_, _) =>
+        {
+            CloseMenu();
+            action?.Invoke();
+        };
+
+        return menuItem;
     }
 
     /// <summary>

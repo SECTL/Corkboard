@@ -56,8 +56,11 @@ public sealed class BoardAutoSaveService
     /// </summary>
     private bool _isSaving;
 
-    /// <summary>页面注册进来的渲染器；页面不在可视树里时为 <c>null</c>。</summary>
-    private Func<CancellationToken, Task<byte[]?>>? _renderer;
+    /// <summary>
+    ///     页面注册进来的渲染器，按注册先后排。可以有多个（主窗口一块、全屏展示窗口里还嵌着一块），
+    ///     渲染时取第一份；注册者自己注销只摘自己那一条。
+    /// </summary>
+    private readonly List<(object Owner, Func<CancellationToken, Task<byte[]?>> Renderer)> _renderers = [];
 
     private BoardAutoSaveSettingsConfig? _settings;
 
@@ -126,11 +129,27 @@ public sealed class BoardAutoSaveService
     ///         渲染器必须自己保证在 UI 线程上跑、并在渲染期间把卡片上的按钮收起来；
     ///         返回 <c>null</c> 表示「这一轮没什么可存的」（比如板子是空的、正在回放）。
     ///     </para>
+    ///     <para>
+    ///         ⚠️ <b>可以有多个页面同时注册</b>：主窗口一块、全屏展示窗口里还嵌着一块。
+    ///         所以按 <paramref name="owner" /> 记账，而不是单槽直接覆盖——否则全屏窗口一关
+    ///         （它 <c>Unloaded</c> 时传 <c>null</c>）会把主窗口那份一起抹掉，自动存档就再也不干活了。
+    ///         真正渲染时取<b>最早注册</b>的那一个（主窗口那块是启动时就挂上的），
+    ///         保证存出来的始终是主板上那张图。
+    ///     </para>
     /// </summary>
-    public void RegisterRenderer(Func<CancellationToken, Task<byte[]?>>? renderer)
+    public void RegisterRenderer(object owner, Func<CancellationToken, Task<byte[]?>>? renderer)
     {
-        _renderer = renderer;
+        ArgumentNullException.ThrowIfNull(owner);
+
+        _renderers.RemoveAll(entry => ReferenceEquals(entry.Owner, owner));
+
+        if (renderer is not null)
+            _renderers.Add((owner, renderer));
     }
+
+    /// <summary>按注册先后取第一份渲染器；没有就返回 <c>null</c>。</summary>
+    private Func<CancellationToken, Task<byte[]?>>? ResolveRenderer() =>
+        _renderers.Count == 0 ? null : _renderers[0].Renderer;
 
     /// <summary>
     ///     板子改了就排一次存档。改得再密也只有最后一笔算数（防抖）。
@@ -176,7 +195,7 @@ public sealed class BoardAutoSaveService
         if (!manual && !settings.Enabled)
             return false;
 
-        if (_renderer is not { } renderer)
+        if (ResolveRenderer() is not { } renderer)
         {
             _logger.LogDebug("作业板还没显示出来，这一轮自动存档跳过");
             return false;

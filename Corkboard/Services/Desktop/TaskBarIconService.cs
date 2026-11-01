@@ -279,6 +279,31 @@ public sealed class TaskBarIconService : IDisposable
                 : new TrayMenuItem(CR.Menu_OpenMainWindow, static () => App.ShowMainWindow()));
         }
 
+        // 看板模式收成一个分类：打开、延长、今天不再自动打开都在里面，
+        // 免得托盘被一堆平铺的功能项撑长（用户明确要「分类一下」）。
+        var displayItems = new List<TrayMenuItem>
+        {
+            new(CR.Menu_OpenDisplayBoard, static () => App.ShowDisplayBoardWindow())
+        };
+
+        if (App.IsDisplayBoardWindowOpen)
+        {
+            displayItems.Add(new TrayMenuItem(
+                CR.Menu_ExtendDisplayBoard,
+                static () => App.ExtendDisplaySession(TimeSpan.FromMinutes(30))));
+            displayItems.Add(new TrayMenuItem(
+                CR.Menu_CloseDisplayBoard,
+                static () => App.CloseDisplayBoardWindow()));
+        }
+
+        if (!App.IsDisplaySuppressed())
+        {
+            displayItems.Add(new TrayMenuItem(
+                CR.Menu_SuppressDisplayToday,
+                static () => App.SuppressDisplayForToday()));
+        }
+
+        items.Add(new TrayMenuItem(CR.Menu_DisplayBoardGroup, null) { Children = displayItems });
         items.Add(new TrayMenuItem(CR.Menu_OpenExamBoard, static () => App.ShowExamBoardWindow()));
         items.Add(new TrayMenuItem(CR.Menu_OpenSettings, static () => App.ShowSettingsWindow()));
         items.Add(TrayMenuItem.Separator);
@@ -295,8 +320,17 @@ public sealed class TaskBarIconService : IDisposable
     private NativeMenu CreateNativeMenu()
     {
         var menu = new NativeMenu();
+        AddNativeItems(menu, CurrentMenuItems);
+        return menu;
+    }
 
-        foreach (var item in CurrentMenuItems)
+    /// <summary>
+    ///     把菜单表递归映射成原生菜单项。分类走 <see cref="NativeMenuItem.Menu" />（原生菜单自己的子菜单），
+    /// 分隔线与图标照旧。
+    /// </summary>
+    private static void AddNativeItems(NativeMenu menu, IReadOnlyList<TrayMenuItem> items)
+    {
+        foreach (var item in items)
         {
             if (item.IsSeparator)
             {
@@ -304,15 +338,24 @@ public sealed class TaskBarIconService : IDisposable
                 continue;
             }
 
-            var action = item.Action;
             var nativeItem = new NativeMenuItem { Header = item.Header };
             if (item.ShowApplicationIcon)
                 nativeItem.Icon = CreateMenuIconSource();
-            nativeItem.Click += (_, _) => action?.Invoke();
+
+            if (item.IsSubmenu)
+            {
+                var submenu = new NativeMenu();
+                AddNativeItems(submenu, item.Children!);
+                nativeItem.Menu = submenu;
+            }
+            else
+            {
+                var action = item.Action;
+                nativeItem.Click += (_, _) => action?.Invoke();
+            }
+
             menu.Items.Add(nativeItem);
         }
-
-        return menu;
     }
 
     /// <summary>

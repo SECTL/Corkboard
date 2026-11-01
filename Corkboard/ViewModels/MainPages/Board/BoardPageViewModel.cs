@@ -138,17 +138,45 @@ public partial class BoardPageViewModel : ViewModelBase
     partial void OnIsExportingChanged(bool value) => RebuildNotes();
 
     /// <summary>
-    ///     作业条右侧那两颗按钮（编辑 / 删除）画不画。两种情况都不画：
-    ///     回放看的是历史快照、不接受增删；点击穿透开着时整窗收不到鼠标，画出来只是两颗点不动的图标。
+    ///     作业条右侧那两颗按钮（编辑 / 删除）画不画。三种情况都不画：
+    ///     回放看的是历史快照、不接受增删；窗口解锁着（调整窗口态）时板面盖着遮罩、鼠标点不进来；
+    ///     宿主把这块板子设成只读（全屏看板模式关掉「允许编辑作业」）。
     ///     <para>值记在每个列表项上（<see cref="BoardNoteCardItem.CanModify" />），所以变化时要重建列表。</para>
     /// </summary>
-    public bool CanModifyNotes => !_replay.IsActive && !Config.Basic.ClickThrough;
+    public bool CanModifyNotes => !IsReadOnly && !_replay.IsActive && Config.Basic.WindowFixed;
 
     /// <summary>
-    ///     导出图片按钮画不画。空板上没什么可导的；点击穿透开着时整窗点不动，画出来只是一颗点不动的图标。
-    ///     回放里允许导出（导的是当前看到的这份历史快照）。
+    ///     宿主强制只读（默认关）。全屏展示窗口里嵌的那块板子会按设置打开它，
+    ///     这样展示时把屏幕摆给别人看，谁也没法顺手把作业改了。
+    ///     <para>只对**这一份 ViewModel** 生效——主窗口那块板子是另一个实例，不受影响。</para>
     /// </summary>
-    public bool CanExportImage => HasNotes && !Config.Basic.ClickThrough;
+    [ObservableProperty] private bool _isReadOnly;
+
+    partial void OnIsReadOnlyChanged(bool value) => RebuildNotes();
+
+    /// <summary>
+    ///     宿主只显示「今天要交的」（默认关）：今天到期与已经逾期的留着，其余先收起来。
+    ///     全屏看板模式选「只看今天到期」时打开它。
+    ///     <para>只对**这一份 ViewModel** 生效——主窗口那块板子照旧显示全部作业。</para>
+    /// </summary>
+    [ObservableProperty] private bool _showDueTodayOnly;
+
+    partial void OnShowDueTodayOnlyChanged(bool value) => RebuildNotes();
+
+    /// <summary>
+    ///     宿主给的空状态文案（<see langword="null" /> 时用作业板自己的那句）。
+    ///     全屏展示时换成「今天没有要交的作业」，比「点右上角布置作业」贴切。
+    /// </summary>
+    [ObservableProperty] private string? _emptyHintOverride;
+
+    partial void OnEmptyHintOverrideChanged(string? value) => OnPropertyChanged(nameof(EmptyHint));
+
+    /// <summary>
+    ///     导出图片按钮画不画。空板上没什么可导的。
+    ///     回放里允许导出（导的是当前看到的这份历史快照）；窗口解锁着也允许——导出只读不写，
+    ///     而标题栏那颗导出按钮在遮罩外面，照样点得到。
+    /// </summary>
+    public bool CanExportImage => HasNotes;
 
     /// <summary>导出结果的轻提示（成功 / 失败），几秒后自己消失。</summary>
     [ObservableProperty] private string _exportHint = string.Empty;
@@ -180,16 +208,17 @@ public partial class BoardPageViewModel : ViewModelBase
     public string ReplayBanner => _replay.BannerText;
 
     /// <summary>
-    ///     空板提示：平时指向标题栏右上角的「布置作业」；点击穿透开着时那个按钮整块隐藏，
-    ///     得改口让用户先解锁，否则提示指向一个看不见的按钮。
+    ///     空板提示：平时指向标题栏右上角的「布置作业」；窗口解锁着时那个按钮收起来了，
+    ///     得改口让用户先把窗口锁上，否则提示指向一个看不见的按钮。
     /// </summary>
-    public string EmptyHint => Config.Basic.ClickThrough ? CR.Board_EmptyHintLocked : CR.Board_EmptyHint;
+    public string EmptyHint => EmptyHintOverride
+        ?? (Config.Basic.WindowFixed ? CR.Board_EmptyHint : CR.Board_UnlockMaskHint);
 
     [RelayCommand]
     private void DeleteNote(BoardNoteCardItem? item)
     {
-        // 回放看的是历史快照，此时不接受增删。
-        if (item is null || _replay.IsActive)
+        // 回放看的是历史快照、宿主设成只读时都不接受增删（按钮本来也收起来了，这里再兜一层）。
+        if (item is null || IsReadOnly || _replay.IsActive)
             return;
 
         _boardService.Remove(item.Note.Id);
@@ -275,9 +304,9 @@ public partial class BoardPageViewModel : ViewModelBase
 
     private void OnBasicSettingsChanged(object? sender, PropertyChangedEventArgs e)
     {
-        // 点击穿透影响三处：空板提示的指向（标题栏那一整块会隐藏）、作业条右侧的编辑/删除按钮，
-        // 以及右上角的导出按钮。
-        if (e.PropertyName is null or nameof(BasicSettingsConfig.ClickThrough))
+        // 窗口固定 / 解锁影响三处：空板提示的指向（解锁时标题栏那几个动作都收起来）、
+        // 作业条右侧的编辑/删除按钮，以及右上角的导出按钮。
+        if (e.PropertyName is null or nameof(BasicSettingsConfig.WindowFixed))
         {
             OnPropertyChanged(nameof(EmptyHint));
             OnPropertyChanged(nameof(CanExportImage));
@@ -342,6 +371,13 @@ public partial class BoardPageViewModel : ViewModelBase
         List<Note> visible = _replay.IsActive
             ? [.. filtered]
             : [.. filtered.Where(note => note.IsOnBoard)];
+
+        // 全屏展示选了「只看今天要交的」：逾期没交的也留着（那还是欠着的），只是不再列别的。
+        if (ShowDueTodayOnly && !_replay.IsActive)
+        {
+            var today = DateOnly.FromDateTime(DateTime.Now);
+            visible = [.. visible.Where(note => note.DueDate is { } due && due <= today)];
+        }
 
         SubjectGroups.Clear();
         foreach (var group in NoteGrouping.GroupWithSections(

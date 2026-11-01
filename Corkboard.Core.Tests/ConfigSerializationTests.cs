@@ -75,20 +75,20 @@ public class ConfigSerializationTests
     }
 
     [Fact]
-    public void MainConfig_PersistsWindowOpacityAndClickThroughAsSnakeCase()
+    public void MainConfig_PersistsWindowOpacityAndFixedAsSnakeCase()
     {
         var config = new MainConfigModel();
         config.Basic.MainWindowOpacity = 0.7;
-        config.Basic.ClickThrough = true;
+        config.Basic.WindowFixed = false;
 
         var json = JsonSerializer.Serialize(config, ConfigServiceBase.JsonOptions);
 
         Assert.Contains("\"main_window_opacity\": 0.7", json);
-        Assert.Contains("\"click_through\": true", json);
+        Assert.Contains("\"window_fixed\": false", json);
 
         var restored = JsonSerializer.Deserialize<MainConfigModel>(json, ConfigServiceBase.JsonOptions)!;
         Assert.Equal(0.7, restored.Basic.MainWindowOpacity);
-        Assert.True(restored.Basic.ClickThrough);
+        Assert.False(restored.Basic.WindowFixed);
     }
 
     [Fact]
@@ -96,9 +96,35 @@ public class ConfigSerializationTests
     {
         var basic = new MainConfigModel().Basic;
 
-        // 默认必须完全不透明、不穿透：新用户的主窗口要能看清、能点。
+        // 默认必须完全不透明、且是「固定窗口」：新用户的主窗口要能看清，位置与大小一开始就钉住
+        // （想挪窗口得先点标题栏那颗锁解锁）。
         Assert.Equal(1.0, basic.MainWindowOpacity);
-        Assert.False(basic.ClickThrough);
+        Assert.True(basic.WindowFixed);
+    }
+
+    [Fact]
+    public void MainConfig_IgnoresRemovedWindowModeFields()
+    {
+        // 窗口模式的旧键全部下架（点击穿透 / 锁定按钮行为 / 锁定时也能添加作业 / 长按拖动）：
+        // 旧配置里留着这些字段必须被静默忽略，而不是把反序列化炸掉。
+        const string legacy = """
+        {
+          "general": {
+            "basic": {
+              "click_through": true,
+              "window_lock_mode": 1,
+              "allow_add_note_when_locked": true,
+              "hold_to_drag_window": true,
+              "autostart": true
+            }
+          }
+        }
+        """;
+
+        var restored = JsonSerializer.Deserialize<MainConfigModel>(legacy, ConfigServiceBase.JsonOptions)!;
+
+        Assert.True(restored.Basic.Autostart);
+        Assert.True(restored.Basic.WindowFixed);
     }
 
     [Fact]

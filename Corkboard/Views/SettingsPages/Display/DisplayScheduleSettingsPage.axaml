@@ -1,0 +1,194 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Corkboard.ViewModels.SettingsPages.Display"
+             xmlns:core="using:Corkboard.Core.Langs.Common"
+             xmlns:icons="using:Corkboard.Core.Icons"
+             xmlns:fa="using:FluentAvalonia.UI.Controls"
+             mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="1200"
+             x:Class="Corkboard.Views.SettingsPages.Display.DisplayScheduleSettingsPage"
+             x:DataType="vm:DisplaySettingsPageViewModel">
+    <UserControl.Styles>
+        <Style Selector="TextBlock.slider-value">
+            <Setter Property="MinWidth" Value="56" />
+            <Setter Property="Margin" Value="8,0,0,0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextAlignment" Value="Right" />
+        </Style>
+        <Style Selector="TextBlock.card-hint">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Margin" Value="0,0,0,8" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style Selector="ToggleButton.day-chip">
+            <Setter Property="Width" Value="30" />
+            <Setter Property="Height" Value="30" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="15" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="ToggleButton.day-chip:checked">
+            <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextOnAccentFillColorPrimaryBrush}" />
+        </Style>
+        <Style Selector="ToggleButton.day-chip:checked /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+        </Style>
+        <Style Selector="Border.slot-row">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="12" />
+        </Style>
+    </UserControl.Styles>
+    <ScrollViewer>
+        <StackPanel Classes="page-container">
+            <!-- 页标题：与其它设置页一致（TitleTextBlockStyle + Normal 字重，下面不挂副标题）。 -->
+            <TextBlock Margin="0 4 0 0"
+                       FontWeight="Normal"
+                       Text="{x:Static core:Resources.Settings_Display_Schedule_Title}"
+                       Theme="{StaticResource TitleTextBlockStyle}" />
+            <!--
+                ══ 作业轮播：一屏放不下时自己往下滚，停多久也能改 ══
+                开关与秒数做成卡里两行（用户反馈「开关 + 标签 + 滑块挤一行不好看」）：
+                卡片折起来只占一行，点开才看见两颗控件，右边也不挤。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Display_AutoScroll}"
+                                   Description="{x:Static core:Resources.Settings_Display_AutoScrollDescription}">
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Display_AutoScrollRow}"
+                                           Description="{x:Static core:Resources.Settings_Display_AutoScrollRowDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ToggleSwitch IsChecked="{Binding Settings.AutoScroll, Mode=TwoWay}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+                <fa:FASettingsExpanderItem Content="{Binding AutoScrollPauseItem.Name}"
+                                           Description="{Binding AutoScrollPauseItem.Description}"
+                                           IsEnabled="{Binding Settings.AutoScroll}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <Panel DataContext="{Binding AutoScrollPauseItem}">
+                            <Grid x:DataType="vm:DisplaySliderItem"
+                                  ColumnDefinitions="Auto,Auto"
+                                  VerticalAlignment="Center">
+                                <Slider Width="200"
+                                        Minimum="{Binding Minimum}"
+                                        Maximum="{Binding Maximum}"
+                                        Value="{Binding SliderValue, Mode=TwoWay}"
+                                        TickFrequency="1"
+                                        IsSnapToTickEnabled="True" />
+                                <TextBlock Grid.Column="1" Classes="slider-value" Text="{Binding ValueText}" />
+                            </Grid>
+                        </Panel>
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+            </fa:FASettingsExpander>
+
+            <!-- ══ 自动进出：开关 + 一段段时段（各自选星期几） ══ -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Display_ScheduleCard}">
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Display_AutoShow}"
+                                           Description="{x:Static core:Resources.Settings_Display_AutoShowDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ToggleSwitch IsChecked="{Binding Settings.AutoShow, Mode=TwoWay}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Display_AutoHide}"
+                                           Description="{x:Static core:Resources.Settings_Display_AutoHideDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ToggleSwitch IsChecked="{Binding Settings.AutoHide, Mode=TwoWay}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <!-- 时段不是设置卡：一段一坨，每段有开关、星期几、进出时刻、删掉 -->
+                <StackPanel Spacing="8">
+                    <TextBlock Text="{x:Static core:Resources.Settings_Display_Slots}"
+                               FontWeight="SemiBold" />
+                    <TextBlock Classes="card-hint"
+                               Text="{x:Static core:Resources.Settings_Display_SlotsDescription}" />
+
+                    <ItemsControl ItemsSource="{Binding SlotItems}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:DisplaySlotItem">
+                                <Border Classes="slot-row" Margin="0,0,0,8">
+                                    <StackPanel Spacing="8">
+                                        <Grid ColumnDefinitions="Auto,*,Auto">
+                                            <ToggleSwitch IsChecked="{Binding Enabled, Mode=TwoWay}"
+                                                          VerticalAlignment="Center" />
+
+                                            <StackPanel Grid.Column="1"
+                                                        Orientation="Horizontal"
+                                                        Spacing="6"
+                                                        Margin="12,0,0,0"
+                                                        VerticalAlignment="Center">
+                                                <ItemsControl ItemsSource="{Binding DayChoices}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <StackPanel Orientation="Horizontal" Spacing="4" />
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:DisplayDayChoice">
+                                                            <ToggleButton Classes="day-chip"
+                                                                          Content="{Binding Label}"
+                                                                          IsChecked="{Binding IsSelected, Mode=TwoWay}" />
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+
+                                            <Button Grid.Column="2"
+                                                    Command="{Binding RemoveCommand}"
+                                                    VerticalAlignment="Center"
+                                                    ToolTip.Tip="{x:Static core:Resources.Settings_Display_RemoveSlot}">
+                                                <TextBlock Text="{x:Static icons:FluentIcons.DeleteFilled}"
+                                                           FontFamily="{DynamicResource FluentSystemIconsResizeable}" />
+                                            </Button>
+                                        </Grid>
+
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <TimePicker ClockIdentifier="24HourClock"
+                                                        UseSeconds="False"
+                                                        MinuteIncrement="1"
+                                                        SelectedTime="{Binding EnterTimeDraft, Mode=TwoWay}"
+                                                        LostFocus="OnEditorLostFocus" />
+                                            <TextBlock Text="→"
+                                                       VerticalAlignment="Center"
+                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                            <TimePicker ClockIdentifier="24HourClock"
+                                                        UseSeconds="False"
+                                                        MinuteIncrement="1"
+                                                        SelectedTime="{Binding ExitTimeDraft, Mode=TwoWay}"
+                                                        LostFocus="OnEditorLostFocus" />
+                                        </StackPanel>
+
+                                        <TextBlock Classes="card-hint"
+                                                   Margin="0"
+                                                   Text="{Binding EmptyWarning}"
+                                                   IsVisible="{Binding HasEmptyWarning}"
+                                                   Foreground="{DynamicResource SystemFillColorCautionBrush}" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <Button Content="{x:Static core:Resources.Settings_Display_AddSlot}"
+                            Command="{Binding AddSlotCommand}"
+                            IsVisible="{Binding CanAddSlot}"
+                            HorizontalAlignment="Left" />
+                </StackPanel>
+            </fa:FASettingsExpander>
+
+            <!--
+                ⚠️ 这里原来还有一张「立即使用」卡（打开全屏 / 关闭全屏两颗按钮），已按用户要求删掉：
+                进全屏的日常入口是作业板标题栏那颗「看板模式」按钮（默认显示，可在
+                「设置 → 作业板 → 界面入口 → 顶部按钮」里关掉）、托盘菜单与 corkboard://display。
+                状态卡（现在开没开）仍在「显示内容」那一页顶部，别再往这里搬回来。
+            -->
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
