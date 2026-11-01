@@ -17,4 +17,19 @@ public static class AppConsts
 
     /// <summary>「关于」页 Id：托盘菜单顶上那项直接跳到它。</summary>
     public const string SettingsAboutPageId = "settings.about";
+
+    /// <summary>「看板字号」页 Id：只给 <c>--open-exam-font</c> 版式冒烟用。</summary>
+    public const string SettingsExamFontPageId = "settings.exam.font";
+
+    /// <summary>「最小化与浮窗」页 Id：只给 <c>--open-exam-floating</c> 版式冒烟用。</summary>
+    public const string SettingsExamFloatingPageId = "settings.exam.floating";
+
+    /// <summary>「看板模式」页 Id：只给 <c>--open-display-settings</c> 版式冒烟用。</summary>
+    public const string SettingsDisplayPageId = "settings.display";
+
+    /// <summary>「一言与天气」页 Id：只给 <c>--open-display-widgets</c> 版式冒烟用。</summary>
+    public const string SettingsDisplayWidgetsPageId = "settings.display.widgets";
+
+    /// <summary>「背景」页 Id：只给 <c>--open-display-background</c> 版式冒烟用。</summary>
+    public const string SettingsDisplayBackgroundPageId = "settings.display.background";
 }

@@ -10,6 +10,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Styling;
+using Avalonia.Threading;
 using FluentAvalonia.Styling;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -19,6 +20,7 @@ using Corkboard.Core.Abstraction;
 using Corkboard.Core.Attributes;
 using Corkboard.Core.Board;
 using Corkboard.Core.Controls;
+using Corkboard.Core.CrashRecovery;
 using Corkboard.Core.Enums;
 using Corkboard.Core.Enums.Configs;
 using Corkboard.Core.Exam;
@@ -32,15 +34,20 @@ using Corkboard.Core.Services;
 using Corkboard.Core.Services.Config;
 using Corkboard.Core.Services.FirstRun;
 using Corkboard.Core.Services.Fonts;
+using Corkboard.Core.Display;
+using Corkboard.Core.Time;
 using Corkboard.Platforms;
 using Corkboard.Platforms.Abstractions;
 using Corkboard.Services;
+using Corkboard.Services.Widgets;
 using Corkboard.Services.Auth;
 using Corkboard.Services.Cloud;
+using Corkboard.Services.CrashRecovery;
 using Corkboard.Services.Desktop;
 using Corkboard.Services.Exam;
 using Corkboard.Services.Ipc;
 using Corkboard.Services.Stats;
+using Corkboard.Services.Display;
 using Corkboard.Services.Time;
 using Corkboard.Services.Board;
 using Corkboard.Services.Homework;
@@ -55,6 +62,8 @@ using Corkboard.ViewModels.SettingsPages;
 using Corkboard.ViewModels.SettingsPages.Board;
 using Corkboard.ViewModels.SettingsPages.Exam;
 using Corkboard.ViewModels.SettingsPages.Export;
+using Corkboard.ViewModels.SettingsPages.Display;
+using Corkboard.ViewModels.DisplayBoard;
 using Corkboard.Views;
 using Corkboard.Views.ExamBoard;
 using Corkboard.Views.MainPages.Board;
@@ -67,7 +76,9 @@ using Corkboard.Views.SettingsPages.Exam;
 using Corkboard.Views.SettingsPages.Export;
 using Corkboard.Views.SettingsPages.General;
 using Corkboard.Views.SettingsPages.Personalized;
+using Corkboard.Views.SettingsPages.Display;
 using Corkboard.Views.SettingsPages.Update;
+using Corkboard.Views.DisplayBoard;
 using CR = Corkboard.Core.Langs.Common.Resources;
 
 namespace Corkboard;
@@ -85,6 +96,7 @@ public partial class App : Application
     private static MainWindow? _settingsWindow;
     private static FirstRunOobeWindow? _oobeWindow;
     private static ExamBoardWindow? _examBoardWindow;
+    private static DisplayBoardWindow? _displayBoardWindow;
     private static ExamBoardEditorWindow? _examBoardEditorWindow;
     private static ExamPlanWizardWindow? _examPlanWizardWindow;
     private static IClassicDesktopStyleApplicationLifetime? _desktopLifetime;
@@ -131,6 +143,29 @@ public partial class App : Application
             _desktopLifetime = desktop;
             IsDesktop = true;
 
+            // 运行期未处理异常：整个进程只挂这一处（Dispatcher 那条路能保住消息循环，
+            // 崩溃窗口才画得出来；AppDomain 那条兜底在 Corkboard.Desktop/Program.cs 里）。
+            Dispatcher.UIThread.UnhandledException += OnDispatcherUnhandledException;
+
+            // 崩溃恢复：这一轮进程是「上一次崩溃后重启起来的」，直接把崩溃窗口铺出来，
+            // 正常启动路径（主窗口 / OOBE / 托盘 / 后台服务）一条都不跑。
+            // 顺序与上游 SecRandom-C 一致：**Host 仍然要建**（崩溃窗口读配置、写日志都靠它），建失败也不拦着弹窗。
+            if (CrashRecoveryRuntime.StartupPromptOptions is { } promptOptions)
+            {
+                try
+                {
+                    BuildHost(PlatformStartupContext.Current);
+                }
+                catch (Exception exception)
+                {
+                    Debug.WriteLine(exception);
+                }
+
+                desktop.MainWindow = ShowCrashRecoveryPromptOnly(promptOptions);
+                base.OnFrameworkInitializationCompleted();
+                return;
+            }
+
             BuildHost(PlatformStartupContext.Current);
 
             // 主窗口是桌面挂件（无系统标题栏），进程常驻由托盘菜单控制：
@@ -148,7 +183,7 @@ public partial class App : Application
             }
             else
             {
-                // 「启动时显示主窗口」：关掉时**不把窗口交给生命周期**，Avalonia 就不会在 StartCore 里
+                // 「启动时显示作业板」：关掉时**不把窗口交给生命周期**，Avalonia 就不会在 StartCore 里
                 // 自动显示它（比先显示再隐藏稳妥：开机自启不该闪一下窗口）。窗口仍然建好放 _mainWindow，
                 // 托盘一点就补上 MainWindow 并显示。
                 // 「启用作业板」关掉时干脆不建：这时主窗口没有任何入口（托盘里那一项也藏着），
@@ -202,8 +237,11 @@ public partial class App : Application
         // 版本使用人数上报：每次启动一次，尽力而为，失败只写日志（平台标识见 GlobalConstants.PlatformId）。
         services.AddHostedService<PlatformVersionReportService>();
 
-        // 平台统计：在线状态（受隐私设置三态控制）与使用量增量。两者都要「后台跑 + 页面读缓存」，
-        // 所以先注册单例、再把这个实例挂成托管服务，避免 DI 里出现两个互不相干的实例。
+        // 平台统计：在线状态（受隐私设置三态控制）、版本与使用量增量。三类上报全部走聚合入口
+        // （POST /api/stats/report），共用同一个上报器（限流/超时口径只在那里定义一次）。
+        services.AddSingleton<ISectlStatsReporter, SectlStatsReporter>();
+        // 在线状态与使用量都要「后台跑 + 页面读缓存」，所以先注册单例、再把这个实例挂成托管服务，
+        // 避免 DI 里出现两个互不相干的实例。
         services.AddSingleton<OnlineStatusService>();
         services.AddHostedService(serviceProvider => serviceProvider.GetRequiredService<OnlineStatusService>());
         services.AddSingleton<PlatformUsageReportService>();
@@ -242,11 +280,19 @@ public partial class App : Application
         // 导出作业板图片：只渲染板子上面那块内容，不带上窗口底色与桌面。
         services.AddSingleton<BoardExportService>();
 
+        // 考试文件的导入导出：一场考试存成 .cbexam，或者从这种文件读回来（格式在 Core 的 ExamEntryFile）。
+        services.AddSingleton<ExamFileService>();
+
         // 收纳：把主窗口收成屏幕角落的一颗展开按钮，位置与大小来自「设置 → 作业板 → 收纳」。
         services.AddSingleton<BoardDockService>();
 
         // 作业板自动存档：板子改完等几秒把整块板面存成 PNG，按「设置 → 作业板 → 自动化与数据」的规则裁剪。
         services.AddSingleton<BoardAutoSaveService>();
+
+        // 看板模式底部那一行一言 / 右上角那行天气：单例缓存（窗口开开关关共用一份），
+        // 拉取时机由窗口决定，所以不挂后台轮询（见两个服务各自的注释）。
+        services.AddSingleton<QuoteService>();
+        services.AddSingleton<WeatherService>();
 
         // 作业自动清理：到点给过期作业打 CleanedAt 标记、从主页面上拿掉（规则与判定都在 Core 的 HomeworkCleanupService）。
         services.AddHostedService<HomeworkCleanupHostedService>();
@@ -260,6 +306,10 @@ public partial class App : Application
         // 考试看板自动放映：到点自己把全屏看板弹出来，最后一场考完（延迟 N 分钟）再收回去。
         // 哪块看板参加由看板文件自己的 auto_show_enabled 决定，判定规则在 Core 的 ExamAutoShowPolicy。
         services.AddHostedService<ExamAutoShowHostedService>();
+
+        // 看板模式自动进出：到点自己把全屏展示窗口铺出来，到点再收回去。
+        // 只关「自动打开的那一次」，用户自己点开的不受 auto_hide 管；判定规则在 Core 的 DisplaySchedulePolicy。
+        services.AddHostedService<DisplayAutoShowHostedService>();
 
         // ViewModel 与页面。AddMainPage/AddSettingsPage 同时写导航注册表和键控 DI，两者必须成对。
         services.AddTransient<MainViewModel>();
@@ -292,6 +342,12 @@ public partial class App : Application
         services.AddTransient<ExamDisplaySettingsPageViewModel>();
         services.AddTransient<ExamTimeSettingsPageViewModel>();
         services.AddTransient<ExamAutoShowSettingsPageViewModel>();
+        services.AddTransient<ExamFontSettingsPageViewModel>();
+        services.AddTransient<ExamFloatingSettingsPageViewModel>();
+        services.AddTransient<DisplayBoardViewModel>();
+        services.AddTransient<DisplaySettingsPageViewModel>();
+        services.AddTransient<DisplayWidgetsSettingsPageViewModel>();
+        services.AddTransient<DisplayBackgroundSettingsPageViewModel>();
 
         // 主页面标题的默认文案；用户可以在作业板设置里改成别的名字。
         services.AddMainPage<BoardPage>(CR.Board_Title);
@@ -300,6 +356,13 @@ public partial class App : Application
         // 侧边栏顶部不再放分隔线（原来的 AddSettingsPageSeparator 已按用户要求删掉）。
         services.AddSettingsPage<BasicSettingsPage>(CR.Settings_Basic_Title);
         services.AddSettingsPage<AppearanceSettingsPage>(CR.Settings_Appearance_Title);
+        // 「看板模式」也是可折叠分组（用户要求的「侧边展开、下拉、再分类」）：一块全屏屏自己的显示与版式、
+        // 背景、一言与天气、到点自己进出，四件事分四页，别挤在一页里。
+        services.AddGroup(new PageGroupInfo(CR.Settings_Display_Group, "settings.display.group", FluentIcons.ClockFilled));
+        services.AddSettingsPage<DisplaySettingsPage>(CR.Settings_Display_Content_Title);
+        services.AddSettingsPage<DisplayBackgroundSettingsPage>(CR.Settings_Display_Background_Title);
+        services.AddSettingsPage<DisplayWidgetsSettingsPage>(CR.Settings_Display_Widgets_Title);
+        services.AddSettingsPage<DisplayScheduleSettingsPage>(CR.Settings_Display_Schedule_Title);
 
         // 「作业板」是可折叠分组：分组本身出现在侧边栏，点开才是它底下的各个设置子页。
         // 子页的 PageInfo 上必须带同一个 groupId，否则会被当成顶层项平铺出去。
@@ -312,10 +375,14 @@ public partial class App : Application
         // 「导出」在作业板分组里：导出的就是作业板，放顶层会让人找不着。
         services.AddSettingsPage<ExportSettingsPage>(CR.Settings_Export_Title);
 
-        // 「考试看板」是第二个可折叠分组，排在「作业板」下面：考试安排、看板显示、时间同步、自动放映。
+        // 「考试看板」是第二个可折叠分组，排在「作业板」下面：考试安排、看板显示、看板字号、时间同步、自动放映。
         services.AddGroup(new PageGroupInfo(CR.Settings_Exam_Group, "settings.exam.group", FluentIcons.CalendarFilled));
         services.AddSettingsPage<ExamScheduleSettingsPage>(CR.Settings_Exam_Schedule_Title);
         services.AddSettingsPage<ExamDisplaySettingsPage>(CR.Settings_Exam_Display_Title);
+        // 「最小化与浮窗」紧跟在「看板显示」后面：两者都是「看板长什么样、怎么用」。
+        services.AddSettingsPage<ExamFloatingSettingsPage>(CR.Settings_Exam_Floating_Title);
+        // 「看板字号」单开一页：看板上每一处文字各有一个字号，塞进「看板显示」会把那一页撑到十几张卡。
+        services.AddSettingsPage<ExamFontSettingsPage>(CR.Settings_Exam_Font_PageTitle);
         services.AddSettingsPage<ExamTimeSettingsPage>(CR.Settings_Exam_Time_Title);
         services.AddSettingsPage<ExamAutoShowSettingsPage>(CR.Settings_Exam_AutoShow_Title);
 
@@ -342,6 +409,9 @@ public partial class App : Application
             // 开机自启是系统集成：启动时按配置重新写一遍（用户可能在别处删掉了自启项）。
             EnsureAutostartIntegration();
 
+            // 「用 corkboard:// 打开看板模式」同理：协议注册可能在别处被清掉了。
+            EnsureUrlProtocolIntegration();
+
             // 「启用作业板」是全局开关：设置页里一拨，主窗口就该当场收掉或叫回来。
             WatchBoardEnabled();
 
@@ -367,6 +437,14 @@ public partial class App : Application
             if (args.Contains("--open-about", StringComparer.OrdinalIgnoreCase))
                 ShowSettingsWindow(AppConsts.SettingsAboutPageId);
 
+            // 同上：带 --open-exam-font 时直接落到「看板字号」页，方便对分组版式截图。
+            if (args.Contains("--open-exam-font", StringComparer.OrdinalIgnoreCase))
+                ShowSettingsWindow(AppConsts.SettingsExamFontPageId);
+
+            // 同上：带 --open-exam-floating 时直接落到「最小化与浮窗」页，方便对设置卡截图。
+            if (args.Contains("--open-exam-floating", StringComparer.OrdinalIgnoreCase))
+                ShowSettingsWindow(AppConsts.SettingsExamFloatingPageId);
+
             // 同上：带 --open-exam-board 时直接铺开全屏考试看板，方便对版式截图。
             if (args.Contains("--open-exam-board", StringComparer.OrdinalIgnoreCase))
                 ShowExamBoardWindow();
@@ -375,10 +453,93 @@ public partial class App : Application
             // 退出时同正常引导一样走「没走完就退出」）。
             if (args.Contains("--open-oobe", StringComparer.OrdinalIgnoreCase))
                 ShowOobeWindow();
+
+            // 同上：带 --open-display-settings 时直接落到「看板模式」页，方便对设置卡版式截图。
+            if (args.Contains("--open-display-settings", StringComparer.OrdinalIgnoreCase))
+                ShowSettingsWindow(AppConsts.SettingsDisplayPageId);
+
+            // 同上：带 --open-display 时直接铺开全屏看板模式，方便对版式截图。
+            if (args.Contains("--open-display", StringComparer.OrdinalIgnoreCase))
+                ShowDisplayBoardWindow();
+
+            // 同上：带 --open-display-widgets 时直接落到「一言与天气」页（这一页曾经一点就崩）。
+            if (args.Contains("--open-display-widgets", StringComparer.OrdinalIgnoreCase))
+                ShowSettingsWindow(AppConsts.SettingsDisplayWidgetsPageId);
+
+            // 同上：带 --open-display-background 时直接落到「背景」页，方便对背景编辑器截图。
+            if (args.Contains("--open-display-background", StringComparer.OrdinalIgnoreCase))
+                ShowSettingsWindow(AppConsts.SettingsDisplayBackgroundPageId);
+
+            // 命令行里带 corkboard://display… 时按链接打开 / 关掉看板模式（协议唤起走这条路）。
+            if (DisplayBoardUri.TryParseAny(args, out var displayCommand))
+                ApplyDisplayCommand(displayCommand);
+
+            // 单实例转发：第二份 Corkboard 被系统唤起时，命令行会被送到这里。
+            // 先接上事件再倒一次队列——两件事之间到达的那一条不会丢。
+            SingleInstanceGate.ArgumentsReceived += OnExternalArguments;
+            foreach (var pending in SingleInstanceGate.DrainPendingArguments())
+                HandleExternalArguments(pending);
         }
         catch (Exception exception)
         {
             IAppHost.TryGetService<ILogger<App>>()?.LogError(exception, "启动后台服务失败。");
+        }
+    }
+
+    /// <summary>
+    ///     别的实例把命令行转发过来了。这个回调在管道线程上，**必须先切到 UI 线程**再动窗口。
+    /// </summary>
+    private static void OnExternalArguments(IReadOnlyList<string> arguments) =>
+        Dispatcher.UIThread.Post(() => HandleExternalArguments(arguments));
+
+    /// <summary>
+    ///     处理一份外部命令行（单实例转发过来的）。目前只认 <c>corkboard://</c>，
+    ///     别的参数（<c>--open-*</c> 那些冒烟开关）只对自己启动的那一次有意义。
+    /// </summary>
+    private static void HandleExternalArguments(IReadOnlyList<string> arguments)
+    {
+        if (DisplayBoardUri.TryParseAny(arguments, out var command))
+            ApplyDisplayCommand(command);
+    }
+
+    /// <summary>
+    ///     按一条 <c>corkboard://</c> 指令打开 / 关掉全屏看板模式。
+    ///     带 <c>from</c> / <c>to</c> 时那一段时刻只作用于这一次（窗口一关就作废）。
+    /// </summary>
+    private static void ApplyDisplayCommand(DisplayBoardCommand? command)
+    {
+        if (command is not { } parsed)
+            return;
+
+        if (parsed.Action == DisplayBoardAction.Close)
+        {
+            CloseDisplayBoardWindow();
+            return;
+        }
+
+        DisplayScheduleOverride = parsed.Window;
+        ShowDisplayBoardWindow();
+    }
+
+    /// <summary>
+    ///     按配置重新写一遍 <c>corkboard://</c> 的协议注册。用户在系统里手动去掉之后，下次启动仍然恢复。
+    ///     失败时把配置回滚并只写日志——协议注册是系统集成，不能把假成功留在配置里。
+    /// </summary>
+    private static void EnsureUrlProtocolIntegration()
+    {
+        var handler = IAppHost.TryGetService<MainConfigHandler>();
+        var schemes = IAppHost.TryGetService<IUrlSchemeRegistrar>();
+        if (handler is null || schemes is null || !schemes.IsSupported)
+            return;
+
+        var basic = handler.Data.Basic;
+        if (basic.UrlProtocol
+            && !schemes.TrySetEnabled(GlobalConstants.UrlProtocolScheme, true, out var error))
+        {
+            basic.UrlProtocol = false;
+            handler.Save();
+            IAppHost.TryGetService<ILogger<App>>()
+                ?.LogWarning("无法恢复 corkboard:// 协议注册，已回滚：{Error}", error);
         }
     }
 
@@ -448,7 +609,7 @@ public partial class App : Application
 
     /// <summary>
     ///     作业板开关的实际效果：关掉就把主窗口收掉（<see cref="MainWindow.HideForDock" /> 那套——
-    ///     连同锁定徽标、右下角浮标一起收，留一个藏起来却还在管浮钮的主窗口最麻烦），
+    ///     连同收纳浮钮的状态一起处理，留一个藏起来却还在管浮钮的主窗口最麻烦），
     ///     打开就把窗口显示回来。
     ///     <para>
     ///         窗口不销毁：作业板是常驻对象，来回拨开关不该每次都重建一遍视图与 ViewModel。
@@ -463,7 +624,7 @@ public partial class App : Application
 
         if (enabled)
         {
-            // 只有「用户本来就该看到主窗口」时才自动叫回来：关掉「启动时显示主窗口」的人
+            // 只有「用户本来就该看到主窗口」时才自动叫回来：关掉「启动时显示作业板」的人
             // 不想因为拨一下作业板开关就蹦出一个窗口。
             if (IAppHost.TryGetService<MainConfigHandler>() is { } handler
                 && !handler.Data.Basic.ShowStartupWindow)
@@ -640,13 +801,6 @@ public partial class App : Application
         Resources[@"AppFontFamily"] = fontFamily;
         Resources[@"ContentControlThemeFontFamily"] = fontFamily;
         Resources[@"AppFontWeight"] = ToFontWeight(settings.FontWeight);
-
-        // 界面字号：AppFontSize 供 Core 的 :is(Window) 样式直接继承，
-        // ControlContentThemeFontSize 是 Fluent 控件模板取字号的键——只改窗口 FontSize
-        // 管不到模板里写死的字号，两个一起写才能让标签、按钮、菜单跟着一起变。
-        var uiFontSize = AppearanceSettingsConfig.ClampUiFontSize(settings.UiFontSize);
-        Resources[@"AppFontSize"] = uiFontSize;
-        Resources[@"ControlContentThemeFontSize"] = uiFontSize;
     }
 
     private static FontWeight ToFontWeight(FontWeightMode mode)
@@ -804,7 +958,7 @@ public partial class App : Application
     ///     把作业板从屏幕上收掉（托盘菜单的「隐藏作业板」）。
     ///     <para>
     ///         走 <see cref="MainWindow.HideForDock" />：窗口只是藏起来、不销毁，位置还在原处，
-    ///         顺带把锁定徽标与右下角浮标一起收掉——只藏主窗口会把这两颗独立窗口留在屏幕上当孤儿。
+    ///         托盘菜单那一项同时改成「显示作业板」。
     ///     </para>
     /// </summary>
     public static void HideMainWindow()
@@ -821,11 +975,11 @@ public partial class App : Application
     ///     <para>
     ///         收纳（「设置 → 作业板 → 收纳」把板子收成屏幕角落一颗浮钮）状态下要**展开**板子：
     ///         先让 <see cref="BoardDockService.Expand" /> 收掉浮钮再显示窗口，
-    ///         顺带重放置底 / 点击穿透 / 不透明度——隐藏会让平台摘掉这些样式，光 <see cref="Window.Show" />
+    ///         顺带重放置底 / 不透明度——隐藏会让平台摘掉这些样式，光 <see cref="Window.Show" />
     ///         是补不回来的。
     ///     </para>
     ///     <para>
-    ///         没在收纳、只是窗口被藏起来（「启动时显示主窗口」关掉）时走 <see cref="MainWindow.ShowFromDock" />，
+    ///         没在收纳、只是窗口被藏起来（「启动时显示作业板」关掉）时走 <see cref="MainWindow.ShowFromDock" />，
     ///         同样把窗口能力重放一遍。
     ///     </para>
     /// </summary>
@@ -833,7 +987,7 @@ public partial class App : Application
     {
         var window = _mainWindow ??= CreateMainWindow(AppConsts.MainWindowScope);
 
-        // 「启动时显示主窗口」关掉时没把它交给生命周期，这里补上，让主窗口仍是生命周期认定的主窗口。
+        // 「启动时显示作业板」关掉时没把它交给生命周期，这里补上，让主窗口仍是生命周期认定的主窗口。
         if (_desktopLifetime is { MainWindow: null } desktop)
             desktop.MainWindow = window;
 
@@ -885,6 +1039,9 @@ public partial class App : Application
     {
         if (_examBoardWindow is { } existing)
         {
+            // 收起来的那份要先「还原」：只 Show 一个 Hide 过的窗口，
+            // 屏幕上会既冒出看板、又留着那颗浮窗按钮。
+            existing.RestoreFromMinimize();
             ShowAndActivate(existing);
             return;
         }
@@ -903,8 +1060,14 @@ public partial class App : Application
     /// <summary>
     ///     全屏考试看板此刻是不是开着。自动放映的看门狗靠它判断「该不该弹」「该不该收」——
     ///     用户自己开着的看板不能被当成自动放映的结果去关掉。
+    ///     <para>
+    ///         ⚠️ **最小化也算开着**：收起来只是把窗口 Hide 掉、屏幕上留一颗浮窗按钮，
+    ///         用户并没有退出看板。不算进来的话看门狗会把这一下当成「窗口已被用户关闭」，
+    ///         当场结束放映；没有放映的那条路还会因为「看板没开」再弹一个回来。
+    ///     </para>
     /// </summary>
-    public static bool IsExamBoardWindowOpen => _examBoardWindow is { IsVisible: true };
+    public static bool IsExamBoardWindowOpen =>
+        _examBoardWindow is { IsVisible: true } || _examBoardWindow is ExamBoardWindow { IsMinimized: true };
 
     /// <summary>
     ///     把全屏考试看板收起来（自动放映到点收工）。窗口本来就没开就什么都不做。
@@ -922,6 +1085,148 @@ public partial class App : Application
         _examBoardWindow = null;
         window.Close();
     }
+
+    /// <summary>
+    ///     打开全屏看板模式。窗口是独立窗口（不进任务栏、无边框、整屏），
+    ///     关掉之后再把字段清空，下次点入口重新建一个（里面挂着每秒的心跳与订阅）。
+    /// </summary>
+    public static void ShowDisplayBoardWindow()
+    {
+        // 主动打开 / 新一轮自动打开：上一轮的「今天不再自动打开」与「延长」都不再有效。
+        ClearDisplaySuppression();
+
+        if (_displayBoardWindow is { } existing)
+        {
+            ShowAndActivate(existing);
+            NotifyDisplayBoardMenuChanged();
+            return;
+        }
+
+        var window = new DisplayBoardWindow();
+        _displayBoardWindow = window;
+        window.Closed += (_, _) =>
+        {
+            if (!ReferenceEquals(_displayBoardWindow, window))
+                return;
+
+            _displayBoardWindow = null;
+            // 临时时段跟着这一扇窗走：窗关了，URI 里带来的 from/to 也就作废了。
+            DisplayScheduleOverride = null;
+            IsDisplayAutoShown = false;
+            DisplayExtendedUntil = null;
+            NotifyDisplayBoardMenuChanged();
+        };
+
+        ShowAndActivate(window);
+        NotifyDisplayBoardMenuChanged();
+    }
+
+    /// <summary>
+    ///     全屏看板模式此刻是不是开着。自动进出的看门狗靠它判断「该不该弹」「该不该收」——
+    ///     用户自己开着的窗口不能被当成自动打开的结果去关掉。
+    /// </summary>
+    public static bool IsDisplayBoardWindowOpen => _displayBoardWindow is { IsVisible: true };
+
+    /// <summary>
+    ///     把全屏看板模式收起来（到点自动退出、设置页点「关闭全屏」、URI 的 <c>?exit=1</c>）。
+    ///     窗口本来就没开就什么都不做。
+    ///     <para>
+    ///         先摘掉字段再关窗：看门狗下一拍就要读 <see cref="IsDisplayBoardWindowOpen" />，
+    ///         不等 <c>Closed</c> 事件走完。
+    ///     </para>
+    /// </summary>
+    public static void CloseDisplayBoardWindow()
+    {
+        var window = _displayBoardWindow;
+        if (window is null)
+            return;
+
+        _displayBoardWindow = null;
+        IsDisplayAutoShown = false;
+        DisplayExtendedUntil = null;
+        DisplayScheduleOverride = null;
+        window.Close();
+        NotifyDisplayBoardMenuChanged();
+    }
+
+    /// <summary>
+    ///     这一次展示临时使用的时段（来自 <c>corkboard://display?from=19:00&amp;to=21:30</c>）。
+    ///     <see langword="null" /> 表示按设置里的时刻来；窗口一关就清空。
+    /// </summary>
+    public static DisplayTimeWindow? DisplayScheduleOverride { get; set; }
+
+    /// <summary>
+    ///     看门狗自己弹出来的那一次（用户自己点开的是 <see langword="false" />）。
+    ///     托盘据此决定「延长」这类动作有没有意义。
+    /// </summary>
+    public static bool IsDisplayAutoShown { get; set; }
+
+    /// <summary>被手动关掉之后，到什么时候为止别再自动打开（看门狗关窗时记一笔）。</summary>
+    public static DateTime? DisplaySuppressedUntil { get; set; }
+
+    /// <summary>用户点了「今天不再自动打开」时记下的那一天。</summary>
+    public static DateOnly? DisplaySuppressedDate { get; set; }
+
+    /// <summary>「延长」延长到什么时候；<see langword="null" /> 表示没延长。</summary>
+    public static DateTime? DisplayExtendedUntil { get; set; }
+
+    /// <summary>现在是不是处在「别再自动打开」的抑制期里。</summary>
+    public static bool IsDisplaySuppressed(DateTime now) =>
+        (DisplaySuppressedUntil is { } until && now < until)
+        || (DisplaySuppressedDate is { } date && date == DateOnly.FromDateTime(now));
+
+    /// <summary>应用内的「现在」（有校时服务就用它，避免托盘与屏幕上的钟对不上）。</summary>
+    private static DateTime DisplayNow =>
+        IAppHost.TryGetService<NtpTimeService>()?.NowLocal ?? DateTime.Now;
+
+    /// <summary>现在是不是处在抑制期里（给托盘 / 设置页用，不用自己找时间源）。</summary>
+    public static bool IsDisplaySuppressed() => IsDisplaySuppressed(DisplayNow);
+
+    /// <summary>今天剩下的时间都不再自动打开（托盘菜单那一项用）。</summary>
+    public static void SuppressDisplayForToday() => SuppressDisplayForToday(DisplayNow);
+
+    /// <summary>把当前这一轮自动放映往后延一段（托盘菜单那一项用）。</summary>
+    public static void ExtendDisplaySession(TimeSpan extra) => ExtendDisplaySession(DisplayNow, extra);
+
+    /// <summary>这一轮到点之前别再自动打开（手动关窗时由看门狗调用）。</summary>
+    public static void SuppressDisplayUntil(DateTime until)
+    {
+        DisplaySuppressedUntil = until;
+        DisplaySuppressedDate = null;
+        NotifyDisplayBoardMenuChanged();
+    }
+
+    /// <summary>今天剩下的时间都不再自动打开。</summary>
+    public static void SuppressDisplayForToday(DateTime now)
+    {
+        DisplaySuppressedDate = DateOnly.FromDateTime(now);
+        DisplaySuppressedUntil = null;
+        NotifyDisplayBoardMenuChanged();
+    }
+
+    /// <summary>把当前这一轮自动放映往后延一段（托盘 / 设置页的「延长」）。</summary>
+    public static void ExtendDisplaySession(DateTime now, TimeSpan extra)
+    {
+        DisplayExtendedUntil = now + extra;
+    }
+
+    /// <summary>清掉抑制与延长（用户主动打开看板时调一次，别让上一轮的旧账挡住这一轮）。</summary>
+    public static void ClearDisplaySuppression()
+    {
+        DisplaySuppressedUntil = null;
+        DisplaySuppressedDate = null;
+        DisplayExtendedUntil = null;
+        NotifyDisplayBoardMenuChanged();
+    }
+
+    /// <summary>
+    ///     看板模式的开合、抑制状态变了，托盘那张菜单要跟着重建：菜单是**快照**，
+    ///     「延长 30 分钟」「关掉看板模式」「今天不再自动打开」这几项的显隐都按当时的
+    ///     <see cref="IsDisplayBoardWindowOpen" /> / <see cref="IsDisplaySuppressed()" /> 算一次，
+    ///     不重建就一直停在上次的样子（托盘模式本来就只在弹出那一刻读一遍）。
+    /// </summary>
+    private static void NotifyDisplayBoardMenuChanged() =>
+        IAppHost.TryGetService<TaskBarIconService>()?.NotifyBoardVisibilityChanged();
 
     /// <summary>
     ///     打开「编辑看板」窗口，编辑指定的那一块看板（<paramref name="boardId" /> 为 <see langword="null" /> 时编辑当前那块）。
@@ -989,6 +1294,108 @@ public partial class App : Application
             window.WindowState = WindowState.Normal;
 
         window.Activate();
+    }
+
+    /// <summary>
+    ///     Dispatcher 上的未处理异常：照崩溃恢复配置写报告、弹崩溃窗口或直接重启。
+    ///     顺序与上游 SecRandom-C 一致——先把配置与日志落盘（崩溃窗口里复制出来的报告才有完整线索），
+    ///     再交给 <see cref="DispatcherCrashRecovery" /> 决策，最后由它决定要不要把异常标成已处理。
+    /// </summary>
+    private void OnDispatcherUnhandledException(object? sender, DispatcherUnhandledExceptionEventArgs e)
+    {
+        try
+        {
+            // 配置每次变更都会落盘，但内存里最后那几次改动可能还没写；崩溃重启后读的就是这份文件。
+            IAppHost.TryGetService<MainConfigHandler>()?.Save();
+        }
+        catch (Exception exception)
+        {
+            Debug.WriteLine(exception);
+        }
+
+        try
+        {
+            IAppHost.TryGetService<ILogger<App>>()?.LogCritical(e.Exception, "未处理的异常");
+        }
+        catch (Exception exception)
+        {
+            Debug.WriteLine(exception);
+        }
+
+        var handled = DispatcherCrashRecovery.TryRecover(
+            e.Exception,
+            CrashRecoveryRuntime.TryCreateCurrentProcessPromptOptions,
+            ShowCrashRecoveryPrompt,
+            exception => CrashRecoveryRuntime.TryHandlePromptDisplayFailure(exception,
+                CrashRecoveryRuntime.StartLaunchPlan),
+            exception => CrashRecoveryRuntime.TryHandleFatalException(exception,
+                CrashRecoveryRuntime.StartLaunchPlan),
+            RequestDesktopShutdown);
+
+        e.Handled = handled;
+    }
+
+    /// <summary>崩溃后重启起来的那一轮：只把崩溃窗口交给生命周期，不当主窗口用（关掉即退出）。</summary>
+    private static Window ShowCrashRecoveryPromptOnly(CrashRecoveryPromptOptions promptOptions)
+    {
+        var window = new CrashRecoveryWindow(promptOptions, RestartFromCrashRecoveryPrompt, canIgnore: false);
+        window.Closed += (_, _) =>
+        {
+            if (!window.WasIgnored)
+                RequestDesktopShutdown();
+        };
+
+        return window;
+    }
+
+    /// <summary>运行期弹崩溃窗口。返回 <c>true</c> 表示窗口已经显示出来（异常由这个窗口接管）。</summary>
+    private static bool ShowCrashRecoveryPrompt(CrashRecoveryPromptOptions promptOptions)
+    {
+        var window = new CrashRecoveryWindow(promptOptions, RestartFromCrashRecoveryCurrentApp);
+        window.Closed += (_, _) =>
+        {
+            if (!window.WasIgnored)
+                RequestDesktopShutdown();
+        };
+
+        ShowAndActivate(window);
+        return true;
+    }
+
+    /// <summary>崩溃提示窗口里点「重新启动」：拉起干净的一份，旧进程随后退出。</summary>
+    private static bool RestartFromCrashRecoveryPrompt() => CrashRecoveryRuntime.StartLaunchPlan([]);
+
+    /// <summary>运行期崩溃后点「重新启动」：与上面同一条路（都要先让出单实例）。</summary>
+    private static bool RestartFromCrashRecoveryCurrentApp() => CrashRecoveryRuntime.StartLaunchPlan([]);
+
+    /// <summary>请求退出进程（崩溃恢复用：可能在任意线程上调用）。</summary>
+    private static void RequestDesktopShutdown()
+    {
+        var lifetime = _desktopLifetime;
+        if (lifetime is null)
+            return;
+
+        if (Dispatcher.UIThread.CheckAccess())
+        {
+            RequestDesktopShutdownCore(lifetime);
+            return;
+        }
+
+        Dispatcher.UIThread.Post(() => RequestDesktopShutdownCore(lifetime));
+    }
+
+    private static void RequestDesktopShutdownCore(IClassicDesktopStyleApplicationLifetime lifetime)
+    {
+        try
+        {
+            lifetime.Shutdown();
+        }
+        catch (Exception exception)
+        {
+            // 崩溃之后生命周期本身也可能已经坏了：最后手段是硬退出。
+            Debug.WriteLine(exception);
+            Environment.Exit(1);
+        }
     }
 
     /// <summary>退出应用：先停 Host，再关窗口。</summary>

@@ -108,4 +108,13 @@ public static class FluentIcons
 
     /// <summary>关于页贡献人员抽屉里的「关闭」按钮。码位来自上游图标映射表 <c>dismiss_20_regular</c>。</summary>
     public const string DismissRegular = "\uE671";
+
+    /// <summary>考试文件的「导出」入口。码位来自上游图标映射表 <c>arrow_export_20_filled</c>。</summary>
+    public const string ArrowExportFilled = "\uE0E4";
+
+    /// <summary>考试文件的「导入」入口。码位来自上游图标映射表 <c>arrow_import_20_filled</c>。</summary>
+    public const string ArrowImportFilled = "\uE104";
+
+    /// <summary>「链接调用」每行末尾那颗复制按钮。码位来自上游图标映射表 <c>copy_20_filled</c>。</summary>
+    public const string CopyFilled = "\uE58A";
 }
