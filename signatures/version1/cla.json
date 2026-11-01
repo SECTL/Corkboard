@@ -1,3 +1,12 @@
 {
-  "signedContributors": []
+  "signedContributors": [
+    {
+      "name": "MF-Dust",
+      "id": 128943330,
+      "comment_id": 6553084385,
+      "created_at": "2026-11-01T03:52:44Z",
+      "repoId": 1406919933,
+      "pullRequestNo": 2
+    }
+  ]
 }
