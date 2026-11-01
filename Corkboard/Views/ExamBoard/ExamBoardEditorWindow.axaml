@@ -139,7 +139,7 @@
 
                     <!-- ⚠️ 表头与数据行必须用完全一样的列定义，否则 * 列宽不同、后面几列整体错位。 -->
                     <Grid Grid.Row="1"
-                          ColumnDefinitions="140,*,150,150,72"
+                          ColumnDefinitions="140,*,150,150,104"
                           ColumnSpacing="12"
                           Margin="16,0,16,6"
                           IsVisible="{Binding !IsEmpty}">
@@ -156,7 +156,7 @@
                                     <Border BorderBrush="{DynamicResource DividerStrokeColorDefaultBrush}"
                                             BorderThickness="0,0,0,1"
                                             Padding="16,8">
-                                        <Grid ColumnDefinitions="140,*,150,150,72" ColumnSpacing="12">
+                                        <Grid ColumnDefinitions="140,*,150,150,104" ColumnSpacing="12">
                                             <TextBlock Grid.Column="0"
                                                        Classes="exam-cell"
                                                        Opacity="0.75"
@@ -193,6 +193,17 @@
                                                         Content="{x:Static icons:FluentIcons.EditFilled}"
                                                         ToolTip.Tip="{x:Static core:Resources.Settings_Exam_Schedule_Edit}"
                                                         Click="OnEditExamClick" />
+                                                <!--
+                                                    用「导出」箭头而不是软盘：软盘图标读起来像「保存」，
+                                                    用户找不到导出入口（反馈过「哪里都没有导出按钮」）。
+                                                -->
+                                                <Button Background="Transparent"
+                                                        BorderThickness="0"
+                                                        Padding="6"
+                                                        FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                                        Content="{x:Static icons:FluentIcons.ArrowExportFilled}"
+                                                        ToolTip.Tip="{x:Static core:Resources.Settings_Exam_Schedule_Export}"
+                                                        Click="OnExportExamClick" />
                                                 <Button Background="Transparent"
                                                         BorderThickness="0"
                                                         Padding="6"

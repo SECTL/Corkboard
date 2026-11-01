@@ -1,0 +1,68 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="220" d:DesignHeight="60"
+        x:Class="Corkboard.Views.ExamBoard.ExamBoardFloatingWindow"
+        WindowDecorations="None"
+        CanResize="False"
+        ShowInTaskbar="False"
+        ShowActivated="False"
+        Topmost="True"
+        SizeToContent="WidthAndHeight"
+        TransparencyLevelHint="Transparent"
+        Background="Transparent">
+    <!--
+        考试看板「最小化」之后留在屏幕上的那颗圆角矩形按钮。
+
+        为什么是独立窗口：看板本身是全屏窗口，最小化时把它 Hide 掉，屏幕上就只剩这一颗；
+        挂在看板窗口的视觉树里会跟着一起消失。
+
+        尺寸与圆角全在 code-behind 里按设置算（ExamBoardFloatingStyle：缩放 60%–200%），
+        这里只给 100% 的初值——窗口是 SizeToContent，宽度靠文字与内边距自己撑出来。
+        层级默认 Topmost：看板收起来时用户可能正在别的窗口里，这颗按钮要一直点得到。
+    -->
+    <Button x:Name="RestoreButton"
+            Classes="accent"
+            CornerRadius="12"
+            Padding="16,10"
+            HorizontalContentAlignment="Center"
+            VerticalContentAlignment="Center"
+            Click="OnRestoreClick">
+        <StackPanel Spacing="4">
+            <!--
+                图标 + 文字：图标默认是软件自己那张 PNG（AppIcon.LoadBitmap），也可以在设置里换成用户挑的图片；
+                「只显示图标」时文字那一列整个藏掉（code-behind 同时把 ColumnSpacing 归零，否则会白留一道缝）。
+            -->
+            <Grid x:Name="IconCaptionGrid" ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                <Image x:Name="AppIconImage"
+                       Width="18" Height="18"
+                       Stretch="Uniform"
+                       VerticalAlignment="Center" />
+                <TextBlock x:Name="CaptionText"
+                           Grid.Column="1"
+                           FontSize="15"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" />
+            </Grid>
+
+            <!--
+                操作提示：用户提过「很多用户不知道长按那个浮窗按钮能够退出」，所以这行小字**常驻**在按钮里
+                （不是悬停才有的气泡——触屏与「先点一下」的人根本看不到气泡）。
+                字号按缩放算（ExamBoardFloatingStyle.ResolveHintFontSize），无字模式时与文字一起藏。
+            -->
+            <TextBlock x:Name="HintText"
+                       FontSize="11"
+                       Opacity="0.85"
+                       HorizontalAlignment="Center" />
+
+            <!-- 长按退出的进度：只在按住时露出来，平时整颗按钮就是「图标 + 一行字」。 -->
+            <ProgressBar x:Name="HoldProgress"
+                         Minimum="0" Maximum="1" Value="0"
+                         Height="3"
+                         MinWidth="0"
+                         IsVisible="False" />
+        </StackPanel>
+    </Button>
+</Window>

@@ -48,6 +48,25 @@
             <Setter Property="FontSize" Value="11" />
             <Setter Property="Foreground" Value="{DynamicResource TextOnAccentFillColorPrimaryBrush}" />
         </Style>
+        <!--
+            看板管理面板：顶部一行工具栏 + 下面直接铺开的看板列表。
+            刻意**不做**成可收纳的设置卡——按钮要一直看得见，列表也不用先点开才看到
+            （用户反馈：「没必要做成可收纳的设置框，直接展开，上面放点工具栏」）。
+        -->
+        <Style Selector="Border.exam-panel">
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="12,8" />
+        </Style>
+        <!-- 工具栏按钮：图标 + 文字、不带底色，靠悬停高亮，跟旁边那颗开关一样低调。 -->
+        <Style Selector="Button.exam-tool">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="8,5" />
+            <Setter Property="CornerRadius" Value="4" />
+        </Style>
     </UserControl.Styles>
 
     <ScrollViewer>
@@ -58,36 +77,36 @@
                        Text="{x:Static core:Resources.Settings_Exam_Schedule_Title}"
                        Theme="{StaticResource TitleTextBlockStyle}" />
 
-            <!-- 全屏看板入口：设置页里也能直接切到看板上确认效果。 -->
-            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Exam_Schedule_OpenBoard}"
-                                   Description="{x:Static core:Resources.Settings_Exam_Schedule_OpenBoardDescription}">
-                <fa:FASettingsExpander.Footer>
-                    <Button VerticalAlignment="Center" Click="OnOpenBoardClick">
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <TextBlock VerticalAlignment="Center"
-                                       FontFamily="{DynamicResource FluentSystemIconsResizeable}"
-                                       Text="{x:Static icons:FluentIcons.FullScreenMaximizeFilled}" />
-                            <TextBlock VerticalAlignment="Center"
-                                       Text="{x:Static core:Resources.Settings_Exam_Schedule_OpenBoard}" />
-                        </StackPanel>
-                    </Button>
-                </fa:FASettingsExpander.Footer>
-            </fa:FASettingsExpander>
-
             <!--
-                看板文件列表：一份看板 = 一个文件，标题、副标题与考试安排都在里面。
-                每一行右边是「编辑」（开编辑窗口）/「设为当前」（全屏看板显示哪一块）/「删除」。
+                看板管理：工具栏在上、看板列表在下，一份看板就是列表里的一行。
+                这块原来上面还有「看板」分区标题 + 一句「每个看板一个文件，标题与考试安排都在里面」，
+                已按用户要求整块删掉（删一半只留标题更难看成「光秃秃一个词」），
+                页标题「考试安排」下面直接就是面板，工具栏按钮自己说明它是干什么的。
             -->
-            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Exam_Schedule_Board}"
-                                   Description="{x:Static core:Resources.Settings_Exam_Schedule_BoardDescription}"
-                                   IsExpanded="True">
-                <fa:FASettingsExpander.Footer>
-                    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+
+            <Border Classes="exam-panel">
+                <StackPanel Spacing="0">
+                    <!--
+                        工具栏：从左往右按「先看 → 再排 → 再建 → 再导」的顺序摆。
+                        导入排在导出前面，跟别的软件里「导入名单 / 导出名单」一个习惯。
+                    -->
+                    <StackPanel Orientation="Horizontal" Spacing="2">
+                        <Button Classes="exam-tool"
+                                ToolTip.Tip="{x:Static core:Resources.Settings_Exam_Schedule_OpenBoardDescription}"
+                                Click="OnOpenBoardClick">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBlock VerticalAlignment="Center"
+                                           FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                           Text="{x:Static icons:FluentIcons.FullScreenMaximizeFilled}" />
+                                <TextBlock VerticalAlignment="Center"
+                                           Text="{x:Static core:Resources.Settings_Exam_Schedule_OpenBoard}" />
+                            </StackPanel>
+                        </Button>
                         <!--
                             「快速布置」放在「新建看板」左边：从零建一块看板最省事的路是排一场考试，
                             而不是先建一块空板再进去一条条录。
                         -->
-                        <Button VerticalAlignment="Center"
+                        <Button Classes="exam-tool"
                                 ToolTip.Tip="{x:Static core:Resources.Settings_Exam_Plan_QuickButtonToolTip}"
                                 Click="OnQuickPlanClick">
                             <StackPanel Orientation="Horizontal" Spacing="6">
@@ -98,7 +117,7 @@
                                            Text="{x:Static core:Resources.Settings_Exam_Plan_QuickButton}" />
                             </StackPanel>
                         </Button>
-                        <Button VerticalAlignment="Center" Click="OnCreateBoardClick">
+                        <Button Classes="exam-tool" Click="OnCreateBoardClick">
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <TextBlock VerticalAlignment="Center"
                                            FontFamily="{DynamicResource FluentSystemIconsResizeable}"
@@ -107,89 +126,140 @@
                                            Text="{x:Static core:Resources.Settings_Exam_Schedule_BoardNew}" />
                             </StackPanel>
                         </Button>
+                        <!--
+                            导入：把别人发来的 .cbexam 考试文件追加到**当前这块**看板里。
+                            放在这里是因为它和「快速布置」是同一类动作——都是往看板里批量加考试，
+                            区别只是一个从对话框里排、一个从文件里读。
+                        -->
+                        <Button Classes="exam-tool"
+                                ToolTip.Tip="{x:Static core:Resources.Settings_Exam_Schedule_ImportToolTip}"
+                                Click="OnImportExamsClick">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBlock VerticalAlignment="Center"
+                                           FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                           Text="{x:Static icons:FluentIcons.OpenFilled}" />
+                                <TextBlock VerticalAlignment="Center"
+                                           Text="{x:Static core:Resources.Settings_Exam_Schedule_Import}" />
+                            </StackPanel>
+                        </Button>
+                        <!--
+                            导出：把**当前这块**看板里的考试整份存成一个 .cbexam。
+                            和「导入考试」并排摆着：导入导出是一对动作，用户找其中一个时另一个就在手边。
+                            单场导出在看板每一行的箭头按钮上（导的是那一场）。
+                        -->
+                        <Button Classes="exam-tool"
+                                ToolTip.Tip="{x:Static core:Resources.Settings_Exam_Schedule_ExportAllToolTip}"
+                                Click="OnExportBoardClick">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBlock VerticalAlignment="Center"
+                                           FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                           Text="{x:Static icons:FluentIcons.ArrowExportFilled}" />
+                                <TextBlock VerticalAlignment="Center"
+                                           Text="{x:Static core:Resources.Settings_Exam_Schedule_ExportAll}" />
+                            </StackPanel>
+                        </Button>
                     </StackPanel>
-                </fa:FASettingsExpander.Footer>
 
-                <ItemsControl ItemsSource="{Binding Items}" Margin="0 2 0 0">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="vm:ExamBoardItem">
-                            <Border Classes="board-row" Classes.last="{Binding IsLast}">
-                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
-                                    <StackPanel Grid.Column="0" Spacing="3">
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <TextBlock Classes="board-title" Text="{Binding Title}" />
-                                            <!-- 「当前」只标在全屏看板正在显示的那一块上。 -->
-                                            <Border Classes="active-badge" IsVisible="{Binding IsActive}">
-                                                <TextBlock Text="{x:Static core:Resources.Settings_Exam_Schedule_BoardActive}" />
-                                            </Border>
-                                        </StackPanel>
-                                        <TextBlock Classes="board-sub"
-                                                   IsVisible="{Binding HasSubtitle}"
-                                                   Text="{Binding Subtitle}" />
-                                        <StackPanel Orientation="Horizontal" Spacing="12">
-                                            <TextBlock Classes="board-meta" Text="{Binding CountText}" />
-                                            <TextBlock Classes="board-meta"
-                                                       IsVisible="{Binding HasNext}"
-                                                       Text="{Binding NextText}" />
-                                        </StackPanel>
-                                    </StackPanel>
+                    <Border Height="1"
+                            Margin="0 8 0 0"
+                            Background="{DynamicResource DividerStrokeColorDefaultBrush}" />
 
-                                    <StackPanel Grid.Column="1"
-                                                Orientation="Horizontal"
-                                                Spacing="4"
-                                                VerticalAlignment="Center">
-                                        <!--
-                                            每块看板自己决定参不参加自动放映（默认不参加）：开关改了直接写回
-                                            这块看板的文件，跟「设为当前」是两件独立的事。
-                                        -->
-                                        <ToggleSwitch MinWidth="0"
-                                                      Margin="0 0 6 0"
-                                                      VerticalAlignment="Center"
-                                                      OnContent=""
-                                                      OffContent=""
-                                                      IsChecked="{Binding AutoShowEnabled, Mode=TwoWay}"
-                                                      ToolTip.Tip="{x:Static core:Resources.Settings_Exam_Schedule_BoardAutoShow}" />
-                                        <!--
-                                            三颗按钮一律图标、一律同尺寸：「编辑」原来带文字，跟另两颗图标按钮
-                                            宽度高度都不一样，一行看过去歪歪扭扭（用户反馈「按钮的大小不一样」）。
-                                        -->
-                                        <Button Width="34" Height="34"
-                                                Padding="0"
-                                                HorizontalContentAlignment="Center"
-                                                VerticalContentAlignment="Center"
-                                                FontFamily="{DynamicResource FluentSystemIconsResizeable}"
-                                                Content="{x:Static icons:FluentIcons.EditFilled}"
-                                                ToolTip.Tip="{x:Static core:Resources.Settings_Exam_Schedule_BoardEditToolTip}"
-                                                Click="OnEditBoardClick" />
-                                        <Button Width="34" Height="34"
-                                                Padding="0"
-                                                HorizontalContentAlignment="Center"
-                                                VerticalContentAlignment="Center"
-                                                Background="Transparent"
-                                                BorderThickness="0"
-                                                FontFamily="{DynamicResource FluentSystemIconsResizeable}"
-                                                Content="{x:Static icons:FluentIcons.PinFilled}"
-                                                IsEnabled="{Binding !IsActive}"
-                                                ToolTip.Tip="{x:Static core:Resources.Settings_Exam_Schedule_BoardActivate}"
-                                                Click="OnActivateBoardClick" />
-                                        <Button Width="34" Height="34"
-                                                Padding="0"
-                                                HorizontalContentAlignment="Center"
-                                                VerticalContentAlignment="Center"
-                                                Background="Transparent"
-                                                BorderThickness="0"
-                                                FontFamily="{DynamicResource FluentSystemIconsResizeable}"
-                                                Content="{x:Static icons:FluentIcons.DeleteFilled}"
-                                                IsEnabled="{Binding $parent[ItemsControl].((vm:ExamScheduleSettingsPageViewModel)DataContext).CanDeleteBoard}"
-                                                ToolTip.Tip="{x:Static core:Resources.Settings_Exam_Schedule_BoardDelete}"
-                                                Click="OnDeleteBoardClick" />
-                                    </StackPanel>
-                                </Grid>
-                            </Border>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </fa:FASettingsExpander>
+                    <!--
+                        看板列表：一份看板 = 一个文件，标题、副标题与考试安排都在里面。
+                        每一行右边是「自动放映」（参不参加自动放映）/「编辑」（开编辑窗口）/
+                        「设为当前」（全屏看板显示哪一块）/「导出」（把这一块存成文件）/「删除」。
+                    -->
+                    <ItemsControl ItemsSource="{Binding Items}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ExamBoardItem">
+                                <Border Classes="board-row" Classes.last="{Binding IsLast}">
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                        <StackPanel Grid.Column="0" Spacing="3">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <TextBlock Classes="board-title" Text="{Binding Title}" />
+                                                <!-- 「当前」只标在全屏看板正在显示的那一块上。 -->
+                                                <Border Classes="active-badge" IsVisible="{Binding IsActive}">
+                                                    <TextBlock Text="{x:Static core:Resources.Settings_Exam_Schedule_BoardActive}" />
+                                                </Border>
+                                            </StackPanel>
+                                            <TextBlock Classes="board-sub"
+                                                       IsVisible="{Binding HasSubtitle}"
+                                                       Text="{Binding Subtitle}" />
+                                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                                <TextBlock Classes="board-meta" Text="{Binding CountText}" />
+                                                <TextBlock Classes="board-meta"
+                                                           IsVisible="{Binding HasNext}"
+                                                           Text="{Binding NextText}" />
+                                            </StackPanel>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Column="1"
+                                                    Orientation="Horizontal"
+                                                    Spacing="4"
+                                                    VerticalAlignment="Center">
+                                            <!--
+                                                每块看板自己决定参不参加自动放映（默认不参加）：开关改了直接写回
+                                                这块看板的文件，跟「设为当前」是两件独立的事。
+                                            -->
+                                            <ToggleSwitch MinWidth="0"
+                                                          Margin="0 0 6 0"
+                                                          VerticalAlignment="Center"
+                                                          OnContent=""
+                                                          OffContent=""
+                                                          IsChecked="{Binding AutoShowEnabled, Mode=TwoWay}"
+                                                          ToolTip.Tip="{x:Static core:Resources.Settings_Exam_Schedule_BoardAutoShow}" />
+                                            <!--
+                                                四颗按钮一律图标、一律同尺寸：「编辑」原来带文字，跟另几颗图标按钮
+                                                宽度高度都不一样，一行看过去歪歪扭扭（用户反馈「按钮的大小不一样」）。
+                                            -->
+                                            <Button Width="34" Height="34"
+                                                    Padding="0"
+                                                    HorizontalContentAlignment="Center"
+                                                    VerticalContentAlignment="Center"
+                                                    FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                                    Content="{x:Static icons:FluentIcons.EditFilled}"
+                                                    ToolTip.Tip="{x:Static core:Resources.Settings_Exam_Schedule_BoardEditToolTip}"
+                                                    Click="OnEditBoardClick" />
+                                            <Button Width="34" Height="34"
+                                                    Padding="0"
+                                                    HorizontalContentAlignment="Center"
+                                                    VerticalContentAlignment="Center"
+                                                    Background="Transparent"
+                                                    BorderThickness="0"
+                                                    FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                                    Content="{x:Static icons:FluentIcons.PinFilled}"
+                                                    IsEnabled="{Binding !IsActive}"
+                                                    ToolTip.Tip="{x:Static core:Resources.Settings_Exam_Schedule_BoardActivate}"
+                                                    Click="OnActivateBoardClick" />
+                                            <Button Width="34" Height="34"
+                                                    Padding="0"
+                                                    HorizontalContentAlignment="Center"
+                                                    VerticalContentAlignment="Center"
+                                                    Background="Transparent"
+                                                    BorderThickness="0"
+                                                    FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                                    Content="{x:Static icons:FluentIcons.ArrowExportFilled}"
+                                                    ToolTip.Tip="{x:Static core:Resources.Settings_Exam_Schedule_ExportBoardToolTip}"
+                                                    Click="OnExportBoardClick" />
+                                            <Button Width="34" Height="34"
+                                                    Padding="0"
+                                                    HorizontalContentAlignment="Center"
+                                                    VerticalContentAlignment="Center"
+                                                    Background="Transparent"
+                                                    BorderThickness="0"
+                                                    FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                                    Content="{x:Static icons:FluentIcons.DeleteFilled}"
+                                                    IsEnabled="{Binding $parent[ItemsControl].((vm:ExamScheduleSettingsPageViewModel)DataContext).CanDeleteBoard}"
+                                                    ToolTip.Tip="{x:Static core:Resources.Settings_Exam_Schedule_BoardDelete}"
+                                                    Click="OnDeleteBoardClick" />
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
 
             <!--
                 考试模板：在编辑窗口里点「另存为模板」存下来的排法。

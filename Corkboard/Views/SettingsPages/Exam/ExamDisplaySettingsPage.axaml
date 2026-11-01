@@ -5,6 +5,7 @@
              xmlns:fa="using:FluentAvalonia.UI.Controls"
              xmlns:vm="using:Corkboard.ViewModels.SettingsPages.Exam"
              xmlns:core="using:Corkboard.Core.Langs.Common"
+             xmlns:bg="using:Corkboard.Views.Common"
              mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="700"
              x:Class="Corkboard.Views.SettingsPages.Exam.ExamDisplaySettingsPage"
              x:DataType="vm:ExamDisplaySettingsPageViewModel">
@@ -115,6 +116,26 @@
                     <ToggleSwitch IsChecked="{Binding Settings.RemainingSecondsEnabled, Mode=TwoWay}" />
                 </fa:FASettingsExpander.Footer>
             </fa:FASettingsExpander>
+
+            <!--
+                背景：与「看板模式 → 背景」是同一个编辑控件，只是各存一份配置。
+                图片会复制进软件数据目录，暗化 / 模糊是为了让时钟与表格的字看得清。
+
+                ⚠️ 这一块**不要**再套一张 `fa:FASettingsExpander`：编辑器自己就是一叠设置卡，
+                套进卡里就成了「FASettingsExpander 嵌 FASettingsExpander」——
+                展开外层卡时 FA 的展开动画会去量一块还没挂到可视树的子树，
+                `FAExpanderExt+ExpanderInfo.HandleExpanderTemplateApplied` 在
+                `ElementComposition.GetElementVisual(...)` 上拿到 null，
+                整个程序直接 NullReferenceException（用户报过，见提交说明）。
+                「看板模式 → 背景」那页（`DisplayBackgroundSettingsPage.axaml`）也是这么摆的：
+                分区标题 + 编辑器，不套卡。
+            -->
+            <TextBlock Classes="section-title"
+                       Text="{x:Static core:Resources.Settings_Exam_Display_Background}" />
+            <TextBlock Margin="0 0 0 4"
+                       Classes="caption"
+                       Text="{x:Static core:Resources.Settings_Background_TitleDescription}" />
+            <bg:BoardBackgroundEditor Settings="{Binding Settings}" />
         </StackPanel>
     </ScrollViewer>
 </UserControl>

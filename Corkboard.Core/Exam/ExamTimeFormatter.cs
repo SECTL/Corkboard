@@ -169,6 +169,23 @@ public static class ExamTimeFormatter
     }
 
     /// <summary>
+    ///     看板模式在日期下面那一行：「贵州省贵阳市2027届高三年级第二次统考 · 还有 19 天」。
+    ///     <para>
+    ///         抬头是**这块看板的大标题**（`IExamService.ActiveBoard.Title`），不是某门科目：
+    ///         看板模式离得远，要回答的是「那场考试还有几天」，用户原话是「我想要的是显示考试的名称，就是大标题」。
+    ///         后半句直接复用 <see cref="FormatCountdown" />（一天以上按天、不到一天按小时/分钟），
+    ///         所以两块全屏屏报日子的口径一致。
+    ///     </para>
+    ///     标题空着时只留后半句——临时录的看板可能没起名字。
+    /// </summary>
+    public static string FormatBoardCountdown(string? title, TimeSpan remaining)
+    {
+        var tail = FormatCountdown(remaining);
+        var headline = title?.Trim();
+        return string.IsNullOrEmpty(headline) ? tail : $"{headline} · {tail}";
+    }
+
+    /// <summary>
     ///     去掉毫秒，只留到秒——和时钟那行「HH:mm:ss」同一个精度。
     ///     之后每一步取整都基于整秒，所以「时钟的秒 + 倒计时的秒」正好进位到整分；
     ///     取整方向也因此变成「向上」（真实还剩 16 分 15.4 秒时写 16 分 16 秒），

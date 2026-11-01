@@ -6,6 +6,7 @@ using FluentAvalonia.UI.Windowing;
 using Corkboard.Core.Abstraction;
 using Corkboard.Core.Exam;
 using Corkboard.Services.Desktop;
+using Corkboard.Services.Exam;
 using Corkboard.Services.Ui;
 using Corkboard.ViewModels.ExamBoard;
 using CR = Corkboard.Core.Langs.Common.Resources;
@@ -80,6 +81,34 @@ public partial class ExamBoardEditorWindow : FAAppWindow
     /// <summary>「取消」：表单退回新增态。</summary>
     private void OnCancelEditClick(object? sender, RoutedEventArgs e) => ViewModel?.CancelEdit();
 
+    /// <summary>
+    ///     某一行点「导出」：把这一场存成一份 <c>.cbexam</c>，别的机器上能直接导回来。
+    ///     <para>
+    ///         导出的是**这一场**、不是整块看板：用户要的就是「把这场发给别人」。
+    ///         看板标题一起写进文件，导入那边能拿它当提示（不参与合并）。
+    ///     </para>
+    /// </summary>
+    private async void OnExportExamClick(object? sender, RoutedEventArgs e)
+    {
+        if ((sender as Control)?.DataContext is not ExamScheduleItem item
+            || TopLevel.GetTopLevel(this) is not { } topLevel)
+        {
+            return;
+        }
+
+        // 先把标题 / 副标题的草稿落盘，导出的文件里带的是真看板名而不是半截输入。
+        ViewModel?.CommitAll();
+
+        try
+        {
+            await IAppHost.GetService<ExamFileService>()
+                .ExportExamAsync(item.Exam, ViewModel?.BoardTitle, topLevel);
+        }
+        catch (InvalidOperationException exception)
+        {
+            await ShowNoticeAsync(topLevel, exception.Message, CR.Exam_File_SaveTitle);
+        }
+    }
     /// <summary>标题 / 副标题输入框失焦就提交：看板文件整份重写，没必要每敲一个字符写一遍。</summary>
     private void OnEditorLostFocus(object? sender, RoutedEventArgs e) => ViewModel?.CommitAll();
 
@@ -180,12 +209,12 @@ public partial class ExamBoardEditorWindow : FAAppWindow
             await ShowNoticeAsync(topLevel, string.Format(CR.Settings_Exam_Plan_SaveTemplateDone, template.ResolveName()));
     }
 
-    /// <summary>一句话提示（只有「知道了」一个按钮）。</summary>
-    private async Task ShowNoticeAsync(TopLevel topLevel, string message)
+    /// <summary>一句话提示（只有「知道了」一个按钮）。标题默认用「另存为模板」，导出那条路会自己传一个。</summary>
+    private async Task ShowNoticeAsync(TopLevel topLevel, string message, string? title = null)
     {
         var dialog = new FAContentDialog
         {
-            Title = CR.Settings_Exam_Plan_SaveTemplateTitle,
+            Title = title ?? CR.Settings_Exam_Plan_SaveTemplateTitle,
             Content = message,
             CloseButtonText = CR.Common_Close
         };

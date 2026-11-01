@@ -162,6 +162,12 @@ public sealed class ExamAutoShowHostedService(
 
         _shownExamIds.Add(targetExam.Id);
         _sessionBoardId = targetBoard.Id;
+
+        // 看板模式也是全屏窗：考试到点要放，先把它收掉，别让两块全屏叠在一起
+        // （那边看门狗见 App.IsExamBoardWindowOpen 就只清账、不记抑制，考完还能自己回来）。
+        if (App.IsDisplayBoardWindowOpen)
+            App.CloseDisplayBoardWindow();
+
         App.ShowExamBoardWindow();
 
         logger.LogInformation("自动放映开始：{Board} · {Exam} {Time}", targetBoard.ResolveTitle(), targetExam.Subject,

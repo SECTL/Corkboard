@@ -107,6 +107,24 @@ public partial class ExamScheduleSettingsPageViewModel : ViewModelBase
     /// <summary>删除某一块看板连同它的考试（确认框在页面 code-behind 里弹）。</summary>
     public bool DeleteBoard(ExamBoardItem item) => item is not null && _examService.DeleteBoard(item.Id);
 
+    /// <summary>
+    ///     把导入的考试追加进**当前这块**看板，返回真正加进去的场数。
+    ///     <para>
+    ///         走 <see cref="IExamService.AddMany" />：只落盘一次、只通知一次界面；
+    ///         Id 撞上已有考试的会被换成新的，同名的科目不会被并掉。
+    ///     </para>
+    /// </summary>
+    public int ImportExams(IEnumerable<ExamEntry> exams) => _examService.AddMany(exams).Count;
+
+    /// <summary>
+    ///     当前看板（全屏看板正在显示的那一块）——「导出考试」导的就是它的排期。
+    ///     <para>
+    ///         导的是**当前这块**而不是列表里随便某一块：页脚那颗按钮没有行上下文，
+    ///         与旁边的「导入考试」是同一套口径（导入也进当前看板）。
+    ///     </para>
+    /// </summary>
+    public ExamBoardDocument ActiveBoard => _examService.ActiveBoard;
+
     /// <summary>把某一块设成「当前看板」（全屏看板显示的就是它）。</summary>
     public void SelectBoard(ExamBoardItem item)
     {

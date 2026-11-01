@@ -1,0 +1,171 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fa="using:FluentAvalonia.UI.Controls"
+             xmlns:vm="using:Corkboard.ViewModels.SettingsPages.Exam"
+             xmlns:core="using:Corkboard.Core.Langs.Common"
+             xmlns:icons="using:Corkboard.Core.Icons"
+             mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="700"
+             x:Class="Corkboard.Views.SettingsPages.Exam.ExamFontSettingsPage"
+             x:DataType="vm:ExamFontSettingsPageViewModel">
+    <!--
+        看板字号设置页：全屏考试看板上每一处文字的字号，外加「恢复默认字号」。
+
+        版式照「作业板」设置页那套设置卡（`BoardSettingsPage.axaml`，用户要求的就是这种）：
+        **外层一张 `fa:FASettingsExpander`（Header 是这段的名称、Description 是一句话简介），
+        里面一行一项用 `fa:FASettingsExpanderItem`**（左边名称与简介，右边 Footer 放控件）。
+        设置项多的一整段收在一张卡里，默认收起，点标题才展开。
+        ⚠️ 别退回手写的 Border + Grid 行，也别套两层可展开卡（以前卡片里再嵌卡片，
+        用户指着这一页说过「这个组件用的不对」）。
+    -->
+    <UserControl.Styles>
+        <!-- 数值文本（「108 号」）：定宽右对齐，拖动时数字变宽不会把滑块推来推去。 -->
+        <Style Selector="TextBlock.slider-value">
+            <Setter Property="MinWidth" Value="56" />
+            <Setter Property="Margin" Value="8,0,0,0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextAlignment" Value="Right" />
+        </Style>
+    </UserControl.Styles>
+
+    <ScrollViewer>
+        <StackPanel Classes="page-container">
+            <!--
+                页面标题：设置壳不画页面标题，标题画在页面里（与其它考试设置页一致）。
+                只这一行——字号来自 TitleTextBlockStyle、字重 Normal，下面不挂副标题。
+            -->
+            <TextBlock Margin="0 4 0 0"
+                       FontWeight="Normal"
+                       Text="{x:Static core:Resources.Settings_Exam_Font_PageTitle}"
+                       Theme="{StaticResource TitleTextBlockStyle}" />
+
+            <!--
+                「恢复默认字号」：看板上的字号一共十几项，改乱了要一项一项调回去太费事，
+                一颗按钮整组回到默认值。
+                ⚠️ 它**不套可展开的设置卡**：就一句话 + 一颗按钮，套上去白给一个折叠箭头，
+                点开之后里面什么都没有（用户明确说过没必要）。
+            -->
+            <Border Classes="card" Margin="0 8 0 0">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                    <TextBlock Grid.Column="0"
+                               VerticalAlignment="Center"
+                               TextWrapping="Wrap"
+                               Text="{x:Static core:Resources.Settings_Exam_Font_ResetHint}"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    <Button Grid.Column="1"
+                            VerticalAlignment="Center"
+                            Command="{Binding ResetToDefaultsCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock VerticalAlignment="Center"
+                                       FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                       Text="{x:Static icons:FluentIcons.ArrowCounterclockwiseFilled}" />
+                            <TextBlock VerticalAlignment="Center"
+                                       Text="{x:Static core:Resources.Settings_Exam_Font_Reset}" />
+                        </StackPanel>
+                    </Button>
+                </Grid>
+            </Border>
+
+            <!--
+                十几项字号按看板上的**区域**分成四张卡（标题与副标题 / 时钟 / 时钟下面的考试信息 / 表格与其他）：
+                卡标题是这段的名称、副标题是一句话简介，展开后一行一项。
+                卡片与行都由 ViewModel 的 `FontSizeGroups` 驱动，加一项新文字不用改这里；
+                上下限也来自 ViewModel（读 `ExamBoardTextStyle`），不写死数字。
+                不写 IsExpanded：默认全部收起，和别的设置页一样。
+            -->
+            <ItemsControl ItemsSource="{Binding FontSizeGroups}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ExamFontGroup">
+                        <!--
+                            ⚠️ 「一行一项」要交给 FASettingsExpander **自己的** items 宿主，别在外面再套一层
+                            ItemsControl：它继承自 HeaderedItemsControl，行是它生成的容器
+                            （FASettingsExpanderItem.IsContainerFromTemplate 就是认这条路径的）。
+                            外面套一层自己的 ItemsControl，行就不算它的容器了，卡片给行准备的底色/分隔线
+                            整套样式都不生效，行会退回去用控件自带的默认底色、比卡片亮一块
+                            （用户反馈过「这个设置项的底色不对，没复用或者用错了」）。
+                        -->
+                        <fa:FASettingsExpander Header="{Binding Title}"
+                                               Description="{Binding Description}"
+                                               ItemsSource="{Binding Items}">
+                            <fa:FASettingsExpander.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ExamFontSizeItem">
+                                        <fa:FASettingsExpanderItem Content="{Binding Name}"
+                                                                   Description="{Binding Description}">
+                                            <fa:FASettingsExpanderItem.Footer>
+                                                <!--
+                                                    字号用滑块调（没有精确输入框）：上下限来自本项（时钟那两档到 480），
+                                                    刻度 1 + 吸附，所以滑出来一定是整数。当前值写在滑块右边。
+                                                -->
+                                                <Grid ColumnDefinitions="Auto,Auto" VerticalAlignment="Center">
+                                                    <Slider x:Name="SizeSlider"
+                                                            Width="220"
+                                                            Minimum="{Binding Minimum}"
+                                                            Maximum="{Binding Maximum}"
+                                                            Value="{Binding SliderValue, Mode=TwoWay}"
+                                                            TickFrequency="1"
+                                                            IsSnapToTickEnabled="True" />
+
+                                                    <TextBlock Grid.Column="1"
+                                                               Classes="slider-value"
+                                                               Text="{Binding ValueText}" />
+
+                                                    <!--
+                                                        拖动时的浮窗：只放一句按当前字号渲染的预览（超过 96 就按 96 画，
+                                                        否则时钟那 480 会把浮窗撑出屏幕）。当前数值不在这里重复显示——
+                                                        滑块右边那行字已经写着，浮窗里再来一遍是废话。
+                                                        IsHitTestVisible=False 是必须的：浮窗挂在滑块上方，
+                                                        能吃掉指针的话拖到一半就断了。
+                                                    -->
+                                                    <Popup IsOpen="{Binding IsDragging}"
+                                                           PlacementTarget="{Binding #SizeSlider}"
+                                                           Placement="Top"
+                                                           VerticalOffset="-8"
+                                                           IsLightDismissEnabled="False"
+                                                           IsHitTestVisible="False">
+                                                        <Border Background="{DynamicResource SolidBackgroundFillColorQuarternaryBrush}"
+                                                                BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                                                                BorderThickness="1"
+                                                                CornerRadius="8"
+                                                                Padding="16,12"
+                                                                MaxWidth="360">
+                                                            <StackPanel Spacing="8">
+                                                                <Border Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}"
+                                                                        CornerRadius="6"
+                                                                        Padding="12,8"
+                                                                        MaxHeight="140"
+                                                                        ClipToBounds="True"
+                                                                        HorizontalAlignment="Left">
+                                                                    <Panel>
+                                                                        <TextBlock IsVisible="{Binding !IsIcon}"
+                                                                                   FontSize="{Binding PreviewFontSize}"
+                                                                                   FontWeight="{Binding PreviewFontWeight}"
+                                                                                   Text="{Binding SampleText}"
+                                                                                   TextWrapping="Wrap"
+                                                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                                                        <TextBlock IsVisible="{Binding IsIcon}"
+                                                                                   FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                                                                   FontSize="{Binding PreviewFontSize}"
+                                                                                   Text="{Binding SampleGlyph}" />
+                                                                    </Panel>
+                                                                </Border>
+
+                                                                <TextBlock Text="{x:Static core:Resources.Settings_Exam_Font_PreviewScaled}"
+                                                                           TextWrapping="Wrap"
+                                                                           IsVisible="{Binding IsPreviewScaled}"
+                                                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                                            </StackPanel>
+                                                        </Border>
+                                                    </Popup>
+                                                </Grid>
+                                            </fa:FASettingsExpanderItem.Footer>
+                                        </fa:FASettingsExpanderItem>
+                                </DataTemplate>
+                            </fa:FASettingsExpander.ItemTemplate>
+                        </fa:FASettingsExpander>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

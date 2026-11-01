@@ -4,6 +4,7 @@ using FluentAvalonia.UI.Controls;
 using Corkboard.Core.Abstraction;
 using Corkboard.Core.Attributes;
 using Corkboard.Core.Icons;
+using Corkboard.Services.Exam;
 using Corkboard.ViewModels.ExamBoard;
 using Corkboard.ViewModels.SettingsPages.Exam;
 using CR = Corkboard.Core.Langs.Common.Resources;
@@ -64,6 +65,86 @@ public partial class ExamScheduleSettingsPage : UserControl
     {
         if ((sender as Control)?.DataContext is ExamBoardItem item)
             ViewModel?.SelectBoard(item);
+    }
+
+    /// <summary>
+    ///     「导入考试」：挑一份 <c>.cbexam</c>，把里面的考试追加进**当前这块**看板。
+    ///     <para>
+    ///         追加而不是替换：导入的多半是别人发来的一两场，不该把看板里原有的排期冲掉。
+    ///         导入完不改当前看板选择，也不开编辑窗口——用户可能只是先攒着。
+    ///     </para>
+    /// </summary>
+    private async void OnImportExamsClick(object? sender, RoutedEventArgs e)
+    {
+        if (ViewModel is not { } viewModel || TopLevel.GetTopLevel(this) is not { } topLevel)
+            return;
+
+        try
+        {
+            var exams = await IAppHost.GetService<ExamFileService>().ImportExamsAsync(topLevel);
+            if (exams is null)
+                return;
+
+            if (exams.Count == 0)
+            {
+                await ShowNoticeAsync(topLevel, CR.Exam_File_ImportEmpty);
+                return;
+            }
+
+            var added = viewModel.ImportExams(exams);
+            await ShowNoticeAsync(topLevel, string.Format(CR.Exam_File_ImportDone, added));
+        }
+        catch (InvalidOperationException exception)
+        {
+            await ShowNoticeAsync(topLevel, exception.Message);
+        }
+    }
+
+    /// <summary>
+    ///     「导出考试」：把一块看板的全部考试存成一份 <c>.cbexam</c>。
+    ///     <para>
+    ///         <b>两个入口共用这一个处理器</b>：看板行上那颗箭头导出的是**那一行**的看板；
+    ///         页脚那颗导出的是**当前看板**（`sender` 不是看板行时退回当前看板）。
+    ///         行内那颗是用户真正会点的入口——要导出某一块就得先进去翻表太绕了（用户反馈过
+    ///         「为什么要点进去才能导出」）。
+    ///     </para>
+    /// </summary>
+    private async void OnExportBoardClick(object? sender, RoutedEventArgs e)
+    {
+        if (ViewModel is not { } viewModel || TopLevel.GetTopLevel(this) is not { } topLevel)
+            return;
+
+        // 行内按钮的 DataContext 是那一行的 ExamBoardItem；页脚按钮没有行上下文。
+        var board = (sender as Control)?.DataContext is ExamBoardItem item ? item.Board : viewModel.ActiveBoard;
+        if (board.Exams is null || board.Exams.Count == 0)
+        {
+            await ShowNoticeAsync(topLevel, CR.Exam_File_ExportEmpty, CR.Settings_Exam_Schedule_ExportAll);
+            return;
+        }
+
+        try
+        {
+            if (await IAppHost.GetService<ExamFileService>().ExportBoardAsync(board, topLevel))
+                await ShowNoticeAsync(topLevel, string.Format(CR.Exam_File_ExportDone, board.Exams.Count),
+                    CR.Settings_Exam_Schedule_ExportAll);
+        }
+        catch (InvalidOperationException exception)
+        {
+            await ShowNoticeAsync(topLevel, exception.Message, CR.Settings_Exam_Schedule_ExportAll);
+        }
+    }
+
+    /// <summary>一句话提示（只有「知道了」一个按钮）。</summary>
+    private async Task ShowNoticeAsync(TopLevel topLevel, string message, string? title = null)
+    {
+        var dialog = new FAContentDialog
+        {
+            Title = title ?? CR.Settings_Exam_Schedule_Import,
+            Content = message,
+            CloseButtonText = CR.Common_Close
+        };
+
+        await dialog.ShowAsync(topLevel);
     }
 
     /// <summary>某一行点「删除」：连里面的考试一起删，先确认一次。</summary>

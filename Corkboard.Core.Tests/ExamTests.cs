@@ -201,6 +201,27 @@ public class ExamStatusPolicyTests
     }
 
     /// <summary>
+    ///     「整场考试的第一场」：全部考试里开考最早的那一场（考完的也算进来）。
+    ///     看板模式那一行倒的是这一大场，不是某个科目，所以第二门科目不能顶上来。
+    /// </summary>
+    [Fact]
+    public void FindFirst_PicksEarliestExamOfWholeBoard()
+    {
+        var finished = Entry("历史", 8, 0, 9, 0);
+        var inProgress = Entry("数学", 9, 30, 11, 0);
+        var later = Entry("物理", 14, 0, 16, 0);
+
+        // 10:00 时数学正在考，但「这一大场」是 08:00 开的历史——倒计时不该改成说数学。
+        Assert.Same(finished, ExamStatusPolicy.FindFirst([later, inProgress, finished]));
+
+        // 对照：FindNext 在这种局面下会把正在考的数学挑出来（全屏考试看板要的是它），两者刻意不同口径。
+        Assert.Same(inProgress, ExamStatusPolicy.FindNext([finished, inProgress, later], At(60)));
+
+        Assert.Null(ExamStatusPolicy.FindFirst(null));
+        Assert.Null(ExamStatusPolicy.FindFirst([]));
+    }
+
+    /// <summary>
     ///     看板列表：只留没考完的、按开考时刻升序。考完的<b>不进列表</b>（看板是给「接下来考什么」用的），
     ///     正在进行的那场留在列表里（它还占着今天）。
     /// </summary>
@@ -681,6 +702,30 @@ public class ExamTimeFormatterTests
 
         Assert.Throws<ArgumentNullException>(() =>
             ExamTimeFormatter.FormatInfoRemaining(ExamStatus.InProgress, null!, start, false));
+    }
+
+    /// <summary>
+    ///     看板模式日期下面那一行：「看板大标题 · 还有 N 天」（<c>FormatBoardCountdown</c>）。
+    ///     抬头是这场考试的名字（不是科目）；标题空着时只留后半句，不留一根光秃秃的「·」。
+    /// </summary>
+    [Fact]
+    public void FormatBoardCountdown_JoinsTitleAndRemaining()
+    {
+        var days = string.Format(CultureInfo.CurrentCulture, CR.Exam_Countdown_Days, 19);
+
+        Assert.Equal(
+            $"贵州省贵阳市2027届高三年级第二次统考 · {days}",
+            ExamTimeFormatter.FormatBoardCountdown("贵州省贵阳市2027届高三年级第二次统考", TimeSpan.FromDays(18.9)));
+
+        // 临时建的看板可能没起名字：只留倒计时那半句。
+        Assert.Equal(days, ExamTimeFormatter.FormatBoardCountdown(null, TimeSpan.FromDays(18.9)));
+        Assert.Equal(days, ExamTimeFormatter.FormatBoardCountdown("   ", TimeSpan.FromDays(18.9)));
+
+        // 不到一天按小时/分钟说，与考试看板报日子的口径一致。
+        var hours = string.Format(CultureInfo.CurrentCulture, CR.Exam_Countdown_Remaining,
+            string.Format(CultureInfo.CurrentCulture, CR.Exam_Duration_HoursMinutes, 5, 20));
+        Assert.Equal($"期末考试 · {hours}",
+            ExamTimeFormatter.FormatBoardCountdown("期末考试", TimeSpan.FromMinutes(320)));
     }
 
     /// <summary>

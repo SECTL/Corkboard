@@ -3,8 +3,8 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="using:Corkboard.ViewModels.ExamBoard"
+        xmlns:bg="using:Corkboard.Views.Common"
         xmlns:core="using:Corkboard.Core.Langs.Common"
-        xmlns:icons="using:Corkboard.Core.Icons"
         mc:Ignorable="d" d:DesignWidth="1600" d:DesignHeight="900"
         x:Class="Corkboard.Views.ExamBoard.ExamBoardWindow"
         x:DataType="vm:ExamBoardViewModel"
@@ -19,25 +19,26 @@
         为什么是一个独立的全屏窗口、而不是主窗口里的一层遮罩：
         1) 看板要占满整块屏幕、盖住任务栏，只有 WindowState=FullScreen 能做到；
         2) 主窗口可能是「置底到桌面」的挂件形态，遮罩根本铺不满屏幕；
-        3) 长按退出只关这一个窗口，主窗口的置底 / 穿透状态一点都不用碰。
+        3) 长按退出只关这一个窗口，主窗口的置底状态一点都不用碰。
 
         版式：左上角标题 + 副标题，正文是「时钟 + 考试表格」两列（谁在左边由设置决定），
         左下角一块长按退出的热区。表格刻意做得淡（无边框、只有极浅的分隔线、表头用小字），
         内容（科目、时间）才是视觉重点。
     -->
     <Window.Styles>
-        <!-- 表格：内容突出、框线退到几乎看不见。 -->
+        <!--
+            表格：内容突出、框线退到几乎看不见。
+            ⚠️ 字号**不在样式里写死**，一律绑 ViewModel 上那份（设置页「看板字号」页改的就是它们）：
+            Style 里的 Setter 优先级高于本地值，写死这里会把绑定盖掉、设置页就改不动了。
+        -->
         <Style Selector="TextBlock.col-head">
-            <Setter Property="FontSize" Value="15" />
             <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
         </Style>
         <Style Selector="TextBlock.cell">
-            <Setter Property="FontSize" Value="26" />
             <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
             <Setter Property="TextTrimming" Value="CharacterEllipsis" />
         </Style>
         <Style Selector="TextBlock.cell.subject">
-            <Setter Property="FontSize" Value="30" />
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
         </Style>
@@ -49,7 +50,6 @@
 
         <!-- 状态：未开始最淡，即将开始 / 进行中亮起来，考完再压下去。 -->
         <Style Selector="TextBlock.cell.status">
-            <Setter Property="FontSize" Value="24" />
             <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
         </Style>
 
@@ -80,7 +80,6 @@
             这一行**不带** upcoming / progress 配色类——状态名已经用颜色说话了，注解再跟着变色就抢眼。
         -->
         <Style Selector="TextBlock.cell.hint">
-            <Setter Property="FontSize" Value="16" />
             <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
         </Style>
 
@@ -105,7 +104,6 @@
             <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
         </Style>
         <Style Selector="Border.exit-hint TextBlock.icon">
-            <Setter Property="FontSize" Value="24" />
             <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
         </Style>
         <Style Selector="Border.exit-hint:pointerover TextBlock.icon">
@@ -113,17 +111,24 @@
         </Style>
     </Window.Styles>
 
-    <Grid Margin="64,48,64,36" RowDefinitions="Auto,*,Auto">
+    <Grid>
+        <!--
+            背景层：垫在所有内容最底下（设置 → 考试看板 → 看板显示里配）。
+            「跟随主题」时它什么都不画，窗口自己的底色照旧透上来。
+        -->
+        <bg:BoardBackgroundLayer x:Name="BackgroundLayer" Settings="{Binding Settings}" />
+
+        <Grid Margin="64,48,64,36" RowDefinitions="Auto,*,Auto">
 
         <!-- 左上角：主标题 + 副标题（副标题更小更淡，颜色可在设置里改）。 -->
         <StackPanel Grid.Row="0" Spacing="6">
             <TextBlock Text="{Binding Title}"
-                       FontSize="34"
+                       FontSize="{Binding TitleFontSize}"
                        FontWeight="SemiBold"
                        Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
             <TextBlock Text="{Binding Subtitle}"
                        IsVisible="{Binding HasSubtitle}"
-                       FontSize="22"
+                       FontSize="{Binding SubtitleFontSize}"
                        TextWrapping="Wrap"
                        Foreground="{Binding SubtitleBrush}" />
         </StackPanel>
@@ -139,12 +144,13 @@
                         Spacing="10">
                 <TextBlock Text="{Binding ClockTime}"
                            FontSize="{Binding ClockFontSize}"
+                           FontFeatures="{Binding NumericFontFeatures}"
                            FontWeight="SemiBold"
                            Foreground="{DynamicResource TextFillColorPrimaryBrush}"
                            HorizontalAlignment="Center" />
                 <!-- 日期跟着时钟居中；「已校时 / 本机时间」那行小字已按用户要求删掉（作用不大）。 -->
                 <TextBlock Text="{Binding ClockDate}"
-                           FontSize="22"
+                           FontSize="{Binding ClockDateFontSize}"
                            HorizontalAlignment="Center"
                            Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
 
@@ -167,33 +173,37 @@
                             Opacity="0.45"
                             Background="{DynamicResource DividerStrokeColorDefaultBrush}" />
                     <TextBlock Text="{Binding InfoCaption}"
-                               FontSize="18"
+                               FontSize="{Binding InfoCaptionFontSize}"
                                HorizontalAlignment="Center"
                                Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
                     <TextBlock Text="{Binding InfoSubject}"
-                               FontSize="54"
+                               FontSize="{Binding InfoSubjectFontSize}"
                                FontWeight="SemiBold"
                                HorizontalAlignment="Center"
                                TextWrapping="Wrap"
                                Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
                     <StackPanel Orientation="Horizontal" Spacing="18" HorizontalAlignment="Center">
                         <TextBlock Text="{Binding InfoDateText}"
-                                   FontSize="26"
+                                   FontSize="{Binding InfoTimeFontSize}"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        <!-- 时间与下面的倒计时都用等宽数字（FontFeatures=tnum，仅默认字体时给值）：
+                             倒计时最后一小时每秒一跳，比例数字会让居中那行左右抖。 -->
                         <TextBlock Text="{Binding InfoTimeRange}"
-                                   FontSize="26"
+                                   FontSize="{Binding InfoTimeFontSize}"
+                                   FontFeatures="{Binding NumericFontFeatures}"
                                    Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                     </StackPanel>
                     <TextBlock Classes="remaining"
                                Classes.urgent="{Binding InfoIsUrgent}"
                                Text="{Binding InfoRemaining}"
                                IsVisible="{Binding InfoHasRemaining}"
-                               FontSize="32"
+                               FontSize="{Binding InfoRemainingFontSize}"
+                               FontFeatures="{Binding NumericFontFeatures}"
                                FontWeight="SemiBold"
                                HorizontalAlignment="Center" />
                     <TextBlock Text="{Binding InfoPaperInfo}"
                                IsVisible="{Binding InfoHasPaperInfo}"
-                               FontSize="19"
+                               FontSize="{Binding InfoPaperFontSize}"
                                HorizontalAlignment="Center"
                                Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
                 </StackPanel>
@@ -237,12 +247,16 @@
                         <ColumnDefinition Width="140" />
                     </Grid.ColumnDefinitions>
                     <TextBlock Grid.Column="0" Classes="col-head"
+                               FontSize="{Binding $parent[Window].((vm:ExamBoardViewModel)DataContext).TableHeaderFontSize}"
                                Text="{x:Static core:Resources.Exam_Board_Table_Date}" />
                     <TextBlock Grid.Column="1" Classes="col-head"
+                               FontSize="{Binding $parent[Window].((vm:ExamBoardViewModel)DataContext).TableHeaderFontSize}"
                                Text="{x:Static core:Resources.Exam_Board_Table_Subject}" />
                     <TextBlock Grid.Column="2" Classes="col-head"
+                               FontSize="{Binding $parent[Window].((vm:ExamBoardViewModel)DataContext).TableHeaderFontSize}"
                                Text="{x:Static core:Resources.Exam_Board_Table_Time}" />
                     <TextBlock Grid.Column="3" Classes="col-head"
+                               FontSize="{Binding $parent[Window].((vm:ExamBoardViewModel)DataContext).TableHeaderFontSize}"
                                Text="{x:Static core:Resources.Exam_Board_Table_Status}" />
                 </Grid>
                 <Border Grid.Row="1" Classes="row-separator" Margin="20,0" />
@@ -262,21 +276,28 @@
                                                 <ColumnDefinition Width="190" />
                                                 <ColumnDefinition Width="140" />
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Grid.Column="0" Classes="cell" Text="{Binding DateText}" />
+                                            <TextBlock Grid.Column="0" Classes="cell" Text="{Binding DateText}"
+                                                       FontSize="{Binding $parent[Window].((vm:ExamBoardViewModel)DataContext).TableFontSize}" />
                                             <!--
                                                 科目这一列只写科目本身。
                                                 卷面信息（几张几页几题）早先在这里另起一行，行高被撑开、
                                                 长一点的「2 张 · 8 页 · 3 大题」还溢出成省略号（用户嫌「表格里
                                                 别多加东西」）——它现在由左边那组独立的考试信息承载，表里不再重复。
                                             -->
-                                            <TextBlock Grid.Column="1" Classes="cell subject" Text="{Binding Subject}" />
-                                            <TextBlock Grid.Column="2" Classes="cell" Text="{Binding TimeText}" />
+                                            <TextBlock Grid.Column="1" Classes="cell subject" Text="{Binding Subject}"
+                                                       FontSize="{Binding $parent[Window].((vm:ExamBoardViewModel)DataContext).TableSubjectFontSize}" />
+                                            <!-- 时间列用等宽数字（FontFeatures=tnum，仅默认字体时给值）：
+                                                 每行都是「08:00 – 10:00」这种窄数字，比例宽度会让上下行的分钟位对不齐。 -->
+                                            <TextBlock Grid.Column="2" Classes="cell" Text="{Binding TimeText}"
+                                                       FontSize="{Binding $parent[Window].((vm:ExamBoardViewModel)DataContext).TableFontSize}"
+                                                       FontFeatures="{Binding $parent[Window].((vm:ExamBoardViewModel)DataContext).NumericFontFeatures}" />
                                             <!--
                                                 状态只写状态名（未开始 / 即将开始 / 进行中 / 已结束）。
                                                 「还有 12 分钟」这种注解一律不进表格——行高会被撑开、六行看着挤
                                                 （用户要求「表格里别多加东西」），它由左边那组考试信息承载。
                                             -->
                                             <TextBlock Grid.Column="3" Classes="cell status"
+                                                       FontSize="{Binding $parent[Window].((vm:ExamBoardViewModel)DataContext).TableFontSize}"
                                                        Classes.upcoming="{Binding IsUpcoming}"
                                                        Classes.progress="{Binding IsInProgress}"
                                                        Classes.finished="{Binding IsFinished}"
@@ -294,11 +315,11 @@
                 <StackPanel Grid.Row="2" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10"
                             IsVisible="{Binding !HasExams}">
                     <TextBlock Text="{x:Static core:Resources.Exam_Board_NoExam}"
-                               FontSize="26"
+                               FontSize="{Binding EmptyFontSize}"
                                HorizontalAlignment="Center"
                                Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                     <TextBlock Text="{x:Static core:Resources.Exam_Board_NoExamHint}"
-                               FontSize="17"
+                               FontSize="{Binding EmptyHintFontSize}"
                                HorizontalAlignment="Center"
                                Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
                 </StackPanel>
@@ -306,15 +327,17 @@
         </Grid>
 
         <!--
-            左下角：长按退出（按住 2 秒，中途松手就取消——避免误触把看板关掉）。
+            左下角：长按退出 / 单击最小化（按住 2 秒，中途松手就取消——避免误触把看板关掉）。
             平时就是一颗等边正方形里的图标，按住时图标周围长出一圈进度：
             从正上方顺时针走满一圈，颜色随进度由蓝渐变到红，满了才关窗。
+            ⚠️ 图标与提示语绑 ViewModel（`CornerGlyph` / `CornerToolTip`）：开了「最小化代替退出」
+            要换成最小化那条横线，写死 x:Static 的话设置页改了界面也不变。
         -->
         <Border Grid.Row="2"
                 Classes="exit-hint"
                 Classes.holding="{Binding IsHolding}"
                 HorizontalAlignment="Left"
-                ToolTip.Tip="{x:Static core:Resources.Exam_Board_ExitToolTip}"
+                ToolTip.Tip="{Binding CornerToolTip}"
                 PointerPressed="OnExitHintPointerPressed"
                 PointerReleased="OnExitHintPointerReleased"
                 PointerCaptureLost="OnExitHintCaptureLost">
@@ -337,11 +360,13 @@
                      StrokeThickness="3"
                      StrokeLineCap="Round" />
                 <TextBlock Classes="icon"
-                           Text="{x:Static icons:FluentIcons.ArrowExitFilled}"
+                           Text="{Binding CornerGlyph}"
                            FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                           FontSize="{Binding ExitIconSize}"
                            HorizontalAlignment="Center"
                            VerticalAlignment="Center" />
             </Grid>
         </Border>
+        </Grid>
     </Grid>
 </Window>

@@ -108,6 +108,33 @@ public static class ExamStatusPolicy
     }
 
     /// <summary>
+    ///     整场考试的第一场：**全部考试**里开考最早的那一场（已经考完的也算进来）。
+    ///     <para>
+    ///         看板模式日期下面那行倒计时倒的是<b>这一场考试</b>（当前看板那一大场），不是某门科目：
+    ///         从它开考那一刻起，屏幕上就不该再数天了（见 <see cref="TimeUntilStart" /> 返回空）。
+    ///         所以这里不能换成 <see cref="FindNext" />——那一个会把「第二门科目」当成下一场。
+    ///     </para>
+    ///     没排考试返回 <see langword="null" />。
+    /// </summary>
+    public static ExamEntry? FindFirst(IEnumerable<ExamEntry>? exams)
+    {
+        if (exams is null)
+            return null;
+
+        ExamEntry? first = null;
+        foreach (var exam in exams)
+        {
+            if (exam is null)
+                continue;
+
+            if (first is null || exam.StartAt < first.StartAt)
+                first = exam;
+        }
+
+        return first;
+    }
+
+    /// <summary>
     ///     看板上要列出来的考试：没考完的、按开考时刻升序。已经考完的**不进列表**
     ///     （看板是给「接下来考什么」用的，历史成绩不在这里）。
     /// </summary>

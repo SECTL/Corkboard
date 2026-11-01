@@ -1,0 +1,242 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fa="using:FluentAvalonia.UI.Controls"
+             xmlns:vm="using:Corkboard.ViewModels.SettingsPages.Exam"
+             xmlns:core="using:Corkboard.Core.Langs.Common"
+             xmlns:icons="using:Corkboard.Core.Icons"
+             mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="700"
+             x:Class="Corkboard.Views.SettingsPages.Exam.ExamFloatingSettingsPage"
+             x:DataType="vm:ExamFloatingSettingsPageViewModel">
+    <ScrollViewer>
+        <StackPanel Classes="page-container">
+            <TextBlock Margin="0 4 0 0"
+                       FontWeight="Normal"
+                       Text="{x:Static core:Resources.Settings_Exam_Floating_Title}"
+                       Theme="{StaticResource TitleTextBlockStyle}" />
+
+            <!--
+                这一页按「最小化 / 浮窗按钮 / 浮窗外观 / 位置」四张卡分组，卡里一行一项。
+                ⚠️ 卡里只能是 fa:FASettingsExpanderItem（行），**不能**再套一张 fa:FASettingsExpander：
+                FA 的展开动画会在内容还没挂到可视树时去量里层卡，直接 NullReferenceException（整程序崩）。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Exam_Floating_GroupMinimize}"
+                                   Description="{x:Static core:Resources.Settings_Exam_Floating_GroupMinimizeDescription}">
+                <!--
+                    什么时候那颗按钮才是最小化：默认「考试进行中」——用户的原话是
+                    「应该是在考试进行中才是最小化，平常都是只有退出」，考完那颗按钮就该只是退出键。
+                -->
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Exam_Floating_MinimizeMode}"
+                                           Description="{x:Static core:Resources.Settings_Exam_Floating_MinimizeModeDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ComboBox MinWidth="180"
+                                  ItemsSource="{Binding MinimizeModeOptions}"
+                                  SelectedItem="{Binding SelectedMinimizeModeOption, Mode=TwoWay}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ExamMinimizeModeOption">
+                                    <TextBlock Text="{Binding DisplayName}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <!-- 两种点法都给：单击（默认，跟普通按钮一样）或长按 2 秒（怕考试中误触）。 -->
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Exam_Floating_Gesture}"
+                                           Description="{x:Static core:Resources.Settings_Exam_Floating_GestureDescription}"
+                                           IsEnabled="{Binding IsMinimizeEnabled}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ComboBox MinWidth="160"
+                                  ItemsSource="{Binding GestureOptions}"
+                                  SelectedItem="{Binding SelectedGestureOption, Mode=TwoWay}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ExamMinimizeGestureOption">
+                                    <TextBlock Text="{Binding DisplayName}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+            </fa:FASettingsExpander>
+
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Exam_Floating_GroupContent}"
+                                   Description="{x:Static core:Resources.Settings_Exam_Floating_GroupContentDescription}">
+                <!-- 浮窗按钮上写什么：留空就用默认那句（「显示考试看板」）。 -->
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Exam_Floating_Text}"
+                                           Description="{x:Static core:Resources.Settings_Exam_Floating_TextDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <!--
+                            绑草稿而不是配置：MainConfigHandler 每变一次属性就落一次盘，
+                            双向绑配置等于每敲一个字符写一遍 settings.json。
+                        -->
+                        <TextBox MinWidth="220"
+                                 MaxLength="24"
+                                 Text="{Binding TextDraft, Mode=TwoWay}"
+                                 PlaceholderText="{Binding DefaultFloatingText}"
+                                 LostFocus="OnEditorLostFocus" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <!-- 大小：按百分比缩放整颗浮窗（文字、图标、内边距一起跟着变）。 -->
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Exam_Floating_Scale}"
+                                           Description="{x:Static core:Resources.Settings_Exam_Floating_ScaleDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <StackPanel Orientation="Horizontal"
+                                    VerticalAlignment="Center"
+                                    Spacing="8">
+                            <NumericUpDown MinWidth="130"
+                                           Minimum="60"
+                                           Maximum="200"
+                                           Increment="5"
+                                           FormatString="0"
+                                           Value="{Binding ScaleDraft, Mode=TwoWay}"
+                                           LostFocus="OnEditorLostFocus" />
+                            <TextBlock VerticalAlignment="Center" Text="%" />
+                        </StackPanel>
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <!--
+                    位置：平时只显示一颗像下拉框的按钮（「下中」这种文案），点开才在浮层里展开九宫格圆点图。
+                    默认是底部居中（屏幕中央底部），九宫格其余八格用来躲开任务栏、桌面图标那些东西。
+                -->
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Exam_Floating_Anchor}"
+                                           Description="{x:Static core:Resources.Settings_Exam_Floating_AnchorDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <Panel>
+                            <Button x:Name="AnchorPickerButton"
+                                    MinWidth="180"
+                                    HorizontalContentAlignment="Stretch"
+                                    Click="OnAnchorPickerClick">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                    <TextBlock VerticalAlignment="Center" Text="{Binding AnchorText}" />
+                                    <TextBlock Grid.Column="1"
+                                               VerticalAlignment="Center"
+                                               FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                               Text="{x:Static icons:FluentIcons.ChevronDownFilled}" />
+                                </Grid>
+                            </Button>
+
+                            <!--
+                                ⚠️ 这里用 Popup 而不是 Button.Flyout：Flyout 的内容在独立弹窗里，
+                                DataContext 不会跟着按钮走，九宫格圆点的 Command 会静默失效。
+                                Popup 声明在同一个可视树里，DataContext 正常继承。
+                            -->
+                            <Popup x:Name="AnchorPopup"
+                                   PlacementTarget="{Binding #AnchorPickerButton}"
+                                   Placement="BottomEdgeAlignedRight"
+                                   IsLightDismissEnabled="True">
+                                <Border Background="{DynamicResource SolidBackgroundFillColorQuarternaryBrush}"
+                                        BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Padding="12">
+                                    <StackPanel Spacing="8">
+                                        <TextBlock FontSize="12"
+                                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                   Text="{x:Static core:Resources.Settings_Board_Dock_AnchorHint}" />
+                                        <!-- 「屏幕」示意框：只是给九颗圆点一个参照，本身不参与任何交互。 -->
+                                        <Border Width="264"
+                                                Height="150"
+                                                Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                                BorderThickness="1"
+                                                CornerRadius="8"
+                                                Padding="8">
+                                            <ItemsControl ItemsSource="{Binding AnchorOptions}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <UniformGrid Rows="3" Columns="3" />
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:ExamFloatingAnchorOption">
+                                                        <Button Width="32"
+                                                                Height="32"
+                                                                MinWidth="0"
+                                                                Padding="0"
+                                                                HorizontalAlignment="Center"
+                                                                VerticalAlignment="Center"
+                                                                CornerRadius="16"
+                                                                Classes.accent="{Binding IsSelected}"
+                                                                Command="{Binding SelectCommand}"
+                                                                Click="OnAnchorDotClick" />
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </Border>
+                                    </StackPanel>
+                                </Border>
+                            </Popup>
+                        </Panel>
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+            </fa:FASettingsExpander>
+
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Exam_Floating_GroupLook}"
+                                   Description="{x:Static core:Resources.Settings_Exam_Floating_GroupLookDescription}">
+                <!--
+                    文字颜色：绑的是草稿而不是配置——ColorPicker 在光谱里拖一下会连发几十次变化，
+                    配置每个属性变化都落一次盘，直接绑等于拖一次写几十遍 settings.json（见 ViewModel）。
+                -->
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Exam_Floating_TextColor}"
+                                           Description="{x:Static core:Resources.Settings_Exam_Floating_TextColorDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ColorPicker VerticalAlignment="Center"
+                                     Color="{Binding TextColorDraft, Mode=TwoWay}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <!-- 按钮底色不开放配置：浮窗按钮走 Classes="accent"，跟随主题强调色。 -->
+
+                <!-- 显示软件图标：默认开；关掉之后浮窗上只剩一行字（「只显示图标」也会跟着灰掉）。 -->
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Exam_Floating_ShowIcon}"
+                                           Description="{x:Static core:Resources.Settings_Exam_Floating_ShowIconDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ToggleSwitch IsChecked="{Binding Settings.ShowFloatingIcon, Mode=TwoWay}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <!--
+                    自定义图标：挑一张本地图片换掉软件自带的图标。
+                    选文件必须走 TopLevel 的 StorageProvider（code-behind），这里只放两颗按钮 + 当前用的是什么。
+                -->
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Exam_Floating_Icon}"
+                                           Description="{x:Static core:Resources.Settings_Exam_Floating_IconDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <StackPanel Orientation="Horizontal"
+                                    VerticalAlignment="Center"
+                                    Spacing="8">
+                            <Button Content="{x:Static core:Resources.Settings_Exam_Floating_IconPick}"
+                                    Click="OnPickIconClick" />
+                            <Button Content="{x:Static core:Resources.Settings_Exam_Floating_IconClear}"
+                                    IsEnabled="{Binding HasCustomIcon}"
+                                    Click="OnClearIconClick" />
+                            <TextBlock MinWidth="0"
+                                       MaxWidth="180"
+                                       VerticalAlignment="Center"
+                                       FontSize="12"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                       Text="{Binding IconPathText}"
+                                       TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <!-- 只显示图标：文字整列藏掉，屏幕上只剩一颗方章（图标跟着放大一档）。 -->
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Exam_Floating_IconOnly}"
+                                           Description="{x:Static core:Resources.Settings_Exam_Floating_IconOnlyDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ToggleSwitch IsChecked="{Binding Settings.FloatingIconOnly, Mode=TwoWay}"
+                                      IsEnabled="{Binding Settings.ShowFloatingIcon}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+            </fa:FASettingsExpander>
+
+            <Button HorizontalAlignment="Left"
+                    Content="{x:Static core:Resources.Settings_Exam_Floating_Reset}"
+                    Click="ResetButton_OnClick" />
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
