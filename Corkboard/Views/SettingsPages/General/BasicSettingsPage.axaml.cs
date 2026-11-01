@@ -1,4 +1,6 @@
 using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using FluentAvalonia.UI.Controls;
@@ -74,14 +76,38 @@ public partial class BasicSettingsPage : UserControl
     }
 
     /// <summary>
-    ///     重新走一遍首次设置。引导本身是独立窗口，这里只负责把它叫出来——
-    ///     已经在开会自己激活，不会再叠第二个。
+    ///     「链接调用」每行那颗复制按钮：把这一行自己的地址写进剪贴板，再冒一句「已复制」。
     ///     <para>
-    ///     这里 <c>exitOnCancel: false</c>：用户是主动重跑的，中途关掉引导只关那个窗口，
-    ///     不能把整个程序（连同他正在调设置的这个窗口）一起退掉。
+    ///         剪贴板挂在顶层窗口上（<c>TopLevel.Clipboard</c>），所以这一步留在页面这边，
+    ///         ViewModel 只管反馈状态（见 <see cref="UrlProtocolEntry.MarkCopiedAsync" />）。
     ///     </para>
     /// </summary>
-    private void OnReopenOobeClick(object? sender, RoutedEventArgs e) => App.ShowOobeWindow(exitOnCancel: false);
+    private async void OnCopyUrlClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { DataContext: UrlProtocolEntry entry })
+            return;
+
+        if (TopLevel.GetTopLevel(this)?.Clipboard is not { } clipboard)
+            return;
+
+        try
+        {
+            // Avalonia 12 的 IClipboard 只剩 SetDataAsync / SetValueAsync 这一套，
+            // 老的 SetTextAsync 已经删了——写一段文本就是往 DataFormat.Text 里放一个值。
+            await clipboard.SetValueAsync(DataFormat.Text, entry.Url);
+
+            // Windows 上剪贴板内容默认随本进程一起没：先 Flush 一下，复制完直接关掉程序也还贴得出来。
+            // 别的平台这个方法什么都不做，不用分平台判。
+            await clipboard.FlushAsync();
+        }
+        catch (Exception)
+        {
+            // 剪贴板可能正被别的程序占着：吞掉就好，别为了复制一个地址把异常抛到界面上。
+            return;
+        }
+
+        await entry.MarkCopiedAsync(TimeSpan.FromSeconds(1.6));
+    }
 
     private void InitializeComponent()
     {

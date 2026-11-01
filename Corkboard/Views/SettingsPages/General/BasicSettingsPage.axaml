@@ -5,9 +5,52 @@
              xmlns:fa="using:FluentAvalonia.UI.Controls"
              xmlns:vm="using:Corkboard.ViewModels.SettingsPages"
              xmlns:core="using:Corkboard.Core.Langs.Common"
+             xmlns:icons="using:Corkboard.Core.Icons"
              mc:Ignorable="d" d:DesignWidth="700" d:DesignHeight="450"
              x:Class="Corkboard.Views.SettingsPages.General.BasicSettingsPage"
              x:DataType="vm:BasicSettingsPageViewModel">
+    <UserControl.Styles>
+        <!--
+            链接调用那几行：地址、它做什么、复制按钮各一列。
+            地址不换行（协议地址本来就不长），行与行之间留一点缝，看着像一张小表。
+        -->
+        <Style Selector="TextBlock.url-text">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+        </Style>
+        <Style Selector="TextBlock.url-action">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Margin" Value="10,0,0,0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorTertiaryBrush}" />
+        </Style>
+
+        <!-- 复制完冒出来那句「已复制」，一两秒后自己收回去。 -->
+        <Style Selector="TextBlock.url-copied">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Margin" Value="0,0,8,0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+        </Style>
+
+        <!-- 复制按钮：一颗 26×26 的小方钮，平时没有底色，指上去才浮一层浅灰。 -->
+        <Style Selector="Button.url-copy">
+            <Setter Property="Width" Value="26" />
+            <Setter Property="Height" Value="26" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.url-copy:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+        </Style>
+    </UserControl.Styles>
     <ScrollViewer>
         <!-- 设置卡：Header 是设置项名称，Description 是简介，Footer 放控件。见 Core/Styles/StylesBase.axaml。 -->
         <StackPanel Classes="page-container">
@@ -60,14 +103,46 @@
             </fa:FASettingsExpander>
 
             <!--
-                重新运行首次设置：引导里那几项（语言 / 协议 / 作业板 / 主题 / 自启）都在设置里单列着，
-                这里只是再给一条「一次过一遍」的入口——不为了改某一项，而是给想重看协议、
-                或者接手别人机器时从头对一遍的人用。
+                链接调用：注册 corkboard:// 之后，别的程序 / 快捷方式能用链接唤起全屏。
+                这是个系统集成项（写注册表 / LaunchServices），不是看板模式里的排版设置，
+                所以放在基础设置的启动段里。
+
+                展开后一行一个入口：地址、它做什么，紧跟一颗这一行自己的复制按钮。
+                文案沿用 Settings_Display_* 那几个键：键名冻结，字符串本身说的就是看板模式的全屏。
             -->
-            <fa:FASettingsExpander Header="{x:Static core:Resources.Oobe_Reopen}"
-                                   Description="{x:Static core:Resources.Oobe_ReopenDescription}">
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Basic_UrlProtocol}"
+                                   Description="{x:Static core:Resources.Settings_Basic_UrlProtocolDescription}"
+                                   IsVisible="{Binding IsUrlProtocolSupported}">
+                <ItemsControl ItemsSource="{Binding UrlProtocolEntries}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:UrlProtocolEntry">
+                            <Grid ColumnDefinitions="Auto,Auto,Auto,*"
+                                  Margin="0,3"
+                                  VerticalAlignment="Center">
+                                <TextBlock Classes="url-text" Text="{Binding Url}" />
+                                <TextBlock Grid.Column="1" Classes="url-action" Text="{Binding Action}" />
+                                <!-- 复制按钮紧跟在地址后面（不甩到卡片最右边）：一行读下来就是
+                                     「地址 → 它干什么 → 复制」。 -->
+                                <StackPanel Grid.Column="2"
+                                            Orientation="Horizontal"
+                                            Margin="12,0,0,0"
+                                            VerticalAlignment="Center">
+                                    <TextBlock Classes="url-copied"
+                                               Text="{x:Static core:Resources.Settings_Basic_UrlCopied}"
+                                               IsVisible="{Binding IsCopied}" />
+                                    <Button Classes="url-copy"
+                                            Click="OnCopyUrlClick"
+                                            ToolTip.Tip="{Binding CopyTip}">
+                                        <TextBlock Text="{x:Static icons:FluentIcons.CopyFilled}"
+                                                   FontFamily="{DynamicResource FluentSystemIconsResizeable}" />
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
                 <fa:FASettingsExpander.Footer>
-                    <Button Click="OnReopenOobeClick" Content="{x:Static core:Resources.Oobe_Reopen}" />
+                    <ToggleSwitch IsChecked="{Binding UrlProtocolEnabled, Mode=TwoWay}" />
                 </fa:FASettingsExpander.Footer>
             </fa:FASettingsExpander>
 
@@ -83,6 +158,25 @@
                               SelectedItem="{Binding SelectedOnlineStatus, Mode=TwoWay}">
                         <ComboBox.ItemTemplate>
                             <DataTemplate x:DataType="vm:OnlineStatusOption">
+                                <TextBlock Text="{Binding DisplayName}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <TextBlock Classes="section-title"
+                       Text="{x:Static core:Resources.Settings_Section_Stability}" />
+
+            <!-- 遇到未处理的错误时：写崩溃报告、弹窗口提示，或者直接重启。 -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Basic_CrashRecovery}"
+                                   Description="{x:Static core:Resources.Settings_Basic_CrashRecoveryDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <ComboBox MinWidth="180"
+                              ItemsSource="{Binding CrashRecoveryModeOptions}"
+                              SelectedItem="{Binding SelectedCrashRecoveryMode, Mode=TwoWay}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:CrashRecoveryModeOption">
                                 <TextBlock Text="{Binding DisplayName}" />
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
