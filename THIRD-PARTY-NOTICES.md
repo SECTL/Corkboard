@@ -32,8 +32,14 @@ Corkboard 以 GNU GPLv3 发布（见 [LICENSE](../LICENSE)），再发布的衍�
 | `Corkboard/Assets/Fonts/FluentSystemIcons-Resizable.ttf` | Microsoft Fluent System Icons | MIT |
 | `Corkboard/Assets/FluentSystemIcons-Resizable.json` | 同上（图标名 → 码位映射，供将来的源生成器使用） | MIT |
 | `Corkboard/Assets/Icons/AuthorAionflux.png`、`Corkboard/Assets/Icons/SECTLLogo.png` | SECTL 思拓创联（沿用上游 SecRandom-C 的同一份素材，只用在「关于」页的作者与组织标识上） | 随本项目一同以 GPLv3 分发 |
+| `Corkboard/Assets/Weather/*.png`（26 个天气图标，256×256 PNG） | Meteocons（<https://github.com/basmilius/meteocons>，作者 Bas Milius），取自 `production/fill/svg-static/` 并光栅化为 PNG | MIT |
 
 图标字体与图标映射随包分发，用途仅限界面图标。
+
+天气图标用在看板模式右上角那块天气上：白天 / 夜间各一套（晴、晴间多云、阵雨、雷阵雨、小雪、雾、霾、浮尘有夜间版），
+映射表在 `Corkboard.Core/Widgets/Weather/WeatherIconCatalog`，文件名与目录的对应关系有单测钉着
+（`Corkboard.Core.Tests/WeatherIconCatalogTests`）。素材只取了**静态**版本（`svg-static`），
+动画版（`production/fill/svg/` 里带 `opacity="0"` 与 `<animate>` 的那些）光栅化出来是残缺的，别换回去。
 
 应用界面字体是随包分发的 MiSans（10 个字重，合计约 78 MB），默认值见
 `GlobalConstants.DefaultFontFamily`；用户可在「设置 → 个性化 → 外观」里换成系统字体。

@@ -1,0 +1,323 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Corkboard.ViewModels.SettingsPages.Display"
+             xmlns:core="using:Corkboard.Core.Langs.Common"
+             xmlns:icons="using:Corkboard.Core.Icons"
+             xmlns:w="using:Corkboard.Core.Widgets.Weather"
+             xmlns:fa="using:FluentAvalonia.UI.Controls"
+             mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="1200"
+             x:Class="Corkboard.Views.SettingsPages.Display.DisplayWidgetsSettingsPage"
+             x:DataType="vm:DisplayWidgetsSettingsPageViewModel">
+    <!--
+        看板模式右上角那行天气、屏幕最下面那行一言。
+
+        两行都**只在这块全屏上看得到**（用户定的）：作业板主界面与考试看板都不放。
+        一言只接官方 v1，参数就是官方那几个（类别 / 字数 / 附加查询串）；
+        天气固定走小米，城市靠抽屉里搜（看板模式是全屏窗没有输入框，搜索只能在这里做）。
+
+        ⚠️ 外层组卡（一言 / 天气）**自己就是那个总开关**：开关放 `FASettingsExpander.Footer`
+        （卡片标题右侧），卡里第一行**不要再放一张同标题同简介的开关行**——
+        进卡里第一眼看到「一言 / 屏幕最下面那行字」和外面一模一样，用户说「真的很奇怪」（反馈过）。
+        总开关关掉时，卡里那些行统一 `IsEnabled` 绑它自己那一半（见各行的 IsEnabled）。
+    -->
+    <UserControl.Resources>
+        <!--
+            换城市抽屉的内容：塞进**设置壳**的右侧抽屉（`Corkboard.Core/Controls/DrawerHost`，
+            照搬上游 SecRandom-C 的同一个控件）里显示，跟「关于」页的贡献人员名单走同一个宿主。
+            放在页面资源里是为了让里面的 Click 处理器还能落在本页 code-behind 上；
+            打开前由 code-behind 把 DataContext 指向本页的 ViewModel。
+
+            ⚠️ 不要把它画回页面里（曾经是页面自己拼的一层 Grid：遮罩 + `#66000000` + 左边圆角）：
+            那样既是另造一个抽屉、盖不住左侧导航与标题栏，也拿不到宿主的滑出动画与 Esc / 点遮罩收起。
+        -->
+        <Grid x:Key="CityPickerDrawer" Width="400" Margin="16">
+            <!-- 胶囊样式得写在这里：抽屉内容搬进设置壳之后就不在本页的样式作用域里了。 -->
+            <Grid.Styles>
+                <Style Selector="Button.city-chip">
+                    <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+                    <Setter Property="BorderThickness" Value="0" />
+                    <Setter Property="CornerRadius" Value="14" />
+                    <Setter Property="Padding" Value="12,6" />
+                    <Setter Property="Margin" Value="0,0,8,8" />
+                </Style>
+            </Grid.Styles>
+
+            <DockPanel LastChildFill="True">
+                <!-- 抽屉头：标题 + 关闭 -->
+                <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+                    <TextBlock Grid.Column="0"
+                               Text="{x:Static core:Resources.Settings_Widgets_WeatherCityPicker}"
+                               Theme="{StaticResource SubtitleTextBlockStyle}"
+                               VerticalAlignment="Center" />
+                    <Button Grid.Column="1"
+                            Theme="{StaticResource TransparentButton}"
+                            ToolTip.Tip="{x:Static core:Resources.Common_Close}"
+                            Click="CloseDrawer_OnClick">
+                        <TextBlock Text="{x:Static icons:FluentIcons.DismissRegular}"
+                                   FontFamily="{DynamicResource FluentSystemIconsResizeable}" />
+                    </Button>
+                </Grid>
+
+                <!-- 当前是哪个城市 -->
+                <TextBlock DockPanel.Dock="Top"
+                           Text="{Binding CurrentCityText}"
+                           Margin="0,0,0,12"
+                           FontSize="12"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+
+                <!-- 搜索框 + 搜索按钮（回车也能搜） -->
+                <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,0,0,8">
+                    <TextBox Grid.Column="0"
+                             Text="{Binding CityQuery, Mode=TwoWay}"
+                             PlaceholderText="{x:Static core:Resources.Settings_Widgets_WeatherCityPlaceholder}">
+                        <TextBox.KeyBindings>
+                            <KeyBinding Gesture="Enter" Command="{Binding SearchCityCommand}" />
+                        </TextBox.KeyBindings>
+                    </TextBox>
+                    <Button Grid.Column="1"
+                            Content="{x:Static core:Resources.Settings_Widgets_WeatherSearch}"
+                            Command="{Binding SearchCityCommand}" />
+                </Grid>
+
+                <TextBlock DockPanel.Dock="Top"
+                           Text="{Binding CitySearchStatus}"
+                           IsVisible="{Binding CitySearchStatus, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                           Margin="0,0,0,8"
+                           FontSize="12"
+                           TextWrapping="Wrap"
+                           Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+
+                <TextBlock DockPanel.Dock="Top"
+                           Text="{x:Static core:Resources.Settings_Widgets_WeatherPopularCities}"
+                           Margin="0,0,0,8"
+                           FontSize="12"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+
+                <ScrollViewer>
+                    <StackPanel>
+                        <!-- 搜索结果（有结果才出现，排在上面，因为刚搜完最想点的是它） -->
+                        <ListBox ItemsSource="{Binding CityResults}"
+                                 SelectedItem="{Binding SelectedCity, Mode=TwoWay}"
+                                 IsVisible="{Binding HasCityResults}"
+                                 Background="Transparent"
+                                 BorderThickness="0"
+                                 Margin="0,0,0,12">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="w:XiaomiCity">
+                                    <TextBlock Text="{Binding DisplayName}" TextWrapping="Wrap" />
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+
+                        <!-- 常去的城市：内置一份，没网也能换 -->
+                        <ItemsControl ItemsSource="{Binding PopularCities}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="w:XiaomiCity">
+                                    <Button Classes="city-chip"
+                                            Content="{Binding Name}"
+                                            Command="{Binding $parent[ItemsControl].((vm:DisplayWidgetsSettingsPageViewModel)DataContext).PickCityCommand}"
+                                            CommandParameter="{Binding}" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+            </DockPanel>
+        </Grid>
+    </UserControl.Resources>
+
+    <UserControl.Styles>
+        <!--
+            下拉框：页面上所有 ComboBox 都长一个样（宽度、圆角内边距交给控件自己），
+            免得同一页里几个下拉框宽窄不一。⚠️ 别去改 Core 的全局 ComboBox 样式。
+        -->
+        <Style Selector="ComboBox">
+            <Setter Property="MinWidth" Value="160" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+    </UserControl.Styles>
+
+    <ScrollViewer>
+        <StackPanel Classes="page-container">
+            <!-- 页标题：与其它设置页一致（TitleTextBlockStyle + Normal 字重，下面不挂副标题）。 -->
+            <TextBlock Margin="0 4 0 0"
+                       FontWeight="Normal"
+                       Text="{x:Static core:Resources.Settings_Display_Widgets_Title}"
+                       Theme="{StaticResource TitleTextBlockStyle}" />
+
+            <!-- ══ 一言 ══ -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Widgets_Quote}"
+                                   Description="{x:Static core:Resources.Settings_Widgets_QuoteDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding Widgets.QuoteEnabled, Mode=TwoWay}" />
+                </fa:FASettingsExpander.Footer>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Widgets_QuoteCategories}"
+                                           Description="{x:Static core:Resources.Settings_Widgets_QuoteCategoriesDescription}"
+                                           IsEnabled="{Binding Widgets.QuoteEnabled}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ItemsControl ItemsSource="{Binding QuoteCategoryItems}" MaxWidth="420">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:QuoteCategoryItem">
+                                    <CheckBox Content="{Binding Name}" IsChecked="{Binding IsSelected, Mode=TwoWay}" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Widgets_QuoteLength}"
+                                           IsEnabled="{Binding Widgets.QuoteEnabled}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                            <NumericUpDown Value="{Binding QuoteMinLength, Mode=TwoWay}"
+                                           Minimum="0" Maximum="100"
+                                           Increment="1"
+                                           FormatString="0"
+                                           Width="120" />
+                            <TextBlock Text="—" VerticalAlignment="Center"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            <NumericUpDown Value="{Binding QuoteMaxLength, Mode=TwoWay}"
+                                           Minimum="0" Maximum="100"
+                                           Increment="1"
+                                           FormatString="0"
+                                           Width="120" />
+                        </StackPanel>
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Widgets_QuoteExtraQuery}"
+                                           Description="{x:Static core:Resources.Settings_Widgets_QuoteExtraQueryDescription}"
+                                           IsEnabled="{Binding Widgets.QuoteEnabled}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <StackPanel Spacing="4" Width="280">
+                            <TextBox Text="{Binding QuoteExtraQueryDraft, Mode=TwoWay}"
+                                     PlaceholderText="from=…&amp;author=…"
+                                     LostFocus="OnQuoteExtraQueryLostFocus" />
+                            <TextBlock Text="{Binding IgnoredQueryHint}"
+                                       IsVisible="{Binding HasIgnoredQueryHint}"
+                                       FontSize="12"
+                                       TextWrapping="Wrap"
+                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                        </StackPanel>
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Widgets_QuoteRefresh}"
+                                           Description="{x:Static core:Resources.Settings_Widgets_QuoteRefreshDescription}"
+                                           IsEnabled="{Binding Widgets.QuoteEnabled}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ComboBox ItemsSource="{Binding QuoteRefreshChoices}"
+                                  SelectedItem="{Binding SelectedQuoteRefresh, Mode=TwoWay}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:WidgetRefreshChoice">
+                                    <TextBlock Text="{Binding Label}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Widgets_QuoteInternational}"
+                                           Description="{x:Static core:Resources.Settings_Widgets_QuoteInternationalDescription}"
+                                           IsEnabled="{Binding Widgets.QuoteEnabled}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ToggleSwitch IsChecked="{Binding Widgets.QuoteUseInternationalEndpoint, Mode=TwoWay}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+            </fa:FASettingsExpander>
+
+            <!-- ══ 天气 ══ -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Widgets_Weather}"
+                                   Description="{x:Static core:Resources.Settings_Widgets_WeatherDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding Widgets.WeatherEnabled, Mode=TwoWay}" />
+                </fa:FASettingsExpander.Footer>
+
+                <!--
+                    天气上到底显示哪几块。默认只开「图标 / 温度 / 现象 / 城市 / 今天高低 / 湿度 / 空气」，
+                    体感与明天默认关着——这两块在多数时候是噪音，想要的人自己勾。
+                    一件都没勾时右上角整块不画（VM 里的 ShowWeather 会兜住）。
+                -->
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Widgets_WeatherFields}"
+                                           Description="{x:Static core:Resources.Settings_Widgets_WeatherFieldsDescription}"
+                                           IsEnabled="{Binding Widgets.WeatherEnabled}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <WrapPanel MaxWidth="380" ItemSpacing="16" LineSpacing="4">
+                            <CheckBox Content="{x:Static core:Resources.Settings_Widgets_ShowWeatherIcon}"
+                                      IsChecked="{Binding Widgets.WeatherShowIcon, Mode=TwoWay}" />
+                            <CheckBox Content="{x:Static core:Resources.Settings_Widgets_ShowWeatherTemperature}"
+                                      IsChecked="{Binding Widgets.WeatherShowTemperature, Mode=TwoWay}" />
+                            <CheckBox Content="{x:Static core:Resources.Settings_Widgets_ShowWeatherCondition}"
+                                      IsChecked="{Binding Widgets.WeatherShowCondition, Mode=TwoWay}" />
+                            <CheckBox Content="{x:Static core:Resources.Settings_Widgets_ShowWeatherCity}"
+                                      IsChecked="{Binding Widgets.WeatherShowCity, Mode=TwoWay}" />
+                            <CheckBox Content="{x:Static core:Resources.Settings_Widgets_ShowWeatherRange}"
+                                      IsChecked="{Binding Widgets.WeatherShowRange, Mode=TwoWay}" />
+                            <CheckBox Content="{x:Static core:Resources.Settings_Widgets_ShowWeatherHumidity}"
+                                      IsChecked="{Binding Widgets.WeatherShowHumidity, Mode=TwoWay}" />
+                            <CheckBox Content="{x:Static core:Resources.Settings_Widgets_ShowWeatherAqi}"
+                                      IsChecked="{Binding Widgets.WeatherShowAqi, Mode=TwoWay}" />
+                            <CheckBox Content="{x:Static core:Resources.Settings_Widgets_ShowWeatherFeelsLike}"
+                                      IsChecked="{Binding Widgets.WeatherShowFeelsLike, Mode=TwoWay}" />
+                            <CheckBox Content="{x:Static core:Resources.Settings_Widgets_ShowWeatherTomorrow}"
+                                      IsChecked="{Binding Widgets.WeatherShowTomorrow, Mode=TwoWay}" />
+                        </WrapPanel>
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <!--
+                    ══ 城市：这一行只显示「现在是哪」+ 一颗换城市的按钮 ══
+                    ⚠️ 搜索框 / 结果列表**不要**塞回这张设置卡里（用户明确要求「不要直接放到设置卡里面去」）：
+                    它们都在右侧抽屉里，点「换城市」才出来。
+                -->
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Widgets_WeatherCity}"
+                                           Description="{x:Static core:Resources.Settings_Widgets_WeatherCityDescription}"
+                                           IsEnabled="{Binding Widgets.WeatherEnabled}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding CurrentCityText}"
+                                       FontWeight="SemiBold"
+                                       VerticalAlignment="Center" />
+                            <Button Content="{x:Static core:Resources.Settings_Widgets_WeatherChangeCity}"
+                                    Click="ChangeCity_OnClick" />
+                        </StackPanel>
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Widgets_WeatherRefresh}"
+                                           Description="{x:Static core:Resources.Settings_Widgets_WeatherRefreshDescription}"
+                                           IsEnabled="{Binding Widgets.WeatherEnabled}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <StackPanel Spacing="4" HorizontalAlignment="Right">
+                            <ComboBox ItemsSource="{Binding WeatherRefreshChoices}"
+                                      SelectedItem="{Binding SelectedWeatherRefresh, Mode=TwoWay}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:WidgetRefreshChoice">
+                                        <TextBlock Text="{Binding Label}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <TextBlock Text="{Binding WeatherStatusText}"
+                                       FontSize="12"
+                                       TextWrapping="Wrap"
+                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                        </StackPanel>
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+            </fa:FASettingsExpander>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
