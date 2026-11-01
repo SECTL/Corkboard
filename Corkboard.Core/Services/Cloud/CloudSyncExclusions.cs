@@ -16,24 +16,15 @@ namespace Corkboard.Core.Services.Cloud;
 public static class CloudSyncExclusions
 {
     /// <summary>
-    ///     不同步的设置路径前缀。命中规则：完全相等，或者前缀后面紧跟 <c>.</c> / <c>_</c>。
-    ///     用前缀而不是逐个字段，是为了以后新增 <c>main_window_*</c> / <c>settings_window_*</c>
-    ///     字段时不会漏掉（漏掉的后果是把对端的窗口尺寸带过来）。
+    ///     不同步的设置路径。命中规则：完全相等，或者它后面还接着子项（<c>.</c> 分隔）。
+    ///     <para>
+    ///         清单不是手写的：由 <see cref="LocalOnlyPaths" /> 反射遍历 <see cref="Models.MainConfigModel" />，
+    ///         收出所有贴了 <see cref="Attributes.LocalOnlyAttribute" /> 的属性/整段。
+    ///         新增本机专属项时只要在配置类上贴那个特性，这里不用改，也不会漏。
+    ///     </para>
     /// </summary>
     public static readonly IReadOnlyList<string> Prefixes =
-    [
-        // 开机自启：每台机器自己决定
-        "general.basic.autostart",
-        // 主窗口尺寸、位置、不透明度、点击穿透：都是本机窗口状态
-        "general.basic.main_window",
-        // 设置窗口尺寸与位置
-        "general.basic.settings_window",
-        // 自动保存的目录：本机的绝对路径，搬到对端多半是个不存在的盘符，
-        // 结果是「开了自动保存却什么都没存」而且失败只记日志。开关与时机照旧同步。
-        "board_auto_save.folder",
-        // 云同步开关与上次同步时间：每个账号、每台设备各自决定
-        "cloud"
-    ];
+        LocalOnlyPaths.Build(typeof(Models.MainConfigModel));
 
     private static readonly JsonSerializerOptions WriteOptions = new() { WriteIndented = true };
 

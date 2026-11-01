@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Corkboard.Core.Attributes;
 using Corkboard.Core.Board.AutoSave;
 
 namespace Corkboard.Core.Models.SubConfigs.Board;
@@ -34,7 +35,12 @@ public partial class BoardAutoSaveSettingsConfig : ObservableObject
     /// <summary>
     ///     存档目录。留空表示软件自己的 <c>data/autosave</c>；填了就按填的走。
     ///     读的时候一律过一遍 <see cref="BoardAutoSavePolicy.ResolveFolder" />（去空白、展开成绝对路径）。
+    ///     <para>
+    ///         目录是**本机绝对路径**，不参与云同步：搬到对端多半是个不存在的盘符，结果是
+    ///         「开了自动保存却什么都没存」而且失败只记日志。开关与时机照旧同步。
+    ///     </para>
     /// </summary>
+    [property: LocalOnly]
     [ObservableProperty] private string _folder = string.Empty;
 
     /// <summary>

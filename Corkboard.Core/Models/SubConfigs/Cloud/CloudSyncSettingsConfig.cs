@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using Corkboard.Core.Attributes;
 
 namespace Corkboard.Core.Models.SubConfigs.Cloud;
 
@@ -6,10 +7,11 @@ namespace Corkboard.Core.Models.SubConfigs.Cloud;
 ///     云同步（思拓创联云存储）设置。
 ///     <para>
 ///         云同步**默认关闭**：每台设备各自决定，登录后不会自动打开；
-///         这一整段也不会跟着同步走（见 <see cref="Services.Cloud.CloudSyncExclusions" />），
+///         这一整段也不会跟着同步走（标了 <see cref="LocalOnlyAttribute" />），
 ///         否则一台设备打开就会替所有设备打开、还没法单独关掉。
 ///     </para>
 /// </summary>
+[LocalOnly]
 public partial class CloudSyncSettingsConfig : ObservableObject
 {
     /// <summary>是否开启云同步。</summary>
