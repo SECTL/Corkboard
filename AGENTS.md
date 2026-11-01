@@ -326,6 +326,9 @@ public partial class BoardSettingsConfig : ObservableObject
   `CLA Assistant` 设为 required status check（check 在界面里显示为 `CLA Assistant / cla`，写规则时填 `cla`）；
   回写签名文件还需要 `CLA_ASSISTANT_PAT`（缺了回落 `GITHUB_TOKEN`，通常没有提交权限）。
   **这些是仓库设置，不在任何文件里**，换机器/新建仓库要重新配。
+- ⚠️ `CLA_ASSISTANT_PAT` 的值**不能带尾随换行**：用管道写 secret（`<值> | gh secret set …`）会把换行一起存进去，
+  action 打 contents API 时报 `##[error]Could not retrieve repository contents. Status: 500`——不是 401，
+  很容易被误读成权限、路径或分支写错。改用 `gh secret set <名字> -R <仓库> -b <值>` 写入即可。
 - 分支名是 `main`（上游 SecRandom-C 用 `master`），`path-to-document`、`branch` 与 `signatures` 路径三处要一致。
 
 ## 崩溃恢复（对齐上游 SecRandom-C）
