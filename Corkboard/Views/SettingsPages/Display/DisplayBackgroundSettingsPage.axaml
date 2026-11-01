@@ -1,0 +1,34 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:core="using:Corkboard.Core.Langs.Common"
+             xmlns:vm="using:Corkboard.ViewModels.SettingsPages.Display"
+             xmlns:bg="using:Corkboard.Views.Common"
+             xmlns:fa="using:FluentAvalonia.UI.Controls"
+             mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="1200"
+             x:Class="Corkboard.Views.SettingsPages.Display.DisplayBackgroundSettingsPage"
+             x:DataType="vm:DisplayBackgroundSettingsPageViewModel">
+    <!--
+        看板模式的背景：跟随主题 / 纯色 / 双色渐变 / 图片。
+
+        选图片会复制一份进软件数据目录（原图挪走也不影响），暗化与模糊是为了让时钟的字看得清。
+        这块屏上作业板也铺在同一张背景上，所以「跟随主题」时跟的是当前主题底色。
+
+        ⚠️ 这一页**不要**再给编辑器套一张「背景样式」设置卡（用户要求）：
+        这本来就是一整页，编辑器里面已经是一张一张的设置卡了，
+        外面再包一层长的是同一个标题的卡，点开里面又来一遍，纯属多一层套娃。
+        编辑器自己按模式显隐卡片（见 `BoardBackgroundEditor.UpdateCardVisibility`）。
+    -->
+    <ScrollViewer>
+        <StackPanel Classes="page-container">
+            <!-- 页标题：与其它设置页一致（TitleTextBlockStyle + Normal 字重，下面不挂副标题）。 -->
+            <TextBlock Margin="0 4 0 0"
+                       FontWeight="Normal"
+                       Text="{x:Static core:Resources.Settings_Display_Background_Title}"
+                       Theme="{StaticResource TitleTextBlockStyle}" />
+
+            <bg:BoardBackgroundEditor Settings="{Binding Config.Display}" />
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

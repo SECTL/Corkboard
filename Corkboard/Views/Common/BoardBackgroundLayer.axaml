@@ -1,0 +1,21 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Corkboard.Views.Common.BoardBackgroundLayer"
+             IsHitTestVisible="False">
+    <!--
+        全屏板子的背景层：垫在内容最底下，自身不吃指针事件。
+
+        三层从下往上：底色笔刷 → 图片 → 暗化。
+        写成一个控件而不是在每扇窗里各铺一份，是因为考试看板与看板模式的规则一模一样
+        （图要铺满、要压暗、要模糊、读不到就退回主题），两处各写一遍迟早会不一致。
+    -->
+    <Grid ClipToBounds="True">
+        <Border x:Name="BrushLayer" IsVisible="False" />
+        <Image x:Name="ImageLayer"
+               Stretch="UniformToFill"
+               IsVisible="False"
+               RenderTransformOrigin="0.5,0.5">
+        </Image>
+        <Border x:Name="DimLayer" Background="#000000" IsVisible="False" />
+    </Grid>
+</UserControl>

@@ -1,0 +1,112 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:core="using:Corkboard.Core.Langs.Common"
+             xmlns:fa="using:FluentAvalonia.UI.Controls"
+             x:Class="Corkboard.Views.Common.BoardBackgroundEditor">
+    <!--
+        背景编辑器：考试看板与看板模式共用同一套（两种板子的背景规则一模一样）。
+        宿主要做的只有两件事：把 Settings 指过去，然后把它放进页面里。
+
+        ⚠️ **不要把它套进 `fa:FASettingsExpander`**：下面这一叠本身就是设置卡，
+        卡里再嵌卡就是「FASettingsExpander 嵌 FASettingsExpander」，展开外层卡时会崩在
+        `FAExpanderExt+ExpanderInfo.HandleExpanderTemplateApplied`（FA 的展开动画去量一块还没挂到
+        可视树的子树，`ElementComposition.GetElementVisual(...)` 返回 null → NullReferenceException）。
+        要给它分块就用 `<TextBlock Classes="section-title" />` 分区标题，别用卡片包起来。
+
+        所有改动都在 code-behind 里走「草稿 + 防抖」再写进配置——配置 handler 每变一次就落一次盘，
+        取色器拖动时会一秒写几十遍 settings.json。
+    -->
+    <StackPanel Spacing="8">
+        <!-- 跟随主题 / 纯色 / 渐变 / 图片 -->
+        <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Background_Mode}"
+                               Description="{x:Static core:Resources.Settings_Background_ModeDescription}"
+                               IsExpanded="True">
+            <fa:FASettingsExpander.Footer>
+                <ComboBox x:Name="ModeCombo" MinWidth="160" SelectionChanged="OnModeSelectionChanged">
+                    <ComboBoxItem Content="{x:Static core:Resources.Settings_Background_ModeTheme}"
+                                  Tag="Theme" />
+                    <ComboBoxItem Content="{x:Static core:Resources.Settings_Background_ModeSolid}"
+                                  Tag="Solid" />
+                    <ComboBoxItem Content="{x:Static core:Resources.Settings_Background_ModeGradient}"
+                                  Tag="Gradient" />
+                    <ComboBoxItem Content="{x:Static core:Resources.Settings_Background_ModeImage}"
+                                  Tag="Image" />
+                </ComboBox>
+            </fa:FASettingsExpander.Footer>
+        </fa:FASettingsExpander>
+
+        <!-- 纯色 -->
+        <fa:FASettingsExpander x:Name="SolidCard"
+                               Header="{x:Static core:Resources.Settings_Background_Color}"
+                               Description="{x:Static core:Resources.Settings_Background_ColorDescription}">
+            <fa:FASettingsExpander.Footer>
+                <ColorPicker x:Name="SolidColorPicker"
+                             ColorChanged="OnSolidColorChanged" />
+            </fa:FASettingsExpander.Footer>
+        </fa:FASettingsExpander>
+
+        <!-- 双色渐变 -->
+        <fa:FASettingsExpander x:Name="GradientCard"
+                               Header="{x:Static core:Resources.Settings_Background_ModeGradient}">
+            <fa:FASettingsExpander.Footer>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <ColorPicker x:Name="GradientStartPicker" ColorChanged="OnGradientStartChanged" />
+                    <ColorPicker x:Name="GradientEndPicker" ColorChanged="OnGradientEndChanged" />
+                </StackPanel>
+            </fa:FASettingsExpander.Footer>
+        </fa:FASettingsExpander>
+
+        <fa:FASettingsExpander x:Name="AngleCard"
+                               Header="{x:Static core:Resources.Settings_Background_GradientAngle}"
+                               Description="{x:Static core:Resources.Settings_Background_GradientAngleDescription}">
+            <fa:FASettingsExpander.Footer>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Slider x:Name="AngleSlider" Width="220" Minimum="0" Maximum="360" TickFrequency="5"
+                            ValueChanged="OnAngleChanged" />
+                    <TextBlock x:Name="AngleValue" VerticalAlignment="Center" MinWidth="48" />
+                </StackPanel>
+            </fa:FASettingsExpander.Footer>
+        </fa:FASettingsExpander>
+
+        <!-- 图片 -->
+        <fa:FASettingsExpander x:Name="ImageCard"
+                               Header="{x:Static core:Resources.Settings_Background_Image}"
+                               Description="{x:Static core:Resources.Settings_Background_ImageDescription}">
+            <fa:FASettingsExpander.Footer>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button x:Name="PickImageButton"
+                            Content="{x:Static core:Resources.Settings_Background_ImagePick}"
+                            Click="OnPickImageClick" />
+                    <Button x:Name="ClearImageButton"
+                            Content="{x:Static core:Resources.Settings_Background_ImageClear}"
+                            Click="OnClearImageClick" />
+                </StackPanel>
+            </fa:FASettingsExpander.Footer>
+        </fa:FASettingsExpander>
+
+        <!-- 压暗与模糊：只对图片有意义 -->
+        <fa:FASettingsExpander x:Name="DimCard"
+                               Header="{x:Static core:Resources.Settings_Background_Dim}"
+                               Description="{x:Static core:Resources.Settings_Background_DimDescription}">
+            <fa:FASettingsExpander.Footer>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Slider x:Name="DimSlider" Width="220" Minimum="0" Maximum="0.9" TickFrequency="0.05"
+                            ValueChanged="OnDimChanged" />
+                    <TextBlock x:Name="DimValue" VerticalAlignment="Center" MinWidth="48" />
+                </StackPanel>
+            </fa:FASettingsExpander.Footer>
+        </fa:FASettingsExpander>
+
+        <fa:FASettingsExpander x:Name="BlurCard"
+                               Header="{x:Static core:Resources.Settings_Background_Blur}"
+                               Description="{x:Static core:Resources.Settings_Background_BlurDescription}">
+            <fa:FASettingsExpander.Footer>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Slider x:Name="BlurSlider" Width="220" Minimum="0" Maximum="60" TickFrequency="2"
+                            ValueChanged="OnBlurChanged" />
+                    <TextBlock x:Name="BlurValue" VerticalAlignment="Center" MinWidth="48" />
+                </StackPanel>
+            </fa:FASettingsExpander.Footer>
+        </fa:FASettingsExpander>
+    </StackPanel>
+</UserControl>
