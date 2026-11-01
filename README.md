@@ -21,6 +21,9 @@
 > [!NOTE]
 > Corkboard 以 GNU GPLv3 协议发布！您可以修改和再发布源代码，但再发布的衍生作品也必须遵循 GNU GPLv3
 
+> [!IMPORTANT]
+> 本仓库自 2026 年 11 月 1 日起要求贡献者签署[贡献者许可协议（CLA）](CLA.md)。首次提交 Pull Request 时会被要求在 PR 中签署，未完成签署的 PR 会被标记为检查未通过。CLA 只做许可授予、不转让版权，也不改变任何已发布版本在 GNU GPLv3 下的授权。
+
 ## Corkboard
 
 Corkboard 是常驻桌面的看板应用
@@ -73,6 +76,7 @@ Corkboard 是常驻桌面的看板应用
 ## 许可证与第三方声明
 
 - Corkboard 使用 [GNU GPLv3](LICENSE) 协议发布
+- 贡献受[贡献者许可协议（CLA）](CLA.md)约束（版本 1.0，2026 年 11 月 1 日生效），在 Pull Request 内签署。CLA 是许可授予而非版权转让：你保留自己贡献的版权与对抗任何人的 GPLv3 权利，任何已发布版本的授权也不会改变
 - 第三方组件、版权与分发审查信息见 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)
 
 ## 贡献者和特别感谢
@@ -82,6 +86,8 @@ Corkboard 是常驻桌面的看板应用
 </a>
 
 感谢每一位为 Corkboard 提交代码、报告问题、完善文档和提供反馈的贡献者。头像由 GitHub 贡献者数据动态生成，点击可前往 [GitHub 贡献者页面](https://github.com/SECTL/Corkboard/graphs/contributors) 查看完整统计
+
+想一起改这份代码，先看 [贡献指南](CONTRIBUTING.md)（构建、测试与目录约定），首次提 PR 时按 [贡献者许可协议（CLA）](CLA.md) 在 PR 里签署即可
 
 ## 支持与社区
 

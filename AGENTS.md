@@ -68,6 +68,8 @@ Corkboard/
 ├── Corkboard.Platforms.Windows|Linux|MacOs/ # 各平台原生窗口能力实现边界
 ├── Corkboard4Ci.Interface/     # ClassIsland 插件侧 IPC 契约（[IpcPublic]）
 ├── Corkboard.Core.Tests/       # xUnit v3 测试
+├── CLA.md                      # 贡献者许可协议 v1.0（2026-11-01 生效）：许可授予式，不做版权转让
+├── CONTRIBUTING.md             # 贡献指南（含 CLA 签署流程）
 ├── docs/                       # 工程规则/规格/待办（checkout 未提供）
 ├── Directory.Build.props       # 全仓库属性：AvaloniaVersion 锚点 + TargetFramework/ImplicitUsings/Nullable + Version
 ├── Directory.Build.targets     # 唯一一处 Import Global.props（在工程正文之后求值）
@@ -307,6 +309,24 @@ public partial class BoardSettingsConfig : ObservableObject
 - DI 唯一注册点是 `Corkboard/App.axaml.cs` 的 `BuildHost`，不要在别处偷偷 `new`。
 - 静态服务定位 `IAppHost.GetService<T>()` **只在 Avalonia 控件构造期**使用，其它位置用构造函数注入。
 - 语言必须先于 XAML 加载，否则 `x:Static` 资源取到旧文化。
+
+## 贡献者准入（CLA，对齐上游 SecRandom-C）
+
+- 仓库根目录的 `CLA.md`（v1.0，2026-11-01 生效）是**许可授予**式协议、不做版权转让：默认出站仍是
+  GPLv3（§4.1），调整出站许可证要提前 30 天公示并善意协商（§4.3 公示、§4.4 异议，异议不构成否决权），
+  已发布版本的 GPLv3 授权不受影响（§7.1）。首次 PR 要在 PR 评论里签署，由 `.github/workflows/cla.yml`
+  的 CLA Assistant 记录到 `signatures/version1/cla.json`；签署语句原文见 `CLA.md` §9.1 与 `CONTRIBUTING.md`，
+  §9.5「追认历史贡献」的后缀与维护者白名单在那份工作流里。
+- ⚠️ **不要原地改 `CLA.md` 的条款**：**版本号、生效日期与 `signatures/versionN/` 目录是一起动的三件套**
+  ——改已签署版本的条款会让既有签名失去凭据。要改条款就发新版本 + 新签名目录，旧目录留着。
+  ⚠️ 发 v2 时 `cla.yml` 里还有四处版本敏感点要一起改：头部注释的版本与日期、`path-to-signatures` 的
+  `version1`、`signed-commit-message` 里的 `CLA v1.0`、`custom-notsigned-prcomment` 里的生效日期。
+  `custom-pr-sign-comment` 必须保持空串（留空时 action 用内置默认语句与内置正则，追认后缀才签得上）。
+- 工作流本身只是**红色提示**：要真正阻止未签署的 PR 合并，得在仓库设置里给 `main` 开分支保护、把
+  `CLA Assistant` 设为 required status check（check 在界面里显示为 `CLA Assistant / cla`，写规则时填 `cla`）；
+  回写签名文件还需要 `CLA_ASSISTANT_PAT`（缺了回落 `GITHUB_TOKEN`，通常没有提交权限）。
+  **这些是仓库设置，不在任何文件里**，换机器/新建仓库要重新配。
+- 分支名是 `main`（上游 SecRandom-C 用 `master`），`path-to-document`、`branch` 与 `signatures` 路径三处要一致。
 
 ## 崩溃恢复（对齐上游 SecRandom-C）
 
