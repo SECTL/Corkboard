@@ -85,26 +85,10 @@ public partial class MainWindow : FAAppWindow
 
     /// <summary>
     ///     置底是不是<b>实际生效</b>了（平台可能报不支持或退化）。
-    ///     主窗口之外那几颗浮钮（收纳按钮、锁定徽标、右下角浮标）按它决定自己置顶还是也跟着进桌面层
+    ///     主窗口之外那颗收纳浮钮按它决定自己置顶还是也跟着进桌面层
     ///     （见 <see cref="FloatingWindowLayer" />）。
     /// </summary>
     public bool IsPinnedToDesktop => _isPinnedToDesktop;
-
-    /// <summary>
-    ///     锁定态（点击穿透开着）时承载「开锁」按钮的独立小窗口。
-    ///     它必须待在主窗口之外：点击穿透是整窗生效的，画在主窗口里的按钮自己也会点不动。
-    /// </summary>
-    private ClickThroughLockWindow? _lockWindow;
-
-    /// <summary>配置里是否要求显示锁定徽标（= 点击穿透开着）。实际显隐还要看窗口在不在、是不是最小化。</summary>
-    private bool _isLockBadgeRequested;
-
-    /// <summary>
-    ///     右下角布置作业浮动按钮：点击穿透状态下右下角那颗大号加号按钮。
-    ///     与锁定徽标同理：主窗口穿透时按钮点不动，得用独立窗口承载。
-    ///     仅当「右下角布置作业按钮」+「锁定时也能添加作业」+「点击穿透」三者都开着时才显示。
-    /// </summary>
-    private CornerAssignFloatingWindow? _cornerAssignWindow;
 
     public MainWindow() : this(AppConsts.MainWindowScope)
     {
@@ -165,11 +149,6 @@ public partial class MainWindow : FAAppWindow
     private void OnLoaded(object? sender, RoutedEventArgs e)
     {
         _hasBeenShown = true;
-
-        // 启动时就开着点击穿透的话，徽标要在窗口显示出来之后才摆得下（Load/Opened 的先后顺序
-        // 不保证，两处都同步一次，谁后到谁把位置定下来）。
-        SyncLockBadge();
-        SyncCornerAssignButton();
         NotifyBoardVisibilityChanged();
     }
 
@@ -196,15 +175,13 @@ public partial class MainWindow : FAAppWindow
         }
 
         ApplyPinToDesktop();
-        ApplyClickThrough();
         ApplyWindowOpacity();
         ApplyWindowCorners();
 
         // 窗口第一次出现的位置就是「上次的位置」的基准：用户从头到尾没挪过窗口时，也要能把这次记下来。
         CaptureNormalPosition();
 
-        // 锁定徽标是独立窗口，主窗口移动/缩放/最小化时它不会跟着动，得自己跟。
-        // 先退订再挂（置底/取消置底、收纳的隐藏/显示都会反复走 OnOpened），避免同一条处理器挂两遍。
+        // 几何跟踪（尺寸/位置记忆与圆角重裁）要在收纳的隐藏/显示反复走 OnOpened 时不会重复挂。
         PositionChanged -= OnWindowPositionChanged;
         PositionChanged += OnWindowPositionChanged;
         ScalingChanged -= OnWindowScalingChanged;
@@ -218,16 +195,6 @@ public partial class MainWindow : FAAppWindow
         if (e.PropertyName is null or nameof(BasicSettingsConfig.PinToDesktop))
             ApplyPinToDesktop();
 
-        if (e.PropertyName is null or nameof(BasicSettingsConfig.ClickThrough))
-            ApplyClickThrough();
-
-        if (e.PropertyName is null or nameof(BasicSettingsConfig.AllowAddNoteWhenLocked)
-            or nameof(BasicSettingsConfig.ShowCornerAssignButton))
-        {
-            UpdateLockBadgeAssignButton();
-            SyncCornerAssignButton();
-        }
-
         if (e.PropertyName is null or nameof(BasicSettingsConfig.MainWindowOpacity))
             ApplyWindowOpacity();
 
@@ -238,7 +205,8 @@ public partial class MainWindow : FAAppWindow
     /// <summary>壳内弹层开关时重算不透明度：弹层自己也压在同一层窗口 alpha 下，一样会变透明。</summary>
     private void OnOverlayChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is null or nameof(PageOverlayService.IsOpen))
+        // ActiveHost 也要跟：弹层被全屏展示窗口抢去画时，本窗口不必再为它让位。
+        if (e.PropertyName is null or nameof(PageOverlayService.IsOpen) or nameof(PageOverlayService.ActiveHost))
             ApplyWindowOpacity();
     }
 
@@ -324,10 +292,6 @@ public partial class MainWindow : FAAppWindow
             if (WindowState != WindowState.Minimized)
                 QueueSizeSave(basic);
 
-            // 缩放会让「最右上角」跟着挪（右端按内容区宽度算），徽标要重摆。
-            SyncLockBadge();
-            SyncCornerAssignButton();
-
             // 圆角区域是贴在窗口上的像素矩形：尺寸一变就得重裁，否则四角会被拉成弧线。
             ApplyWindowCorners();
 
@@ -340,21 +304,15 @@ public partial class MainWindow : FAAppWindow
         if (WindowState != WindowState.Minimized)
             _lastNonMinimizedState = WindowState;
 
-        // 最小化 / 还原都会让主窗口从屏幕上挪开或挪回来，徽标得跟着收放。
-        SyncLockBadge();
-        SyncCornerAssignButton();
-
         // 托盘菜单里那一项在「显示作业板 / 隐藏作业板」之间切换，最小化也算不在屏幕上。
         NotifyBoardVisibilityChanged();
 
-        // 最小化时 Windows 会把窗口的分层扩展样式（WS_EX_LAYERED / WS_EX_TRANSPARENT）摘掉，
-        // 还原后它们不会自己回来。结果是：配置里仍写着「开启点击穿透 + 不透明度」、锁定徽标也照旧
-        // 显示「已锁」，但主窗口其实又能被点、也恢复成完全不透明了——界面在说一件事、窗口在做另一件事。
-        // 还原时把这几项能力重放一次，让原生样式回到配置描述的状态（重放是幂等的）。
+        // 最小化时 Windows 会把窗口的分层扩展样式（WS_EX_LAYERED）摘掉，还原后它不会自己回来，
+        // 表现就是「配置里还写着半透明，窗口其实已经完全不透明了」。还原时把窗口能力重放一次
+        // （重放是幂等的）。
         if (WindowState != WindowState.Minimized)
         {
             ApplyPinToDesktop();
-            ApplyClickThrough();
             ApplyWindowOpacity();
         }
 
@@ -656,10 +614,6 @@ public partial class MainWindow : FAAppWindow
         // 还可能把「主窗口已关」的判断拖住（主窗口关了、弹层还开着）。
         IAppHost.TryGetService<PageOverlayService>()?.Close();
 
-        // 锁定徽标同样是独立窗口：主窗口没了它就没人管了，必须一起收掉。
-        CloseLockBadge();
-        CloseCornerAssignButton();
-
         ReleaseDesktopBottom();
         ReleaseBasicSettingsWatcher();
         ReleaseOverlayWatcher();
@@ -677,42 +631,12 @@ public partial class MainWindow : FAAppWindow
 
         // 置底/取消置底会换掉窗口的父窗口与样式：圆角区域贴的还是上一次的形态与尺寸，重贴一次。
         ApplyWindowCorners();
-
-        // 浮钮（锁定徽标 / 右下角浮标）的层级跟着主窗口走：板子沉到桌面了，
-        // 这几颗按钮也不该再浮在所有窗口之上（见 FloatingWindowLayer）。
-        SyncLockBadge();
-        SyncCornerAssignButton();
-    }
-
-    /// <summary>
-    ///     点击穿透：主窗口不再接收鼠标与触摸。开了之后窗口里一个控件都点不动
-    ///     （标题栏动作区因此整块隐藏），只能从托盘菜单打开设置窗口、或点锁定徽标把它关掉。
-    /// </summary>
-    private void ApplyClickThrough()
-    {
-        if (!_isMainScope || IAppHost.TryGetService<MainConfigHandler>() is not { } handler)
-            return;
-
-        ApplyWindowFeature(WindowFeatures.ClickThrough, handler.Data.Basic.ClickThrough);
-
-        // 点击穿透也是 WS_EX_LAYERED，圆角得重新贴一次（分层窗口走区域裁剪那条路），
-        // 否则从普通窗口切到穿透后圆角会被系统合成器丢掉。
-        ApplyWindowCorners();
-
-        // 点击穿透开着时窗口里没有可点的东西了，锁定徽标就是唯一的「解锁」入口。
-        _isLockBadgeRequested = handler.Data.Basic.ClickThrough;
-        SyncLockBadge();
-        SyncCornerAssignButton();
     }
 
     #region 收纳
 
     /// <summary>
     ///     「收纳」：把主窗口藏起来，交给 <see cref="BoardDockService" /> 的浮钮。
-    ///     <para>
-    ///         锁定徽标是本窗口的属主窗口，主窗口藏起来后它不该单独留在屏幕上，所以先收掉；
-    ///         展开时由 <see cref="ShowFromDock" /> 里那次 <see cref="SyncLockBadge" /> 再摆回来。
-    ///     </para>
     ///     <para>
     ///         位置不在这里动：<see cref="Window.Hide" /> 不改变 <see cref="Window.Position" />，
     ///         原位置由窗口自己保留，展开后还是收起来之前的样子。
@@ -723,13 +647,6 @@ public partial class MainWindow : FAAppWindow
         if (!IsVisible)
             return;
 
-        // 只是藏起来，不销毁：点浮钮展开时会接着用（与 SyncLockBadge 里隐藏徽标的做法一致）。
-        if (_lockWindow is { IsVisible: true } badge)
-            badge.Hide();
-
-        if (_cornerAssignWindow is { IsVisible: true } cornerBtn)
-            cornerBtn.Hide();
-
         Hide();
 
         // 板子从屏幕上没了，托盘那一项要变成「显示作业板」。
@@ -737,11 +654,11 @@ public partial class MainWindow : FAAppWindow
     }
 
     /// <summary>
-    ///     从收纳状态展开：把主窗口显示回来，并重放置底 / 点击穿透 / 不透明度。
+    ///     从收纳状态展开：把主窗口显示回来，并重放置底 / 不透明度。
     ///     <para>
-    ///         为什么要重放：Windows 在隐藏（以及最小化）时会把 <c>WS_EX_LAYERED</c> /
-    ///         <c>WS_EX_TRANSPARENT</c> 摘掉，置底窗口的 <c>WS_CHILD</c> 也会失效，这些样式不会自己回来。
-    ///         不重放就会出现「设置里写着穿透 / 半透明 / 置底，界面也这么显示，窗口实际全部失效」。
+    ///         为什么要重放：Windows 在隐藏（以及最小化）时会把 <c>WS_EX_LAYERED</c> 摘掉，
+    ///         置底窗口的 <c>WS_CHILD</c> 也会失效，这些样式不会自己回来。
+    ///         不重放就会出现「设置里写着半透明 / 置底，窗口实际全部失效」。
     ///         重放是幂等的（与最小化还原那条路同一套，见 <see cref="OnWindowPropertyChanged" />）。
     ///     </para>
     /// </summary>
@@ -756,10 +673,7 @@ public partial class MainWindow : FAAppWindow
         Activate();
 
         ApplyPinToDesktop();
-        ApplyClickThrough();
         ApplyWindowOpacity();
-        SyncLockBadge();
-        SyncCornerAssignButton();
 
         // 板子回到屏幕上了，托盘那一项要变成「隐藏作业板」。
         NotifyBoardVisibilityChanged();
@@ -767,221 +681,8 @@ public partial class MainWindow : FAAppWindow
 
     #endregion
 
-    #region 锁定徽标
-
     /// <summary>
-    ///     显示 / 隐藏锁定徽标，并把它摆回主窗口标题栏最右上角。
-    ///     <para>
-    ///         徽标是独立顶层窗口，不会跟着主窗口走：位置、显隐都靠这里主动同步。
-    ///         窗口还没显示完（原生句柄没就绪）或主窗口最小化时不摆——最小化后主窗口挪到了
-    ///         屏幕外，徽标留在原地就会变成屏幕角落一颗孤零零的按钮。
-    ///     </para>
-    /// </summary>
-    private void SyncLockBadge()
-    {
-        if (!_isMainScope)
-            return;
-
-        // 主窗口自己被收纳藏起来时（IsVisible=false）徽标也不能露头：它是本窗口的属主窗口，
-        // 主窗口不在屏幕上、徽标单独挂着就成了一颗点不回去的孤儿按钮。
-        var shouldShow = _isLockBadgeRequested
-                         && _hasBeenShown
-                         && IsVisible
-                         && WindowState != WindowState.Minimized;
-
-        if (!shouldShow)
-        {
-            // 只是藏起来，不销毁：解锁/锁定会来回切，重开一个窗口要重新走一遍原生创建。
-            // 关窗才真的销毁（见 CloseLockBadge）。
-            if (_lockWindow is { IsVisible: true } hidden)
-                hidden.Hide();
-
-            return;
-        }
-
-        if (_lockWindow is null)
-        {
-            _lockWindow = new ClickThroughLockWindow();
-            _lockWindow.UnlockRequested += OnLockBadgeUnlockRequested;
-            _lockWindow.AssignRequested += OnLockBadgeAssignRequested;
-            _lockWindow.Closed += OnLockBadgeClosed;
-
-            // 记下这颗窗口自己的默认层级（XAML 里写的是置顶），置底关掉时按它还原。
-            FloatingWindowLayer.Register(_lockWindow);
-        }
-
-        // 同步「锁定时也能添加作业」按钮的显隐
-        UpdateLockBadgeAssignButton(syncPosition: false);
-
-        // 用 Show(this) 建立属主关系：主窗口最小化/关闭时徽标跟着一起收，
-        // 也不会在任务栏多出一个条目（徽标自己 ShowInTaskbar=false）。
-        if (!_lockWindow.IsVisible)
-            _lockWindow.Show(this);
-
-        _lockWindow.PlaceAtTitleBarCorner(this);
-
-        // 主窗口置底时徽标也跟着贴到桌面层：板子已经沉到桌面了，这颗锁再浮在所有窗口之上
-        // 就很突兀（用户反馈）。置底没生效时它照旧置顶，主窗口被盖住时仍然点得到。
-        FloatingWindowLayer.Apply(_lockWindow, _isPinnedToDesktop);
-    }
-
-    /// <summary>点了徽标上的「开锁」：把点击穿透关掉。只写配置，生效与显隐都由配置变化那条路走。</summary>
-    private void OnLockBadgeUnlockRequested(object? sender, EventArgs e)
-    {
-        if (IAppHost.TryGetService<MainConfigHandler>() is not { } handler)
-            return;
-
-        handler.Data.Basic.ClickThrough = false;
-    }
-
-    /// <summary>
-    ///     点了锁徽标上的「布置作业」：走统一的锁定态布置作业流程。
-    /// </summary>
-    private void OnLockBadgeAssignRequested(object? sender, EventArgs e) =>
-        OpenAssignFormFromLockedState();
-
-    /// <summary>
-    ///     同步锁定徽标上「布置作业」按钮的显隐。开了「锁定时也能添加作业」就显示，
-    ///     否则不显示。默认同步位置（按钮数量变了窗口宽度会变，位置要重新摆）。
-    /// </summary>
-    private void UpdateLockBadgeAssignButton(bool syncPosition = true)
-    {
-        if (_lockWindow is null)
-            return;
-        if (IAppHost.TryGetService<MainConfigHandler>() is not { } handler)
-            return;
-
-        _lockWindow.ShowAssignButton = handler.Data.Basic.AllowAddNoteWhenLocked;
-
-        if (syncPosition && _lockWindow.IsVisible)
-            _lockWindow.PlaceAtTitleBarCorner(this);
-    }
-
-    private void OnLockBadgeClosed(object? sender, EventArgs e)
-    {
-        if (_lockWindow is { } window)
-        {
-            window.UnlockRequested -= OnLockBadgeUnlockRequested;
-            window.AssignRequested -= OnLockBadgeAssignRequested;
-        }
-
-        _lockWindow = null;
-    }
-
-    /// <summary>关窗时收掉徽标：它没有属主之外的存活理由，留下就是屏幕上洗不掉的一颗按钮。</summary>
-    private void CloseLockBadge()
-    {
-        if (_lockWindow is not { } window)
-            return;
-
-        window.UnlockRequested -= OnLockBadgeUnlockRequested;
-        window.AssignRequested -= OnLockBadgeAssignRequested;
-        window.Closed -= OnLockBadgeClosed;
-        _lockWindow = null;
-
-        // 主窗口正在关，徽标是它的子窗口，正常会跟着一起关；
-        // 这里显式关一次，覆盖「徽标不是通过 Show(owner) 建出来的」那种极端情况。
-        window.Close();
-    }
-
-    /// <summary>
-    ///     同步右下角布置作业浮动按钮的显隐与位置。
-    ///     显示条件：点击穿透开着 + 右下角布置作业按钮开着 + 锁定时也能添加作业开着 + 窗口在屏幕上。
-    /// </summary>
-    private void SyncCornerAssignButton()
-    {
-        if (!_isMainScope || IAppHost.TryGetService<MainConfigHandler>() is not { } handler)
-            return;
-
-        var shouldShow = handler.Data.Basic.ClickThrough
-                         && handler.Data.Basic.ShowCornerAssignButton
-                         && handler.Data.Basic.AllowAddNoteWhenLocked
-                         && _hasBeenShown
-                         && IsVisible
-                         && WindowState != WindowState.Minimized;
-
-        if (!shouldShow)
-        {
-            if (_cornerAssignWindow is { IsVisible: true } hidden)
-                hidden.Hide();
-
-            return;
-        }
-
-        if (_cornerAssignWindow is null)
-        {
-            _cornerAssignWindow = new CornerAssignFloatingWindow();
-            _cornerAssignWindow.AssignRequested += OnCornerAssignRequested;
-            _cornerAssignWindow.Closed += OnCornerAssignClosed;
-
-            // 记下这颗窗口自己的默认层级（XAML 里没写 Topmost，本来就不置顶）。
-            FloatingWindowLayer.Register(_cornerAssignWindow);
-        }
-
-        if (!_cornerAssignWindow.IsVisible)
-            _cornerAssignWindow.Show(this);
-
-        _cornerAssignWindow.PlaceAtBottomRightCorner(this);
-
-        // 与锁定徽标同理：主窗口置底时这颗浮标也跟着进桌面层。
-        FloatingWindowLayer.Apply(_cornerAssignWindow, _isPinnedToDesktop);
-    }
-
-    /// <summary>
-    ///     点了右下角浮动的布置作业：走统一的锁定态布置作业流程。
-    /// </summary>
-    private void OnCornerAssignRequested(object? sender, EventArgs e) =>
-        OpenAssignFormFromLockedState();
-
-    /// <summary>
-    ///     从锁定态打开布置作业表单：强制表单走独立窗口模式，主窗口保持点击穿透不动。
-    ///     弹层画在主窗口里的话，主窗口穿透时弹层也点不动，所以必须用独立窗口承载。
-    ///     表单关闭后把 UseSeparateWindow 改回原值。
-    /// </summary>
-    private void OpenAssignFormFromLockedState()
-    {
-        if (IAppHost.TryGetService<PageOverlayService>() is not { } overlay)
-            return;
-
-        var prevUseSeparate = overlay.UseSeparateWindow;
-        overlay.UseSeparateWindow = true;
-
-        // 表单关掉后恢复原来的 UseSeparateWindow 设置
-        void OnClosed(object? s, EventArgs e)
-        {
-            overlay.Closed -= OnClosed;
-            overlay.UseSeparateWindow = prevUseSeparate;
-        }
-
-        overlay.Closed += OnClosed;
-
-        if (Content is MainView mainView)
-            mainView.OpenAddAssignmentForm();
-    }
-
-    private void OnCornerAssignClosed(object? sender, EventArgs e)
-    {
-        if (_cornerAssignWindow is { } window)
-            window.AssignRequested -= OnCornerAssignRequested;
-
-        _cornerAssignWindow = null;
-    }
-
-    /// <summary>关窗时收掉右下角浮动按钮。</summary>
-    private void CloseCornerAssignButton()
-    {
-        if (_cornerAssignWindow is not { } window)
-            return;
-
-        window.AssignRequested -= OnCornerAssignRequested;
-        window.Closed -= OnCornerAssignClosed;
-        _cornerAssignWindow = null;
-
-        window.Close();
-    }
-
-    /// <summary>
-    ///     窗口位置变了：同步徽标，并记下「上次普通位置」准备落盘。
+    ///     窗口位置变了：记下「上次普通位置」准备落盘。
     ///     <para>
     ///         位置没有对应的 <c>AvaloniaProperty</c>（<see cref="Window.Position" /> 只是普通属性），
     ///         所以这条不能走 <see cref="OnWindowPropertyChanged" />，得挂在 <see cref="Window.PositionChanged" /> 上。
@@ -990,9 +691,6 @@ public partial class MainWindow : FAAppWindow
     /// </summary>
     private void OnWindowPositionChanged(object? sender, PixelPointEventArgs e)
     {
-        SyncLockBadge();
-        SyncCornerAssignButton();
-
         if (!_hasBeenShown || WindowState != WindowState.Normal)
             return;
 
@@ -1010,14 +708,9 @@ public partial class MainWindow : FAAppWindow
 
     private void OnWindowScalingChanged(object? sender, EventArgs e)
     {
-        SyncLockBadge();
-        SyncCornerAssignButton();
-
         // 圆角半径按 DPI 折算成物理像素，换到另一块不同缩放的屏幕上要按新 DPI 重裁。
         ApplyWindowCorners();
     }
-
-    #endregion
 
     /// <summary>
     ///     主窗口不透明度：配置里是 0–1 的标量（1 完全不透明），由平台写进原生窗口。
@@ -1033,8 +726,9 @@ public partial class MainWindow : FAAppWindow
             return;
 
         // UseSeparateWindow 为真时弹层活在独立窗口里，跟本窗口的 alpha 无关，不用让位。
+        // 弹层被别的宿主（例如全屏展示窗口）抢去画时同理，本窗口不需要为它恢复不透明度。
         var hasModalSurface = _modalSurfaceCount > 0
-                              || _watchedOverlay is { IsOpen: true, UseSeparateWindow: false };
+                              || _watchedOverlay is { IsOpen: true, UseSeparateWindow: false, ActiveHost: { Owner: MainView } };
         var opacity = hasModalSurface ? 1.0 : handler.Data.Basic.MainWindowOpacity;
 
         ApplyWindowFeature(WindowFeatures.WindowOpacity, enabled: true, opacity: opacity);
@@ -1047,7 +741,7 @@ public partial class MainWindow : FAAppWindow
     /// <summary>
     ///     主窗口圆角：把配置里的开关转给平台。主窗口没有原生边框，
     ///     平台侧优先用 DWM 的圆角偏好（边缘抗锯齿、平滑）；
-    ///     只有分层窗口（开了不透明度 / 点击穿透）与置底后的桌面子窗口走不通，
+    ///     只有分层窗口（开了不透明度）与置底后的桌面子窗口走不通，
     ///     那时才退回裁窗口区域（见 <c>WindowsWindowFeatureService.TrySetRoundedCorners</c>）。
     ///     <para>
     ///         ⚠️ 区域会一直贴在窗口上，<b>尺寸 / 缩放一变就要重裁</b>：不重裁的话圆角半径还按旧尺寸算，

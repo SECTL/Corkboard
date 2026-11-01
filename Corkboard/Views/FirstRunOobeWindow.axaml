@@ -236,7 +236,7 @@
                         </StackPanel>
                     </Border>
 
-                    <!-- 板子：关掉后主窗口不再出现，托盘与考试看板照用。 -->
+                    <!-- 板子：关掉后作业板不再出现，托盘与考试看板照用。 -->
                     <Border Classes="oobe-card">
                         <StackPanel Spacing="16">
                             <TextBlock Classes="oobe-section" Text="{x:Static core:Resources.Oobe_BoardTitle}" />

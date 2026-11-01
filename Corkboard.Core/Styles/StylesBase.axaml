@@ -50,17 +50,19 @@
         应用字体：在 Window 上设一次，靠 TextElement.FontFamily 的继承覆盖整棵可视树。
         容器类弹窗（FAContentDialog）是独立顶层，不继承窗口字体，必须单独设。
         字体键由应用层 App.axaml 定义，Core 只引用不定义（样式包要能被任意宿主复用）。
+        字号写死 14 是因为「界面字号」那个设置项已经删掉了：不写会让窗口掉回 Avalonia 基线的 12，
+        而 14 正是控件主题自己的默认值，与删之前不调这项时的观感一致。
     -->
     <Style Selector=":is(Window)">
         <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}" />
         <Setter Property="FontWeight" Value="{DynamicResource AppFontWeight}" />
-        <Setter Property="FontSize" Value="{DynamicResource AppFontSize}" />
+        <Setter Property="FontSize" Value="14" />
     </Style>
 
     <Style Selector="fa|FAContentDialog">
         <Setter Property="FontFamily" Value="{DynamicResource AppFontFamily}" />
         <Setter Property="FontWeight" Value="{DynamicResource AppFontWeight}" />
-        <Setter Property="FontSize" Value="{DynamicResource AppFontSize}" />
+        <Setter Property="FontSize" Value="14" />
     </Style>
 
     <Style Selector="TextBlock.h1">
@@ -126,6 +128,27 @@
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="CornerRadius" Value="8" />
         <Setter Property="Padding" Value="16" />
+        <Setter Property="HorizontalAlignment" Value="Center" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <!--
+        解锁态的作业板遮罩：铺满内容区（不含自绘标题栏——那时候标题栏还得能拖、能点那颗锁），
+        压暗底下的板子并吃掉所有指针，于是「挪窗口 / 改大小」的当口改不了作业。
+        与页面弹层用同一族半透明黑，但它不是模态：上面那张卡片只是说明 + 一颗「锁定」按钮。
+    -->
+    <Style Selector="Border.lock-mask">
+        <Setter Property="Background" Value="#80000000" />
+    </Style>
+
+    <!-- 遮罩里那张说明卡：实体底色，压在压暗的板子上才看得清字。 -->
+    <Style Selector="Border.lock-mask-card">
+        <Setter Property="Background" Value="{DynamicResource SolidBackgroundFillColorQuarternaryBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource CardStrokeColorDefaultBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="Padding" Value="24 20" />
+        <Setter Property="MaxWidth" Value="420" />
         <Setter Property="HorizontalAlignment" Value="Center" />
         <Setter Property="VerticalAlignment" Value="Center" />
     </Style>

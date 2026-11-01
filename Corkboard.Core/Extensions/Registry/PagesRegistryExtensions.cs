@@ -18,24 +18,10 @@ public static class PagesRegistryExtensions
         return services.AddPageTo<T>(PagesRegistryService.MainItems, name);
     }
 
-    public static IServiceCollection AddMainPageSeparator(this IServiceCollection services,
-        PageLocation location = PageLocation.Top)
-    {
-        PagesRegistryService.MainItems.Add(new PageInfo(true, location));
-        return services;
-    }
-
     public static IServiceCollection AddSettingsPage<T>(this IServiceCollection services, string name)
         where T : UserControl
     {
         return services.AddPageTo<T>(PagesRegistryService.SettingsItems, name);
-    }
-
-    public static IServiceCollection AddSettingsPageSeparator(this IServiceCollection services,
-        PageLocation location = PageLocation.Top, bool isHide = false)
-    {
-        PagesRegistryService.SettingsItems.Add(new PageInfo(true, location) { IsHide = isHide });
-        return services;
     }
 
     public static IServiceCollection AddGroup(this IServiceCollection services, PageGroupInfo info)

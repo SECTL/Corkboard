@@ -25,8 +25,8 @@
                        Text="{x:Static core:Resources.Settings_Section_Window}" />
 
             <!-- 平台不支持的能力整张卡隐藏，而不是留一个点不动的控件。 -->
-            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Basic_MainWindowOpacity}"
-                                   Description="{x:Static core:Resources.Settings_Basic_MainWindowOpacityDescription}"
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_MainWindowOpacity}"
+                                   Description="{x:Static core:Resources.Settings_Board_MainWindowOpacityDescription}"
                                    IsVisible="{Binding IsWindowOpacitySupported}">
                 <fa:FASettingsExpander.Footer>
                     <StackPanel Orientation="Horizontal" Spacing="8">
@@ -51,8 +51,8 @@
             </fa:FASettingsExpander>
 
             <!-- 平台不支持的能力整张卡隐藏，而不是留一个点不动的开关。 -->
-            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Basic_PinToDesktop}"
-                                   Description="{x:Static core:Resources.Settings_Basic_PinToDesktopDescription}"
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_PinToDesktop}"
+                                   Description="{x:Static core:Resources.Settings_Board_PinToDesktopDescription}"
                                    IsVisible="{Binding IsPinToDesktopSupported}">
                 <fa:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding Basic.PinToDesktop}" />
@@ -60,59 +60,11 @@
             </fa:FASettingsExpander>
 
             <!-- 平台不支持的能力整张卡隐藏，而不是留一个点不动的开关。 -->
-            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Basic_WindowCorners}"
-                                   Description="{x:Static core:Resources.Settings_Basic_WindowCornersDescription}"
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_WindowCorners}"
+                                   Description="{x:Static core:Resources.Settings_Board_WindowCornersDescription}"
                                    IsVisible="{Binding IsWindowCornersSupported}">
                 <fa:FASettingsExpander.Footer>
                     <ToggleSwitch IsChecked="{Binding Basic.MainWindowRoundedCorners}" />
-                </fa:FASettingsExpander.Footer>
-            </fa:FASettingsExpander>
-
-            <!--
-                拖动窗口：三档下拉（长按任意位置 / 只能拖标题栏 / 固定窗口）。
-                原来这里是一颗「长按拖动窗口」开关，第三档「固定」是新加的能力，
-                两个布尔值一起表达三档，落盘的还是老键（见 WindowDragModes）。
-            -->
-            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Basic_WindowDragMode}"
-                                   Description="{x:Static core:Resources.Settings_Basic_WindowDragModeDescription}">
-                <fa:FASettingsExpander.Footer>
-                    <ComboBox MinWidth="200"
-                              ItemsSource="{Binding DragModeOptions}"
-                              SelectedItem="{Binding SelectedDragMode, Mode=TwoWay}">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate x:DataType="vm:WindowDragModeOption">
-                                <TextBlock Text="{Binding DisplayName}" />
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
-                </fa:FASettingsExpander.Footer>
-            </fa:FASettingsExpander>
-
-            <!--
-                锁定按钮做什么：点击穿透（老行为）还是只固定位置。
-                前者整窗不收鼠标，后者窗口里的按钮照常点得动，用户按自己的用法选。
-            -->
-            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Basic_WindowLockMode}"
-                                   Description="{x:Static core:Resources.Settings_Basic_WindowLockModeDescription}">
-                <fa:FASettingsExpander.Footer>
-                    <ComboBox MinWidth="200"
-                              ItemsSource="{Binding LockModeOptions}"
-                              SelectedItem="{Binding SelectedLockMode, Mode=TwoWay}">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate x:DataType="vm:WindowLockModeOption">
-                                <TextBlock Text="{Binding DisplayName}" />
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
-                </fa:FASettingsExpander.Footer>
-            </fa:FASettingsExpander>
-
-            <!-- 平台不支持的能力整张卡隐藏，而不是留一个点不动的开关。 -->
-            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Basic_ClickThrough}"
-                                   Description="{x:Static core:Resources.Settings_Basic_ClickThroughDescription}"
-                                   IsVisible="{Binding IsClickThroughSupported}">
-                <fa:FASettingsExpander.Footer>
-                    <ToggleSwitch IsChecked="{Binding Basic.ClickThrough}" />
                 </fa:FASettingsExpander.Footer>
             </fa:FASettingsExpander>
 

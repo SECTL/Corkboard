@@ -11,31 +11,9 @@ namespace Corkboard.Core.Attributes;
 [AttributeUsage(AttributeTargets.Class)]
 public class PageInfo : Attribute
 {
-    public PageInfo(bool isSeparator, PageLocation location = PageLocation.Top)
-    {
-        if (isSeparator)
-        {
-            IsSeparator = true;
-
-            Id = "separator";
-            IconGlyph = "";
-            Location = location;
-
-            IsHide = false;
-            UseFullWidth = false;
-            HidePageTitle = false;
-        }
-        else
-        {
-            throw new ArgumentException("isSeparator 为 false!!!!!");
-        }
-    }
-
     public PageInfo(string id, string iconGlyph, string? groupId = null, PageLocation location = PageLocation.Top,
         bool isHide = false, bool useFullWidth = false, bool hidePageTitle = false)
     {
-        IsSeparator = false;
-
         Id = id;
         IconGlyph = iconGlyph;
         GroupId = groupId;
@@ -45,8 +23,6 @@ public class PageInfo : Attribute
         UseFullWidth = useFullWidth;
         HidePageTitle = hidePageTitle;
     }
-
-    public bool IsSeparator { get; }
 
     public string Name { get; set; } = string.Empty;
     public string Id { get; }
@@ -63,8 +39,6 @@ public class PageInfo : Attribute
 
     public FANavigationViewItemBase ToNavigationViewItemBase()
     {
-        if (IsSeparator) return new FANavigationViewItemSeparator();
-
         return new FANavigationViewItem
         {
             IconSource = new FluentIconSource(IconGlyph),

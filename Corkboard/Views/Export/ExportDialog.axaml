@@ -67,8 +67,7 @@
                 MinWidth="720"
                 MaxWidth="900"
                 HorizontalAlignment="Center"
-                VerticalAlignment="Center"
-                controls:WindowDragGesture.Suppress="True">
+                VerticalAlignment="Center">
             <DockPanel>
                 <!-- 标题栏整条可拖动：弹层卡片本身不能拖（会误触），这里用 RenderTransform 自己挪。 -->
                 <Grid x:Name="DialogTitleBar"

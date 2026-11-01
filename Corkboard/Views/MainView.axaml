@@ -14,15 +14,87 @@
              NavigationPage.HasNavigationBar="False">
     <ContentPage.Styles>
         <!--
-            标题栏右上角的动作按钮统一高度。
-            Fluent 的 Button 只给最小高度，实际高度是「内容高度 + 内边距」量出来的：
-            只有图标字形的（设置）、只有文字的（布置作业）、图标+文字的（时空回放 / 退出回放）
-            三种内容各自量出来都不一样，不统一就会高矮不齐。
+            标题栏右上角的图标按钮：平时不画底，指上去才浮一层浅色，按下去再深一档。
+            Fluent 的 Button 自带一层底色，六七个并排在一起就像一排贴片，把标题栏切得很碎；
+            去掉底色之后一眼看过去只剩图标，主操作那颗实心强调色才显得突出。
+
+            高度统一成 28：Fluent 的 Button 只给最小高度，实际高度是「内容高度 + 内边距」量出来的，
+            只有图标的与图标+文字的两者量出来不一样，不统一就高矮不齐。
+
+            用类名（titlebar-icon）而不是「StackPanel.titlebar-actions 的子孙」来选：后者会连带
+            选中主操作那颗实心强调色按钮，两条样式同特异性、谁赢取决于来源顺序，hover 时底色会打架。
         -->
-        <Style Selector="StackPanel.titlebar-actions Button">
+        <Style Selector="Button.titlebar-icon">
             <Setter Property="Height" Value="28" />
             <Setter Property="MinWidth" Value="28" />
+            <Setter Property="Padding" Value="6 0" />
             <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="4" />
+        </Style>
+        <!--
+            底色是模板里那个 ContentPresenter 画的：只改 Button.Background 管不到指针态
+            （模板在 :pointerover 里直接给 ContentPresenter 设了底色）。
+        -->
+        <Style Selector="Button.titlebar-icon:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+        </Style>
+        <Style Selector="Button.titlebar-icon:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorTertiaryBrush}" />
+        </Style>
+
+        <!--
+            主操作「布置作业」：整排里唯一的实心强调色，带图标 + 文字，把最常按的那一颗挑出来。
+            不叠 FluentAvalonia 的 accent 类：那套选择器与上面那条同特异性、顺序敏感，
+            这里自己写全套三态，稳定。
+        -->
+        <Style Selector="Button.main-action">
+            <Setter Property="Height" Value="28" />
+            <Setter Property="Padding" Value="10 0" />
+            <Setter Property="Margin" Value="4 0" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="{DynamicResource TextOnAccentFillColorPrimaryBrush}" />
+            <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+        <Style Selector="Button.main-action:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource AccentFillColorSecondaryBrush}" />
+        </Style>
+        <Style Selector="Button.main-action:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+        </Style>
+
+        <!--
+            锁定开关。要让 ToggleSwitch 缩成一颗小开关，得把自带的那段「开 / 关」文字去掉
+            （XAML 里 OnContent / OffContent 都写 null），并把默认的宽下限解开——
+            Fluent 那个 MinWidth 是按带文字排的，留着会在标题栏里空出一大块。
+            ⚠️ 宽度要写 40：默认量出来是 52，右边多出的 12 是给「开 / 关」文字留的位置，
+            内容写 null 之后那块空着，看起来就像开关离窗口右边多缩了一截。
+
+            ⚠️ 高度写 28 是「和旁边那几颗按钮同高」，但它**必须跟下面那颗开关上的
+            ToggleSwitch.Resources 一起改**，单改这一条会更歪：
+            FluentAvalonia 3.0.2 的 ToggleSwitch 模板（Grid RowDefinitions="Auto,*"）里，
+            第 0 行是给页头留的 ContentPresenter、带 `ToggleSwitchTopHeaderMargin` = 0,0,0,4，
+            **Content 为 null 也照占这 4 DIP**；第 1 行是「上 10 / 轨道 20 / 下 10」。
+            所以轨道在控件自身坐标里恒在 y = 4+10 = 14..34（跟 Height 无关，Height 只决定裁掉多少）：
+              · 不写 Height（盒子 32 高）→ 轨道中心 24、盒中心 16，**轨道比按钮低 8 DIP**
+                （用户看到的就是这个），而且轨道底部探出盒子 2 DIP 被 ClipToBounds 切平；
+              · 只写 Height=28 → 盒中心 14、轨道中心 24，偏 10 DIP，切得更狠；
+              · 现在这套（Height=28 + 页头 0 / 上 4 / 下 4）→ 盒 28 高、轨道 4..24、
+                中心 14 = 盒中心，与 28 高的按钮盒完全重合，也不再越界被裁。
+            资源键是库的模板内部键（版本在 Directory.Build.props 钉死）；万一以后库把键改名，
+            表现是「退回 44 的自然布局、开关又偏下去」，不是崩溃。
+        -->
+        <Style Selector="ToggleSwitch.titlebar-switch">
+            <Setter Property="MinWidth" Value="0" />
+            <Setter Property="Width" Value="40" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="Margin" Value="8 0 0 0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
     </ContentPage.Styles>
     <Panel>
@@ -56,23 +128,23 @@
                     </StackPanel>
 
                     <!--
-                        右上角：平时是「设置 + 排序 + 布置作业 + 时空回放」，进入回放后换成控制条。
-                        回放控件也留在标题栏，用户不用在两个地方找入口。
-                        点击穿透开着时整块隐藏：这些按钮一个都点不动，留着只会误导
-                        （那种状态下主窗口完全不收鼠标，设置要从托盘菜单打开）。
+                        右上角只有五样：设置 / 看板模式 / 布置作业（唯一的实心强调色）/ 更多 / 锁定开关。
+                        排序、导出、时空回放、收纳都收进了「更多」菜单——它们是「偶尔点一次」的动作，
+                        平铺在一排里既挤又容易误点。进入回放后中间换成控制条。
+                        整排始终在：解锁态下「布置作业」与「更多」里那几件动板子的事各自收起
+                        （见 MainViewModel 那几个 ShowTitleBar*），设置、看板模式与锁仍然可点。
                     -->
                     <StackPanel Grid.Column="2"
                                 Classes="titlebar-actions"
                                 Orientation="Horizontal"
-                                Spacing="6"
-                                VerticalAlignment="Center"
-                                IsVisible="{Binding !ViewModel.Config.Basic.ClickThrough}">
+                                Spacing="2"
+                                VerticalAlignment="Center">
                         <!--
                             设置入口：主窗口是 WindowDecorations.None，没有系统按钮也没有菜单栏，
                             用户在窗口里能找到的设置入口就是这个齿轮（托盘菜单里也有一个）。
                             标题栏按下即拖，所以按钮必须标 User，否则按下会被判成拖窗口、点不动。
                         -->
-                        <Button VerticalAlignment="Center"
+                        <Button Classes="titlebar-icon"
                                 IsVisible="{Binding ViewModel.ShowTitleBarSettings}"
                                 ToolTip.Tip="{x:Static core:Resources.Menu_OpenSettings}"
                                 WindowDecorationProperties.ElementRole="User"
@@ -82,97 +154,112 @@
                                        VerticalAlignment="Center" />
                         </Button>
 
-                        <Button x:Name="SortButton"
-                                VerticalAlignment="Center"
-                                IsVisible="{Binding ViewModel.ShowTitleBarSort}"
-                                ToolTip.Tip="{Binding ViewModel.SortTip}"
+                        <!--
+                            看板模式：点一下直接铺全屏（与托盘菜单、「更多」里的入口同一个动作）。
+                            面板就这么一块屏，展示时不该为了进全屏再去开设置窗口找按钮。
+                            默认显示，可以在「设置 → 作业板 → 界面入口 → 顶部按钮」里关掉。
+                        -->
+                        <Button Classes="titlebar-icon"
+                                IsVisible="{Binding ViewModel.ShowTitleBarDisplay}"
+                                ToolTip.Tip="{x:Static core:Resources.Menu_OpenDisplayBoard}"
                                 WindowDecorationProperties.ElementRole="User"
-                                Click="SortButton_OnClick">
-                            <TextBlock Text="{x:Static icons:FluentIcons.ArrowSortFilled}"
+                                Click="OpenDisplayModeButton_OnClick">
+                            <TextBlock Text="{x:Static icons:FluentIcons.FullScreenMaximizeFilled}"
                                        FontFamily="{DynamicResource FluentSystemIconsResizeable}"
                                        VerticalAlignment="Center" />
-                            <!--
-                                排序：原来在「设置 → 作业板」的下拉框里，现在放到标题栏这一排。
-                                菜单是单选的，勾的就是当前档；选中即写配置（见 MainViewModel.SetSortMode），
-                                作业板页面订阅了配置变化，会自己按新顺序重建。
-                                按钮只给字形，当前档靠这里的提示与菜单里的勾表示。
-
-                                菜单项不在这个可视树里（画在弹出层），所以既不绑 IsChecked 也不绑 Command：
-                                勾选与点击都在代码隐藏里按配置收口（见 MainView.axaml.cs 的
-                                RefreshSortMenuChecks / SortMenuItem_OnClick），与这一排其它按钮一样走 Click。
-                            -->
-                            <Button.Flyout>
-                                <MenuFlyout Placement="BottomEdgeAlignedRight">
-                                    <MenuItem Header="{x:Static core:Resources.Board_Sort_CreatedDescending}"
-                                              ToggleType="Radio"
-                                              GroupName="BoardSort"
-                                              Tag="{x:Static enums:BoardSortMode.CreatedDescending}"
-                                              Click="SortMenuItem_OnClick" />
-                                    <MenuItem Header="{x:Static core:Resources.Board_Sort_CreatedAscending}"
-                                              ToggleType="Radio"
-                                              GroupName="BoardSort"
-                                              Tag="{x:Static enums:BoardSortMode.CreatedAscending}"
-                                              Click="SortMenuItem_OnClick" />
-                                    <MenuItem Header="{x:Static core:Resources.Board_Sort_UpdatedDescending}"
-                                              ToggleType="Radio"
-                                              GroupName="BoardSort"
-                                              Tag="{x:Static enums:BoardSortMode.UpdatedDescending}"
-                                              Click="SortMenuItem_OnClick" />
-                                    <MenuItem Header="{x:Static core:Resources.Board_Sort_Subject}"
-                                              ToggleType="Radio"
-                                              GroupName="BoardSort"
-                                              Tag="{x:Static enums:BoardSortMode.Subject}"
-                                              Click="SortMenuItem_OnClick" />
-                                    <MenuItem Header="{x:Static core:Resources.Board_Sort_Manual}"
-                                              ToggleType="Radio"
-                                              GroupName="BoardSort"
-                                              Tag="{x:Static enums:BoardSortMode.Manual}"
-                                              Click="SortMenuItem_OnClick" />
-                                </MenuFlyout>
-                            </Button.Flyout>
                         </Button>
 
-                        <!-- 要的是图标不是文字：与右下角那颗浮标同款加号，含义交给 ToolTip。 -->
-                        <Button VerticalAlignment="Center"
-                                ToolTip.Tip="{x:Static core:Resources.Board_AddNote}"
+                        <!--
+                            主操作：整排里唯一的实心强调色。图标 + 文字，与右下角那颗浮标同一个入口，
+                            点下去开布置作业表单。
+                        -->
+                        <Button Classes="main-action"
                                 IsVisible="{Binding ViewModel.ShowTitleBarAssign}"
+                                ToolTip.Tip="{x:Static core:Resources.Board_AddNote}"
                                 WindowDecorationProperties.ElementRole="User"
                                 Click="AddAssignmentButton_OnClick">
-                            <TextBlock Text="{x:Static icons:FluentIcons.AddFilled}"
-                                       FontFamily="{DynamicResource FluentSystemIconsResizeable}"
-                                       VerticalAlignment="Center" />
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBlock Text="{x:Static icons:FluentIcons.AddFilled}"
+                                           FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                           FontSize="14"
+                                           VerticalAlignment="Center" />
+                                <TextBlock Text="{x:Static core:Resources.Board_AddNote}"
+                                           VerticalAlignment="Center" />
+                            </StackPanel>
                         </Button>
 
                         <!--
-                            导出：先弹格式对话框，图片直接保存、表格直接写成 xlsx。
-                            按钮从作业板页面右上角搬到了标题栏（用户要求「保存按钮放到顶部去」），
-                            真正的导出仍由页面自己做（它才知道板子内容容器在哪）。
-                        -->
-                        <Button VerticalAlignment="Center"
-                                IsVisible="{Binding ViewModel.ShowTitleBarExport}"
-                                ToolTip.Tip="{x:Static core:Resources.Export_DialogTitle}"
-                                WindowDecorationProperties.ElementRole="User"
-                                Click="ExportImageButton_OnClick">
-                            <TextBlock Text="{x:Static icons:FluentIcons.SaveFilled}"
-                                       FontFamily="{DynamicResource FluentSystemIconsResizeable}"
-                                       VerticalAlignment="Center" />
-                        </Button>
+                            更多：排序 / 导出 / 时空回放 / 收纳四件事都收进这个菜单。
+                            它们都是「偶尔点一次」的动作，平铺在标题栏里既挤又容易误点，
+                            收进菜单之后标题栏只剩设置、布置作业、更多与锁定四样。
+                            四个开关全关掉时整颗按钮也不显示（ShowTitleBarMore）。
 
-                        <!--
-                            回放入口：要点两次才真的进去（第一次按钮变成高亮「已就绪」，同时提示语换成
-                            「再点一次进入回放」，超时自动退回，见 BoardReplayService.Enter）。
-                            一条作业都没有时整颗按钮不显示（CanEnterReplay）。
-                            与这一排其它按钮一样只给图标，所以「已就绪」靠 accent 高亮 + ToolTip 表示。
+                            菜单项不在这个可视树里（画在弹出层），所以既不绑 IsVisible 也不绑 IsChecked、
+                            不绑 Command：显隐与勾选都在弹出那一刻由代码按配置写，
+                            点击一律走 Click（见 MainView.axaml.cs 的 RefreshMoreMenu / SortMenuItem_OnClick）。
                         -->
-                        <Button VerticalAlignment="Center"
-                                Classes.accent="{Binding Replay.IsArmed}"
-                                IsVisible="{Binding ViewModel.ShowTitleBarReplay}"
-                                ToolTip.Tip="{Binding Replay.EnterButtonText}"
+                        <Button x:Name="MoreButton"
+                                Classes="titlebar-icon"
+                                IsVisible="{Binding ViewModel.ShowTitleBarMore}"
+                                ToolTip.Tip="{x:Static core:Resources.MainView_More}"
                                 WindowDecorationProperties.ElementRole="User"
-                                Click="ReplayEnterButton_OnClick">
-                            <TextBlock Text="{x:Static icons:FluentIcons.HistoryFilled}"
+                                Click="MoreButton_OnClick">
+                            <!-- 三点：Assets/FluentSystemIcons-Resizable.json 里的
+                                 ic_fluent_more_horizontal_20_filled（U+EBAB）。图标常量在 Core，那边不让动，
+                                 所以这里直接写码位（与下面日历字形同一个做法）。 -->
+                            <TextBlock Text="&#xEBAB;"
                                        FontFamily="{DynamicResource FluentSystemIconsResizeable}"
                                        VerticalAlignment="Center" />
+                            <Button.Flyout>
+                                <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                    <!-- 排序是子菜单：单选，勾的就是当前档。 -->
+                                    <MenuItem Classes="more-sort" Header="{x:Static core:Resources.Board_Sort_Title}">
+                                        <MenuItem Header="{x:Static core:Resources.Board_Sort_CreatedDescending}"
+                                                  ToggleType="Radio"
+                                                  GroupName="BoardSort"
+                                                  Tag="{x:Static enums:BoardSortMode.CreatedDescending}"
+                                                  Click="SortMenuItem_OnClick" />
+                                        <MenuItem Header="{x:Static core:Resources.Board_Sort_CreatedAscending}"
+                                                  ToggleType="Radio"
+                                                  GroupName="BoardSort"
+                                                  Tag="{x:Static enums:BoardSortMode.CreatedAscending}"
+                                                  Click="SortMenuItem_OnClick" />
+                                        <MenuItem Header="{x:Static core:Resources.Board_Sort_UpdatedDescending}"
+                                                  ToggleType="Radio"
+                                                  GroupName="BoardSort"
+                                                  Tag="{x:Static enums:BoardSortMode.UpdatedDescending}"
+                                                  Click="SortMenuItem_OnClick" />
+                                        <MenuItem Header="{x:Static core:Resources.Board_Sort_Subject}"
+                                                  ToggleType="Radio"
+                                                  GroupName="BoardSort"
+                                                  Tag="{x:Static enums:BoardSortMode.Subject}"
+                                                  Click="SortMenuItem_OnClick" />
+                                        <MenuItem Header="{x:Static core:Resources.Board_Sort_Manual}"
+                                                  ToggleType="Radio"
+                                                  GroupName="BoardSort"
+                                                  Tag="{x:Static enums:BoardSortMode.Manual}"
+                                                  Click="SortMenuItem_OnClick" />
+                                    </MenuItem>
+                                    <!--
+                                        导出：先弹格式对话框，图片直接保存、表格直接写成 xlsx。
+                                        真正的导出仍由页面自己做（它才知道板子内容容器在哪）。
+                                    -->
+                                    <MenuItem Classes="more-export"
+                                              Header="{x:Static core:Resources.Export_DialogTitle}"
+                                              Click="ExportImageButton_OnClick" />
+                                    <!--
+                                        回放入口：第一次点只是「就绪」，再点一次才真的进去，超时自动退回
+                                        （见 BoardReplayService.Enter）。一条作业都没有时这一项不显示。
+                                    -->
+                                    <MenuItem Classes="more-replay"
+                                              Header="{x:Static core:Resources.Board_Replay}"
+                                              Click="ReplayEnterButton_OnClick" />
+                                    <!-- 收纳：把作业板收起来，屏幕上只留一颗展开按钮。 -->
+                                    <MenuItem Classes="more-dock"
+                                              Header="{x:Static core:Resources.Board_Dock_Collapse}"
+                                              Click="DockButton_OnClick" />
+                                </MenuFlyout>
+                            </Button.Flyout>
                         </Button>
 
                         <!--
@@ -194,6 +281,7 @@
                             -->
                             <Panel VerticalAlignment="Center">
                                 <Button x:Name="ReplayCalendarButton"
+                                        Classes="titlebar-icon"
                                         MinWidth="170"
                                         VerticalAlignment="Center"
                                         ToolTip.Tip="{x:Static core:Resources.Board_ReplayCalendarTip}"
@@ -221,7 +309,7 @@
                                 </Popup>
                             </Panel>
 
-                            <Button VerticalAlignment="Center"
+                            <Button Classes="titlebar-icon"
                                     ToolTip.Tip="{x:Static core:Resources.Board_ReplayRestoreTip}"
                                     WindowDecorationProperties.ElementRole="User"
                                     Click="ReplayRestoreButton_OnClick">
@@ -234,8 +322,7 @@
                                 </StackPanel>
                             </Button>
 
-                            <Button VerticalAlignment="Center"
-                                    Classes="accent"
+                            <Button Classes="main-action"
                                     ToolTip.Tip="{x:Static core:Resources.Board_ReplayExit}"
                                     WindowDecorationProperties.ElementRole="User"
                                     Click="ReplayExitButton_OnClick">
@@ -250,39 +337,32 @@
                         </StackPanel>
 
                         <!--
-                            收纳：把主窗口收起来，屏幕上只留一颗展开按钮（位置 / 大小在
-                            「设置 → 作业板 → 收纳」里调）。
-                            它必须放在最右那颗「锁窗口」的左边：锁定后这一排整体隐藏，由独立的
-                            ClickThroughLockWindow 在标题栏最右上角接着显示「开锁」，
-                            那颗锁必须仍然是最右一个，两态位置才对得上、不会跳。
-                            开关关掉时整颗不显示（DockEnabled）。
+                            锁定：拨上去 = 窗口位置与大小都钉住、板子照常查看与编辑；
+                            拨下来 = 解锁（调整窗口）态，能拖标题栏、能拉四边，但内容区会盖一层遮罩，
+                            遮罩期间不能编辑作业。
+                            提示文案跟着状态走（MainViewModel.LockWindowTip）：锁着时说解锁、没锁时说锁定。
+                            ⚠️ ToggleSwitch 不是 Button 的子类，光标 ElementRole 还不够——
+                            它必须同时列进 MainView.IsInteractiveSource，否则标题栏会把按下当成拖窗口。
                         -->
-                        <Button VerticalAlignment="Center"
-                                IsVisible="{Binding ViewModel.ShowTitleBarDock}"
-                                ToolTip.Tip="{x:Static core:Resources.Board_Dock_Collapse}"
-                                WindowDecorationProperties.ElementRole="User"
-                                Click="DockButton_OnClick">
-                            <TextBlock Text="{x:Static icons:FluentIcons.ArrowMinimizeFilled}"
-                                       FontFamily="{DynamicResource FluentSystemIconsResizeable}"
-                                       VerticalAlignment="Center" />
-                        </Button>
-
-                        <!--
-                            锁定窗口：按「设置 → 作业板 → 窗口与收纳 → 锁定按钮做什么」决定点下去
-                            是开点击穿透还是只固定位置。它是这一排的最右一个，因为锁定后整排会隐藏、
-                            由独立的 ClickThroughLockWindow 在同一位置接着显示「开锁」图标，
-                            两态位置对齐才不会跳。
-                            字形与提示跟着状态走（MainViewModel.LockWindowIcon / LockWindowTip）：
-                            「固定位置」那一档锁上之后图标变闭锁、再点一次就解开，所以要能变。
-                        -->
-                        <Button VerticalAlignment="Center"
-                                ToolTip.Tip="{Binding ViewModel.LockWindowTip}"
-                                WindowDecorationProperties.ElementRole="User"
-                                Click="LockWindowButton_OnClick">
-                            <TextBlock Text="{Binding ViewModel.LockWindowIcon}"
-                                       FontFamily="{DynamicResource FluentSystemIconsResizeable}"
-                                       VerticalAlignment="Center" />
-                        </Button>
+                        <ToggleSwitch Classes="titlebar-switch"
+                                      OnContent="{x:Null}"
+                                      OffContent="{x:Null}"
+                                      IsChecked="{Binding ViewModel.IsWindowLocked, Mode=TwoWay}"
+                                      ToolTip.Tip="{Binding ViewModel.LockWindowTip}"
+                                      WindowDecorationProperties.ElementRole="User">
+                            <!--
+                                把模板里的「页头 4 / 上 10 / 下 10」换成「0 / 4 / 4」，轨道就是
+                                28 高盒子正中的 20（4..24），与旁边那几颗 28 高的按钮垂直对齐
+                                （几何与依据见上面 ToggleSwitch.titlebar-switch 那段注释）。
+                                写在**这一颗开关自己**的 Resources 里，不要提到页面级——
+                                那样 MainView 子树里其它 ToggleSwitch 的内边距会一起被改掉。
+                            -->
+                            <ToggleSwitch.Resources>
+                                <Thickness x:Key="ToggleSwitchTopHeaderMargin">0</Thickness>
+                                <GridLength x:Key="ToggleSwitchPreContentMargin">4</GridLength>
+                                <GridLength x:Key="ToggleSwitchPostContentMargin">4</GridLength>
+                            </ToggleSwitch.Resources>
+                        </ToggleSwitch>
                     </StackPanel>
                 </Grid>
             </Border>
@@ -308,15 +388,55 @@
                             x:Name="NavigationFrame"
                             IsNavigationStackEnabled="False"
                             CacheSize="0" />
+
+                <!--
+                    解锁态（调整窗口态）的遮罩：只盖内容区，页面标题那一行也算在内——
+                    拿掉指针就等于不能编辑作业、也不能布置作业。自绘标题栏不在这个 Grid 里，
+                    所以解锁时照样能拖标题栏挪窗口、照样能点那颗锁把窗口锁回去。
+                    它不是模态弹层：上面那张卡只是说明 + 一颗「锁定」按钮，压在页面弹层遮罩之下。
+                -->
+                <Border Grid.Row="0"
+                        Grid.RowSpan="2"
+                        Classes="lock-mask"
+                        IsVisible="{Binding ViewModel.IsWindowAdjusting}">
+                    <Border Classes="lock-mask-card">
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="{x:Static icons:FluentIcons.LockOpenFilled}"
+                                       FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                       FontSize="26"
+                                       HorizontalAlignment="Center"
+                                       Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+                            <TextBlock Text="{x:Static core:Resources.Board_UnlockMaskTitle}"
+                                       FontSize="17"
+                                       FontWeight="SemiBold"
+                                       HorizontalAlignment="Center" />
+                            <TextBlock Text="{x:Static core:Resources.Board_UnlockMaskDescription}"
+                                       HorizontalAlignment="Center"
+                                       TextAlignment="Center"
+                                       TextWrapping="Wrap" />
+                            <TextBlock Text="{x:Static core:Resources.Board_UnlockMaskHint}"
+                                       Margin="0 2 0 4"
+                                       FontSize="12"
+                                       Opacity="0.7"
+                                       HorizontalAlignment="Center"
+                                       TextAlignment="Center"
+                                       TextWrapping="Wrap" />
+                            <Button Classes="accent"
+                                    Content="{x:Static core:Resources.Board_UnlockMaskLock}"
+                                    HorizontalAlignment="Center"
+                                    Click="LockMaskButton_OnClick" />
+                        </StackPanel>
+                    </Border>
+                </Border>
             </Grid>
         </Grid>
 
         <!--
-            主窗口右下角的「布置作业」快捷按钮（开关在设置 → 基础设置）。
+            主窗口右下角的「布置作业」快捷按钮（开关在设置 → 作业板 → 常规）。
             它浮在页面内容之上、按窗口角定位，不跟着页面滚动；放在弹层遮罩之前，
             弹层打开时会被遮罩盖住，不会浮在表单上面。
-            开着点击穿透时整窗都不收鼠标，这颗按钮照样点不动，所以那种状态下一起隐藏
-            （与标题栏那一排同一个理由，见 MainViewModel.ShowCornerAssignButton）。
+            解锁态（遮罩盖着内容区、不能编辑作业）里也一起隐藏：与标题栏那颗「布置作业」
+            同一个理由，见 MainViewModel.ShowCornerAssignButton。
             回放期间也不显示：那时看的是历史快照，不接受新建。
         -->
         <Panel HorizontalAlignment="Right"
@@ -341,9 +461,11 @@
         <!--
             页面级弹层宿主。挂在壳的根 Panel 上而不是页面里，遮罩才能盖住上面的自绘标题栏。
             内容由 PageOverlayService 提供，页面只管 Show/Close。
+            ⚠️ 绑的是 OverlayHost（壳自己那份）而不是 Overlay：宿主可以有多个，
+            全屏展示窗口层级更高时由它来画，壳这边要干干净净。
         -->
-        <Border Classes="scrim" IsVisible="{Binding Overlay.IsOpen}">
-            <ContentControl Content="{Binding Overlay.Content}"
+        <Border Classes="scrim" IsVisible="{Binding OverlayHost.IsOpen}">
+            <ContentControl Content="{Binding OverlayHost.Content}"
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center" />
         </Border>

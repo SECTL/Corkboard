@@ -1,7 +1,6 @@
 using System.Collections.ObjectModel;
 using Avalonia;
 using Avalonia.Media;
-using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Corkboard.Core.Board;
@@ -9,6 +8,7 @@ using Corkboard.Core.Controls;
 using Corkboard.Core.Models.SubConfigs.Board;
 using Corkboard.Core.RichText;
 using Corkboard.Core.Services.Config;
+using Corkboard.Helpers;
 using Corkboard.ViewModels.SettingsPages.RichText;
 
 namespace Corkboard.ViewModels.SettingsPages.Board;
@@ -76,7 +76,7 @@ public partial class BoardContentSettingsPageViewModel : ViewModelBase
     private static readonly TimeSpan ColorCommitDelay = TimeSpan.FromMilliseconds(400);
 
     private Color? _defaultColorDraft;
-    private DispatcherTimer? _defaultColorCommitTimer;
+    private readonly DebounceTimer _defaultColorCommit = new(ColorCommitDelay);
 
     /// <summary>
     ///     默认颜色的取色器草稿。理由同字号：每帧都写配置会把 <c>settings.json</c> 写爆。
@@ -94,7 +94,6 @@ public partial class BoardContentSettingsPageViewModel : ViewModelBase
             ScheduleColorCommit(value);
         }
     }
-
     /// <summary>默认颜色是否跟随主题（配置里为空就是跟随），对应设置卡上的开关。</summary>
     public bool FollowThemeColor
     {
@@ -140,25 +139,15 @@ public partial class BoardContentSettingsPageViewModel : ViewModelBase
 
     private void ScheduleColorCommit(Color value)
     {
-        _defaultColorCommitTimer?.Stop();
-
-        _defaultColorCommitTimer = new DispatcherTimer { Interval = ColorCommitDelay };
-        _defaultColorCommitTimer.Tick += (_, _) =>
+        _defaultColorCommit.Schedule(() =>
         {
-            CancelColorCommit();
-
             // 已经切回「跟随主题」了：别再把手里的颜色写回配置。
             if (!FollowThemeColor)
                 Board.DefaultContentColor = value;
-        };
-        _defaultColorCommitTimer.Start();
+        });
     }
 
-    private void CancelColorCommit()
-    {
-        _defaultColorCommitTimer?.Stop();
-        _defaultColorCommitTimer = null;
-    }
+    private void CancelColorCommit() => _defaultColorCommit.Cancel();
 
     /// <summary>把还压在草稿里的颜色立刻写进配置，并停掉待触发的防抖计时。</summary>
     public void FlushColorDraft()
@@ -329,27 +318,25 @@ public partial class BoardContentSettingsPageViewModel : ViewModelBase
     ///     取色器拖一次光谱会发上百次变更，攒一下再落盘。按色块下标分别计时，
     ///     这样连改多个色块时不会互相把对方的计时顶掉。
     /// </summary>
-    private readonly Dictionary<int, DispatcherTimer> _paletteCommitTimers = [];
+    private readonly Dictionary<int, DebounceTimer> _paletteCommitTimers = [];
 
     /// <summary>色块颜色变更的入口：防抖之后把行对象的值写回配置。</summary>
     private void SchedulePaletteColorCommit(int index, Color color)
     {
-        if (_paletteCommitTimers.Remove(index, out var pending))
-            pending.Stop();
-
-        var timer = new DispatcherTimer { Interval = ColorCommitDelay };
-        timer.Tick += (_, _) =>
+        if (!_paletteCommitTimers.TryGetValue(index, out var pending))
         {
-            timer.Stop();
+            pending = new DebounceTimer(ColorCommitDelay);
+            _paletteCommitTimers[index] = pending;
+        }
+
+        pending.Schedule(() =>
+        {
             _paletteCommitTimers.Remove(index);
 
             // 期间可能已经删过色块，下标要先确认还在范围内。
             if (index < PaletteColors.Count)
                 PersistPalette();
-        };
-
-        _paletteCommitTimers[index] = timer;
-        timer.Start();
+        });
     }
 
     /// <summary>把还压在防抖里的色板改动立刻落盘（离开页面 / 保存时调）。</summary>
@@ -359,7 +346,7 @@ public partial class BoardContentSettingsPageViewModel : ViewModelBase
             return;
 
         foreach (var timer in _paletteCommitTimers.Values)
-            timer.Stop();
+            timer.Cancel();
 
         _paletteCommitTimers.Clear();
         PersistPalette();

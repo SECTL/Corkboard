@@ -10,7 +10,7 @@ using Corkboard.ViewModels.SettingsPages.Board;
 namespace Corkboard.Views.SettingsPages.Board;
 
 /// <summary>
-///     「窗口与收纳」设置页：主窗口不透明度 / 置底 / 圆角 / 长按拖动 / 点击穿透，以及收纳浮钮的
+///     「窗口与收纳」设置页：主窗口不透明度 / 置底 / 圆角，以及收纳浮钮的
 ///     开关、位置（九宫格示意图）、左右 / 上下偏移与按钮大小。
 ///     <para>
 ///         窗口那几项是从「基础设置」整块搬过来的（基础设置里不再放作业板专属项），
@@ -27,18 +27,13 @@ public partial class BoardWindowSettingsPage : UserControl
 
         // 收纳的子 VM 是 transient、配置是单例：订阅必须在离开可视树时断开，
         // 否则每开一次这个页面就往配置上多挂一个处理器。
-        Loaded += (_, _) =>
-        {
-            ViewModel?.Attach();
-            ViewModel?.Dock.Attach();
-        };
+        Loaded += (_, _) => ViewModel?.Dock.Attach();
         Unloaded += (_, _) =>
         {
             // 拖完滑杆马上关页面时最后一次拖动不能丢。
             ViewModel?.FlushOpacityDraft();
             ViewModel?.Dock.CommitAll();
             ViewModel?.Dock.Detach();
-            ViewModel?.Detach();
         };
     }
 

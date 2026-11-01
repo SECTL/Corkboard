@@ -1,22 +1,24 @@
-using Avalonia;
 using Avalonia.Media;
-using Avalonia.Threading;
 using Corkboard.Core;
 using Corkboard.Core.Enums.Configs;
 using Corkboard.Core.Models.SubConfigs.Personalized;
 using Corkboard.Core.Services.Config;
 using Corkboard.Core.Services.Fonts;
+using Corkboard.Helpers;
 using CR = Corkboard.Core.Langs.Common.Resources;
 
 namespace Corkboard.ViewModels.SettingsPages;
 
 /// <summary>
-///     外观设置页的 ViewModel：主题模式、主题色、字体族、字体粗细与界面字号。
+///     外观设置页的 ViewModel：主题模式、主题色、字体族、字体粗细与动效开关。
 ///     <para>
 ///         全都是「选了立刻改」，写进配置后由 <c>App.RefreshAppearanceSettings</c> 重新应用：
-///         主题模式与主题色落到 <c>FluentAvaloniaTheme</c>，字体族、字重与界面字号落到
-///         <c>AppFontFamily</c> / <c>ContentControlThemeFontFamily</c> / <c>AppFontWeight</c> /
-///         <c>AppFontSize</c> 几个资源上。
+///         主题模式与主题色落到 <c>FluentAvaloniaTheme</c>，字体族与字重落到
+///         <c>AppFontFamily</c> / <c>ContentControlThemeFontFamily</c> / <c>AppFontWeight</c> 几个资源上。
+///     </para>
+///     <para>
+///         这里**不再有「界面字号」**：那一项调不动多少东西（只有窗口与对话框的默认字号跟着走，
+///         页面里绝大多数文字都有自己的字号），用户要求删掉，字号统一在「作业板」那边按用途配。
 ///     </para>
 /// </summary>
 public partial class AppearanceSettingsPageViewModel(MainConfigHandler configHandler) : ViewModelBase(configHandler)
@@ -73,7 +75,7 @@ public partial class AppearanceSettingsPageViewModel(MainConfigHandler configHan
     private static readonly TimeSpan ThemeColorCommitDelay = TimeSpan.FromMilliseconds(400);
 
     private Color? _themeColorDraft;
-    private DispatcherTimer? _themeColorCommitTimer;
+    private readonly DebounceTimer _themeColorCommit = new(ThemeColorCommitDelay);
 
     /// <summary>
     ///     取色器的草稿值。
@@ -94,22 +96,8 @@ public partial class AppearanceSettingsPageViewModel(MainConfigHandler configHan
 
             _themeColorDraft = value;
             OnPropertyChanged();
-            ScheduleThemeColorCommit(value);
+            _themeColorCommit.Schedule(() => Appearance.ThemeColor = value);
         }
-    }
-
-    private void ScheduleThemeColorCommit(Color value)
-    {
-        _themeColorCommitTimer?.Stop();
-
-        _themeColorCommitTimer = new DispatcherTimer { Interval = ThemeColorCommitDelay };
-        _themeColorCommitTimer.Tick += (_, _) =>
-        {
-            _themeColorCommitTimer?.Stop();
-            _themeColorCommitTimer = null;
-            Appearance.ThemeColor = value;
-        };
-        _themeColorCommitTimer.Start();
     }
 
     /// <summary>
@@ -119,105 +107,15 @@ public partial class AppearanceSettingsPageViewModel(MainConfigHandler configHan
     /// </summary>
     public void FlushThemeColorDraft()
     {
-        _themeColorCommitTimer?.Stop();
-        _themeColorCommitTimer = null;
+        _themeColorCommit.Cancel();
 
         if (_themeColorDraft is { } draft && Appearance.ThemeColor != draft)
             Appearance.ThemeColor = draft;
     }
 
     // ---------------------------------------------------------------------------------------
-    // 界面字号
+    // 字体族与字重
     // ---------------------------------------------------------------------------------------
-
-    /// <summary>字号滑杆停手多久才把值写进配置。拖动时每帧都在变，写盘要攒一攒。</summary>
-    private static readonly TimeSpan UiFontSizeCommitDelay = TimeSpan.FromMilliseconds(400);
-
-    private double? _uiFontSizeDraft;
-    private DispatcherTimer? _uiFontSizeCommitTimer;
-
-    /// <summary>滑杆下限（跟配置的夹取范围一致，不要在页面里另写一套常量）。</summary>
-    public double UiFontSizeMinimum => AppearanceSettingsConfig.MinUiFontSize;
-
-    /// <summary>滑杆上限。</summary>
-    public double UiFontSizeMaximum => AppearanceSettingsConfig.MaxUiFontSize;
-
-    /// <summary>
-    ///     界面字号的草稿值。
-    ///     <para>
-    ///         <b>不直接双向绑配置</b>：<c>Slider</c> 拖一下会连发几十次 <c>Value</c> 变化，
-    ///         而 <c>ConfigHandlerBase</c> 每次属性变化都会落一次盘（没有防抖）。所以先进草稿，
-    ///         停手 <see cref="UiFontSizeCommitDelay" /> 之后再落到配置上；配置一变
-    ///         <c>App.RefreshAppearanceSettings</c> 就把 <c>AppFontSize</c> 重新写进应用资源，
-    ///         窗口、对话框与控件主题的字号当场跟着变。
-    ///     </para>
-    /// </summary>
-    public double UiFontSizeDraft
-    {
-        get => _uiFontSizeDraft ?? AppearanceSettingsConfig.ClampUiFontSize(Appearance.UiFontSize);
-        set
-        {
-            var clamped = AppearanceSettingsConfig.ClampUiFontSize(value);
-            if (_uiFontSizeDraft is { } current && Math.Abs(current - clamped) < 0.001)
-                return;
-
-            _uiFontSizeDraft = clamped;
-            OnPropertyChanged();
-            OnPropertyChanged(nameof(UiFontSizeText));
-
-            // 拖回配置里已有的值时把待提交的计时掐掉，否则松手几百毫秒后又写一次旧值。
-            if (Math.Abs(clamped - AppearanceSettingsConfig.ClampUiFontSize(Appearance.UiFontSize)) < 0.001)
-            {
-                CancelUiFontSizeCommit();
-                return;
-            }
-
-            ScheduleUiFontSizeCommit();
-        }
-    }
-
-    /// <summary>滑杆右边显示的当前字号。</summary>
-    public string UiFontSizeText => UiFontSizeDraft.ToString("0");
-
-    private void ScheduleUiFontSizeCommit()
-    {
-        _uiFontSizeCommitTimer?.Stop();
-
-        _uiFontSizeCommitTimer = new DispatcherTimer { Interval = UiFontSizeCommitDelay };
-        _uiFontSizeCommitTimer.Tick += (_, _) => CommitUiFontSize();
-        _uiFontSizeCommitTimer.Start();
-    }
-
-    private void CancelUiFontSizeCommit()
-    {
-        _uiFontSizeCommitTimer?.Stop();
-        _uiFontSizeCommitTimer = null;
-    }
-
-    /// <summary>把草稿写进配置并立刻应用一次（实时预览就靠这一句）。</summary>
-    private void CommitUiFontSize()
-    {
-        CancelUiFontSizeCommit();
-
-        var size = AppearanceSettingsConfig.ClampUiFontSize(UiFontSizeDraft);
-        if (Math.Abs(Appearance.UiFontSize - size) >= 0.001)
-            Appearance.UiFontSize = size;
-
-        // 配置变化本身会由页面的订阅触发 RefreshAppearanceSettings；这里再主动刷一次，
-        // 保证「拖动中、页面订阅还没挂上」时也能实时预览。写资源是幂等的，重复调用没有副作用。
-        if (Application.Current is App app)
-            app.RefreshAppearanceSettings();
-    }
-
-    /// <summary>
-    ///     把还压在防抖里的字号立刻写进配置，并停掉待触发的计时。
-    ///     页面离开可视树时调用（见 <c>AppearanceSettingsPage</c> 的 <c>Unloaded</c>），
-    ///     免得「拖完马上关页面」把最后一次选择丢掉。
-    /// </summary>
-    public void FlushUiFontSizeDraft()
-    {
-        CommitUiFontSize();
-    }
 
     /// <summary>
     ///     字体下拉项：第一项是随包分发的默认字体，后面按名称排序列出系统字体。

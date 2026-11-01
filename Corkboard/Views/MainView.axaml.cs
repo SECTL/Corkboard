@@ -16,7 +16,6 @@ using Corkboard.Core.Board;
 using Corkboard.Core.Enums.Configs;
 using Corkboard.Core.Helpers;
 using Corkboard.Core.Services;
-using Corkboard.Helpers;
 using Corkboard.Services.Board;
 using Corkboard.Services.Ui;
 using Corkboard.ViewModels;
@@ -33,9 +32,9 @@ namespace Corkboard.Views;
 ///         （<c>TaskBarIconService</c>），设置界面是独立窗口（<see cref="App.ShowSettingsWindow" />）。
 ///     </para>
 ///     <para>
-///         窗口拖动有两条路径：顶部标题栏按下即拖；其余位置按 <c>BasicSettingsConfig.HoldToDragWindow</c>
-///         长按判定后拖动。<b>开关打开时是整窗任意位置</b>——命中按钮、输入框、列表也一样——
-///         见 <see cref="OnPointerPressedForDrag" />。
+///         窗口拖动只有一条路径：<b>解锁态下按住顶部标题栏</b>（<c>BasicSettingsConfig.WindowFixed</c>
+///         为假时）。锁着的时候窗口位置与大小都钉住，板面按住也不会拖窗口——作业板上按住是要拖卡片、
+///         写字的，抢那一下手势只会让人误操作。
 ///     </para>
 ///     <para>
 ///         窗口缩放也归这里管：主窗口是 <c>WindowDecorations.None</c>，没有原生可缩放边框
@@ -45,12 +44,6 @@ namespace Corkboard.Views;
 /// </summary>
 public partial class MainView : ContentPage, IFANavigationPageFactory
 {
-    /// <summary>长按判定时间：按住不动多久算长按。</summary>
-    private const double HoldToDragMilliseconds = 500;
-
-    /// <summary>长按判定期间允许的指针抖动（DIP）：超过就认为用户在拖内容，不再抢拖动。</summary>
-    private const double HoldToDragMoveTolerance = 4;
-
     /// <summary>
     ///     贴边多少 DIP 以内算「抓到了边缘」，按下即进入缩放。
     ///     <para>
@@ -80,7 +73,7 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
 
     private readonly FAFrame? _navigationFrame;
     private readonly Border? _titleBar;
-    private readonly Button? _sortButton;
+    private readonly Button? _moreButton;
 
     /// <summary>回放时刻的月历浮层宿主：内容在 XAML 里（<see cref="ReplayCalendarView" />）。</summary>
     private readonly Popup? _replayCalendarPopup;
@@ -92,9 +85,6 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
     private DateTime _replayCalendarClosedAt;
 
     private InputElement? _dragHost;
-    private DispatcherTimer? _holdToDragTimer;
-    private PointerPressedEventArgs? _holdToDragPressedEvent;
-    private Point _holdToDragOrigin;
     private bool _isDraggingWindow;
     private IPointer? _dragPointer;
     private PixelPoint _dragStartWindowPosition;
@@ -110,8 +100,17 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
     /// <summary>Debug 构建的版本水印是否已经挂上（见 <see cref="OnLoadedForDevelopmentAdorner" />）。</summary>
     private bool _isDevelopmentAdornerAdded;
 
-    /// <summary>页面级弹层的宿主状态，绑定在壳的根 Panel 上。</summary>
+    /// <summary>页面级弹层服务（单例）。</summary>
     public PageOverlayService Overlay { get; } = IAppHost.GetService<PageOverlayService>();
+
+    /// <summary>
+    ///     壳这一层的弹层状态，绑定在根 <c>Panel</c> 的遮罩上。
+    ///     <para>
+    ///         绑自己的那一份而不是服务上那两个属性：宿主可以有多个（全屏展示窗口层级更高），
+    ///         同一时刻只有一个该显示遮罩。
+    ///     </para>
+    /// </summary>
+    public PageOverlayHost OverlayHost { get; }
 
     /// <summary>
     ///     收纳服务（单例）：「收纳」按钮把主窗口交给它藏起来、换一颗浮在屏幕上的小按钮。
@@ -126,32 +125,24 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
     public BoardReplayService Replay { get; } = IAppHost.GetService<BoardReplayService>();
 
     /// <summary>
-    ///     当前拖动档位（设置页那张「拖动窗口」下拉框里的三档之一）。
-    ///     <para>
-    ///         配置里落盘的是两个老布尔值，三档的折算只有 <see cref="WindowDragModes" /> 一份，
-    ///         这里直接读它，不要在视图里再拼一遍「固定优先还是长按优先」。
-    ///     </para>
-    /// </summary>
-    private WindowDragMode CurrentDragMode => WindowDragModes.Normalize(
-        WindowDragModes.FromConfig(
-            ViewModel.Config.Basic.HoldToDragWindow,
-            ViewModel.Config.Basic.WindowFixed));
-
-    /// <summary>
-    ///     窗口是否被「固定」：位置与大小都锁住，拖动与四边缩放一起失效。
+    ///     窗口是否被「固定」（标题栏那颗锁处于锁定态）：位置与大小都锁住，拖动与四边缩放一起失效。
     ///     拖动、缩放、光标三处判定都从这里取，不要在别处另读配置。
     /// </summary>
-    private bool IsWindowFixed => !WindowDragModes.AllowsDrag(CurrentDragMode);
+    private bool IsWindowFixed => ViewModel.Config.Basic.WindowFixed;
 
     public MainView()
     {
         Current = this;
         DataContext = this;
+
+        // 必须在 InitializeComponent 之前建好：XAML 里的绑定要读到它。
+        OverlayHost = Overlay.CreateHost(this, PageOverlayService.ShellHostPriority);
+
         InitializeComponent();
 
         _navigationFrame = this.FindControl<FAFrame>("NavigationFrame");
         _titleBar = this.FindControl<Border>("TitleBar");
-        _sortButton = this.FindControl<Button>("SortButton");
+        _moreButton = this.FindControl<Button>("MoreButton");
         _replayCalendarPopup = this.FindControl<Popup>("ReplayCalendarPopup");
 
         if (_replayCalendarPopup is { } calendarPopup)
@@ -185,8 +176,8 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
 
         Unloaded += (_, _) =>
         {
-            CancelHoldToDrag();
             Overlay.PropertyChanged -= OnOverlayChanged;
+            Overlay.ReleaseHost(OverlayHost);
             Replay.PropertyChanged -= OnReplayChanged;
 
             if (_replayCalendar is not null)
@@ -217,7 +208,7 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
     ///     拖动手势挂在<b>窗口</b>上而不是这个壳上：主窗口顶部那条标题栏带宽是
     ///     <c>FAAppWindow</c> 自己的标题栏层（在内容之上、不属于本壳的可视子树），
     ///     只挂在 <see cref="MainView" /> 上时按在那里的事件根本到不了这里，
-    ///     于是窗口最上面一条就成了长按拖不动的死区。
+    ///     于是窗口最上面一条就成了拖不动的死区。
     /// </summary>
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
@@ -228,7 +219,7 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
 
     /// <summary>
     ///     兜底：个别时序下 <see cref="OnAttachedToVisualTree" /> 还取不到窗口，首次布局后再解析一次；
-    ///     仍取不到就退回挂在本壳上，至少内容区还能长按拖动。
+    ///     仍取不到就退回挂在本壳上，至少标题栏还能拖动。
     /// </summary>
     private void OnLoadedForDragHost(object? sender, RoutedEventArgs e)
     {
@@ -240,7 +231,7 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
     {
         base.OnDetachedFromVisualTree(e);
 
-        CancelHoldToDrag();
+        EndWindowDrag();
         EndWindowResize();
         SetDragHost(null);
     }
@@ -298,7 +289,7 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
 
         var page = IAppHost.Host!.Services.GetKeyedService<UserControl>(info.Id);
         if (page == null)
-            return new TextBlock { Text = $"页面 {info.Id} 未找到" };
+            return new TextBlock { Text = string.Format(CR.Common_PageNotFound, info.Id) };
 
         return page;
     }
@@ -315,7 +306,7 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
         ViewModel.FrameContent = null;
         ViewModel.SelectedPageInfo = info;
         if (_navigationFrame is not null)
-            UiMotion.NavigateFromObject(_navigationFrame, info);
+            _navigationFrame.NavigateFromObject(info);
     }
 
     /// <summary>
@@ -336,12 +327,6 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
     }
 
     /// <summary>
-    ///     整窗拖动入口。顶部标题栏按下即拖（窗口自身还有一个原生标题栏路径兜底）；
-    ///     其余位置在开关打开时长按判定：<b>整窗任意位置</b>——包括按钮、输入框、列表——
-    ///     按住不动到时间后都开始拖动，期间移动超过阈值就放弃，这样短按点击、输入、滚动
-    ///     仍然归控件，只有「按住不动」才被判成长按拖动。
-    /// </summary>
-    /// <summary>
     ///     窗口级边缘兜底：指针在窗口四边 8 DIP 以内按下时优先开始缩放。
     ///     <para>
     ///         用「相对窗口」的坐标判定，而不是相对 MainView：作业板置底成桌面子窗口后，
@@ -355,7 +340,7 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
             return;
 
         // 固定窗口时四边也没有缩放热区：不然光标照旧变成双向箭头、按下去却没反应。
-        if (!WindowDragModes.AllowsResize(CurrentDragMode))
+        if (IsWindowFixed)
             return;
 
         if (e.Pointer.Type == PointerType.Mouse && !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
@@ -372,6 +357,13 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
             e.Handled = true;
     }
 
+    /// <summary>
+    ///     整窗手势入口：先看边缘缩放，再看标题栏拖动，两样都不中就让给内容。
+    ///     <para>
+    ///         <b>只有标题栏能拖窗口</b>，而且只在解锁态。板面上按住既不拖窗口也不抢手势——
+    ///         作业板上的按住是「拖卡片 / 拖区块排序 / 往编辑器里点」，长按拖动那套与它们处处打架。
+    ///     </para>
+    /// </summary>
     private void OnPointerPressedForDrag(object? sender, PointerPressedEventArgs e)
     {
         // 上一次拖动如果没收到 PointerReleased / PointerCaptureLost（指针在窗口外抬起、
@@ -396,42 +388,18 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
             return;
         }
 
-        if (IsInTitleBar(e.Source))
-        {
-            // 标题栏按下即拖；命中标题栏里的交互控件时让出（导航栏去掉后主界面标题栏暂时没有控件，
-            // 但以后加按钮就靠这张排除表，见 IsInteractiveSource）。
-            // 拖动开始后同样标 Handled：否则库的原生标题栏拖动可能再接管一次。
-            if (!IsInteractiveSource(e.Source) && !IsWindowFixed)
-            {
-                StartWindowDrag(e);
-                if (_isDraggingWindow)
-                    e.Handled = true;
-            }
-
-            return;
-        }
-
-        // 不再按命中控件过滤：整窗任意位置都能长按拖动，控件自己的手势靠
-        // 「长按判定期间移动超过阈值即放弃」让出（见 OnPointerMovedForDrag）。
-        //
-        // 但弹层开着时必须让出：模态期间拖窗口没意义，而且长按会把弹层里输入框的点击抢走，
-        // 用户会觉得「输入框点不动、打不了字」。
-        if (Overlay.IsOpen)
+        if (!IsInTitleBar(e.Source) || IsWindowFixed)
             return;
 
-        // 标了「这块地方的手势归我」的子树也要让出：作业板科目区块的标题行是
-        // 「按住就拖起来排序」，不让出就会变成拖窗口与换区块同时发生（见 WindowDragGesture）。
-        if (WindowDragGesture.IsSuppressed(e.Source))
+        // 标题栏按下即拖；命中标题栏里的交互控件时让出（导航栏去掉后主界面标题栏暂时没有控件，
+        // 但以后加按钮就靠这张排除表，见 IsInteractiveSource）。
+        // 拖动开始后同样标 Handled：否则库的原生标题栏拖动可能再接管一次。
+        if (IsInteractiveSource(e.Source))
             return;
 
-        if (!WindowDragModes.AllowsHoldAnywhere(CurrentDragMode))
-            return;
-
-        _holdToDragPressedEvent = e;
-        _holdToDragOrigin = e.GetPosition(this);
-        _holdToDragTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(HoldToDragMilliseconds) };
-        _holdToDragTimer.Tick += OnHoldToDragTimerTick;
-        _holdToDragTimer.Start();
+        StartWindowDrag(e);
+        if (_isDraggingWindow)
+            e.Handled = true;
     }
 
     /// <summary>
@@ -443,15 +411,6 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
     {
         if (_navigationFrame?.Content is MainPages.Board.BoardPage page)
             await page.ExportAsync();
-    }
-
-    private void OnHoldToDragTimerTick(object? sender, EventArgs e)
-    {
-        var pressedEvent = _holdToDragPressedEvent;
-        CancelHoldToDrag();
-
-        if (pressedEvent is not null)
-            StartWindowDrag(pressedEvent);
     }
 
     private void OnPointerMovedForDrag(object? sender, PointerEventArgs e)
@@ -483,16 +442,7 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
             return;
         }
 
-        if (_holdToDragTimer is null)
-        {
-            UpdateResizeCursor(e);
-            return;
-        }
-
-        var position = e.GetPosition(this);
-        if (Math.Abs(position.X - _holdToDragOrigin.X) > HoldToDragMoveTolerance
-            || Math.Abs(position.Y - _holdToDragOrigin.Y) > HoldToDragMoveTolerance)
-            CancelHoldToDrag();
+        UpdateResizeCursor(e);
     }
 
     private void OnPointerReleasedForDrag(object? sender, PointerReleasedEventArgs e)
@@ -507,18 +457,6 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
         EndWindowResize();
     }
 
-    private void CancelHoldToDrag()
-    {
-        if (_holdToDragTimer is not null)
-        {
-            _holdToDragTimer.Stop();
-            _holdToDragTimer.Tick -= OnHoldToDragTimerTick;
-            _holdToDragTimer = null;
-        }
-
-        _holdToDragPressedEvent = null;
-    }
-
     /// <summary>
     ///     拖动开始：接管指针并记下窗口与指针的起点。刻意不用 <c>Window.BeginMoveDrag</c>：
     ///     窗口置底到桌面后是桌面宿主的子窗口，原生标题拖动对它不生效（实测不动），
@@ -529,7 +467,6 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
         if (TopLevel.GetTopLevel(this) is not Window window)
             return;
 
-        CancelHoldToDrag();
         _isDraggingWindow = true;
         _dragPointer = e.Pointer;
         _dragStartWindowPosition = window.Position;
@@ -561,7 +498,6 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
         _dragPointer?.Capture(null);
         _dragPointer = null;
         _isDraggingWindow = false;
-        CancelHoldToDrag();
     }
 
     /// <summary>
@@ -615,7 +551,6 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
         if (sides == ResizeSides.None)
             return false;
 
-        CancelHoldToDrag();
         _isResizingWindow = true;
         _resizeSides = sides;
         _resizePointer = e.Pointer;
@@ -782,13 +717,21 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
     private void OpenSettingsButton_OnClick(object? sender, RoutedEventArgs e) => App.ShowSettingsWindow();
 
     /// <summary>
-    ///     「排序」：按钮本身只负责弹菜单，弹出前把当前档勾上。
+    ///     「看板模式」：点一下直接铺全屏，与托盘菜单里那一项、<c>corkboard://display</c> 是同一个入口。
     ///     <para>
-    ///         勾选不走 MVVM：菜单项画在弹出层里、不在这个可视树上，所以在<b>弹出这一刻</b>
-    ///         按配置写一遍（<see cref="RefreshSortMenuChecks" />），而不是绑 MenuItem.IsChecked。
+    ///         全屏已经开着时 <see cref="App.ShowDisplayBoardWindow" /> 自己会把那扇窗提到前面，不用在这儿判。
     ///     </para>
     /// </summary>
-    private void SortButton_OnClick(object? sender, RoutedEventArgs e) => RefreshSortMenuChecks();
+    private void OpenDisplayModeButton_OnClick(object? sender, RoutedEventArgs e) => App.ShowDisplayBoardWindow();
+
+    /// <summary>
+    ///     「更多」：按钮本身只负责弹菜单，弹出前把菜单项调成此刻该有的样子。
+    ///     <para>
+    ///         显隐与勾选都不走 MVVM：菜单项画在弹出层里、不在这个可视树上，所以在<b>弹出这一刻</b>
+    ///         按配置写一遍（<see cref="RefreshMoreMenu" />），而不是绑 MenuItem.IsVisible / IsChecked。
+    ///     </para>
+    /// </summary>
+    private void MoreButton_OnClick(object? sender, RoutedEventArgs e) => RefreshMoreMenu();
 
     /// <summary>
     ///     排序菜单里的一项被点了：写进配置，再按配置把勾重新点一遍。
@@ -804,18 +747,46 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
             return;
 
         ViewModel.SetSortModeCommand.Execute(mode);
-        RefreshSortMenuChecks();
+        RefreshMoreMenu();
     }
 
-    /// <summary>按配置给菜单里的五项写勾选状态（配置里是越界值时就一个都不勾）。</summary>
-    private void RefreshSortMenuChecks()
+    /// <summary>「更多」菜单里四项的类名。认类名不认下标：菜单以后增删项不用回来改数字。</summary>
+    private const string MoreSortClass = "more-sort";
+
+    private const string MoreExportClass = "more-export";
+    private const string MoreReplayClass = "more-replay";
+    private const string MoreDockClass = "more-dock";
+
+    /// <summary>
+    ///     按当前配置把「更多」菜单调成该有的样子：四项各自显隐、排序子菜单的标题写着当前档、
+    ///     子菜单里勾上当前那一项（配置里是越界值时就一个都不勾）。
+    /// </summary>
+    private void RefreshMoreMenu()
     {
-        if (_sortButton?.Flyout is not MenuFlyout flyout)
+        if (_moreButton?.Flyout is not MenuFlyout flyout)
             return;
 
         var current = ViewModel.SelectedSortOption.Mode;
+
         foreach (var item in flyout.Items.OfType<MenuItem>())
-            item.IsChecked = item.Tag is BoardSortMode mode && mode == current;
+        {
+            if (item.Classes.Contains(MoreSortClass))
+            {
+                item.IsVisible = ViewModel.ShowTitleBarSort;
+
+                // 标题带上当前档（「排序方式：按科目」）：不用点开子菜单就知道现在按什么排。
+                item.Header = ViewModel.SortTip;
+
+                foreach (var option in item.Items.OfType<MenuItem>())
+                    option.IsChecked = option.Tag is BoardSortMode mode && mode == current;
+            }
+            else if (item.Classes.Contains(MoreExportClass))
+                item.IsVisible = ViewModel.ShowTitleBarExport;
+            else if (item.Classes.Contains(MoreReplayClass))
+                item.IsVisible = ViewModel.ShowTitleBarReplay;
+            else if (item.Classes.Contains(MoreDockClass))
+                item.IsVisible = ViewModel.ShowTitleBarDock;
+        }
     }
 
     /// <summary>
@@ -828,7 +799,7 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
     }
 
     /// <summary>
-    ///     打开布置作业表单。供 MainWindow 从锁定徽标的布置作业按钮调用（点击穿透状态下）。
+    ///     打开布置作业表单。标题栏那颗「布置作业」与右下角浮标都走它。
     /// </summary>
     public void OpenAddAssignmentForm()
     {
@@ -838,6 +809,13 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
 
         Overlay.Show(new HomeworkAssignmentForm());
     }
+
+    /// <summary>
+    ///     解锁态遮罩上那颗「锁定窗口」：把窗口锁回去（<c>WindowFixed</c> 置真）。
+    ///     锁上之后遮罩自己消失，板子重新可编辑——它是解锁态里唯一的收尾动作，
+    ///     所以必须画在遮罩上，不能让人先去找标题栏那颗锁。
+    /// </summary>
+    private void LockMaskButton_OnClick(object? sender, RoutedEventArgs e) => ViewModel.IsWindowLocked = true;
 
     private void ReplayEnterButton_OnClick(object? sender, RoutedEventArgs e) => Replay.Enter();
 
@@ -923,25 +901,6 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
     private void DockButton_OnClick(object? sender, RoutedEventArgs e) =>
         Dock.Collapse(TopLevel.GetTopLevel(this) as Window);
 
-    /// <summary>
-    ///     「锁定窗口」：按 <c>BasicSettingsConfig.WindowLockMode</c> 决定点下去做什么——
-    ///     点击穿透（老行为）还是固定窗口（位置锁死但内容照常点得动）。
-    ///     只写配置：窗口样式与显隐都由 <c>MainWindow</c> 订阅配置变化后处理，
-    ///     视图不直接碰平台能力，也不需要知道徽标窗口的存在。
-    ///     <para>
-    ///         「固定窗口」这一档是<b>可来回切</b>的：固定之后标题栏照样点得动（固定只是不收拖动），
-    ///         再点一次这颗锁就解开。点击穿透那一档不行——穿透之后整窗收不到鼠标，
-    ///         解锁只能靠独立的锁定徽标（见 <c>ClickThroughLockWindow</c>）。
-    ///     </para>
-    /// </summary>
-    private void LockWindowButton_OnClick(object? sender, RoutedEventArgs e)
-    {
-        if (ViewModel.Config.Basic.WindowLockMode == WindowLockMode.FixedPosition)
-            ViewModel.Config.Basic.WindowFixed = !ViewModel.Config.Basic.WindowFixed;
-        else
-            ViewModel.Config.Basic.ClickThrough = true;
-    }
-
     #endregion
 
     private bool IsInTitleBar(object? source)
@@ -959,11 +918,14 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
     }
 
     /// <summary>
-    ///     命中标题栏里的交互控件时不要启动窗口拖动，否则按钮收不到点击。
+    ///     命中标题栏里的交互控件时不要启动窗口拖动，否则控件收不到点击。
     ///     <para>
-    ///         标题栏现在有「设置 / 排序 / 布置作业 / 时空回放 / 锁窗口」五类入口（按钮、下拉），
+    ///         标题栏现在有「设置 / 布置作业 / 更多」三颗按钮和「锁定」那颗开关，
     ///         所以这张排除表是真在用的：漏掉任何一类控件，那个控件就会变成「点不动」。
-    ///         排序菜单的菜单项画在弹出层里、不在标题栏上，不走这里。
+    ///     </para>
+    ///     <para>
+    ///         ⚠️ <see cref="ToggleSwitch" /> 不是 <see cref="Button" /> 的子类，必须单独列出来，
+    ///         否则解锁态下按住锁定开关会被判成拖窗口。菜单项画在弹出层里、不在标题栏上，不走这里。
     ///     </para>
     /// </summary>
     private bool IsInteractiveSource(object? source)
@@ -973,7 +935,7 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
 
         for (Visual? current = visual; current is not null; current = current.GetVisualParent())
         {
-            if (current is Button or ToggleButton or TextBox or ComboBox or Slider)
+            if (current is Button or ToggleButton or ToggleSwitch or TextBox or ComboBox or Slider)
                 return true;
 
             if (ReferenceEquals(current, _titleBar))

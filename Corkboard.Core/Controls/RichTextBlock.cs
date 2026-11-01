@@ -102,7 +102,7 @@ public class RichTextBlock : RichEditor
 
     public RichTextBlock()
     {
-        // 默认是查看器：卡片上不接收指针、也没有右键菜单（卡片整块要留给壳的整窗长按拖动）。
+        // 默认是查看器：卡片上不接收指针、也没有右键菜单（卡片整块要留给页面自己的点击）。
         IsReadOnly = true;
         ShowFormattingMenu = false;
 

@@ -2,12 +2,12 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using Avalonia;
 using Avalonia.Media;
-using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Corkboard.Core.Handwriting;
 using Corkboard.Core.Models.SubConfigs.Board;
 using Corkboard.Core.Services.Config;
+using Corkboard.Helpers;
 using Corkboard.ViewModels.SettingsPages.RichText;
 
 namespace Corkboard.ViewModels.SettingsPages.Board;
@@ -36,11 +36,11 @@ public partial class HandwritingSettingsPageViewModel : ViewModelBase
     private readonly MainConfigHandler _configHandler;
 
     private Color? _penColorDraft;
-    private DispatcherTimer? _penColorCommitTimer;
+    private readonly DebounceTimer _penColorCommit = new(ColorCommitDelay);
 
     private decimal? _penWidthDraft;
     private decimal? _eraserWidthDraft;
-    private DispatcherTimer? _widthCommitTimer;
+    private readonly DebounceTimer _widthCommit = new(WidthCommitDelay);
 
     /// <summary>正在把夹过 / 规范化过的值写回草稿：这时别再排防抖计时，否则会白提交一轮。</summary>
     private bool _syncingWidthDrafts;
@@ -49,7 +49,7 @@ public partial class HandwritingSettingsPageViewModel : ViewModelBase
     ///     取色器拖一次光谱会发上百次变更，攒一下再落盘。按色块下标分别计时，
     ///     这样连改多个色块时不会互相把对方的计时顶掉。
     /// </summary>
-    private readonly Dictionary<int, DispatcherTimer> _paletteCommitTimers = [];
+    private readonly Dictionary<int, DebounceTimer> _paletteCommitTimers = [];
 
     public HandwritingSettingsPageViewModel(MainConfigHandler configHandler) : base(configHandler)
     {
@@ -134,17 +134,10 @@ public partial class HandwritingSettingsPageViewModel : ViewModelBase
     private void ScheduleWidthCommit()
     {
         CancelWidthCommit();
-
-        _widthCommitTimer = new DispatcherTimer { Interval = WidthCommitDelay };
-        _widthCommitTimer.Tick += (_, _) => CommitWidths();
-        _widthCommitTimer.Start();
+        _widthCommit.Schedule(CommitWidths);
     }
 
-    private void CancelWidthCommit()
-    {
-        _widthCommitTimer?.Stop();
-        _widthCommitTimer = null;
-    }
+    private void CancelWidthCommit() => _widthCommit.Cancel();
 
     #endregion
 
@@ -213,25 +206,15 @@ public partial class HandwritingSettingsPageViewModel : ViewModelBase
 
     private void ScheduleColorCommit(Color value)
     {
-        _penColorCommitTimer?.Stop();
-
-        _penColorCommitTimer = new DispatcherTimer { Interval = ColorCommitDelay };
-        _penColorCommitTimer.Tick += (_, _) =>
+        _penColorCommit.Schedule(() =>
         {
-            CancelColorCommit();
-
             // 已经切回「跟随主题」了：别再把手里的颜色写回配置。
             if (!FollowThemeColor)
                 Settings.HandwritingPenColor = value;
-        };
-        _penColorCommitTimer.Start();
+        });
     }
 
-    private void CancelColorCommit()
-    {
-        _penColorCommitTimer?.Stop();
-        _penColorCommitTimer = null;
-    }
+    private void CancelColorCommit() => _penColorCommit.Cancel();
 
     /// <summary>把还压在草稿里的颜色立刻写进配置，并停掉待触发的防抖计时。</summary>
     public void FlushColorDraft()
@@ -323,22 +306,20 @@ public partial class HandwritingSettingsPageViewModel : ViewModelBase
     /// <summary>色块颜色变更的入口：防抖之后把界面上的色板整体写回配置。</summary>
     private void SchedulePaletteColorCommit(int index, Color color)
     {
-        if (_paletteCommitTimers.Remove(index, out var pending))
-            pending.Stop();
-
-        var timer = new DispatcherTimer { Interval = ColorCommitDelay };
-        timer.Tick += (_, _) =>
+        if (!_paletteCommitTimers.TryGetValue(index, out var pending))
         {
-            timer.Stop();
+            pending = new DebounceTimer(ColorCommitDelay);
+            _paletteCommitTimers[index] = pending;
+        }
+
+        pending.Schedule(() =>
+        {
             _paletteCommitTimers.Remove(index);
 
             // 期间可能已经删过色块，下标要先确认还在范围内。
             if (index < PaletteColors.Count)
                 PersistPalette();
-        };
-
-        _paletteCommitTimers[index] = timer;
-        timer.Start();
+        });
     }
 
     /// <summary>把还压在防抖里的色板改动立刻落盘（离开页面 / 保存时调）。</summary>
@@ -348,7 +329,7 @@ public partial class HandwritingSettingsPageViewModel : ViewModelBase
             return;
 
         foreach (var timer in _paletteCommitTimers.Values)
-            timer.Stop();
+            timer.Cancel();
 
         _paletteCommitTimers.Clear();
         PersistPalette();

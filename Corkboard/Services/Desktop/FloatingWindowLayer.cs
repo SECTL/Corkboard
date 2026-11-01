@@ -7,9 +7,9 @@ using Corkboard.Platforms.Abstractions;
 namespace Corkboard.Services.Desktop;
 
 /// <summary>
-///     主窗口之外那几颗浮钮（收纳展开按钮、锁定徽标、右下角布置作业浮标）的层级归属。
+///     主窗口之外的浮钮（收纳展开按钮、右下角布置作业浮标）的层级归属。
 ///     <para>
-///         它们各自是一扇独立的无边框小窗口，其中两颗 XAML 里默认 <c>Topmost="True"</c>——压在一切窗口之上，
+///         它们各自是一扇独立的无边框小窗口，XAML 里默认 <c>Topmost="True"</c>——压在一切窗口之上，
 ///         这样主窗口被别的东西盖住时仍然点得到。但主窗口开了「置底到桌面」之后，板子已经沉到桌面层了，
 ///         这几颗按钮再浮在所有窗口之上就很突兀（用户反馈：
 ///         「开了置底时，收纳和锁定后的按钮是置顶的，这个按钮也要改成置底」）。
@@ -105,7 +105,7 @@ public static class FloatingWindowLayer
 
     /// <summary>
     ///     请求平台把这颗浮钮挂进 / 拿出桌面层。窗口还没创建出原生句柄时静默跳过——
-    ///     调用方本来就会在显示之后再同步一次（见 <c>MainWindow.SyncLockBadge</c>）。
+    ///     调用方本来就会在显示之后再同步一次（见 <c>BoardDockService.Collapse</c>）。
     /// </summary>
     private static void ApplyDesktopBottom(Window window, bool enabled)
     {

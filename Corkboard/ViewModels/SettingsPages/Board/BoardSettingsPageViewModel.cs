@@ -1,10 +1,10 @@
-using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Corkboard.Core.Board;
 using Corkboard.Core.Controls;
 using Corkboard.Core.Enums;
 using Corkboard.Core.Models.SubConfigs.Board;
 using Corkboard.Core.Services.Config;
+using Corkboard.Helpers;
 using CR = Corkboard.Core.Langs.Common.Resources;
 
 namespace Corkboard.ViewModels.SettingsPages.Board;
@@ -59,7 +59,7 @@ public partial class BoardSettingsPageViewModel : ViewModelBase
     /// </summary>
     private static readonly TimeSpan TextCommitDelay = TimeSpan.FromMilliseconds(400);
 
-    private DispatcherTimer? _boardNameCommitTimer;
+    private readonly DebounceTimer _boardNameCommit = new(TextCommitDelay);
 
     /// <summary>
     ///     提交区块最小宽度。手输越界值时夹回合法区间，并把夹过的值同步回界面，
@@ -110,7 +110,7 @@ public partial class BoardSettingsPageViewModel : ViewModelBase
         CommitBlockMinWidth();
 
         // 草稿上面都提交过了，压在防抖里的计时就别再触发一次（重复提交会白写一遍盘）。
-        CancelTextCommits();
+        _boardNameCommit.Cancel();
     }
 
     /// <summary>把名称草稿写回配置。配置自己会落盘。</summary>
@@ -131,32 +131,6 @@ public partial class BoardSettingsPageViewModel : ViewModelBase
         if (value.Trim() == Board.BoardName)
             return;
 
-        _boardNameCommitTimer = ScheduleTextCommit(_boardNameCommitTimer, CommitBoardName);
-    }
-
-    /// <summary>
-    ///     排一次「停手后提交」：先把上一次的计时顶掉，再起一个新的。
-    ///     新计时器由调用点存回字段——lambda 里不能捕获 <c>ref</c> 参数，所以这里不用引用传递。
-    /// </summary>
-    private DispatcherTimer ScheduleTextCommit(DispatcherTimer? pending, Action commit)
-    {
-        pending?.Stop();
-
-        var timer = new DispatcherTimer { Interval = TextCommitDelay };
-        timer.Tick += (_, _) =>
-        {
-            timer.Stop();
-            commit();
-        };
-        timer.Start();
-
-        return timer;
-    }
-
-    /// <summary>停掉还压在防抖里的名称提交（<see cref="SaveAll" /> 已经把草稿提交过了）。</summary>
-    private void CancelTextCommits()
-    {
-        _boardNameCommitTimer?.Stop();
-        _boardNameCommitTimer = null;
+        _boardNameCommit.Schedule(CommitBoardName);
     }
 }

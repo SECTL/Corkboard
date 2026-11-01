@@ -36,7 +36,7 @@ public partial class SettingsView : ContentPage, IFANavigationPageFactory
 
     /// <summary>
     ///     平台窗口能力：标题栏右侧要让出多少给窗口自己的系统按钮。
-    ///     控件构造期取一次（见 docs/project_rules.md 的静态服务定位规矩）。
+    ///     控件构造期取一次（平台服务由 DI 单例提供，控件不参与注入）。
     /// </summary>
     private readonly IWindowFeatureService? _windowFeatures;
 
@@ -172,7 +172,9 @@ public partial class SettingsView : ContentPage, IFANavigationPageFactory
         if (target is not PageInfo info) return null;
 
         var page = IAppHost.Host!.Services.GetKeyedService<UserControl>(info.Id);
-        return page is not null ? page : new TextBlock { Text = $"页面 {info.Id} 未找到" };
+        return page is not null
+            ? page
+            : new TextBlock { Text = string.Format(CR.Common_PageNotFound, info.Id) };
     }
 
     public void SelectNavigationItemById(string id)
@@ -252,7 +254,7 @@ public partial class SettingsView : ContentPage, IFANavigationPageFactory
         if (item is not null)
         {
             // 分组折叠时子项没有容器，选择动画会无限重投递（窗口卡死），先展开祖先后再走一次布局。
-            // 设置项当前是平铺的（没有 groupId），这条只是分组回来时的保险。
+            // 「作业板」「考试看板」两个分组平时是收起的，点进来必然走这条。
             if (ViewModel.NavigationViewItems.ExpandGroupsContaining(item))
                 _navigationView?.UpdateLayout();
 

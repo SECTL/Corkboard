@@ -294,8 +294,7 @@ public partial class BoardDockService : ObservableObject, IDisposable
     }
 
     /// <summary>
-    ///     藏主窗口。主窗口自己的 <c>HideForDock</c> 会顺带收掉锁定徽标（那是它的属主窗口，
-    ///     主窗口藏起来后徽标不该单独留在屏幕上）。
+    ///     藏主窗口。走主窗口自己的 <c>HideForDock</c>：它会顺带把托盘那一项改成「显示作业板」。
     /// </summary>
     private static void HideMainWindow(Window window)
     {
@@ -306,8 +305,8 @@ public partial class BoardDockService : ObservableObject, IDisposable
     }
 
     /// <summary>
-    ///     显示主窗口。主窗口自己的 <c>ShowFromDock</c> 会在 Show 之后重放置底/穿透/不透明度——
-    ///     隐藏与最小化都会让平台摘掉 <c>WS_EX_LAYERED</c> / <c>WS_EX_TRANSPARENT</c> / 置底的 <c>WS_CHILD</c>。
+    ///     显示主窗口。主窗口自己的 <c>ShowFromDock</c> 会在 Show 之后重放置底/不透明度——
+    ///     隐藏与最小化都会让平台摘掉 <c>WS_EX_LAYERED</c> 与置底的 <c>WS_CHILD</c>。
     /// </summary>
     private static void ShowMainWindow(Window window)
     {

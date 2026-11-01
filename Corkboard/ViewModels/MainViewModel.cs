@@ -5,7 +5,6 @@ using CommunityToolkit.Mvvm.Input;
 using Corkboard.Core.Attributes;
 using Corkboard.Core.Board;
 using Corkboard.Core.Enums.Configs;
-using Corkboard.Core.Icons;
 using Corkboard.Core.Models.SubConfigs.General;
 using Corkboard.Core.Models.SubConfigs.Board;
 using Corkboard.ViewModels.MainPages.Board;
@@ -63,56 +62,80 @@ public partial class MainViewModel : ViewModelBase
         string.Format(CultureInfo.CurrentCulture, CR.Board_Sort_Tip, SelectedSortOption.DisplayName);
 
     /// <summary>
-    ///     主窗口右下角那颗「布置作业」浮标画不画：设置里打开之外，点击穿透锁住窗口时也一并隐藏
-    ///     （那时整窗收不到鼠标，浮标只是颗点不动的装饰）。
-    ///     开了「锁定时也能添加作业」时，改由独立的浮动窗口承载（CornerAssignFloatingWindow），
-    ///     主窗口里这颗还是藏起来，避免两态重叠。
+    ///     主窗口右下角那颗「布置作业」浮标画不画：设置里打开之外，窗口处于<b>解锁态</b>时也一并隐藏
+    ///     ——那时内容区盖着遮罩、不能编辑作业，浮标只是一颗跟当前态打架的装饰。
     /// </summary>
-    public bool ShowCornerAssignButton => Config.Basic.ShowCornerAssignButton && !Config.Basic.ClickThrough;
+    public bool ShowCornerAssignButton => Config.Basic.ShowCornerAssignButton && Config.Basic.WindowFixed;
 
     /// <summary>
-    ///     标题栏右上角那几颗动作按钮画不画（「设置 → 作业板 → 顶部按钮」）。
+    ///     窗口是不是处在「解锁（调整窗口）」态：解锁时内容区盖一层遮罩，
+    ///     因为这时候能拖标题栏挪窗口、拉四边改大小，板子上的点按十有八九是误触。
+    /// </summary>
+    public bool IsWindowAdjusting => !Config.Basic.WindowFixed;
+
+    /// <summary>
+    ///     标题栏右上角那几样控件画不画（「设置 → 作业板 → 顶部按钮」）。
     ///     配置开关只决定「允不允许显示」，各自还要叠上原有条件：
     ///     布置作业在回放期间不显示、回放入口没作业时不显示、收纳自己还有开关。
     ///     <para>
-    ///         「锁定窗口」那颗不在这一组里——它是穿透状态下唯一的解锁入口，必须常驻。
+    ///         整组还要叠一层「窗口是锁着的」：解锁态是调窗口的时候，布置作业 / 排序 / 时空回放
+    ///         三件事动的都是板子本身，那时内容区盖着遮罩、做这些事没意义，索性一起收起来；
+    ///         设置、导出、收纳与锁本身留着（它们不碰板子内容）。
     ///     </para>
     /// </summary>
     public bool ShowTitleBarSettings => Config.BoardSettings.ShowTitleBarSettings;
 
+    /// <summary>
+    ///     看板模式入口：点一下直接铺全屏（<see cref="App.ShowDisplayBoardWindow" />）。
+    ///     只读动作、不碰板子内容，所以不叠「窗口锁着」那一层（与设置 / 导出 / 收纳同档）。
+    /// </summary>
+    public bool ShowTitleBarDisplay => Config.BoardSettings.ShowTitleBarDisplay;
+
     /// <summary>排序菜单那顆。</summary>
-    public bool ShowTitleBarSort => Config.BoardSettings.ShowTitleBarSort;
+    public bool ShowTitleBarSort => Config.BoardSettings.ShowTitleBarSort && Config.Basic.WindowFixed;
 
     /// <summary>布置作业。</summary>
-    public bool ShowTitleBarAssign => Config.BoardSettings.ShowTitleBarAssign && !_replay.IsActive;
+    public bool ShowTitleBarAssign =>
+        Config.BoardSettings.ShowTitleBarAssign && !_replay.IsActive && Config.Basic.WindowFixed;
 
     /// <summary>导出图片。</summary>
     public bool ShowTitleBarExport => Config.BoardSettings.ShowTitleBarExport;
 
     /// <summary>时空回放入口。</summary>
-    public bool ShowTitleBarReplay => Config.BoardSettings.ShowTitleBarReplay && _replay.CanEnterReplay;
+    public bool ShowTitleBarReplay =>
+        Config.BoardSettings.ShowTitleBarReplay && _replay.CanEnterReplay && Config.Basic.WindowFixed;
 
     /// <summary>收纳（两个开关都开着才显示）。</summary>
     public bool ShowTitleBarDock => Config.BoardSettings.ShowTitleBarDock && Config.BoardSettings.DockEnabled;
 
     /// <summary>
-    ///     标题栏那颗锁画哪个字形。锁定行为是「固定窗口」时它会真的锁上、也还能再点开，
-    ///     所以图标得跟着变（闭锁 = 现在锁着、点它解开）；点击穿透那一档永远是「开锁」，
-    ///     因为穿透之后这颗按钮自己就点不动了，解锁靠独立徽标。
+    ///     标题栏那颗「更多」画不画：排序 / 导出 / 时空回放 / 收纳四件事全收在它的菜单里，
+    ///     四个都关掉就没什么可点的了，整颗一起收掉（免得弹出一个空菜单）。
     /// </summary>
-    public string LockWindowIcon =>
-        Config.Basic.WindowLockMode == WindowLockMode.FixedPosition && Config.Basic.WindowFixed
-            ? FluentIcons.LockClosedFilled
-            : FluentIcons.LockOpenFilled;
+    public bool ShowTitleBarMore =>
+        ShowTitleBarSort || ShowTitleBarExport || ShowTitleBarReplay || ShowTitleBarDock;
 
-    /// <summary>那颗锁的提示文案：按当前状态说清楚点它会发生什么。</summary>
-    public string LockWindowTip =>
-        Config.Basic.WindowLockMode == WindowLockMode.FixedPosition && Config.Basic.WindowFixed
-            ? CR.MainView_UnlockWindow
-            : CR.MainView_LockWindow;
+    /// <summary>
+    ///     标题栏那颗「锁定」开关现在是不是拨在「锁上」。
+    ///     <para>
+    ///         直接就是 <see cref="BasicSettingsConfig.WindowFixed" />：锁着 = 位置与大小都钉住、
+    ///         板子照常查看与编辑；解锁 = 调整窗口态（能拖标题栏、能拉四边，内容区盖遮罩）。
+    ///         这颗开关两边都能拨，因为解锁态窗口照样接收鼠标。
+    ///     </para>
+    /// </summary>
+    public bool IsWindowLocked
+    {
+        get => Config.Basic.WindowFixed;
+        set => Config.Basic.WindowFixed = value;
+    }
+
+    /// <summary>那颗锁的提示文案：按当前状态说清楚拨它会怎样。</summary>
+    public string LockWindowTip => Config.Basic.WindowFixed
+        ? CR.MainView_UnlockWindow
+        : CR.MainView_LockWindow;
 
     // 菜单里的勾选不在这里：菜单项画在弹出层里、拿不到这里的 DataContext，
-    // 所以由 MainView 在弹出时按 SelectedSortOption 直接写（见 MainView.RefreshSortMenuChecks）。
+    // 所以由 MainView 在弹出时按 SelectedSortOption 直接写（见 MainView.RefreshMoreMenu）。
 
     /// <summary>
     ///     内容区标题。作业板的名称用户可以自己改（<see cref="BoardSettingsConfig.BoardName" />），
@@ -155,41 +178,47 @@ public partial class MainViewModel : ViewModelBase
             OnPropertyChanged(nameof(SortTip));
         }
 
-        // 顶部按钮的显隐：字段少，逐个判名字不划算，直接六个一起通知。
+        // 顶部按钮的显隐：字段少，逐个判名字不划算，直接连「更多」一起通知。
         OnPropertyChanged(nameof(ShowTitleBarSettings));
+        OnPropertyChanged(nameof(ShowTitleBarDisplay));
         OnPropertyChanged(nameof(ShowTitleBarSort));
         OnPropertyChanged(nameof(ShowTitleBarAssign));
         OnPropertyChanged(nameof(ShowTitleBarExport));
         OnPropertyChanged(nameof(ShowTitleBarReplay));
         OnPropertyChanged(nameof(ShowTitleBarDock));
+        OnPropertyChanged(nameof(ShowTitleBarMore));
     }
 
-    /// <summary>回放状态变了：只有「布置作业」与「回放入口」两颗受它影响。</summary>
+    /// <summary>回放状态变了：只有「布置作业」与「回放入口」（含装着它的「更多」）受它影响。</summary>
     private void OnReplayChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(BoardReplayService.IsActive) or null)
             OnPropertyChanged(nameof(ShowTitleBarAssign));
 
         if (e.PropertyName is nameof(BoardReplayService.CanEnterReplay) or nameof(BoardReplayService.IsActive) or null)
+        {
             OnPropertyChanged(nameof(ShowTitleBarReplay));
+            OnPropertyChanged(nameof(ShowTitleBarMore));
+        }
     }
 
     private void OnBasicSettingsChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is null
-            or nameof(BasicSettingsConfig.ShowCornerAssignButton)
-            or nameof(BasicSettingsConfig.ClickThrough))
-        {
+        if (e.PropertyName is null or nameof(BasicSettingsConfig.ShowCornerAssignButton))
             OnPropertyChanged(nameof(ShowCornerAssignButton));
-        }
 
-        // 那颗锁的字形与提示：锁定行为、固定状态任一变了都要重算。
-        if (e.PropertyName is null
-            or nameof(BasicSettingsConfig.WindowFixed)
-            or nameof(BasicSettingsConfig.WindowLockMode))
+        // 锁定状态牵一发动全身：那颗锁自己的状态与提示、内容区遮罩、
+        // 以及整组「动板子」的标题栏按钮（布置作业 / 排序 / 时空回放）与右下角浮标。
+        if (e.PropertyName is null or nameof(BasicSettingsConfig.WindowFixed))
         {
-            OnPropertyChanged(nameof(LockWindowIcon));
+            OnPropertyChanged(nameof(IsWindowLocked));
             OnPropertyChanged(nameof(LockWindowTip));
+            OnPropertyChanged(nameof(IsWindowAdjusting));
+            OnPropertyChanged(nameof(ShowCornerAssignButton));
+            OnPropertyChanged(nameof(ShowTitleBarSort));
+            OnPropertyChanged(nameof(ShowTitleBarAssign));
+            OnPropertyChanged(nameof(ShowTitleBarReplay));
+            OnPropertyChanged(nameof(ShowTitleBarMore));
         }
     }
 

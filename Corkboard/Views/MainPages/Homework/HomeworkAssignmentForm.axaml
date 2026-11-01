@@ -136,14 +136,11 @@
             独立窗口（SizeToContent）用屏幕工作区，都只占其 70%（见 code-behind 的 ApplySheetSizeLimits）。
             内容比上限还高时卡片自己滚动，不会把窗口一直撑下去，也不会长成一条竖长的板子。
             卡片可以拖动，但拖动面只有顶栏那一行（见下面 SheetHeader）。
-            ⚠️ 整张卡片标 WindowDragGesture.Suppress：卡片的手势归表单自己，壳的整窗长按拖动让出去
-            （壳在弹层打开时本来就已让出，这里是显式声明，别删）。
         -->
         <Border Classes="sheet"
                 x:Name="Sheet"
                 MinWidth="480"
-                MaxWidth="960"
-                controls:WindowDragGesture.Suppress="True">
+                MaxWidth="960">
             <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <StackPanel x:Name="SheetBody" Spacing="12">
                     <!--

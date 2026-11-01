@@ -240,7 +240,7 @@ public partial class FirstRunOobeViewModel : ObservableObject
         }
     }
 
-    /// <summary>启动时要不要主窗口，取决于「启用了作业板」与「启动时显示主窗口」两个开关。</summary>
+    /// <summary>启动时要不要主窗口，取决于「启用了作业板」与「启动时显示作业板」两个开关。</summary>
     public bool IsBoardEnabled
     {
         get => Board.BoardEnabled;
