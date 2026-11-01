@@ -10,7 +10,8 @@ using Corkboard.Services.Auth;
 namespace Corkboard.Services.Stats;
 
 /// <summary>
-///     把本机的在线状态上报给 SECTL 平台统计（<c>POST /api/stats/online</c>），
+///     把本机的在线状态上报给 SECTL 平台统计（走聚合入口 <c>POST /api/stats/report</c>，
+///     一条只有 <c>platform_id</c> / <c>device_uuid</c> / <c>device_type</c> 的事件就是在线心跳），
 ///     并缓存服务端返回的在线人数供「关于」页显示。
 /// </summary>
 /// <remarks>
@@ -29,12 +30,12 @@ public sealed class OnlineStatusService : BackgroundService
     private static readonly TimeSpan ReportInterval = TimeSpan.FromMinutes(2);
     private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(10);
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-    private static readonly Uri ReportUri = new(SectlAuthEndpoints.OnlineReportUrl);
 
     private readonly MainConfigHandler _configHandler;
     private readonly IDeviceIdProvider _deviceIdProvider;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<OnlineStatusService> _logger;
+    private readonly ISectlStatsReporter _reporter;
 
     private int _onlineCount;
     private int _hasOnlineCount;
@@ -43,11 +44,13 @@ public sealed class OnlineStatusService : BackgroundService
         MainConfigHandler configHandler,
         IDeviceIdProvider deviceIdProvider,
         IHttpClientFactory httpClientFactory,
+        ISectlStatsReporter reporter,
         ILogger<OnlineStatusService> logger)
     {
         _configHandler = configHandler;
         _deviceIdProvider = deviceIdProvider;
         _httpClientFactory = httpClientFactory;
+        _reporter = reporter;
         _logger = logger;
 
         // 从云端恢复设置会整个换掉配置对象，隐私开关可能因此变成「停止上报」。
@@ -157,10 +160,10 @@ public sealed class OnlineStatusService : BackgroundService
             return;
         }
 
-        OnlineStatusPayload payload;
+        StatsReportEvent report;
         try
         {
-            payload = OnlineStatusPayload.Create(
+            report = StatsReportEvent.CreateOnline(
                 GlobalConstants.PlatformId,
                 _deviceIdProvider.GetOrCreate().ToString("D"));
         }
@@ -171,25 +174,19 @@ public sealed class OnlineStatusService : BackgroundService
             return;
         }
 
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        timeout.CancelAfter(RequestTimeout);
-        using var response = await _httpClientFactory.CreateClient()
-            .PostAsync(ReportUri, JsonContent.Create(payload, options: JsonOptions), timeout.Token)
-            .ConfigureAwait(false);
-
-        if (!response.IsSuccessStatusCode)
+        // 聚合入口按「哪些键在」判定类型：只有 platform_id / device_uuid / device_type 的事件
+        // 正好命中在线心跳那一档，不需要再传类型字段。
+        var results = await _reporter.ReportAsync([report], cancellationToken).ConfigureAwait(false);
+        if (results.Count == 0 || !results[0].IsAccepted)
         {
-            _logger.LogDebug("在线状态上报被拒绝：HTTP {StatusCode}", (int)response.StatusCode);
+            _logger.LogDebug("在线状态上报被拒绝");
             return;
         }
 
-        var result = await response.Content
-            .ReadFromJsonAsync<OnlineStatsResult>(JsonOptions, timeout.Token)
-            .ConfigureAwait(false);
-        if (result?.ResolveOnlineCount() is { } count)
+        if (results[0].ResolveOnlineCount() is { } count)
             SetOnlineCount(count);
 
-        _logger.LogDebug("已上报在线状态：{DeviceType}", payload.DeviceType);
+        _logger.LogDebug("已上报在线状态：{DeviceType}", report.DeviceType);
     }
 
     private void OnConfigReloaded(object? sender, EventArgs e)

@@ -47,9 +47,6 @@ public static class SectlAuthEndpoints
     /// <summary>设备活跃上报地址（账号体系的一部分，无业务负载）。</summary>
     public const string HeartbeatUrl = $"{ApiBaseUrl}/api/oauth/heartbeat";
 
-    /// <summary>版本使用人数上报地址（服务端统计，载荷只含平台标识、版本与设备标识）。</summary>
-    public const string VersionReportUrl = $"{ApiBaseUrl}/api/stats/version";
-
     // ---------------------------------------------------------------- 云存储（云同步用）
 
     /// <summary>云存储：文件列表（<c>GET</c>，带 <c>client_id</c>）。</summary>
@@ -67,17 +64,26 @@ public static class SectlAuthEndpoints
     /// <summary>云存储：换临时下载地址（<c>GET</c>，返回体里的 <c>download_url</c> 才带文件内容）。</summary>
     public static string CloudFileDownloadUrl(string fileId) => $"{CloudFileUrl(fileId)}/download";
 
-    // ---------------------------------------------------------------- 平台统计（在线状态 / 使用量）
+    // ---------------------------------------------------------------- 平台统计（在线状态 / 版本 / 使用量）
 
-    /// <summary>在线状态上报地址（<c>POST</c>，载荷 <c>platform_id</c> / <c>device_uuid</c> / <c>device_type</c>）。</summary>
-    public const string OnlineReportUrl = $"{ApiBaseUrl}/api/stats/online";
+    /// <summary>
+    ///     统计**聚合上报**地址（<c>POST</c>，请求体 <c>{"events":[…]}</c>；每条事件是一个
+    ///     <c>{platform_id, …}</c> 对象，服务端按「哪些键在」判定它属于哪一类上报）。
+    /// </summary>
+    /// <remarks>
+    ///     ⚠️ 统计上报**只走这一个入口**。旧的 <c>/api/stats/online</c>、<c>/api/stats/version</c>、
+    ///     <c>/api/stats/usage/increment</c> 与 <c>/api/fields/values</c> 仍然可用（兼容保留），
+    ///     但一个请求只能装一类事件，而且接错端点**不会报错**——数据只会静默落进错误的统计口径。
+    ///     聚合入口按字段判定类型，判不出来会直接 400，所以不要再往那些地址发上报请求。
+    /// </remarks>
+    public const string StatsReportUrl = $"{ApiBaseUrl}/api/stats/report";
 
-    /// <summary>在线人数查询地址（<c>GET</c>，返回 <c>success</c> / <c>online_count</c> / <c>error</c>）。</summary>
+    /// <summary>
+    ///     在线人数**查询**地址（<c>GET</c>，返回 <c>success</c> / <c>online.online_count</c> / <c>error</c>）。
+    ///     查询类端点没有聚合版本，要带 Bearer Token（平台开发者/维护者）。
+    /// </summary>
     public static string OnlineStatsUrl(string platformId) =>
         $"{ApiBaseUrl}/api/stats/platform/{Uri.EscapeDataString(platformId)}";
-
-    /// <summary>使用量增量上报地址（<c>POST</c>，载荷 <c>platform_id</c> / <c>field_key</c> / <c>delta</c>）。</summary>
-    public const string UsageIncrementUrl = $"{ApiBaseUrl}/api/stats/usage/increment";
 
     /// <summary>令牌文件在数据根下的相对路径段。</summary>
     public static readonly string[] TokenFileSegments = ["config", "sectl-auth.json"];

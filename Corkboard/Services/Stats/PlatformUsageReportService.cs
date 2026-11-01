@@ -1,4 +1,3 @@
-using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -6,13 +5,13 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Corkboard.Core;
 using Corkboard.Core.Services.Stats;
-using Corkboard.Services.Auth;
 using Corkboard.Shared;
 
 namespace Corkboard.Services.Stats;
 
 /// <summary>
-///     把本机的使用量增量上报给 SECTL 平台统计（<c>POST /api/stats/usage/increment</c>）。
+///     把本机的使用量增量上报给 SECTL 平台统计（走聚合入口 <c>POST /api/stats/report</c>，
+///     一条带 <c>metrics</c> 用法容器的事件就是用量上报）。
 /// </summary>
 /// <remarks>
 ///     <para>
@@ -21,26 +20,25 @@ namespace Corkboard.Services.Stats;
 ///         下次启动接着传。它**不是**设置项，不能并进 <c>settings.json</c>（会被云同步互相同步掉）。
 ///     </para>
 ///     <para>
-///         记录后 2 秒防抖再传（连续操作合成一次）；失败把增量放回队列，30 秒后重试。
-///         所有失败都只记 debug/warning，绝不影响用户操作。
+///         记录后 2 秒防抖再传（连续操作合成一次）：**一次刷写只发一个请求**，把当前所有指标
+///         各装成一条事件塞进同一个 <c>events[]</c>——旧端点得一项指标一个往返。
+///         失败的那几条放回队列，30 秒后重试。所有失败都只记 debug/warning，绝不影响用户操作。
 ///     </para>
 /// </remarks>
 public sealed class PlatformUsageReportService : BackgroundService
 {
     private static readonly TimeSpan FlushDelay = TimeSpan.FromSeconds(2);
     private static readonly TimeSpan RetryDelay = TimeSpan.FromSeconds(30);
-    private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(10);
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-    private static readonly Uri IncrementUri = new(SectlAuthEndpoints.UsageIncrementUrl);
 
     private readonly UsageMetricCounter _counter = new();
     private readonly SemaphoreSlim _signal = new(0, 1);
-    private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<PlatformUsageReportService> _logger;
+    private readonly ISectlStatsReporter _reporter;
 
-    public PlatformUsageReportService(IHttpClientFactory httpClientFactory, ILogger<PlatformUsageReportService> logger)
+    public PlatformUsageReportService(ISectlStatsReporter reporter, ILogger<PlatformUsageReportService> logger)
     {
-        _httpClientFactory = httpClientFactory;
+        _reporter = reporter;
         _logger = logger;
         PendingFilePath = Utils.GetFilePath("config", "usage-stats.json");
         LoadPending();
@@ -116,46 +114,44 @@ public sealed class PlatformUsageReportService : BackgroundService
         if (pending.Count == 0)
             return true;
 
-        var failed = new Dictionary<string, long>(StringComparer.Ordinal);
-        var client = _httpClientFactory.CreateClient();
+        // 按 nameof 之外的顺序稳定性无所谓：事件顺序与结果顺序一一对应就够了。
+        var metrics = pending.ToArray();
 
-        foreach (var (field, delta) in pending)
+        // 服务端对单条增量的上限是 1..MaxDelta，超了整条会被拒。超出的部分拆到下一批发，
+        // **不要丢掉**——离线很久再上线时攒超上限的增量照样要算进总数（`carried` 在下面放回队列，
+        // 下一拍刷写接着发）。
+        var sent = new List<(string Field, long Delta)>(metrics.Length);
+        var carried = new Dictionary<string, long>(StringComparer.Ordinal);
+        var events = new List<StatsReportEvent>(metrics.Length);
+        foreach (var (field, total) in metrics)
         {
-            if (cancellationToken.IsCancellationRequested)
+            var chunk = Math.Min(total, StatsReportEvent.MaxDelta);
+            if (total > chunk)
+                carried[field] = total - chunk;
+
+            sent.Add((field, chunk));
+            events.Add(StatsReportEvent.CreateUsage(GlobalConstants.PlatformId, field, chunk));
+        }
+
+        var results = await _reporter.ReportAsync(events, cancellationToken).ConfigureAwait(false);
+
+        // results[i] 对应 events[i]：只把没落库的那几条放回队列，成功的别再重发（会被重复计数）。
+        var failed = new Dictionary<string, long>(StringComparer.Ordinal);
+        for (var index = 0; index < sent.Count; index++)
+        {
+            var (field, delta) = sent[index];
+            if (index < results.Count && results[index].IsAccepted)
             {
-                failed[field] = delta;
+                _logger.LogDebug("已上报使用量：{Field} +{Delta}", field, delta);
                 continue;
             }
 
-            try
-            {
-                var payload = UsageIncrementPayload.Create(GlobalConstants.PlatformId, field, delta);
-                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-                timeout.CancelAfter(RequestTimeout);
-                using var response = await client
-                    .PostAsync(IncrementUri, JsonContent.Create(payload, options: JsonOptions), timeout.Token)
-                    .ConfigureAwait(false);
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    _logger.LogDebug("使用量上报被拒绝：{Field} HTTP {StatusCode}", field, (int)response.StatusCode);
-                    failed[field] = delta;
-                }
-                else
-                {
-                    _logger.LogDebug("已上报使用量：{Field} +{Delta}", field, delta);
-                }
-            }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-            {
-                failed[field] = delta;
-            }
-            catch (Exception exception)
-            {
-                _logger.LogDebug(exception, "使用量上报失败：{Field}", field);
-                failed[field] = delta;
-            }
+            _logger.LogDebug("使用量上报未落库：{Field} +{Delta}", field, delta);
+            failed[field] = delta;
         }
+
+        if (carried.Count > 0)
+            _counter.Restore(carried);
 
         if (failed.Count > 0)
             _counter.Restore(failed);

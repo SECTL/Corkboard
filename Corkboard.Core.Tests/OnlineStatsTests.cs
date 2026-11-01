@@ -6,35 +6,17 @@ using Corkboard.Core.Services.Stats;
 namespace Corkboard.Core.Tests;
 
 /// <summary>
-///     SECTL 平台统计（在线状态 / 使用量）的纯逻辑单测：请求载荷的字段名与校验、
-///     隐私三态的规则、待上报增量的取用与放回。这些是服务端契约的一部分，改名/改类型先看这里。
+///     SECTL 平台统计的纯逻辑单测：在线人数查询响应、隐私三态、待上报增量的取用与放回。
+///     事件形状（聚合上报的请求体）与批量响应解析见 <see cref="StatsReportEventTests" />。
 /// </summary>
 public class OnlineStatsTests
 {
     private static readonly JsonSerializerOptions WebOptions = new(JsonSerializerDefaults.Web);
 
     [Fact]
-    public void OnlineStatusPayload_UsesApiFieldNamesAndNormalizes()
+    public void StatsReportEvent_DetectsDeviceTypeFromCurrentRuntime()
     {
-        var payload = OnlineStatusPayload.Create(
-            "6ac3d35400241eff9fbe",
-            "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE",
-            "Windows-Desktop");
-
-        Assert.Equal("6ac3d35400241eff9fbe", payload.PlatformId);
-        Assert.Equal("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", payload.DeviceUuid);
-        Assert.Equal("windows-desktop", payload.DeviceType);
-
-        var json = JsonSerializer.Serialize(payload, WebOptions);
-        Assert.Contains("\"platform_id\":", json, StringComparison.Ordinal);
-        Assert.Contains("\"device_uuid\":", json, StringComparison.Ordinal);
-        Assert.Contains("\"device_type\":", json, StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void OnlineStatusPayload_DetectsDeviceTypeFromCurrentRuntime()
-    {
-        var deviceType = OnlineStatusPayload.DetectDeviceType();
+        var deviceType = StatsReportEvent.DetectDeviceType();
 
         // 服务端按词表校验，带架构的（windows-x64）会被 400 拒掉。
         Assert.Contains(
@@ -43,25 +25,20 @@ public class OnlineStatsTests
     }
 
     [Fact]
-    public void OnlineStatusPayload_RejectsMissingPlatformAndBadDeviceId()
-    {
-        Assert.Throws<ArgumentException>(() =>
-            OnlineStatusPayload.Create(" ", "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"));
-        Assert.Throws<ArgumentException>(() =>
-            OnlineStatusPayload.Create("platform", "not-a-uuid"));
-        Assert.Throws<ArgumentException>(() =>
-            OnlineStatusPayload.Create("platform", null));
-    }
-
-    [Fact]
     public void OnlineStatsResult_ResolvesNonNegativeCount()
     {
-        var parsed = JsonSerializer.Deserialize<OnlineStatsResult>(
-            """{"success":true,"online_count":12,"error":null}""", WebOptions);
+        // GET /api/stats/platform/{id} 把人数放在 online.online_count 里。
+        var platform = JsonSerializer.Deserialize<OnlineStatsResult>(
+            """{"success":true,"platform_id":"6ac3d35400241eff9fbe","online":{"online_count":78}}""",
+            WebOptions);
+        Assert.Equal(78, platform!.ResolveOnlineCount());
 
-        Assert.NotNull(parsed);
-        Assert.True(parsed.Success);
-        Assert.Equal(12, parsed.ResolveOnlineCount());
+        // 顶层形态也认（同一份响应在别处的写法）。
+        var flat = JsonSerializer.Deserialize<OnlineStatsResult>(
+            """{"success":true,"online_count":12,"error":null}""", WebOptions);
+        Assert.NotNull(flat);
+        Assert.True(flat.Success);
+        Assert.Equal(12, flat.ResolveOnlineCount());
 
         var negative = JsonSerializer.Deserialize<OnlineStatsResult>(
             """{"success":true,"online_count":-3}""", WebOptions);
@@ -69,12 +46,6 @@ public class OnlineStatsTests
 
         var missing = JsonSerializer.Deserialize<OnlineStatsResult>("""{"success":false}""", WebOptions);
         Assert.Null(missing!.ResolveOnlineCount());
-
-        // GET /api/stats/platform/{id} 把人数放在 online.online_count 里，也要能读出来。
-        var platform = JsonSerializer.Deserialize<OnlineStatsResult>(
-            """{"success":true,"platform_id":"6ac3d35400241eff9fbe","online":{"online_count":78}}""",
-            WebOptions);
-        Assert.Equal(78, platform!.ResolveOnlineCount());
     }
 
     [Theory]
@@ -102,23 +73,6 @@ public class OnlineStatsTests
         settings.OnlineStatusMode = (OnlineStatusMode)42;
         settings.Normalize();
         Assert.Equal(OnlineStatusMode.Full, settings.OnlineStatusMode);
-    }
-
-    [Fact]
-    public void UsageIncrementPayload_UsesApiFieldNamesAndValidates()
-    {
-        var payload = UsageIncrementPayload.Create("platform_x", UsageMetricNames.NoteAdd, 3);
-
-        var json = JsonSerializer.Serialize(payload, WebOptions);
-        Assert.Contains("\"platform_id\":\"platform_x\"", json, StringComparison.Ordinal);
-        Assert.Contains("\"field_key\":\"daily_note_add_count\"", json, StringComparison.Ordinal);
-        Assert.Contains("\"delta\":3", json, StringComparison.Ordinal);
-        Assert.DoesNotContain("\"field\":", json, StringComparison.Ordinal);
-
-        Assert.Throws<ArgumentException>(() => UsageIncrementPayload.Create(" ", "export", 1));
-        Assert.Throws<ArgumentException>(() => UsageIncrementPayload.Create("platform", " ", 1));
-        Assert.Throws<ArgumentOutOfRangeException>(() => UsageIncrementPayload.Create("platform", "export", 0));
-        Assert.Throws<ArgumentOutOfRangeException>(() => UsageIncrementPayload.Create("platform", "export", -1));
     }
 
     [Fact]
