@@ -1,0 +1,13 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:lcr="using:Corkboard.Langs.CrashRecovery"
+        x:Class="Corkboard.Views.CrashRecoveryWindow"
+        Title="{x:Static lcr:Resources.Title}"
+        Width="720"
+        Height="520"
+        MinWidth="520"
+        MinHeight="420"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource SolidBackgroundFillColorBaseBrush}">
+    <ContentControl x:Name="ContentHost" />
+</Window>

@@ -1,0 +1,60 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Corkboard.ViewModels.CrashRecovery"
+             xmlns:lcr="using:Corkboard.Langs.CrashRecovery"
+             x:Class="Corkboard.Views.CrashRecoveryView"
+             x:DataType="vm:CrashRecoveryPromptViewModel">
+    <Grid Margin="24" RowDefinitions="Auto,*,Auto">
+        <StackPanel Grid.Row="0" Spacing="8">
+            <TextBlock Text="{x:Static lcr:Resources.Title}"
+                       FontSize="24"
+                       FontWeight="SemiBold"
+                       TextWrapping="Wrap" />
+            <TextBlock Text="{x:Static lcr:Resources.Description}"
+                       Margin="0,0,0,8"
+                       TextWrapping="Wrap"
+                       Opacity="0.8" />
+        </StackPanel>
+
+        <Border Grid.Row="1"
+                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                CornerRadius="4">
+            <TextBox Text="{Binding CrashReport}"
+                     IsReadOnly="True"
+                     AcceptsReturn="True"
+                     TextWrapping="NoWrap"
+                     FontFamily="Consolas,Cascadia Mono,Menlo,monospace"
+                     BorderThickness="0"
+                     Background="Transparent"
+                     ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto" />
+        </Border>
+
+        <StackPanel Grid.Row="2" Spacing="8" Margin="0,16,0,0">
+            <TextBlock Text="{Binding StatusMessage}"
+                       IsVisible="{Binding HasStatusMessage}"
+                       TextWrapping="Wrap"
+                       Opacity="0.8" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                <Button Content="{x:Static lcr:Resources.C_CopyReport}"
+                        MinWidth="96"
+                        Click="CopyReport_OnClick" />
+                <Button Content="{x:Static lcr:Resources.C_ReportIssue}"
+                        MinWidth="96"
+                        Click="ReportIssue_OnClick" />
+                <Button Content="{x:Static lcr:Resources.C_Ignore}"
+                        MinWidth="80"
+                        IsVisible="{Binding CanIgnore}"
+                        Click="Ignore_OnClick" />
+                <Button Content="{Binding RestartButtonText}"
+                        MinWidth="96"
+                        Classes="accent"
+                        Click="Restart_OnClick" />
+                <Button Content="{x:Static lcr:Resources.C_Close}"
+                        MinWidth="80"
+                        Click="Close_OnClick" />
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</UserControl>
