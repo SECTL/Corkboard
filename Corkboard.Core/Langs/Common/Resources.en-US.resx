@@ -22,9 +22,6 @@
   <data name="Common_Cancel" xml:space="preserve">
     <value>Cancel</value>
   </data>
-  <data name="Feat_Settings" xml:space="preserve">
-    <value>Settings</value>
-  </data>
   <data name="Menu_OpenMainWindow" xml:space="preserve">
     <value>Show board</value>
   </data>
@@ -40,19 +37,37 @@
   <data name="Menu_ExitProgram" xml:space="preserve">
     <value>Exit</value>
   </data>
-  <data name="Menu_About" xml:space="preserve">
-    <value>About Corkboard</value>
+  <!-- Three-dot button at the top right of the title bar: Sort / Export / Replay / Dock live in its menu. -->
+  <data name="MainView_More" xml:space="preserve">
+    <value>More</value>
   </data>
   <!--
-      Lock button at the far right of the main window title bar: locked means click-through is on.
-      In the locked state the main window receives no mouse input, so that button is hosted by a
-      separate small window (see ClickThroughLockWindow).
+      Lock button at the far right of the main window title bar: locked pins the window position and
+      size (the board stays fully usable); unlocked is the "adjust the window" state - you can drag
+      the title bar and resize from the edges, but the content area is covered by a mask and cannot
+      be edited while it is up.
   -->
   <data name="MainView_LockWindow" xml:space="preserve">
-    <value>Lock window (click-through)</value>
+    <value>Lock window (pin position and size)</value>
   </data>
   <data name="MainView_UnlockWindow" xml:space="preserve">
-    <value>Unlock window (click-through)</value>
+    <value>Unlock window (move and resize)</value>
+  </data>
+  <!--
+      The mask drawn over the content area while the window is unlocked: it swallows clicks so the
+      board cannot be edited while the user is moving/resizing the window.
+  -->
+  <data name="Board_UnlockMaskTitle" xml:space="preserve">
+    <value>Window unlocked</value>
+  </data>
+  <data name="Board_UnlockMaskDescription" xml:space="preserve">
+    <value>Drag the title bar to move it, drag an edge to resize</value>
+  </data>
+  <data name="Board_UnlockMaskHint" xml:space="preserve">
+    <value>Lock it again to edit homework</value>
+  </data>
+  <data name="Board_UnlockMaskLock" xml:space="preserve">
+    <value>Lock window</value>
   </data>
   <!-- Default board name, used only when the user has not set one in settings. -->
   <data name="Board_Title" xml:space="preserve">
@@ -78,9 +93,6 @@
   </data>
   <data name="Board_EmptyHint" xml:space="preserve">
     <value>Use "New assignment" at the top right to add one</value>
-  </data>
-  <data name="Board_EmptyHintLocked" xml:space="preserve">
-    <value>Window is locked - unlock at the top right first</value>
   </data>
   <data name="Board_Replay" xml:space="preserve">
     <value>Time replay</value>
@@ -179,15 +191,6 @@
     <value>Font size</value>
   </data>
   <!-- 整篇字号下拉里「不定字号」那一项；{0} 是设置里的默认字号。 -->
-  <data name="Board_FontSizeFollowDefault" xml:space="preserve">
-    <value>Use default ({0})</value>
-  </data>
-  <data name="Board_TextColor" xml:space="preserve">
-    <value>Color</value>
-  </data>
-  <data name="Board_ClearFormat" xml:space="preserve">
-    <value>Clear formatting</value>
-  </data>
   <!-- 库自带颜色浮层里那颗「自定义颜色」按钮（由 RichTextCustomColor 补上）：点开是它自己的取色器浮层。 -->
   <data name="Board_CustomColor" xml:space="preserve">
     <value>Custom color</value>
@@ -199,12 +202,6 @@
   <data name="Settings_Title" xml:space="preserve">
     <value>Settings</value>
   </data>
-  <data name="Settings_Group_General" xml:space="preserve">
-    <value>General</value>
-  </data>
-  <data name="Settings_Group_About" xml:space="preserve">
-    <value>About</value>
-  </data>
   <!-- Section titles inside a settings page: groups a page's settings by purpose. -->
   <data name="Settings_Section_Startup" xml:space="preserve">
     <value>Startup</value>
@@ -212,14 +209,14 @@
   <data name="Settings_Section_Window" xml:space="preserve">
     <value>Window</value>
   </data>
-  <data name="Settings_Section_DeleteAndCleanup" xml:space="preserve">
-    <value>Deleting and cleanup</value>
-  </data>
   <data name="Settings_Section_Theme" xml:space="preserve">
     <value>Theme and color</value>
   </data>
   <data name="Settings_Section_Font" xml:space="preserve">
     <value>Font and weight</value>
+  </data>
+  <data name="Settings_Section_Motion" xml:space="preserve">
+    <value>Motion</value>
   </data>
   <data name="Settings_Basic_Title" xml:space="preserve">
     <value>General</value>
@@ -244,7 +241,7 @@
     <value>Opens on its own when you sign in</value>
   </data>
   <data name="Settings_Basic_ShowStartupWindow" xml:space="preserve">
-    <value>Show main window on startup</value>
+    <value>Show the homework board on startup</value>
   </data>
   <data name="Settings_Basic_ShowStartupWindowDescription" xml:space="preserve">
     <value>Turn off to stay in the tray until you click it</value>
@@ -255,77 +252,26 @@
   <data name="Settings_Basic_AutoSaveWindowSizeDescription" xml:space="preserve">
     <value>Reopens at the same size and spot</value>
   </data>
-  <data name="Settings_Basic_PinToDesktop" xml:space="preserve">
+  <data name="Settings_Board_PinToDesktop" xml:space="preserve">
     <value>Pin to desktop</value>
   </data>
-  <data name="Settings_Basic_PinToDesktopDescription" xml:space="preserve">
+  <data name="Settings_Board_PinToDesktopDescription" xml:space="preserve">
     <value>Stays on the desktop, under other windows</value>
   </data>
-  <data name="Settings_Basic_HoldToDragWindow" xml:space="preserve">
-    <value>Hold to drag the window</value>
-  </data>
-  <data name="Settings_Basic_HoldToDragWindowDescription" xml:space="preserve">
-    <value>Press any empty part of the window to drag it</value>
-  </data>
-  <data name="Settings_Basic_WindowDragMode" xml:space="preserve">
-    <value>Dragging</value>
-  </data>
-  <data name="Settings_Basic_WindowDragModeDescription" xml:space="preserve">
-    <value>How the window moves, or lock it in place</value>
-  </data>
-  <data name="Settings_Basic_WindowDragModeHoldAnywhere" xml:space="preserve">
-    <value>Hold anywhere to drag</value>
-  </data>
-  <data name="Settings_Basic_WindowDragModeTitleBarOnly" xml:space="preserve">
-    <value>Title bar only</value>
-  </data>
-  <data name="Settings_Basic_WindowDragModeFixed" xml:space="preserve">
-    <value>Fixed, cannot be moved</value>
-  </data>
-  <data name="Settings_Basic_WindowLockMode" xml:space="preserve">
-    <value>What the lock button does</value>
-  </data>
-  <data name="Settings_Basic_WindowLockModeDescription" xml:space="preserve">
-    <value>Lock the position, or let the mouse pass through</value>
-  </data>
-  <data name="Settings_Basic_WindowLockModeClickThrough" xml:space="preserve">
-    <value>Click-through</value>
-  </data>
-  <data name="Settings_Basic_WindowLockModeFixedPosition" xml:space="preserve">
-    <value>Fix the window position</value>
-  </data>
-  <data name="Settings_Basic_MainWindowOpacity" xml:space="preserve">
+  <data name="Settings_Board_MainWindowOpacity" xml:space="preserve">
     <value>Main window opacity</value>
   </data>
-  <data name="Settings_Basic_MainWindowOpacityDescription" xml:space="preserve">
+  <data name="Settings_Board_MainWindowOpacityDescription" xml:space="preserve">
     <value>Lower values let more of the desktop show through</value>
   </data>
-  <data name="Settings_Basic_ClickThrough" xml:space="preserve">
-    <value>Click-through</value>
-  </data>
-  <data name="Settings_Basic_ClickThroughDescription" xml:space="preserve">
-    <value>The mouse goes right through it, change it from the tray</value>
-  </data>
-  <data name="Settings_Basic_WindowCorners" xml:space="preserve">
+  <data name="Settings_Board_WindowCorners" xml:space="preserve">
     <value>Rounded corners</value>
   </data>
-  <data name="Settings_Basic_WindowCornersDescription" xml:space="preserve">
+  <data name="Settings_Board_WindowCornersDescription" xml:space="preserve">
     <value>Round the corners of the main window, also when pinned to the desktop</value>
   </data>
-  <data name="Settings_Basic_CornerAssignButton" xml:space="preserve">
+  <data name="Settings_Board_CornerAssignButton" xml:space="preserve">
     <value>Corner assign button</value>
-  </data>
-  <data name="Settings_Basic_CornerAssignButtonDescription" xml:space="preserve">
-    <value>A plus button in the corner for quick notes</value>
-  </data>
-  <data name="Settings_Basic_AllowAddNoteWhenLocked" xml:space="preserve">
-    <value>Allow adding notes when locked</value>
-  </data>
-  <data name="Settings_Basic_AllowAddNoteWhenLockedDescription" xml:space="preserve">
-    <value>The corner assign button stays available when the window is locked (click-through)</value>
-  </data>
-  <data name="Settings_Group_Board" xml:space="preserve">
-    <value>Board</value>
   </data>
   <data name="Settings_Board_Title" xml:space="preserve">
     <value>Board</value>
@@ -354,6 +300,9 @@
   <data name="Settings_Board_TitleBarDock" xml:space="preserve">
     <value>Dock button</value>
   </data>
+  <data name="Settings_Board_TitleBarDisplay" xml:space="preserve">
+    <value>Display mode button</value>
+  </data>
   <data name="Settings_Board_Layout" xml:space="preserve">
     <value>Layout</value>
   </data>
@@ -377,6 +326,10 @@
   </data>
   <data name="Settings_Board_BlockWidthAdaptiveDescription" xml:space="preserve">
     <value>Blocks grow with the window, then wrap</value>
+  </data>
+  <!-- Title of the Sort submenu inside the title bar's "More" menu. -->
+  <data name="Board_Sort_Title" xml:space="preserve">
+    <value>Sort</value>
   </data>
   <data name="Board_Sort_Tip" xml:space="preserve">
     <value>Sort by: {0}</value>
@@ -579,9 +532,6 @@
   </data>
   <data name="Board_DueDateOverdueFormat" xml:space="preserve">
     <value>Overdue by {0} days</value>
-  </data>
-  <data name="Settings_Group_Personalized" xml:space="preserve">
-    <value>Personalization</value>
   </data>
   <data name="Settings_Appearance_Title" xml:space="preserve">
     <value>Appearance</value>
@@ -790,9 +740,6 @@
   <data name="Settings_Cloud_Title" xml:space="preserve">
     <value>Cloud sync</value>
   </data>
-  <data name="Settings_Cloud_Description" xml:space="preserve">
-    <value>Back up your board and settings to the SECTL cloud after signing in</value>
-  </data>
   <data name="Settings_Cloud_Enable" xml:space="preserve">
     <value>Cloud sync</value>
   </data>
@@ -930,9 +877,6 @@
   </data>
   <data name="Settings_Board_Sections_Categories" xml:space="preserve">
     <value>Categories</value>
-  </data>
-  <data name="Settings_Board_Sections_SubjectPicker" xml:space="preserve">
-    <value>Subject</value>
   </data>
   <data name="Settings_Board_Sections_CategoryCount" xml:space="preserve">
     <value>{0} categories</value>
@@ -1138,21 +1082,6 @@
   <data name="Settings_Board_Dock_Reset" xml:space="preserve">
     <value>Reset position</value>
   </data>
-  <data name="Board_ExportImage" xml:space="preserve">
-    <value>Export image</value>
-  </data>
-  <data name="Board_ExportImageTip" xml:space="preserve">
-    <value>Save the notes on the board as an image</value>
-  </data>
-  <data name="Board_ExportSuccess" xml:space="preserve">
-    <value>Image saved</value>
-  </data>
-  <data name="Board_ExportFailed" xml:space="preserve">
-    <value>Export failed, try again later</value>
-  </data>
-  <data name="Board_ExportNoContent" xml:space="preserve">
-    <value>Nothing on the board yet</value>
-  </data>
   <data name="Board_HandwritingTab" xml:space="preserve">
     <value>Handwriting</value>
   </data>
@@ -1180,12 +1109,6 @@
   <data name="Board_HandwritingClear" xml:space="preserve">
     <value>Clear</value>
   </data>
-  <data name="Board_HandwritingHint" xml:space="preserve">
-    <value>Write below, undo if needed</value>
-  </data>
-  <data name="Board_HandwritingEmpty" xml:space="preserve">
-    <value>Draw something first</value>
-  </data>
   <data name="Board_Section" xml:space="preserve">
     <value>Category</value>
   </data>
@@ -1201,11 +1124,11 @@
   <data name="Board_QuickTags" xml:space="preserve">
     <value>Quick tags</value>
   </data>
-  <data name="Settings_Appearance_UiFontSize" xml:space="preserve">
-    <value>Interface font size</value>
+  <data name="Settings_Appearance_Motion" xml:space="preserve">
+    <value>Interface animations</value>
   </data>
-  <data name="Settings_Appearance_UiFontSizeDescription" xml:space="preserve">
-    <value>Size of text across the app, raise it if hard to read</value>
+  <data name="Settings_Appearance_MotionDescription" xml:space="preserve">
+    <value>Blocks snap into place instead of sliding when reordering</value>
   </data>
   <data name="Board_Dock_Expand" xml:space="preserve">
     <value>Expand board</value>
@@ -1221,6 +1144,9 @@
   </data>
   <data name="Common_Refresh" xml:space="preserve">
     <value>Refresh</value>
+  </data>
+  <data name="Common_PageNotFound" xml:space="preserve">
+    <value>Page {0} was not found</value>
   </data>
   <data name="Settings_Board_Sections_DuplicateName" xml:space="preserve">
     <value>A category with this name already exists</value>
@@ -1514,11 +1440,20 @@
   <data name="Exam_Board_ExitHint" xml:space="preserve">
     <value>Hold to exit</value>
   </data>
-  <data name="Exam_Board_ExitHintActive" xml:space="preserve">
-    <value>Release to cancel</value>
-  </data>
   <data name="Exam_Board_ExitToolTip" xml:space="preserve">
     <value>Hold for 2 seconds to leave full screen</value>
+  </data>
+  <data name="Exam_Board_FloatingToolTip" xml:space="preserve">
+    <value>Click to go back, hold 2 seconds to exit</value>
+  </data>
+  <data name="Exam_Board_FloatingHoldHint" xml:space="preserve">
+    <value>Hold 2 seconds to exit</value>
+  </data>
+  <data name="Exam_Board_MinimizeClickToolTip" xml:space="preserve">
+    <value>Click to minimize, hold 2 seconds to exit</value>
+  </data>
+  <data name="Exam_Board_MinimizeHoldToolTip" xml:space="preserve">
+    <value>Hold for 2 seconds to minimize</value>
   </data>
   <data name="Exam_Board_NoExam" xml:space="preserve">
     <value>No exams yet</value>
@@ -1540,12 +1475,6 @@
   </data>
   <data name="Exam_Board_Table_Status" xml:space="preserve">
     <value>Status</value>
-  </data>
-  <data name="Exam_Board_ClockLocal" xml:space="preserve">
-    <value>System clock</value>
-  </data>
-  <data name="Exam_Board_ClockSynced" xml:space="preserve">
-    <value>Time synced</value>
   </data>
   <data name="Exam_Status_NotStarted" xml:space="preserve">
     <value>Not started</value>
@@ -1664,17 +1593,11 @@
     <data name="Settings_Exam_Plan_StepReview" xml:space="preserve">
     <value>Slots &amp; summary</value>
   </data>
-  <data name="Settings_Exam_Plan_TitleDefault" xml:space="preserve">
-    <value>{0} Final Exams</value>
-  </data>
   <data name="Settings_Exam_Plan_StepFormat" xml:space="preserve">
     <value>Step {0} of {1} · {2}</value>
   </data>
     <data name="Settings_Exam_Plan_TitleLabel" xml:space="preserve">
     <value>Board title</value>
-  </data>
-  <data name="Settings_Exam_Plan_TitlePlaceholder" xml:space="preserve">
-    <value>Leave empty to use the default name</value>
   </data>
   <data name="Settings_Exam_Plan_SubtitleLabel" xml:space="preserve">
     <value>Subtitle</value>
@@ -1718,11 +1641,14 @@
   <data name="Settings_Exam_Plan_CombineHint" xml:space="preserve">
     <value>Pick several subjects to sit as one exam</value>
   </data>
-  <data name="Settings_Exam_Plan_CombineTitle" xml:space="preserve">
-    <value>Which subjects sit together</value>
-  </data>
   <data name="Settings_Exam_Plan_Duration" xml:space="preserve">
     <value>Length</value>
+  </data>
+  <data name="Settings_Exam_Plan_SubjectOrder" xml:space="preserve">
+    <value>Exam order</value>
+  </data>
+  <data name="Settings_Exam_Plan_DurationHint" xml:space="preserve">
+    <value>Lengths are filled in for you, edit them in the review</value>
   </data>
   <data name="Settings_Exam_Plan_OrderUp" xml:space="preserve">
     <value>Move up</value>
@@ -1806,7 +1732,7 @@
     <value>No template yet — plan once, then save it as a template</value>
   </data>
   <data name="Settings_Exam_Plan_TemplateHint" xml:space="preserve">
-    <value>Subjects and slots come from the template; just confirm the dates</value>
+    <value>Brings in subjects, lengths and slots — still editable</value>
   </data>
   <data name="Settings_Exam_Plan_TemplateDefaultName" xml:space="preserve">
     <value>Untitled template</value>
@@ -1895,9 +1821,6 @@
   <data name="Settings_Exam_Plan_SlotPresetDeleteBody" xml:space="preserve">
     <value>Schedule &quot;{0}&quot; will be deleted; exams already planned stay</value>
   </data>
-  <data name="Settings_Exam_Plan_SubtitleDefault" xml:space="preserve">
-    <value>Stay calm and think clearly</value>
-  </data>
   <data name="Settings_Exam_Plan_SlotPresetSummary" xml:space="preserve">
     <value>{0} a day</value>
   </data>
@@ -1930,9 +1853,6 @@
   </data>
   <data name="Common_Minutes" xml:space="preserve">
     <value>min</value>
-  </data>
-  <data name="Common_Seconds" xml:space="preserve">
-    <value>s</value>
   </data>
   <data name="Common_Milliseconds" xml:space="preserve">
     <value>ms</value>
@@ -2024,12 +1944,6 @@
   <data name="Settings_Exam_Schedule_Count" xml:space="preserve">
     <value>{0} exams</value>
   </data>
-  <data name="Settings_Exam_Schedule_Board" xml:space="preserve">
-    <value>Board</value>
-  </data>
-  <data name="Settings_Exam_Schedule_BoardDescription" xml:space="preserve">
-    <value>One file per board, holding its title and exam schedule</value>
-  </data>
   <data name="Settings_Exam_Schedule_BoardNew" xml:space="preserve">
     <value>New board</value>
   </data>
@@ -2045,12 +1959,6 @@
   <data name="Settings_Exam_Schedule_BoardDeleteBody" xml:space="preserve">
     <value>Delete board &quot;{0}&quot; and all its exams?</value>
   </data>
-  <data name="Settings_Exam_Schedule_TitleBlock" xml:space="preserve">
-    <value>Title and subtitle</value>
-  </data>
-  <data name="Settings_Exam_Schedule_TitleBlockDescription" xml:space="preserve">
-    <value>The two lines at the board top left, per board</value>
-  </data>
   <data name="Settings_Exam_Schedule_PaperInfo" xml:space="preserve">
     <value>Paper info</value>
   </data>
@@ -2060,26 +1968,17 @@
   <data name="Settings_Exam_Display_TitleLabel" xml:space="preserve">
     <value>Title</value>
   </data>
-  <data name="Settings_Exam_Display_TitleDescription" xml:space="preserve">
-    <value>The large text at the top left; empty uses the default</value>
-  </data>
   <data name="Settings_Exam_Display_TitlePlaceholder" xml:space="preserve">
     <value>e.g. Final exams</value>
   </data>
   <data name="Settings_Exam_Display_SubtitleLabel" xml:space="preserve">
     <value>Subtitle</value>
   </data>
-  <data name="Settings_Exam_Display_SubtitleDescription" xml:space="preserve">
-    <value>Sits under the title, smaller and lighter</value>
-  </data>
   <data name="Settings_Exam_Display_SubtitlePlaceholder" xml:space="preserve">
     <value>e.g. 12 days to go</value>
   </data>
   <data name="Settings_Exam_Display_SubtitleColor" xml:space="preserve">
     <value>Subtitle colour</value>
-  </data>
-  <data name="Settings_Exam_Display_SubtitleColorDescription" xml:space="preserve">
-    <value>Unset follows the theme's secondary text colour</value>
   </data>
   <data name="Settings_Exam_Display_SubtitleColorDefault" xml:space="preserve">
     <value>Follow theme</value>
@@ -2132,6 +2031,252 @@
   <data name="Settings_Exam_Display_ShowInfoDescription" xml:space="preserve">
     <value>Turn it off to leave only the big clock</value>
   </data>
+  <data name="Settings_Exam_Floating_Title" xml:space="preserve">
+    <value>Minimize and floating button</value>
+  </data>
+  <data name="Settings_Exam_Floating_GroupMinimize" xml:space="preserve">
+    <value>Minimize</value>
+  </data>
+  <data name="Settings_Exam_Floating_GroupMinimizeDescription" xml:space="preserve">
+    <value>Puts the board away and leaves one button on screen</value>
+  </data>
+  <data name="Settings_Exam_Floating_GroupContent" xml:space="preserve">
+    <value>Floating button</value>
+  </data>
+  <data name="Settings_Exam_Floating_GroupContentDescription" xml:space="preserve">
+    <value>What it says, how big it is and where it sits</value>
+  </data>
+  <data name="Settings_Exam_Floating_GroupLook" xml:space="preserve">
+    <value>Button look</value>
+  </data>
+  <data name="Settings_Exam_Floating_GroupLookDescription" xml:space="preserve">
+    <value>Text colour and icon</value>
+  </data>
+  <data name="Settings_Exam_Floating_MinimizeMode" xml:space="preserve">
+    <value>When it can minimize</value>
+  </data>
+  <data name="Settings_Exam_Floating_MinimizeModeDescription" xml:space="preserve">
+    <value>Otherwise the button just exits</value>
+  </data>
+  <data name="Settings_Exam_Floating_MinimizeMode_InProgress" xml:space="preserve">
+    <value>During an exam</value>
+  </data>
+  <data name="Settings_Exam_Floating_MinimizeMode_InProgressOrUpcoming" xml:space="preserve">
+    <value>During or about to start</value>
+  </data>
+  <data name="Settings_Exam_Floating_MinimizeMode_Always" xml:space="preserve">
+    <value>Always</value>
+  </data>
+  <data name="Settings_Exam_Floating_MinimizeMode_Off" xml:space="preserve">
+    <value>Never, exit only</value>
+  </data>
+  <data name="Settings_Exam_Floating_Gesture" xml:space="preserve">
+    <value>Minimize gesture</value>
+  </data>
+  <data name="Settings_Exam_Floating_GestureDescription" xml:space="preserve">
+    <value>Click once, or hold for 2 seconds</value>
+  </data>
+  <data name="Settings_Exam_Floating_Gesture_Click" xml:space="preserve">
+    <value>Click</value>
+  </data>
+  <data name="Settings_Exam_Floating_Gesture_Hold" xml:space="preserve">
+    <value>Hold 2 seconds</value>
+  </data>
+  <data name="Settings_Exam_Floating_Text" xml:space="preserve">
+    <value>Text on the floating button</value>
+  </data>
+  <data name="Settings_Exam_Floating_TextDescription" xml:space="preserve">
+    <value>Leave it empty to use the default line</value>
+  </data>
+  <data name="Settings_Exam_Floating_DefaultText" xml:space="preserve">
+    <value>Show exam board</value>
+  </data>
+  <data name="Settings_Exam_Floating_Scale" xml:space="preserve">
+    <value>Floating button size</value>
+  </data>
+  <data name="Settings_Exam_Floating_ScaleDescription" xml:space="preserve">
+    <value>Percentage of the default size</value>
+  </data>
+  <data name="Settings_Exam_Floating_TextColor" xml:space="preserve">
+    <value>Text color</value>
+  </data>
+  <data name="Settings_Exam_Floating_TextColorDescription" xml:space="preserve">
+    <value>Color of the caption on the floating button</value>
+  </data>
+  <data name="Settings_Exam_Floating_ShowIcon" xml:space="preserve">
+    <value>Show app icon</value>
+  </data>
+  <data name="Settings_Exam_Floating_ShowIconDescription" xml:space="preserve">
+    <value>Turn it off to leave only the caption</value>
+  </data>
+  <data name="Settings_Exam_Floating_Icon" xml:space="preserve">
+    <value>Custom icon</value>
+  </data>
+  <data name="Settings_Exam_Floating_IconDescription" xml:space="preserve">
+    <value>Pick an image to replace the default icon</value>
+  </data>
+  <data name="Settings_Exam_Floating_IconPick" xml:space="preserve">
+    <value>Choose image</value>
+  </data>
+  <data name="Settings_Exam_Floating_IconClear" xml:space="preserve">
+    <value>Use default</value>
+  </data>
+  <data name="Settings_Exam_Floating_IconDefault" xml:space="preserve">
+    <value>Using the default app icon</value>
+  </data>
+  <data name="Settings_Exam_Floating_IconOnly" xml:space="preserve">
+    <value>Icon only</value>
+  </data>
+  <data name="Settings_Exam_Floating_IconOnlyDescription" xml:space="preserve">
+    <value>Hide the caption and keep the icon</value>
+  </data>
+  <data name="Settings_Exam_Floating_Anchor" xml:space="preserve">
+    <value>Floating button position</value>
+  </data>
+  <data name="Settings_Exam_Floating_AnchorDescription" xml:space="preserve">
+    <value>Pick where the button sits on screen</value>
+  </data>
+  <data name="Settings_Exam_Floating_Reset" xml:space="preserve">
+    <value>Restore defaults</value>
+  </data>
+  <data name="Settings_Exam_Font_PageTitle" xml:space="preserve">
+    <value>Board fonts</value>
+  </data>
+  <data name="Settings_Exam_Font_PageDescription" xml:space="preserve">
+    <value>Set the size of every piece of text on the board</value>
+  </data>
+  <data name="Settings_Exam_Font_Reset" xml:space="preserve">
+    <value>Reset fonts</value>
+  </data>
+  <data name="Settings_Exam_Font_ResetHint" xml:space="preserve">
+    <value>Puts every size back to the factory setting</value>
+  </data>
+  <data name="Settings_Exam_Font_PreviewScaled" xml:space="preserve">
+    <value>Preview stops at 96, the number is real</value>
+  </data>
+  <data name="Settings_Exam_Font_Unit" xml:space="preserve">
+    <value>pt</value>
+  </data>
+  <data name="Settings_Exam_Font_GroupTitle" xml:space="preserve">
+    <value>Title and subtitle</value>
+  </data>
+  <data name="Settings_Exam_Font_GroupTitleDescription" xml:space="preserve">
+    <value>The two lines in the top-left corner</value>
+  </data>
+  <data name="Settings_Exam_Font_GroupClock" xml:space="preserve">
+    <value>Clock</value>
+  </data>
+  <data name="Settings_Exam_Font_GroupClockDescription" xml:space="preserve">
+    <value>The big clock and the date under it</value>
+  </data>
+  <data name="Settings_Exam_Font_GroupInfo" xml:space="preserve">
+    <value>Exam info under the clock</value>
+  </data>
+  <data name="Settings_Exam_Font_GroupInfoDescription" xml:space="preserve">
+    <value>Subject, time left and paper info printed there</value>
+  </data>
+  <data name="Settings_Exam_Font_GroupTable" xml:space="preserve">
+    <value>Exam table and the rest</value>
+  </data>
+  <data name="Settings_Exam_Font_GroupTableDescription" xml:space="preserve">
+    <value>The table, the empty notice and the exit icon</value>
+  </data>
+  <data name="Settings_Exam_Font_MainTitle" xml:space="preserve">
+    <value>Main title</value>
+  </data>
+  <data name="Settings_Exam_Font_MainTitleDescription" xml:space="preserve">
+    <value>Size of the big line in the top-left corner</value>
+  </data>
+  <data name="Settings_Exam_Font_Subtitle" xml:space="preserve">
+    <value>Subtitle</value>
+  </data>
+  <data name="Settings_Exam_Font_SubtitleDescription" xml:space="preserve">
+    <value>Size of the smaller line under the title</value>
+  </data>
+  <data name="Settings_Exam_Font_Clock" xml:space="preserve">
+    <value>Clock</value>
+  </data>
+  <data name="Settings_Exam_Font_ClockDescription" xml:space="preserve">
+    <value>Clock size while the exam table is shown</value>
+  </data>
+  <data name="Settings_Exam_Font_ClockAlone" xml:space="preserve">
+    <value>Clock alone</value>
+  </data>
+  <data name="Settings_Exam_Font_ClockAloneDescription" xml:space="preserve">
+    <value>Clock size once the table is folded away</value>
+  </data>
+  <data name="Settings_Exam_Font_ClockDate" xml:space="preserve">
+    <value>Date under the clock</value>
+  </data>
+  <data name="Settings_Exam_Font_ClockDateDescription" xml:space="preserve">
+    <value>Size of the date line below the clock</value>
+  </data>
+  <data name="Settings_Exam_Font_InfoCaption" xml:space="preserve">
+    <value>Info caption</value>
+  </data>
+  <data name="Settings_Exam_Font_InfoCaptionDescription" xml:space="preserve">
+    <value>Size of the "Next" or "In progress" line</value>
+  </data>
+  <data name="Settings_Exam_Font_InfoSubject" xml:space="preserve">
+    <value>Info subject</value>
+  </data>
+  <data name="Settings_Exam_Font_InfoSubjectDescription" xml:space="preserve">
+    <value>Size of the big subject name under the clock</value>
+  </data>
+  <data name="Settings_Exam_Font_InfoTime" xml:space="preserve">
+    <value>Info time</value>
+  </data>
+  <data name="Settings_Exam_Font_InfoTimeDescription" xml:space="preserve">
+    <value>Size of the date and time range lines</value>
+  </data>
+  <data name="Settings_Exam_Font_InfoRemaining" xml:space="preserve">
+    <value>Info countdown</value>
+  </data>
+  <data name="Settings_Exam_Font_InfoRemainingDescription" xml:space="preserve">
+    <value>Size of the time left or time to go line</value>
+  </data>
+  <data name="Settings_Exam_Font_InfoPaper" xml:space="preserve">
+    <value>Paper info</value>
+  </data>
+  <data name="Settings_Exam_Font_InfoPaperDescription" xml:space="preserve">
+    <value>Size of the sheets, pages and questions line</value>
+  </data>
+  <data name="Settings_Exam_Font_TableHeader" xml:space="preserve">
+    <value>Table header</value>
+  </data>
+  <data name="Settings_Exam_Font_TableHeaderDescription" xml:space="preserve">
+    <value>Size of the date, subject and time headers</value>
+  </data>
+  <data name="Settings_Exam_Font_Table" xml:space="preserve">
+    <value>Table rows</value>
+  </data>
+  <data name="Settings_Exam_Font_TableDescription" xml:space="preserve">
+    <value>Size of date, time and status in the table</value>
+  </data>
+  <data name="Settings_Exam_Font_TableSubject" xml:space="preserve">
+    <value>Table subject</value>
+  </data>
+  <data name="Settings_Exam_Font_TableSubjectDescription" xml:space="preserve">
+    <value>Size of the subject column in the table</value>
+  </data>
+  <data name="Settings_Exam_Font_Empty" xml:space="preserve">
+    <value>Empty notice</value>
+  </data>
+  <data name="Settings_Exam_Font_EmptyDescription" xml:space="preserve">
+    <value>Size of the no exams yet line</value>
+  </data>
+  <data name="Settings_Exam_Font_EmptyHint" xml:space="preserve">
+    <value>Empty hint</value>
+  </data>
+  <data name="Settings_Exam_Font_EmptyHintDescription" xml:space="preserve">
+    <value>Size of the hint under that line</value>
+  </data>
+  <data name="Settings_Exam_Font_ExitIcon" xml:space="preserve">
+    <value>Exit icon</value>
+  </data>
+  <data name="Settings_Exam_Font_ExitIconDescription" xml:space="preserve">
+    <value>Size of the icon you hold to leave the board</value>
+  </data>
   <data name="Settings_Exam_Time_Title" xml:space="preserve">
     <value>Time sync</value>
   </data>
@@ -2152,9 +2297,6 @@
   </data>
   <data name="Settings_Exam_Time_AddServer" xml:space="preserve">
     <value>Add</value>
-  </data>
-  <data name="Settings_Exam_Time_InvalidServer" xml:space="preserve">
-    <value>That does not look like a valid host</value>
   </data>
   <data name="Settings_Exam_Time_ResetServers" xml:space="preserve">
     <value>Restore defaults</value>
@@ -2275,6 +2417,48 @@
   </data>
   <data name="Settings_Exam_AutoShow_SwitchBoardDescription" xml:space="preserve">
     <value>Switches to whichever board has today's exam</value>
+  </data>
+  <data name="Settings_Exam_Schedule_Export" xml:space="preserve">
+    <value>Export this exam</value>
+  </data>
+  <data name="Settings_Exam_Schedule_Import" xml:space="preserve">
+    <value>Import exams</value>
+  </data>
+  <data name="Settings_Exam_Schedule_ImportToolTip" xml:space="preserve">
+    <value>Adds the exams in a file to the current board</value>
+  </data>
+  <data name="Exam_File_SaveTitle" xml:space="preserve">
+    <value>Export exam</value>
+  </data>
+  <data name="Exam_File_FileType" xml:space="preserve">
+    <value>Exam file</value>
+  </data>
+  <data name="Exam_File_ExportFailed" xml:space="preserve">
+    <value>Export failed, please try again</value>
+  </data>
+  <data name="Exam_File_ImportFailed" xml:space="preserve">
+    <value>Couldn't read any exam from this file</value>
+  </data>
+  <data name="Exam_File_ImportEmpty" xml:space="preserve">
+    <value>The file has no exams to import</value>
+  </data>
+  <data name="Exam_File_ImportDone" xml:space="preserve">
+    <value>Imported {0} exams</value>
+  </data>
+  <data name="Settings_Exam_Schedule_ExportAll" xml:space="preserve">
+    <value>Export exams</value>
+  </data>
+  <data name="Settings_Exam_Schedule_ExportAllToolTip" xml:space="preserve">
+    <value>Saves every exam on this board into one file</value>
+  </data>
+  <data name="Settings_Exam_Schedule_ExportBoardToolTip" xml:space="preserve">
+    <value>Saves every exam on this board into one file</value>
+  </data>
+  <data name="Exam_File_ExportEmpty" xml:space="preserve">
+    <value>The current board has no exams yet</value>
+  </data>
+  <data name="Exam_File_ExportDone" xml:space="preserve">
+    <value>Exported {0} exams</value>
   </data>
   <data name="Settings_Board_Content_Title" xml:space="preserve">
     <value>Content &amp; style</value>
@@ -2472,16 +2656,10 @@
     <value>Enable homework board</value>
   </data>
   <data name="Settings_Board_EnabledDescription" xml:space="preserve">
-    <value>Turning it off hides the main window; the tray and the exam board still work</value>
+    <value>Turning it off hides the homework board; the tray and the exam board still work</value>
   </data>
   <data name="Oobe_Title" xml:space="preserve">
     <value>First-time setup</value>
-  </data>
-  <data name="Oobe_Language" xml:space="preserve">
-    <value>Choose your language</value>
-  </data>
-  <data name="Oobe_LanguageDescription" xml:space="preserve">
-    <value>The whole app follows this, including the steps after it</value>
   </data>
   <data name="Oobe_WelcomeTitle" xml:space="preserve">
     <value>Welcome to Corkboard</value>
@@ -2543,7 +2721,7 @@ Continuing to use it means you understand and accept the above.</value>
     <value>you open it yourself</value>
   </data>
   <data name="Oobe_StartupShowWindow" xml:space="preserve">
-    <value>opens the main window on launch</value>
+    <value>opens the homework board on launch</value>
   </data>
   <data name="Oobe_StartupTrayOnly" xml:space="preserve">
     <value>stays in the tray until you click it</value>
@@ -2558,7 +2736,7 @@ Continuing to use it means you understand and accept the above.</value>
     <value>Enable homework board</value>
   </data>
   <data name="Oobe_BoardEnabledDescription" xml:space="preserve">
-    <value>Turning it off hides the main window; the tray and the exam board still work</value>
+    <value>Turning it off hides the homework board; the tray and the exam board still work</value>
   </data>
   <data name="Oobe_AppearanceTitle" xml:space="preserve">
     <value>Appearance</value>
@@ -2588,7 +2766,7 @@ Continuing to use it means you understand and accept the above.</value>
     <value>Could not set autostart; the previous choice was kept</value>
   </data>
   <data name="Oobe_ShowStartupWindow" xml:space="preserve">
-    <value>Show the main window on launch</value>
+    <value>Show the homework board on launch</value>
   </data>
   <data name="Oobe_ShowStartupWindowDescription" xml:space="preserve">
     <value>Off keeps it in the tray until you click the icon</value>
@@ -2623,10 +2801,727 @@ Continuing to use it means you understand and accept the above.</value>
   <data name="Oobe_ExitWindowDescription" xml:space="preserve">
     <value>The choices are already saved and can be changed in settings any time</value>
   </data>
-  <data name="Oobe_Reopen" xml:space="preserve">
-    <value>Run first-time setup again</value>
+  <data name="Settings_Display_Title" xml:space="preserve">
+    <value>Display mode</value>
   </data>
-  <data name="Oobe_ReopenDescription" xml:space="preserve">
-    <value>Go through language, terms, board, theme and startup once more</value>
+  <data name="Settings_Display_DisplayCard" xml:space="preserve">
+    <value>What to show</value>
+  </data>
+  <data name="Settings_Display_DisplayCardDescription" xml:space="preserve">
+    <value>Pick what fills the full screen</value>
+  </data>
+  <data name="Settings_Display_ShowClock" xml:space="preserve">
+    <value>Show the big clock</value>
+  </data>
+  <data name="Settings_Display_ShowClockDescription" xml:space="preserve">
+    <value>The largest thing on the screen</value>
+  </data>
+  <data name="Settings_Display_ShowDate" xml:space="preserve">
+    <value>Show the date</value>
+  </data>
+  <data name="Settings_Display_ShowDateDescription" xml:space="preserve">
+    <value>The line under the clock</value>
+  </data>
+  <data name="Settings_Display_ClockDate" xml:space="preserve">
+    <value>What the clock shows</value>
+  </data>
+  <data name="Settings_Display_ClockDateDescription" xml:space="preserve">
+    <value>Clock and date can be shown alone</value>
+  </data>
+  <data name="Settings_Display_ClockDateBoth" xml:space="preserve">
+    <value>Clock and date</value>
+  </data>
+  <data name="Settings_Display_ClockOnly" xml:space="preserve">
+    <value>Clock only</value>
+  </data>
+  <data name="Settings_Display_DateOnly" xml:space="preserve">
+    <value>Date only</value>
+  </data>
+  <data name="Settings_Display_ClockDateNone" xml:space="preserve">
+    <value>Neither</value>
+  </data>
+  <data name="Settings_Display_SecondsMode" xml:space="preserve">
+    <value>Seconds</value>
+  </data>
+  <data name="Settings_Display_SecondsModeDescription" xml:space="preserve">
+    <value>Off, smaller, or as big as the time</value>
+  </data>
+  <data name="Settings_Display_SecondsNone" xml:space="preserve">
+    <value>Hide seconds</value>
+  </data>
+  <data name="Settings_Display_SecondsSmall" xml:space="preserve">
+    <value>Show seconds, a bit smaller</value>
+  </data>
+  <data name="Settings_Display_SecondsBig" xml:space="preserve">
+    <value>Seconds as big as the time</value>
+  </data>
+  <data name="Settings_Display_BoardDisplay" xml:space="preserve">
+    <value>Show homework</value>
+  </data>
+  <data name="Settings_Display_BoardDisplayDescription" xml:space="preserve">
+    <value>All of it, only what is due today, or none</value>
+  </data>
+  <data name="Settings_Display_BoardDisplayNone" xml:space="preserve">
+    <value>No homework</value>
+  </data>
+  <data name="Settings_Display_ExamCountdown" xml:space="preserve">
+    <value>Exam countdown</value>
+  </data>
+  <data name="Settings_Display_ExamCountdownDescription" xml:space="preserve">
+    <value>Show days until the exam under the date</value>
+  </data>
+  <data name="Settings_Display_ExamCountdownSample" xml:space="preserve">
+    <value>Final exam · in 3 days</value>
+  </data>
+  <data name="Settings_Display_AllowAssign" xml:space="preserve">
+    <value>Allow adding homework</value>
+  </data>
+  <data name="Settings_Display_AllowAssignDescription" xml:space="preserve">
+    <value>Turn it off to block adding on screen</value>
+  </data>
+  <data name="Settings_Display_Editable" xml:space="preserve">
+    <value>Allow editing homework</value>
+  </data>
+  <data name="Settings_Display_EditableDescription" xml:space="preserve">
+    <value>Read only, no edit buttons</value>
+  </data>
+  <data name="Settings_Display_FontCard" xml:space="preserve">
+    <value>Font sizes</value>
+  </data>
+  <data name="Settings_Display_ClockFontSize" xml:space="preserve">
+    <value>Clock size</value>
+  </data>
+  <data name="Settings_Display_ClockFontSizeDescription" xml:space="preserve">
+    <value>Default 96, up to 480</value>
+  </data>
+  <data name="Settings_Display_ClockDateFontSize" xml:space="preserve">
+    <value>Date size</value>
+  </data>
+  <data name="Settings_Display_ClockDateFontSizeDescription" xml:space="preserve">
+    <value>Size of the line under the clock</value>
+  </data>
+  <data name="Settings_Display_TitleFontSize" xml:space="preserve">
+    <value>Heading size</value>
+  </data>
+  <data name="Settings_Display_TitleFontSizeDescription" xml:space="preserve">
+    <value>Size of the homework heading</value>
+  </data>
+  <data name="Settings_Display_WeatherFontSize" xml:space="preserve">
+    <value>Weather size</value>
+  </data>
+  <data name="Settings_Display_WeatherFontSizeDescription" xml:space="preserve">
+    <value>Size of the weather at the top right</value>
+  </data>
+  <data name="Settings_Display_QuoteFontSize" xml:space="preserve">
+    <value>Quote size</value>
+  </data>
+  <data name="Settings_Display_QuoteFontSizeDescription" xml:space="preserve">
+    <value>Size of the quote line at the bottom</value>
+  </data>
+  <data name="Settings_Display_ExamCountdownFontSize" xml:space="preserve">
+    <value>Countdown size</value>
+  </data>
+  <data name="Settings_Display_ExamCountdownFontSizeDescription" xml:space="preserve">
+    <value>Size of the countdown line under the date</value>
+  </data>
+  <data name="Settings_Display_QuoteSample" xml:space="preserve">
+    <value>The road ahead is long, and so is the search</value>
+  </data>
+  <data name="Settings_Display_FontUnit" xml:space="preserve">
+    <value>pt</value>
+  </data>
+  <data name="Settings_Display_PreviewScaled" xml:space="preserve">
+    <value>Too big to preview, capped at 96</value>
+  </data>
+  <data name="Settings_Display_CursorSecondsUnit" xml:space="preserve">
+    <value>s</value>
+  </data>
+  <data name="Settings_Display_ScheduleCard" xml:space="preserve">
+    <value>Automatic schedule</value>
+  </data>
+  <data name="Settings_Display_AutoShow" xml:space="preserve">
+    <value>Open automatically</value>
+  </data>
+  <data name="Settings_Display_AutoShowDescription" xml:space="preserve">
+    <value>Fill the screen at this time</value>
+  </data>
+  <data name="Settings_Display_AutoHide" xml:space="preserve">
+    <value>Close automatically</value>
+  </data>
+  <data name="Settings_Display_AutoHideDescription" xml:space="preserve">
+    <value>Only the one it opened</value>
+  </data>
+  <data name="Settings_Display_Open" xml:space="preserve">
+    <value>Open full screen</value>
+  </data>
+  <data name="Settings_Display_Close" xml:space="preserve">
+    <value>Close full screen</value>
+  </data>
+  <data name="Settings_Basic_UrlProtocol" xml:space="preserve">
+    <value>Allow link invocation</value>
+  </data>
+  <data name="Settings_Basic_UrlProtocolDescription" xml:space="preserve">
+    <value>Registers corkboard:// so links can open it</value>
+  </data>
+  <data name="Settings_Basic_UrlCopy" xml:space="preserve">
+    <value>Copy link</value>
+  </data>
+  <data name="Settings_Basic_UrlCopied" xml:space="preserve">
+    <value>Copied</value>
+  </data>
+  <data name="Menu_OpenDisplayBoard" xml:space="preserve">
+    <value>Display mode</value>
+  </data>
+  <data name="Display_Board_Heading" xml:space="preserve">
+    <value>Today's homework</value>
+  </data>
+  <data name="Display_ExitHint" xml:space="preserve">
+    <value>Hold for two seconds to exit</value>
+  </data>
+  <data name="Display_EmptyState" xml:space="preserve">
+    <value>Clock, exam countdown and homework are all off — turn one on in Settings > Display mode</value>
+  </data>
+  <data name="Display_LockedTip" xml:space="preserve">
+    <value>Board is locked — editing is off on this screen</value>
+  </data>
+  <data name="Display_EmptyBoard" xml:space="preserve">
+    <value>Nothing due today</value>
+  </data>
+  <data name="Menu_DisplayBoardGroup" xml:space="preserve">
+    <value>Display mode</value>
+  </data>
+  <data name="Menu_ExtendDisplayBoard" xml:space="preserve">
+    <value>Extend by 30 minutes</value>
+  </data>
+  <data name="Menu_CloseDisplayBoard" xml:space="preserve">
+    <value>Close display mode</value>
+  </data>
+  <data name="Menu_SuppressDisplayToday" xml:space="preserve">
+    <value>Don't auto-open today</value>
+  </data>
+  <data name="Settings_Display_ShowSeconds" xml:space="preserve">
+    <value>Show seconds</value>
+  </data>
+  <data name="Settings_Display_ShowSecondsDescription" xml:space="preserve">
+    <value>Keep the seconds running so you can see the clock ticking</value>
+  </data>
+  <data name="Settings_Display_ClockFormat" xml:space="preserve">
+    <value>Clock format</value>
+  </data>
+  <data name="Settings_Display_ClockFormatDescription" xml:space="preserve">
+    <value>Pick 24-hour or 12-hour time</value>
+  </data>
+  <data name="Settings_Display_ClockFormat24" xml:space="preserve">
+    <value>24-hour</value>
+  </data>
+  <data name="Settings_Display_ClockFormat12" xml:space="preserve">
+    <value>12-hour</value>
+  </data>
+  <data name="Settings_Display_DateFormat" xml:space="preserve">
+    <value>Date format</value>
+  </data>
+  <data name="Settings_Display_DateFormatDescription" xml:space="preserve">
+    <value>How the date under the clock reads</value>
+  </data>
+  <data name="Settings_Display_DateFormatFull" xml:space="preserve">
+    <value>Full date</value>
+  </data>
+  <data name="Settings_Display_DateFormatMonthDay" xml:space="preserve">
+    <value>Month and day</value>
+  </data>
+  <data name="Settings_Display_DateFormatNumeric" xml:space="preserve">
+    <value>Numeric date</value>
+  </data>
+  <data name="Settings_Display_DateCalendar" xml:space="preserve">
+    <value>Date calendar</value>
+  </data>
+  <data name="Settings_Display_DateCalendarDescription" xml:space="preserve">
+    <value>Whether the date line also shows the lunar date</value>
+  </data>
+  <data name="Settings_Display_DateCalendarGregorian" xml:space="preserve">
+    <value>Gregorian</value>
+  </data>
+  <data name="Settings_Display_DateCalendarLunar" xml:space="preserve">
+    <value>Lunar</value>
+  </data>
+  <data name="Settings_Display_DateCalendarBoth" xml:space="preserve">
+    <value>Gregorian + lunar</value>
+  </data>
+  <data name="Settings_Display_BoardScopeAll" xml:space="preserve">
+    <value>All homework</value>
+  </data>
+  <data name="Settings_Display_BoardScopeDueToday" xml:space="preserve">
+    <value>Only due today</value>
+  </data>
+  <data name="Settings_Display_AutoScroll" xml:space="preserve">
+    <value>Auto scroll</value>
+  </data>
+  <data name="Settings_Display_AutoScrollDescription" xml:space="preserve">
+    <value>Scrolls a page at a time when the board is longer than the screen</value>
+  </data>
+  <data name="Settings_Display_AutoScrollPause" xml:space="preserve">
+    <value>Seconds per page</value>
+  </data>
+  <data name="Settings_Display_AutoScrollPauseDescription" xml:space="preserve">
+    <value>Longer is easier to read, shorter flips faster</value>
+  </data>
+  <data name="Settings_Display_AutoScrollRow" xml:space="preserve">
+    <value>Scroll automatically</value>
+  </data>
+  <data name="Settings_Display_AutoScrollRowDescription" xml:space="preserve">
+    <value>Turn it off to stay at the top</value>
+  </data>
+  <data name="Settings_Display_Slots" xml:space="preserve">
+    <value>Time slots</value>
+  </data>
+  <data name="Settings_Display_SlotsDescription" xml:space="preserve">
+    <value>Add several slots and pick weekdays for each</value>
+  </data>
+  <data name="Settings_Display_AddSlot" xml:space="preserve">
+    <value>Add a slot</value>
+  </data>
+  <data name="Settings_Display_RemoveSlot" xml:space="preserve">
+    <value>Remove this slot</value>
+  </data>
+  <data name="Settings_Display_SlotEmpty" xml:space="preserve">
+    <value>Entry and exit are the same, so this slot never fires</value>
+  </data>
+  <data name="Settings_Display_Status" xml:space="preserve">
+    <value>Right now</value>
+  </data>
+  <data name="Settings_Display_StatusDescription" xml:space="preserve">
+    <value>Whether it is open right now</value>
+  </data>
+  <data name="Settings_Display_StatusOpen" xml:space="preserve">
+    <value>Open right now</value>
+  </data>
+  <data name="Settings_Display_StatusClosed" xml:space="preserve">
+    <value>Closed right now</value>
+  </data>
+  <data name="Settings_Display_StatusSuppressed" xml:space="preserve">
+    <value>Won't auto-open today</value>
+  </data>
+  <data name="Settings_Display_WarningNothingVisible" xml:space="preserve">
+    <value>Clock, countdown and homework are off, so the screen shows only a hint</value>
+  </data>
+  <data name="Settings_Display_DayMonday" xml:space="preserve">
+    <value>Mon</value>
+  </data>
+  <data name="Settings_Display_DayTuesday" xml:space="preserve">
+    <value>Tue</value>
+  </data>
+  <data name="Settings_Display_DayWednesday" xml:space="preserve">
+    <value>Wed</value>
+  </data>
+  <data name="Settings_Display_DayThursday" xml:space="preserve">
+    <value>Thu</value>
+  </data>
+  <data name="Settings_Display_DayFriday" xml:space="preserve">
+    <value>Fri</value>
+  </data>
+  <data name="Settings_Display_DaySaturday" xml:space="preserve">
+    <value>Sat</value>
+  </data>
+  <data name="Settings_Display_DaySunday" xml:space="preserve">
+    <value>Sun</value>
+  </data>
+  <data name="Settings_Display_Content_Title" xml:space="preserve">
+    <value>Display and layout</value>
+  </data>
+  <data name="Settings_Display_Layout_Title" xml:space="preserve">
+    <value>Layout and type</value>
+  </data>
+  <data name="Settings_Display_Widgets_Title" xml:space="preserve">
+    <value>Quote and weather</value>
+  </data>
+  <data name="Settings_Display_Background_Title" xml:space="preserve">
+    <value>Background</value>
+  </data>
+  <data name="Settings_Display_Schedule_Title" xml:space="preserve">
+    <value>Auto show</value>
+  </data>
+  <data name="Settings_Display_BigSeconds" xml:space="preserve">
+    <value>Keep the seconds the same size</value>
+  </data>
+  <data name="Settings_Display_BigSecondsDescription" xml:space="preserve">
+    <value>Off shrinks the seconds into a small tail</value>
+  </data>
+  <data name="Settings_Background_TitleDescription" xml:space="preserve">
+    <value>Only this screen changes</value>
+  </data>
+  <data name="Settings_Background_Mode" xml:space="preserve">
+    <value>Style</value>
+  </data>
+  <data name="Settings_Background_ModeDescription" xml:space="preserve">
+    <value>Follow the theme, or pick your own</value>
+  </data>
+  <data name="Settings_Background_ModeTheme" xml:space="preserve">
+    <value>Theme</value>
+  </data>
+  <data name="Settings_Background_ModeSolid" xml:space="preserve">
+    <value>Solid colour</value>
+  </data>
+  <data name="Settings_Background_ModeGradient" xml:space="preserve">
+    <value>Two-colour gradient</value>
+  </data>
+  <data name="Settings_Background_ModeImage" xml:space="preserve">
+    <value>Picture</value>
+  </data>
+  <data name="Settings_Background_Color" xml:space="preserve">
+    <value>Colour</value>
+  </data>
+  <data name="Settings_Background_ColorDescription" xml:space="preserve">
+    <value>Fills the whole screen</value>
+  </data>
+  <data name="Settings_Background_GradientStart" xml:space="preserve">
+    <value>First colour</value>
+  </data>
+  <data name="Settings_Background_GradientEnd" xml:space="preserve">
+    <value>Second colour</value>
+  </data>
+  <data name="Settings_Background_GradientAngle" xml:space="preserve">
+    <value>Direction</value>
+  </data>
+  <data name="Settings_Background_GradientAngleDescription" xml:space="preserve">
+    <value>0 runs left to right</value>
+  </data>
+  <data name="Settings_Background_Image" xml:space="preserve">
+    <value>Picture</value>
+  </data>
+  <data name="Settings_Background_ImageDescription" xml:space="preserve">
+    <value>A copy is kept here, so moving the original is fine</value>
+  </data>
+  <data name="Settings_Background_ImageEmpty" xml:space="preserve">
+    <value>No picture yet</value>
+  </data>
+  <data name="Settings_Background_ImagePick" xml:space="preserve">
+    <value>Choose</value>
+  </data>
+  <data name="Settings_Background_ImageReplace" xml:space="preserve">
+    <value>Replace</value>
+  </data>
+  <data name="Settings_Background_ImageClear" xml:space="preserve">
+    <value>Clear</value>
+  </data>
+  <data name="Settings_Background_ImageFailed" xml:space="preserve">
+    <value>This picture cannot be opened</value>
+  </data>
+  <data name="Settings_Background_Dim" xml:space="preserve">
+    <value>Dim</value>
+  </data>
+  <data name="Settings_Background_DimDescription" xml:space="preserve">
+    <value>Darkens the picture behind the text</value>
+  </data>
+  <data name="Settings_Background_Blur" xml:space="preserve">
+    <value>Blur</value>
+  </data>
+  <data name="Settings_Background_BlurDescription" xml:space="preserve">
+    <value>Softens the picture</value>
+  </data>
+  <data name="Settings_Background_ImageFilter" xml:space="preserve">
+    <value>Image files</value>
+  </data>
+  <data name="Settings_Background_PickTitle" xml:space="preserve">
+    <value>Choose a background picture</value>
+  </data>
+  <data name="Settings_Widgets_Quote" xml:space="preserve">
+    <value>Quote</value>
+  </data>
+  <data name="Settings_Widgets_QuoteDescription" xml:space="preserve">
+    <value>The line at the bottom of the screen</value>
+  </data>
+  <data name="Settings_Widgets_QuoteCategories" xml:space="preserve">
+    <value>Categories</value>
+  </data>
+  <data name="Settings_Widgets_QuoteCategoriesDescription" xml:space="preserve">
+    <value>Leave all unticked to allow any</value>
+  </data>
+  <data name="Settings_Widgets_QuoteLength" xml:space="preserve">
+    <value>Length</value>
+  </data>
+  <data name="Settings_Widgets_QuoteMinLength" xml:space="preserve">
+    <value>At least</value>
+  </data>
+  <data name="Settings_Widgets_QuoteMaxLength" xml:space="preserve">
+    <value>At most</value>
+  </data>
+  <data name="Settings_Widgets_QuoteExtraQuery" xml:space="preserve">
+    <value>Extra parameters</value>
+  </data>
+  <data name="Settings_Widgets_QuoteExtraQueryDescription" xml:space="preserve">
+    <value>Follow the official docs</value>
+  </data>
+  <data name="Settings_Widgets_QuoteIgnored" xml:space="preserve">
+    <value>These are managed here: {0}</value>
+  </data>
+  <data name="Settings_Widgets_QuoteRefresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="Settings_Widgets_QuoteRefreshDescription" xml:space="preserve">
+    <value>Every time the board opens, or on a timer</value>
+  </data>
+  <data name="Settings_Widgets_RefreshOnOpen" xml:space="preserve">
+    <value>A new one each time the board opens</value>
+  </data>
+  <data name="Settings_Widgets_RefreshEveryMinutes" xml:space="preserve">
+    <value>Every {0} minutes</value>
+  </data>
+  <data name="Settings_Widgets_QuoteInternational" xml:space="preserve">
+    <value>Use the overseas endpoint</value>
+  </data>
+  <data name="Settings_Widgets_QuoteInternationalDescription" xml:space="preserve">
+    <value>The domestic endpoint is rate limited</value>
+  </data>
+  <data name="Settings_Widgets_Weather" xml:space="preserve">
+    <value>Weather</value>
+  </data>
+  <data name="Settings_Widgets_WeatherDescription" xml:space="preserve">
+    <value>The line in the top right corner</value>
+  </data>
+  <data name="Settings_Widgets_WeatherCity" xml:space="preserve">
+    <value>City</value>
+  </data>
+  <data name="Settings_Widgets_WeatherCityDescription" xml:space="preserve">
+    <value>Search a city, or pick a common one</value>
+  </data>
+  <data name="Settings_Widgets_WeatherChangeCity" xml:space="preserve">
+    <value>Change</value>
+  </data>
+  <data name="Settings_Widgets_WeatherCityPicker" xml:space="preserve">
+    <value>Pick a city</value>
+  </data>
+  <data name="Settings_Widgets_WeatherPopularCities" xml:space="preserve">
+    <value>Common cities</value>
+  </data>
+  <data name="Settings_Widgets_WeatherCityPlaceholder" xml:space="preserve">
+    <value>Type a city name</value>
+  </data>
+  <data name="Settings_Widgets_WeatherSearch" xml:space="preserve">
+    <value>Search</value>
+  </data>
+  <data name="Settings_Widgets_WeatherSearching" xml:space="preserve">
+    <value>Searching…</value>
+  </data>
+  <data name="Settings_Widgets_WeatherSearchFailed" xml:space="preserve">
+    <value>No such city</value>
+  </data>
+  <data name="Settings_Widgets_WeatherRefresh" xml:space="preserve">
+    <value>Refresh</value>
+  </data>
+  <data name="Settings_Widgets_WeatherRefreshDescription" xml:space="preserve">
+    <value>Weather moves slowly</value>
+  </data>
+  <data name="Settings_Widgets_Category_Animation" xml:space="preserve">
+    <value>Anime</value>
+  </data>
+  <data name="Settings_Widgets_Category_Comic" xml:space="preserve">
+    <value>Comics</value>
+  </data>
+  <data name="Settings_Widgets_Category_Game" xml:space="preserve">
+    <value>Games</value>
+  </data>
+  <data name="Settings_Widgets_Category_Literature" xml:space="preserve">
+    <value>Literature</value>
+  </data>
+  <data name="Settings_Widgets_Category_Original" xml:space="preserve">
+    <value>Original</value>
+  </data>
+  <data name="Settings_Widgets_Category_Web" xml:space="preserve">
+    <value>Web</value>
+  </data>
+  <data name="Settings_Widgets_Category_Other" xml:space="preserve">
+    <value>Other</value>
+  </data>
+  <data name="Settings_Widgets_Category_Movie" xml:space="preserve">
+    <value>Movies</value>
+  </data>
+  <data name="Settings_Widgets_Category_Poetry" xml:space="preserve">
+    <value>Poetry</value>
+  </data>
+  <data name="Settings_Widgets_Category_Philosophy" xml:space="preserve">
+    <value>Philosophy</value>
+  </data>
+  <data name="Settings_Widgets_Category_Funny" xml:space="preserve">
+    <value>Fun</value>
+  </data>
+  <data name="Widgets_WeatherHumidity" xml:space="preserve">
+    <value>Humidity {0}%</value>
+  </data>
+  <data name="Widgets_WeatherAqi" xml:space="preserve">
+    <value>AQI {0}</value>
+  </data>
+  <data name="Widgets_WeatherRange" xml:space="preserve">
+    <value>Today {0}–{1}°</value>
+  </data>
+  <data name="Widgets_WeatherTomorrow" xml:space="preserve">
+    <value>Tomorrow {0} {1}–{2}°</value>
+  </data>
+  <data name="Weather_Condition_Clear" xml:space="preserve">
+    <value>Clear</value>
+  </data>
+  <data name="Weather_Condition_PartlyCloudy" xml:space="preserve">
+    <value>Partly cloudy</value>
+  </data>
+  <data name="Weather_Condition_Cloudy" xml:space="preserve">
+    <value>Cloudy</value>
+  </data>
+  <data name="Weather_Condition_Overcast" xml:space="preserve">
+    <value>Overcast</value>
+  </data>
+  <data name="Weather_Condition_Shower" xml:space="preserve">
+    <value>Showers</value>
+  </data>
+  <data name="Weather_Condition_Thunderstorm" xml:space="preserve">
+    <value>Thunderstorm</value>
+  </data>
+  <data name="Weather_Condition_ThunderHail" xml:space="preserve">
+    <value>Thundershowers with hail</value>
+  </data>
+  <data name="Weather_Condition_Sleet" xml:space="preserve">
+    <value>Sleet</value>
+  </data>
+  <data name="Weather_Condition_LightRain" xml:space="preserve">
+    <value>Light rain</value>
+  </data>
+  <data name="Weather_Condition_ModerateRain" xml:space="preserve">
+    <value>Moderate rain</value>
+  </data>
+  <data name="Weather_Condition_HeavyRain" xml:space="preserve">
+    <value>Heavy rain</value>
+  </data>
+  <data name="Weather_Condition_Rainstorm" xml:space="preserve">
+    <value>Rainstorm</value>
+  </data>
+  <data name="Weather_Condition_LightSnow" xml:space="preserve">
+    <value>Light snow</value>
+  </data>
+  <data name="Weather_Condition_ModerateSnow" xml:space="preserve">
+    <value>Moderate snow</value>
+  </data>
+  <data name="Weather_Condition_HeavySnow" xml:space="preserve">
+    <value>Heavy snow</value>
+  </data>
+  <data name="Weather_Condition_Blizzard" xml:space="preserve">
+    <value>Blizzard</value>
+  </data>
+  <data name="Weather_Condition_Fog" xml:space="preserve">
+    <value>Fog</value>
+  </data>
+  <data name="Weather_Condition_Haze" xml:space="preserve">
+    <value>Haze</value>
+  </data>
+  <data name="Weather_Condition_FreezingRain" xml:space="preserve">
+    <value>Freezing rain</value>
+  </data>
+  <data name="Weather_Condition_Dust" xml:space="preserve">
+    <value>Dust</value>
+  </data>
+  <data name="Weather_Condition_Sandstorm" xml:space="preserve">
+    <value>Sandstorm</value>
+  </data>
+  <data name="Weather_Condition_Unknown" xml:space="preserve">
+    <value>Unknown</value>
+  </data>
+  <data name="Settings_Display_Group" xml:space="preserve">
+    <value>Display mode</value>
+  </data>
+  <data name="Settings_Widgets_WeatherEveryMinutes" xml:space="preserve">
+    <value>Every {0} minutes</value>
+  </data>
+  <data name="Settings_Widgets_WeatherCitySelected" xml:space="preserve">
+    <value>Now showing: {0}</value>
+  </data>
+  <data name="Settings_Widgets_WeatherSearchEmpty" xml:space="preserve">
+    <value>No city found</value>
+  </data>
+  <data name="Settings_Widgets_WeatherSearchResult" xml:space="preserve">
+    <value>{0} results, pick one</value>
+  </data>
+  <data name="Settings_Widgets_WeatherLastSuccess" xml:space="preserve">
+    <value>Last updated {0}</value>
+  </data>
+  <data name="Settings_Widgets_WeatherNeverFetched" xml:space="preserve">
+    <value>No weather fetched yet</value>
+  </data>
+  <data name="Settings_Exam_Display_Background" xml:space="preserve">
+    <value>Background</value>
+  </data>
+  <data name="Widgets_WeatherFeelsLike" xml:space="preserve">
+    <value>Feels like {0}°</value>
+  </data>
+  <data name="Widgets_WeatherTomorrowNoTemperature" xml:space="preserve">
+    <value>Tomorrow {0}</value>
+  </data>
+  <data name="Weather_Aqi_Excellent" xml:space="preserve">
+    <value>Excellent</value>
+  </data>
+  <data name="Weather_Aqi_Good" xml:space="preserve">
+    <value>Good</value>
+  </data>
+  <data name="Weather_Aqi_Light" xml:space="preserve">
+    <value>Light pollution</value>
+  </data>
+  <data name="Weather_Aqi_Moderate" xml:space="preserve">
+    <value>Moderate pollution</value>
+  </data>
+  <data name="Weather_Aqi_Heavy" xml:space="preserve">
+    <value>Heavy pollution</value>
+  </data>
+  <data name="Weather_Aqi_Severe" xml:space="preserve">
+    <value>Severe pollution</value>
+  </data>
+  <data name="Settings_Widgets_WeatherFields" xml:space="preserve">
+    <value>What to show</value>
+  </data>
+  <data name="Settings_Widgets_WeatherFieldsDescription" xml:space="preserve">
+    <value>Anything you untick stays off the screen</value>
+  </data>
+  <data name="Settings_Widgets_ShowWeatherIcon" xml:space="preserve">
+    <value>Weather icon</value>
+  </data>
+  <data name="Settings_Widgets_ShowWeatherTemperature" xml:space="preserve">
+    <value>Current temperature</value>
+  </data>
+  <data name="Settings_Widgets_ShowWeatherCondition" xml:space="preserve">
+    <value>Conditions</value>
+  </data>
+  <data name="Settings_Widgets_ShowWeatherCity" xml:space="preserve">
+    <value>City name</value>
+  </data>
+  <data name="Settings_Widgets_ShowWeatherRange" xml:space="preserve">
+    <value>High and low</value>
+  </data>
+  <data name="Settings_Widgets_ShowWeatherHumidity" xml:space="preserve">
+    <value>Humidity</value>
+  </data>
+  <data name="Settings_Widgets_ShowWeatherAqi" xml:space="preserve">
+    <value>Air quality</value>
+  </data>
+  <data name="Settings_Widgets_ShowWeatherFeelsLike" xml:space="preserve">
+    <value>Feels like</value>
+  </data>
+  <data name="Settings_Widgets_ShowWeatherTomorrow" xml:space="preserve">
+    <value>Tomorrow</value>
+  </data>
+  <data name="Settings_Section_Stability" xml:space="preserve">
+    <value>Stability</value>
+  </data>
+  <data name="Settings_Basic_CrashRecovery" xml:space="preserve">
+    <value>Crash recovery</value>
+  </data>
+  <data name="Settings_Basic_CrashRecoveryDescription" xml:space="preserve">
+    <value>What to do when an unhandled error happens</value>
+  </data>
+  <data name="Settings_Basic_CrashRecovery_None" xml:space="preserve">
+    <value>Do nothing</value>
+  </data>
+  <data name="Settings_Basic_CrashRecovery_RestartOnly" xml:space="preserve">
+    <value>Restart right away</value>
+  </data>
+  <data name="Settings_Basic_CrashRecovery_PromptThenRestart" xml:space="preserve">
+    <value>Show a prompt, then I restart</value>
+  </data>
+  <data name="Settings_Basic_CrashRecovery_PromptAndRestart" xml:space="preserve">
+    <value>Show a prompt and restart automatically</value>
   </data>
 </root>

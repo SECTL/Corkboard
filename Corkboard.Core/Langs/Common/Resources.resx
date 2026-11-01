@@ -22,9 +22,6 @@
   <data name="Common_Cancel" xml:space="preserve">
     <value>取消</value>
   </data>
-  <data name="Feat_Settings" xml:space="preserve">
-    <value>设置</value>
-  </data>
   <data name="Menu_OpenMainWindow" xml:space="preserve">
     <value>显示作业板</value>
   </data>
@@ -40,19 +37,34 @@
   <data name="Menu_ExitProgram" xml:space="preserve">
     <value>退出程序</value>
   </data>
-  <data name="Menu_About" xml:space="preserve">
-    <value>关于 Corkboard</value>
+  <!-- 标题栏右上角那颗三点按钮：排序 / 导出 / 时空回放 / 收纳 都收在它的菜单里。 -->
+  <data name="MainView_More" xml:space="preserve">
+    <value>更多</value>
   </data>
   <!--
-      主窗口最右上角的锁按钮：锁上就等于开启点击穿透。
-      锁定态主窗口收不到鼠标，那颗按钮由独立小窗口承载（见 ClickThroughLockWindow），
-      所以两条文案分别用在不同位置。
+      主窗口最右上角的锁按钮：锁定 = 窗口位置与大小都钉死（板子照常查看与编辑）；
+      解锁 = 调整窗口态，能拖标题栏、能拉四边，但内容区会盖一层遮罩、期间不能编辑作业。
   -->
   <data name="MainView_LockWindow" xml:space="preserve">
-    <value>锁定窗口（开启点击穿透）</value>
+    <value>锁定窗口（位置与大小都钉住）</value>
   </data>
   <data name="MainView_UnlockWindow" xml:space="preserve">
-    <value>解锁窗口（关闭点击穿透）</value>
+    <value>解锁窗口（可移动、可改大小）</value>
+  </data>
+  <!--
+    解锁态盖在内容区上的那层遮罩：它吃掉指针，所以挪窗口/改大小的当口改不了作业。
+  -->
+  <data name="Board_UnlockMaskTitle" xml:space="preserve">
+    <value>窗口已解锁</value>
+  </data>
+  <data name="Board_UnlockMaskDescription" xml:space="preserve">
+    <value>拖标题栏能挪窗口，拉四边能改大小</value>
+  </data>
+  <data name="Board_UnlockMaskHint" xml:space="preserve">
+    <value>锁定之后才能编辑作业</value>
+  </data>
+  <data name="Board_UnlockMaskLock" xml:space="preserve">
+    <value>锁定窗口</value>
   </data>
   <!-- 作业板的默认名称：用户在设置里填了名字就用用户的，没填才回退到这条。 -->
   <data name="Board_Title" xml:space="preserve">
@@ -92,15 +104,6 @@
     <value>字号</value>
   </data>
   <!-- 整篇字号下拉里「不定字号」那一项；{0} 是设置里的默认字号。 -->
-  <data name="Board_FontSizeFollowDefault" xml:space="preserve">
-    <value>跟随默认（{0}）</value>
-  </data>
-  <data name="Board_TextColor" xml:space="preserve">
-    <value>颜色</value>
-  </data>
-  <data name="Board_ClearFormat" xml:space="preserve">
-    <value>清除格式</value>
-  </data>
   <!-- 库自带颜色浮层里那颗「自定义颜色」按钮（由 RichTextCustomColor 补上）：点开是它自己的取色器浮层。 -->
   <data name="Board_CustomColor" xml:space="preserve">
     <value>自定义颜色</value>
@@ -120,13 +123,6 @@
   </data>
   <data name="Board_EmptyHint" xml:space="preserve">
     <value>点右上角「布置作业」记下第一条</value>
-  </data>
-  <!--
-    点击穿透开着时，标题栏右上角整块（含「布置作业」）是隐藏的，
-    上面那条提示就没有落点了，换成指向「先解锁」的说法。
-  -->
-  <data name="Board_EmptyHintLocked" xml:space="preserve">
-    <value>窗口已锁定，先点右上角解锁，再记下第一条</value>
   </data>
   <data name="Board_Replay" xml:space="preserve">
     <value>时空回放</value>
@@ -204,12 +200,6 @@
   <data name="Settings_Title" xml:space="preserve">
     <value>设置</value>
   </data>
-  <data name="Settings_Group_General" xml:space="preserve">
-    <value>通用</value>
-  </data>
-  <data name="Settings_Group_About" xml:space="preserve">
-    <value>关于</value>
-  </data>
   <!-- 设置页里的分区标题：一页里的设置按用途分块。 -->
   <data name="Settings_Section_Startup" xml:space="preserve">
     <value>启动</value>
@@ -217,14 +207,14 @@
   <data name="Settings_Section_Window" xml:space="preserve">
     <value>窗口</value>
   </data>
-  <data name="Settings_Section_DeleteAndCleanup" xml:space="preserve">
-    <value>删除与清理</value>
-  </data>
   <data name="Settings_Section_Theme" xml:space="preserve">
     <value>主题与颜色</value>
   </data>
   <data name="Settings_Section_Font" xml:space="preserve">
     <value>字体与字重</value>
+  </data>
+  <data name="Settings_Section_Motion" xml:space="preserve">
+    <value>动效</value>
   </data>
   <data name="Settings_Basic_Title" xml:space="preserve">
     <value>通用</value>
@@ -249,7 +239,7 @@
     <value>开机后自己启动，不用手动打开</value>
   </data>
   <data name="Settings_Basic_ShowStartupWindow" xml:space="preserve">
-    <value>启动时显示主窗口</value>
+    <value>启动时显示作业板</value>
   </data>
   <data name="Settings_Basic_ShowStartupWindowDescription" xml:space="preserve">
     <value>关掉后就待在托盘里，点托盘图标才出来</value>
@@ -260,77 +250,26 @@
   <data name="Settings_Basic_AutoSaveWindowSizeDescription" xml:space="preserve">
     <value>下次打开时还是上次的大小和位置</value>
   </data>
-  <data name="Settings_Basic_PinToDesktop" xml:space="preserve">
+  <data name="Settings_Board_PinToDesktop" xml:space="preserve">
     <value>置底到桌面</value>
   </data>
-  <data name="Settings_Basic_PinToDesktopDescription" xml:space="preserve">
+  <data name="Settings_Board_PinToDesktopDescription" xml:space="preserve">
     <value>贴在桌面上，会被别的窗口盖住</value>
   </data>
-  <data name="Settings_Basic_HoldToDragWindow" xml:space="preserve">
-    <value>长按拖动窗口</value>
-  </data>
-  <data name="Settings_Basic_HoldToDragWindowDescription" xml:space="preserve">
-    <value>按住窗口空白处就能拖，不用抓标题栏</value>
-  </data>
-  <data name="Settings_Basic_WindowDragMode" xml:space="preserve">
-    <value>拖动窗口</value>
-  </data>
-  <data name="Settings_Basic_WindowDragModeDescription" xml:space="preserve">
-    <value>怎么挪窗口，也可以干脆锁住不动</value>
-  </data>
-  <data name="Settings_Basic_WindowDragModeHoldAnywhere" xml:space="preserve">
-    <value>长按任意位置拖动</value>
-  </data>
-  <data name="Settings_Basic_WindowDragModeTitleBarOnly" xml:space="preserve">
-    <value>只能拖标题栏</value>
-  </data>
-  <data name="Settings_Basic_WindowDragModeFixed" xml:space="preserve">
-    <value>固定窗口，拖不动</value>
-  </data>
-  <data name="Settings_Basic_WindowLockMode" xml:space="preserve">
-    <value>锁定按钮做什么</value>
-  </data>
-  <data name="Settings_Basic_WindowLockModeDescription" xml:space="preserve">
-    <value>点标题栏那把锁之后，是锁住位置还是穿透</value>
-  </data>
-  <data name="Settings_Basic_WindowLockModeClickThrough" xml:space="preserve">
-    <value>点击穿透，鼠标穿过去</value>
-  </data>
-  <data name="Settings_Basic_WindowLockModeFixedPosition" xml:space="preserve">
-    <value>固定窗口，位置锁住</value>
-  </data>
-  <data name="Settings_Basic_MainWindowOpacity" xml:space="preserve">
+  <data name="Settings_Board_MainWindowOpacity" xml:space="preserve">
     <value>主窗口不透明度</value>
   </data>
-  <data name="Settings_Basic_MainWindowOpacityDescription" xml:space="preserve">
+  <data name="Settings_Board_MainWindowOpacityDescription" xml:space="preserve">
     <value>数值越小越透明，能看见后面的窗口</value>
   </data>
-  <data name="Settings_Basic_ClickThrough" xml:space="preserve">
-    <value>点击穿透</value>
-  </data>
-  <data name="Settings_Basic_ClickThroughDescription" xml:space="preserve">
-    <value>鼠标点不到窗口，改设置要从托盘菜单进</value>
-  </data>
-  <data name="Settings_Basic_WindowCorners" xml:space="preserve">
+  <data name="Settings_Board_WindowCorners" xml:space="preserve">
     <value>窗口圆角</value>
   </data>
-  <data name="Settings_Basic_WindowCornersDescription" xml:space="preserve">
+  <data name="Settings_Board_WindowCornersDescription" xml:space="preserve">
     <value>把主窗口四角收圆，置底到桌面时也生效</value>
   </data>
-  <data name="Settings_Basic_CornerAssignButton" xml:space="preserve">
+  <data name="Settings_Board_CornerAssignButton" xml:space="preserve">
     <value>右下角布置作业按钮</value>
-  </data>
-  <data name="Settings_Basic_CornerAssignButtonDescription" xml:space="preserve">
-    <value>右下角浮一颗加号，顺手就能布置作业</value>
-  </data>
-  <data name="Settings_Basic_AllowAddNoteWhenLocked" xml:space="preserve">
-    <value>锁定时也能添加作业</value>
-  </data>
-  <data name="Settings_Basic_AllowAddNoteWhenLockedDescription" xml:space="preserve">
-    <value>窗口锁定（点击穿透）时，右下角布置作业按钮仍然可用</value>
-  </data>
-  <data name="Settings_Group_Board" xml:space="preserve">
-    <value>作业板</value>
   </data>
   <data name="Settings_Board_Title" xml:space="preserve">
     <value>作业板</value>
@@ -359,6 +298,9 @@
   <data name="Settings_Board_TitleBarDock" xml:space="preserve">
     <value>收纳按钮</value>
   </data>
+  <data name="Settings_Board_TitleBarDisplay" xml:space="preserve">
+    <value>看板模式按钮</value>
+  </data>
   <data name="Settings_Board_Layout" xml:space="preserve">
     <value>排布</value>
   </data>
@@ -382,6 +324,10 @@
   </data>
   <data name="Settings_Board_BlockWidthAdaptiveDescription" xml:space="preserve">
     <value>一格跟着窗口变宽，到上限才换行</value>
+  </data>
+  <!-- 标题栏「更多」菜单里排序子菜单的标题；点开后子菜单里是五个排序档。 -->
+  <data name="Board_Sort_Title" xml:space="preserve">
+    <value>排序</value>
   </data>
   <data name="Board_Sort_Tip" xml:space="preserve">
     <value>排序方式：{0}</value>
@@ -584,9 +530,6 @@
   </data>
   <data name="Board_DueDateOverdueFormat" xml:space="preserve">
     <value>已过期 {0} 天</value>
-  </data>
-  <data name="Settings_Group_Personalized" xml:space="preserve">
-    <value>个性化</value>
   </data>
   <data name="Settings_Appearance_Title" xml:space="preserve">
     <value>外观</value>
@@ -795,9 +738,6 @@
   <data name="Settings_Cloud_Title" xml:space="preserve">
     <value>云同步</value>
   </data>
-  <data name="Settings_Cloud_Description" xml:space="preserve">
-    <value>登录后可以把作业板与设置备份到思拓创联云端</value>
-  </data>
   <data name="Settings_Cloud_Enable" xml:space="preserve">
     <value>云同步</value>
   </data>
@@ -935,9 +875,6 @@
   </data>
   <data name="Settings_Board_Sections_Categories" xml:space="preserve">
     <value>二级分类</value>
-  </data>
-  <data name="Settings_Board_Sections_SubjectPicker" xml:space="preserve">
-    <value>科目</value>
   </data>
   <data name="Settings_Board_Sections_CategoryCount" xml:space="preserve">
     <value>{0} 个分类</value>
@@ -1143,21 +1080,6 @@
   <data name="Settings_Board_Dock_Reset" xml:space="preserve">
     <value>恢复默认位置</value>
   </data>
-  <data name="Board_ExportImage" xml:space="preserve">
-    <value>导出图片</value>
-  </data>
-  <data name="Board_ExportImageTip" xml:space="preserve">
-    <value>把板子上的作业导成一张图片</value>
-  </data>
-  <data name="Board_ExportSuccess" xml:space="preserve">
-    <value>图片已保存</value>
-  </data>
-  <data name="Board_ExportFailed" xml:space="preserve">
-    <value>导出失败，请稍后重试</value>
-  </data>
-  <data name="Board_ExportNoContent" xml:space="preserve">
-    <value>板上还没有作业</value>
-  </data>
   <data name="Board_HandwritingTab" xml:space="preserve">
     <value>手写</value>
   </data>
@@ -1185,12 +1107,6 @@
   <data name="Board_HandwritingClear" xml:space="preserve">
     <value>清除</value>
   </data>
-  <data name="Board_HandwritingHint" xml:space="preserve">
-    <value>在下面写，写错了可以撤销</value>
-  </data>
-  <data name="Board_HandwritingEmpty" xml:space="preserve">
-    <value>先写点什么再布置</value>
-  </data>
   <data name="Board_Section" xml:space="preserve">
     <value>二级分类</value>
   </data>
@@ -1206,11 +1122,11 @@
   <data name="Board_QuickTags" xml:space="preserve">
     <value>快捷标签</value>
   </data>
-  <data name="Settings_Appearance_UiFontSize" xml:space="preserve">
-    <value>界面字号</value>
+  <data name="Settings_Appearance_Motion" xml:space="preserve">
+    <value>界面动效</value>
   </data>
-  <data name="Settings_Appearance_UiFontSizeDescription" xml:space="preserve">
-    <value>整个界面的字都按这个大小显示，看不清就调大</value>
+  <data name="Settings_Appearance_MotionDescription" xml:space="preserve">
+    <value>关掉后拖动排序时区块直接换位、不再滑动</value>
   </data>
   <data name="Board_Dock_Expand" xml:space="preserve">
     <value>展开作业板</value>
@@ -1226,6 +1142,9 @@
   </data>
   <data name="Common_Refresh" xml:space="preserve">
     <value>刷新</value>
+  </data>
+  <data name="Common_PageNotFound" xml:space="preserve">
+    <value>页面 {0} 未找到</value>
   </data>
   <data name="Settings_Board_Sections_DuplicateName" xml:space="preserve">
     <value>已经有同名分类了，换一个名字</value>
@@ -1519,11 +1438,20 @@
   <data name="Exam_Board_ExitHint" xml:space="preserve">
     <value>长按退出</value>
   </data>
-  <data name="Exam_Board_ExitHintActive" xml:space="preserve">
-    <value>松开取消</value>
-  </data>
   <data name="Exam_Board_ExitToolTip" xml:space="preserve">
     <value>按住 2 秒退出全屏</value>
+  </data>
+  <data name="Exam_Board_FloatingToolTip" xml:space="preserve">
+    <value>点一下回到看板，按住 2 秒退出</value>
+  </data>
+  <data name="Exam_Board_FloatingHoldHint" xml:space="preserve">
+    <value>按住 2 秒退出</value>
+  </data>
+  <data name="Exam_Board_MinimizeClickToolTip" xml:space="preserve">
+    <value>单击最小化，按住 2 秒退出</value>
+  </data>
+  <data name="Exam_Board_MinimizeHoldToolTip" xml:space="preserve">
+    <value>按住 2 秒最小化</value>
   </data>
   <data name="Exam_Board_NoExam" xml:space="preserve">
     <value>还没有考试安排</value>
@@ -1545,12 +1473,6 @@
   </data>
   <data name="Exam_Board_Table_Status" xml:space="preserve">
     <value>状态</value>
-  </data>
-  <data name="Exam_Board_ClockLocal" xml:space="preserve">
-    <value>本机时间</value>
-  </data>
-  <data name="Exam_Board_ClockSynced" xml:space="preserve">
-    <value>已校时</value>
   </data>
   <data name="Exam_Status_NotStarted" xml:space="preserve">
     <value>未开始</value>
@@ -1669,17 +1591,11 @@
     <data name="Settings_Exam_Plan_StepReview" xml:space="preserve">
     <value>一天几场与汇总</value>
   </data>
-  <data name="Settings_Exam_Plan_TitleDefault" xml:space="preserve">
-    <value>{0} 年期末考试</value>
-  </data>
   <data name="Settings_Exam_Plan_StepFormat" xml:space="preserve">
     <value>第 {0} 步 / 共 {1} 步 · {2}</value>
   </data>
     <data name="Settings_Exam_Plan_TitleLabel" xml:space="preserve">
     <value>看板标题</value>
-  </data>
-  <data name="Settings_Exam_Plan_TitlePlaceholder" xml:space="preserve">
-    <value>不填就用默认名</value>
   </data>
   <data name="Settings_Exam_Plan_SubtitleLabel" xml:space="preserve">
     <value>副标题</value>
@@ -1723,11 +1639,14 @@
   <data name="Settings_Exam_Plan_CombineHint" xml:space="preserve">
     <value>勾几门合成一场，比如理综</value>
   </data>
-  <data name="Settings_Exam_Plan_CombineTitle" xml:space="preserve">
-    <value>哪几门合成一场</value>
-  </data>
   <data name="Settings_Exam_Plan_Duration" xml:space="preserve">
     <value>时长</value>
+  </data>
+  <data name="Settings_Exam_Plan_SubjectOrder" xml:space="preserve">
+    <value>考试顺序</value>
+  </data>
+  <data name="Settings_Exam_Plan_DurationHint" xml:space="preserve">
+    <value>时长已按科目带好，要在汇总里改</value>
   </data>
   <data name="Settings_Exam_Plan_OrderUp" xml:space="preserve">
     <value>上移</value>
@@ -1811,7 +1730,7 @@
     <value>还没有存过模板，先排一次再「另存为模板」</value>
   </data>
   <data name="Settings_Exam_Plan_TemplateHint" xml:space="preserve">
-    <value>科目和作息都按模板来，只确认一下日期</value>
+    <value>科目、时长和作息都按模板带进来，后面还能改</value>
   </data>
   <data name="Settings_Exam_Plan_TemplateDefaultName" xml:space="preserve">
     <value>未命名模板</value>
@@ -1900,9 +1819,6 @@
   <data name="Settings_Exam_Plan_SlotPresetDeleteBody" xml:space="preserve">
     <value>作息模板「{0}」会被删掉，已经排好的考试不受影响</value>
   </data>
-  <data name="Settings_Exam_Plan_SubtitleDefault" xml:space="preserve">
-    <value>冷静分析，沉着应考</value>
-  </data>
   <data name="Settings_Exam_Plan_SlotPresetSummary" xml:space="preserve">
     <value>一天 {0} 场</value>
   </data>
@@ -1935,9 +1851,6 @@
   </data>
   <data name="Common_Minutes" xml:space="preserve">
     <value>分钟</value>
-  </data>
-  <data name="Common_Seconds" xml:space="preserve">
-    <value>秒</value>
   </data>
   <data name="Common_Milliseconds" xml:space="preserve">
     <value>毫秒</value>
@@ -2029,12 +1942,6 @@
   <data name="Settings_Exam_Schedule_Count" xml:space="preserve">
     <value>共 {0} 场</value>
   </data>
-  <data name="Settings_Exam_Schedule_Board" xml:space="preserve">
-    <value>看板</value>
-  </data>
-  <data name="Settings_Exam_Schedule_BoardDescription" xml:space="preserve">
-    <value>每个看板一个文件，标题与考试安排都在里面</value>
-  </data>
   <data name="Settings_Exam_Schedule_BoardNew" xml:space="preserve">
     <value>新建看板</value>
   </data>
@@ -2050,12 +1957,6 @@
   <data name="Settings_Exam_Schedule_BoardDeleteBody" xml:space="preserve">
     <value>删除看板「{0}」和里面的全部考试安排？</value>
   </data>
-  <data name="Settings_Exam_Schedule_TitleBlock" xml:space="preserve">
-    <value>标题与副标题</value>
-  </data>
-  <data name="Settings_Exam_Schedule_TitleBlockDescription" xml:space="preserve">
-    <value>看板左上角的两行大字，跟着当前看板走</value>
-  </data>
   <data name="Settings_Exam_Schedule_PaperInfo" xml:space="preserve">
     <value>卷面信息</value>
   </data>
@@ -2065,26 +1966,17 @@
   <data name="Settings_Exam_Display_TitleLabel" xml:space="preserve">
     <value>主标题</value>
   </data>
-  <data name="Settings_Exam_Display_TitleDescription" xml:space="preserve">
-    <value>看板左上角的大字，留空用默认名</value>
-  </data>
   <data name="Settings_Exam_Display_TitlePlaceholder" xml:space="preserve">
     <value>例如：期末考试</value>
   </data>
   <data name="Settings_Exam_Display_SubtitleLabel" xml:space="preserve">
     <value>副标题</value>
   </data>
-  <data name="Settings_Exam_Display_SubtitleDescription" xml:space="preserve">
-    <value>显示在主标题下面，字更小更淡</value>
-  </data>
   <data name="Settings_Exam_Display_SubtitlePlaceholder" xml:space="preserve">
     <value>例如：距离期末还有 12 天</value>
   </data>
   <data name="Settings_Exam_Display_SubtitleColor" xml:space="preserve">
     <value>副标题颜色</value>
-  </data>
-  <data name="Settings_Exam_Display_SubtitleColorDescription" xml:space="preserve">
-    <value>不选就跟随主题的次要文字色</value>
   </data>
   <data name="Settings_Exam_Display_SubtitleColorDefault" xml:space="preserve">
     <value>跟随主题</value>
@@ -2137,6 +2029,252 @@
   <data name="Settings_Exam_Display_ShowInfoDescription" xml:space="preserve">
     <value>关掉之后整块看板只剩一个大时钟</value>
   </data>
+  <data name="Settings_Exam_Floating_Title" xml:space="preserve">
+    <value>最小化与浮窗</value>
+  </data>
+  <data name="Settings_Exam_Floating_GroupMinimize" xml:space="preserve">
+    <value>最小化</value>
+  </data>
+  <data name="Settings_Exam_Floating_GroupMinimizeDescription" xml:space="preserve">
+    <value>考试时把看板收起来，屏幕上留一颗按钮</value>
+  </data>
+  <data name="Settings_Exam_Floating_GroupContent" xml:space="preserve">
+    <value>浮窗按钮</value>
+  </data>
+  <data name="Settings_Exam_Floating_GroupContentDescription" xml:space="preserve">
+    <value>这颗按钮上写什么、多大、停在哪儿</value>
+  </data>
+  <data name="Settings_Exam_Floating_GroupLook" xml:space="preserve">
+    <value>按钮外观</value>
+  </data>
+  <data name="Settings_Exam_Floating_GroupLookDescription" xml:space="preserve">
+    <value>文字颜色与图标怎么画</value>
+  </data>
+  <data name="Settings_Exam_Floating_MinimizeMode" xml:space="preserve">
+    <value>什么时候能最小化</value>
+  </data>
+  <data name="Settings_Exam_Floating_MinimizeModeDescription" xml:space="preserve">
+    <value>平时那颗按钮只是退出</value>
+  </data>
+  <data name="Settings_Exam_Floating_MinimizeMode_InProgress" xml:space="preserve">
+    <value>考试进行中</value>
+  </data>
+  <data name="Settings_Exam_Floating_MinimizeMode_InProgressOrUpcoming" xml:space="preserve">
+    <value>进行中或即将开始</value>
+  </data>
+  <data name="Settings_Exam_Floating_MinimizeMode_Always" xml:space="preserve">
+    <value>一直</value>
+  </data>
+  <data name="Settings_Exam_Floating_MinimizeMode_Off" xml:space="preserve">
+    <value>从不，只用退出</value>
+  </data>
+  <data name="Settings_Exam_Floating_Gesture" xml:space="preserve">
+    <value>最小化的手势</value>
+  </data>
+  <data name="Settings_Exam_Floating_GestureDescription" xml:space="preserve">
+    <value>单击就收，还是按住 2 秒才收</value>
+  </data>
+  <data name="Settings_Exam_Floating_Gesture_Click" xml:space="preserve">
+    <value>单击</value>
+  </data>
+  <data name="Settings_Exam_Floating_Gesture_Hold" xml:space="preserve">
+    <value>长按 2 秒</value>
+  </data>
+  <data name="Settings_Exam_Floating_Text" xml:space="preserve">
+    <value>浮窗按钮上的文字</value>
+  </data>
+  <data name="Settings_Exam_Floating_TextDescription" xml:space="preserve">
+    <value>留空就显示默认的那句话</value>
+  </data>
+  <data name="Settings_Exam_Floating_DefaultText" xml:space="preserve">
+    <value>显示考试看板</value>
+  </data>
+  <data name="Settings_Exam_Floating_Scale" xml:space="preserve">
+    <value>浮窗按钮大小</value>
+  </data>
+  <data name="Settings_Exam_Floating_ScaleDescription" xml:space="preserve">
+    <value>相对默认大小的百分比</value>
+  </data>
+  <data name="Settings_Exam_Floating_TextColor" xml:space="preserve">
+    <value>文字颜色</value>
+  </data>
+  <data name="Settings_Exam_Floating_TextColorDescription" xml:space="preserve">
+    <value>浮窗按钮上那行字的颜色</value>
+  </data>
+  <data name="Settings_Exam_Floating_ShowIcon" xml:space="preserve">
+    <value>显示软件图标</value>
+  </data>
+  <data name="Settings_Exam_Floating_ShowIconDescription" xml:space="preserve">
+    <value>关掉之后浮窗上只剩一行字</value>
+  </data>
+  <data name="Settings_Exam_Floating_Icon" xml:space="preserve">
+    <value>自定义图标</value>
+  </data>
+  <data name="Settings_Exam_Floating_IconDescription" xml:space="preserve">
+    <value>挑一张图片换掉默认那颗图标</value>
+  </data>
+  <data name="Settings_Exam_Floating_IconPick" xml:space="preserve">
+    <value>选择图片</value>
+  </data>
+  <data name="Settings_Exam_Floating_IconClear" xml:space="preserve">
+    <value>用默认图标</value>
+  </data>
+  <data name="Settings_Exam_Floating_IconDefault" xml:space="preserve">
+    <value>正在用软件默认图标</value>
+  </data>
+  <data name="Settings_Exam_Floating_IconOnly" xml:space="preserve">
+    <value>只显示图标</value>
+  </data>
+  <data name="Settings_Exam_Floating_IconOnlyDescription" xml:space="preserve">
+    <value>不写文字，只留一颗图标</value>
+  </data>
+  <data name="Settings_Exam_Floating_Anchor" xml:space="preserve">
+    <value>浮窗按钮位置</value>
+  </data>
+  <data name="Settings_Exam_Floating_AnchorDescription" xml:space="preserve">
+    <value>点开后选按钮停在屏幕哪儿</value>
+  </data>
+  <data name="Settings_Exam_Floating_Reset" xml:space="preserve">
+    <value>恢复默认</value>
+  </data>
+  <data name="Settings_Exam_Font_PageTitle" xml:space="preserve">
+    <value>看板字号</value>
+  </data>
+  <data name="Settings_Exam_Font_PageDescription" xml:space="preserve">
+    <value>看板上每一处文字多大，全在这里调</value>
+  </data>
+  <data name="Settings_Exam_Font_Reset" xml:space="preserve">
+    <value>恢复默认字号</value>
+  </data>
+  <data name="Settings_Exam_Font_ResetHint" xml:space="preserve">
+    <value>把这十几项字号一次改回出厂设置</value>
+  </data>
+  <data name="Settings_Exam_Font_PreviewScaled" xml:space="preserve">
+    <value>预览最多放到 96，数值照实</value>
+  </data>
+  <data name="Settings_Exam_Font_Unit" xml:space="preserve">
+    <value>号</value>
+  </data>
+  <data name="Settings_Exam_Font_GroupTitle" xml:space="preserve">
+    <value>标题与副标题</value>
+  </data>
+  <data name="Settings_Exam_Font_GroupTitleDescription" xml:space="preserve">
+    <value>看板左上角那两行字</value>
+  </data>
+  <data name="Settings_Exam_Font_GroupClock" xml:space="preserve">
+    <value>时钟</value>
+  </data>
+  <data name="Settings_Exam_Font_GroupClockDescription" xml:space="preserve">
+    <value>正中间的大钟和它下面那行日期</value>
+  </data>
+  <data name="Settings_Exam_Font_GroupInfo" xml:space="preserve">
+    <value>时钟下面的考试信息</value>
+  </data>
+  <data name="Settings_Exam_Font_GroupInfoDescription" xml:space="preserve">
+    <value>钟下面那块说考哪科、还剩多久的字</value>
+  </data>
+  <data name="Settings_Exam_Font_GroupTable" xml:space="preserve">
+    <value>考试表格与其他</value>
+  </data>
+  <data name="Settings_Exam_Font_GroupTableDescription" xml:space="preserve">
+    <value>右边那张表、没考试时的提示和退出图标</value>
+  </data>
+  <data name="Settings_Exam_Font_MainTitle" xml:space="preserve">
+    <value>主标题</value>
+  </data>
+  <data name="Settings_Exam_Font_MainTitleDescription" xml:space="preserve">
+    <value>左上角那行大字的字号</value>
+  </data>
+  <data name="Settings_Exam_Font_Subtitle" xml:space="preserve">
+    <value>副标题</value>
+  </data>
+  <data name="Settings_Exam_Font_SubtitleDescription" xml:space="preserve">
+    <value>主标题下面那行小字的字号</value>
+  </data>
+  <data name="Settings_Exam_Font_Clock" xml:space="preserve">
+    <value>时钟</value>
+  </data>
+  <data name="Settings_Exam_Font_ClockDescription" xml:space="preserve">
+    <value>旁边还摆着考试表时的时钟字号</value>
+  </data>
+  <data name="Settings_Exam_Font_ClockAlone" xml:space="preserve">
+    <value>只剩时钟时</value>
+  </data>
+  <data name="Settings_Exam_Font_ClockAloneDescription" xml:space="preserve">
+    <value>考试中考试表收起后的时钟字号</value>
+  </data>
+  <data name="Settings_Exam_Font_ClockDate" xml:space="preserve">
+    <value>时钟下面的日期</value>
+  </data>
+  <data name="Settings_Exam_Font_ClockDateDescription" xml:space="preserve">
+    <value>钟下面「几月几日 周几」那行字号</value>
+  </data>
+  <data name="Settings_Exam_Font_InfoCaption" xml:space="preserve">
+    <value>考试信息抬头</value>
+  </data>
+  <data name="Settings_Exam_Font_InfoCaptionDescription" xml:space="preserve">
+    <value>「下一场」「进行中」那行小字的字号</value>
+  </data>
+  <data name="Settings_Exam_Font_InfoSubject" xml:space="preserve">
+    <value>考试信息的科目</value>
+  </data>
+  <data name="Settings_Exam_Font_InfoSubjectDescription" xml:space="preserve">
+    <value>钟下面最大的那行科目名的字号</value>
+  </data>
+  <data name="Settings_Exam_Font_InfoTime" xml:space="preserve">
+    <value>考试信息的时间</value>
+  </data>
+  <data name="Settings_Exam_Font_InfoTimeDescription" xml:space="preserve">
+    <value>钟下面日期与起止时间的字号</value>
+  </data>
+  <data name="Settings_Exam_Font_InfoRemaining" xml:space="preserve">
+    <value>考试信息的倒计时</value>
+  </data>
+  <data name="Settings_Exam_Font_InfoRemainingDescription" xml:space="preserve">
+    <value>「还剩 40 分钟」那行的字号</value>
+  </data>
+  <data name="Settings_Exam_Font_InfoPaper" xml:space="preserve">
+    <value>卷面信息</value>
+  </data>
+  <data name="Settings_Exam_Font_InfoPaperDescription" xml:space="preserve">
+    <value>「几张几页几大题」那行的字号</value>
+  </data>
+  <data name="Settings_Exam_Font_TableHeader" xml:space="preserve">
+    <value>考试表表头</value>
+  </data>
+  <data name="Settings_Exam_Font_TableHeaderDescription" xml:space="preserve">
+    <value>日期、科目、时间那排小字的字号</value>
+  </data>
+  <data name="Settings_Exam_Font_Table" xml:space="preserve">
+    <value>考试表内容</value>
+  </data>
+  <data name="Settings_Exam_Font_TableDescription" xml:space="preserve">
+    <value>考试表里日期、时间、状态的字号</value>
+  </data>
+  <data name="Settings_Exam_Font_TableSubject" xml:space="preserve">
+    <value>考试表里的科目</value>
+  </data>
+  <data name="Settings_Exam_Font_TableSubjectDescription" xml:space="preserve">
+    <value>考试表里科目那一列的字号</value>
+  </data>
+  <data name="Settings_Exam_Font_Empty" xml:space="preserve">
+    <value>没有考试时的提示</value>
+  </data>
+  <data name="Settings_Exam_Font_EmptyDescription" xml:space="preserve">
+    <value>「还没有考试安排」那句的字号</value>
+  </data>
+  <data name="Settings_Exam_Font_EmptyHint" xml:space="preserve">
+    <value>没有考试时的说明</value>
+  </data>
+  <data name="Settings_Exam_Font_EmptyHintDescription" xml:space="preserve">
+    <value>那句下面「去哪儿加考试」的字号</value>
+  </data>
+  <data name="Settings_Exam_Font_ExitIcon" xml:space="preserve">
+    <value>退出按钮的图标</value>
+  </data>
+  <data name="Settings_Exam_Font_ExitIconDescription" xml:space="preserve">
+    <value>左下角长按两秒退出那个图标的大小</value>
+  </data>
   <data name="Settings_Exam_Time_Title" xml:space="preserve">
     <value>时间同步</value>
   </data>
@@ -2157,9 +2295,6 @@
   </data>
   <data name="Settings_Exam_Time_AddServer" xml:space="preserve">
     <value>添加</value>
-  </data>
-  <data name="Settings_Exam_Time_InvalidServer" xml:space="preserve">
-    <value>这个地址看起来不对</value>
   </data>
   <data name="Settings_Exam_Time_ResetServers" xml:space="preserve">
     <value>恢复默认源</value>
@@ -2280,6 +2415,48 @@
   </data>
   <data name="Settings_Exam_AutoShow_SwitchBoardDescription" xml:space="preserve">
     <value>今天考哪块就自己切到哪块，不用手动选</value>
+  </data>
+  <data name="Settings_Exam_Schedule_Export" xml:space="preserve">
+    <value>导出这场考试</value>
+  </data>
+  <data name="Settings_Exam_Schedule_Import" xml:space="preserve">
+    <value>导入考试</value>
+  </data>
+  <data name="Settings_Exam_Schedule_ImportToolTip" xml:space="preserve">
+    <value>把考试文件里的考试加进当前这块看板</value>
+  </data>
+  <data name="Exam_File_SaveTitle" xml:space="preserve">
+    <value>导出考试</value>
+  </data>
+  <data name="Exam_File_FileType" xml:space="preserve">
+    <value>考试文件</value>
+  </data>
+  <data name="Exam_File_ExportFailed" xml:space="preserve">
+    <value>导出失败，请稍后重试</value>
+  </data>
+  <data name="Exam_File_ImportFailed" xml:space="preserve">
+    <value>这个文件里读不出考试</value>
+  </data>
+  <data name="Exam_File_ImportEmpty" xml:space="preserve">
+    <value>文件里没有能导入的考试</value>
+  </data>
+  <data name="Exam_File_ImportDone" xml:space="preserve">
+    <value>已导入 {0} 场考试</value>
+  </data>
+  <data name="Settings_Exam_Schedule_ExportAll" xml:space="preserve">
+    <value>导出考试</value>
+  </data>
+  <data name="Settings_Exam_Schedule_ExportAllToolTip" xml:space="preserve">
+    <value>把当前这块看板的考试整份存成一个文件</value>
+  </data>
+  <data name="Settings_Exam_Schedule_ExportBoardToolTip" xml:space="preserve">
+    <value>把这块看板的考试整份存成一个文件</value>
+  </data>
+  <data name="Exam_File_ExportEmpty" xml:space="preserve">
+    <value>当前看板里还没有考试</value>
+  </data>
+  <data name="Exam_File_ExportDone" xml:space="preserve">
+    <value>已导出 {0} 场考试</value>
   </data>
   <data name="Settings_Board_Content_Title" xml:space="preserve">
     <value>内容与样式</value>
@@ -2477,16 +2654,10 @@
     <value>启用作业板</value>
   </data>
   <data name="Settings_Board_EnabledDescription" xml:space="preserve">
-    <value>关掉后主窗口不再出现，托盘与考试看板仍然可用</value>
+    <value>关掉后作业板不再出现，托盘与考试看板仍然可用</value>
   </data>
   <data name="Oobe_Title" xml:space="preserve">
     <value>首次设置</value>
-  </data>
-  <data name="Oobe_Language" xml:space="preserve">
-    <value>选择界面语言</value>
-  </data>
-  <data name="Oobe_LanguageDescription" xml:space="preserve">
-    <value>整个界面跟着这里换，包括后面几步</value>
   </data>
   <data name="Oobe_WelcomeTitle" xml:space="preserve">
     <value>欢迎使用 Corkboard</value>
@@ -2548,7 +2719,7 @@
     <value>开机后要手动打开</value>
   </data>
   <data name="Oobe_StartupShowWindow" xml:space="preserve">
-    <value>启动时显示主窗口</value>
+    <value>启动时显示作业板</value>
   </data>
   <data name="Oobe_StartupTrayOnly" xml:space="preserve">
     <value>启动后先待在托盘里</value>
@@ -2563,7 +2734,7 @@
     <value>启用作业板</value>
   </data>
   <data name="Oobe_BoardEnabledDescription" xml:space="preserve">
-    <value>关掉后主窗口不再出现，托盘与考试看板仍然可用</value>
+    <value>关掉后作业板不再出现，托盘与考试看板仍然可用</value>
   </data>
   <data name="Oobe_AppearanceTitle" xml:space="preserve">
     <value>外观</value>
@@ -2593,7 +2764,7 @@
     <value>开机自启没设成功，已退回原来的选择</value>
   </data>
   <data name="Oobe_ShowStartupWindow" xml:space="preserve">
-    <value>启动时显示主窗口</value>
+    <value>启动时显示作业板</value>
   </data>
   <data name="Oobe_ShowStartupWindowDescription" xml:space="preserve">
     <value>关掉后只在托盘里待着，点图标才出来</value>
@@ -2628,10 +2799,727 @@
   <data name="Oobe_ExitWindowDescription" xml:space="preserve">
     <value>这次的选择已经存下了，可以随时在设置里再改</value>
   </data>
-  <data name="Oobe_Reopen" xml:space="preserve">
-    <value>重新运行首次设置</value>
+  <data name="Settings_Display_Title" xml:space="preserve">
+    <value>看板模式</value>
   </data>
-  <data name="Oobe_ReopenDescription" xml:space="preserve">
-    <value>再从头过一遍语言、协议、作业板、主题与自启</value>
+  <data name="Settings_Display_DisplayCard" xml:space="preserve">
+    <value>显示内容</value>
+  </data>
+  <data name="Settings_Display_DisplayCardDescription" xml:space="preserve">
+    <value>全屏里放时钟还是作业，你自己定</value>
+  </data>
+  <data name="Settings_Display_ShowClock" xml:space="preserve">
+    <value>显示大时钟</value>
+  </data>
+  <data name="Settings_Display_ShowClockDescription" xml:space="preserve">
+    <value>整块屏幕上最大那个时间</value>
+  </data>
+  <data name="Settings_Display_ShowDate" xml:space="preserve">
+    <value>显示日期</value>
+  </data>
+  <data name="Settings_Display_ShowDateDescription" xml:space="preserve">
+    <value>时钟下面那行今天几号</value>
+  </data>
+  <data name="Settings_Display_ClockDate" xml:space="preserve">
+    <value>钟面上显示什么</value>
+  </data>
+  <data name="Settings_Display_ClockDateDescription" xml:space="preserve">
+    <value>时钟和日期可以只留一个</value>
+  </data>
+  <data name="Settings_Display_ClockDateBoth" xml:space="preserve">
+    <value>时钟和日期</value>
+  </data>
+  <data name="Settings_Display_ClockOnly" xml:space="preserve">
+    <value>只显示时钟</value>
+  </data>
+  <data name="Settings_Display_DateOnly" xml:space="preserve">
+    <value>只显示日期</value>
+  </data>
+  <data name="Settings_Display_ClockDateNone" xml:space="preserve">
+    <value>都不显示</value>
+  </data>
+  <data name="Settings_Display_SecondsMode" xml:space="preserve">
+    <value>秒</value>
+  </data>
+  <data name="Settings_Display_SecondsModeDescription" xml:space="preserve">
+    <value>可以不要，也可以比时间小一号</value>
+  </data>
+  <data name="Settings_Display_SecondsNone" xml:space="preserve">
+    <value>不显示秒</value>
+  </data>
+  <data name="Settings_Display_SecondsSmall" xml:space="preserve">
+    <value>显示秒，比时间小一号</value>
+  </data>
+  <data name="Settings_Display_SecondsBig" xml:space="preserve">
+    <value>秒和时间一样大</value>
+  </data>
+  <data name="Settings_Display_BoardDisplay" xml:space="preserve">
+    <value>显示作业</value>
+  </data>
+  <data name="Settings_Display_BoardDisplayDescription" xml:space="preserve">
+    <value>可以只看今天要交的，也能整个不显示</value>
+  </data>
+  <data name="Settings_Display_BoardDisplayNone" xml:space="preserve">
+    <value>不显示作业</value>
+  </data>
+  <data name="Settings_Display_ExamCountdown" xml:space="preserve">
+    <value>考试倒计时</value>
+  </data>
+  <data name="Settings_Display_ExamCountdownDescription" xml:space="preserve">
+    <value>日期下面显示离这场考试还有几天</value>
+  </data>
+  <data name="Settings_Display_ExamCountdownSample" xml:space="preserve">
+    <value>期末考试 · 还有 3 天</value>
+  </data>
+  <data name="Settings_Display_AllowAssign" xml:space="preserve">
+    <value>允许布置作业</value>
+  </data>
+  <data name="Settings_Display_AllowAssignDescription" xml:space="preserve">
+    <value>关掉后屏幕上不能新布置作业</value>
+  </data>
+  <data name="Settings_Display_Editable" xml:space="preserve">
+    <value>允许编辑作业</value>
+  </data>
+  <data name="Settings_Display_EditableDescription" xml:space="preserve">
+    <value>关掉后只能看，点不出按钮</value>
+  </data>
+  <data name="Settings_Display_FontCard" xml:space="preserve">
+    <value>字号</value>
+  </data>
+  <data name="Settings_Display_ClockFontSize" xml:space="preserve">
+    <value>时钟字号</value>
+  </data>
+  <data name="Settings_Display_ClockFontSizeDescription" xml:space="preserve">
+    <value>默认 96，最大可以到 480</value>
+  </data>
+  <data name="Settings_Display_ClockDateFontSize" xml:space="preserve">
+    <value>日期字号</value>
+  </data>
+  <data name="Settings_Display_ClockDateFontSizeDescription" xml:space="preserve">
+    <value>时钟下面那行字的大小</value>
+  </data>
+  <data name="Settings_Display_TitleFontSize" xml:space="preserve">
+    <value>标题字号</value>
+  </data>
+  <data name="Settings_Display_TitleFontSizeDescription" xml:space="preserve">
+    <value>作业区顶上那行字的大小</value>
+  </data>
+  <data name="Settings_Display_WeatherFontSize" xml:space="preserve">
+    <value>天气字号</value>
+  </data>
+  <data name="Settings_Display_WeatherFontSizeDescription" xml:space="preserve">
+    <value>右上角那块天气的字号</value>
+  </data>
+  <data name="Settings_Display_QuoteFontSize" xml:space="preserve">
+    <value>一言字号</value>
+  </data>
+  <data name="Settings_Display_QuoteFontSizeDescription" xml:space="preserve">
+    <value>屏幕最底下那行话的字号</value>
+  </data>
+  <data name="Settings_Display_ExamCountdownFontSize" xml:space="preserve">
+    <value>考试倒计时字号</value>
+  </data>
+  <data name="Settings_Display_ExamCountdownFontSizeDescription" xml:space="preserve">
+    <value>日期下面那行倒计时的字号</value>
+  </data>
+  <data name="Settings_Display_QuoteSample" xml:space="preserve">
+    <value>路漫漫其修远兮，吾将上下而求索</value>
+  </data>
+  <data name="Settings_Display_FontUnit" xml:space="preserve">
+    <value>号</value>
+  </data>
+  <data name="Settings_Display_PreviewScaled" xml:space="preserve">
+    <value>字太大，浮窗里最大只画到 96 号</value>
+  </data>
+  <data name="Settings_Display_CursorSecondsUnit" xml:space="preserve">
+    <value>秒</value>
+  </data>
+  <data name="Settings_Display_ScheduleCard" xml:space="preserve">
+    <value>自动进出</value>
+  </data>
+  <data name="Settings_Display_AutoShow" xml:space="preserve">
+    <value>到点自动进入</value>
+  </data>
+  <data name="Settings_Display_AutoShowDescription" xml:space="preserve">
+    <value>每天到这个时刻铺满屏幕</value>
+  </data>
+  <data name="Settings_Display_AutoHide" xml:space="preserve">
+    <value>到点自动退出</value>
+  </data>
+  <data name="Settings_Display_AutoHideDescription" xml:space="preserve">
+    <value>只关自动打开的那一次</value>
+  </data>
+  <data name="Settings_Display_Open" xml:space="preserve">
+    <value>打开全屏</value>
+  </data>
+  <data name="Settings_Display_Close" xml:space="preserve">
+    <value>关闭全屏</value>
+  </data>
+  <data name="Settings_Basic_UrlProtocol" xml:space="preserve">
+    <value>允许用链接调用</value>
+  </data>
+  <data name="Settings_Basic_UrlProtocolDescription" xml:space="preserve">
+    <value>注册 corkboard:// 后，别处能用链接唤起全屏</value>
+  </data>
+  <data name="Settings_Basic_UrlCopy" xml:space="preserve">
+    <value>复制链接</value>
+  </data>
+  <data name="Settings_Basic_UrlCopied" xml:space="preserve">
+    <value>已复制</value>
+  </data>
+  <data name="Menu_OpenDisplayBoard" xml:space="preserve">
+    <value>看板模式</value>
+  </data>
+  <data name="Display_Board_Heading" xml:space="preserve">
+    <value>今天的作业</value>
+  </data>
+  <data name="Display_ExitHint" xml:space="preserve">
+    <value>长按两秒退出</value>
+  </data>
+  <data name="Display_EmptyState" xml:space="preserve">
+    <value>时钟、考试倒计时和作业都关掉了，去「设置 → 看板模式」里打开一样</value>
+  </data>
+  <data name="Display_LockedTip" xml:space="preserve">
+    <value>作业已锁定，不能在这块屏幕上改</value>
+  </data>
+  <data name="Display_EmptyBoard" xml:space="preserve">
+    <value>今天没有要交的作业</value>
+  </data>
+  <data name="Menu_DisplayBoardGroup" xml:space="preserve">
+    <value>看板模式</value>
+  </data>
+  <data name="Menu_ExtendDisplayBoard" xml:space="preserve">
+    <value>延长 30 分钟</value>
+  </data>
+  <data name="Menu_CloseDisplayBoard" xml:space="preserve">
+    <value>关闭看板模式</value>
+  </data>
+  <data name="Menu_SuppressDisplayToday" xml:space="preserve">
+    <value>今天不再自动打开</value>
+  </data>
+  <data name="Settings_Display_ShowSeconds" xml:space="preserve">
+    <value>显示秒</value>
+  </data>
+  <data name="Settings_Display_ShowSecondsDescription" xml:space="preserve">
+    <value>数字后面跟着秒，跳一下就知道表还在走</value>
+  </data>
+  <data name="Settings_Display_ClockFormat" xml:space="preserve">
+    <value>时钟制式</value>
+  </data>
+  <data name="Settings_Display_ClockFormatDescription" xml:space="preserve">
+    <value>24 小时还是 12 小时，跟着你的习惯来</value>
+  </data>
+  <data name="Settings_Display_ClockFormat24" xml:space="preserve">
+    <value>24 小时制</value>
+  </data>
+  <data name="Settings_Display_ClockFormat12" xml:space="preserve">
+    <value>12 小时制</value>
+  </data>
+  <data name="Settings_Display_DateFormat" xml:space="preserve">
+    <value>日期写法</value>
+  </data>
+  <data name="Settings_Display_DateFormatDescription" xml:space="preserve">
+    <value>时钟下面那行日期用哪种写法</value>
+  </data>
+  <data name="Settings_Display_DateFormatFull" xml:space="preserve">
+    <value>完整日期</value>
+  </data>
+  <data name="Settings_Display_DateFormatMonthDay" xml:space="preserve">
+    <value>只到月日</value>
+  </data>
+  <data name="Settings_Display_DateFormatNumeric" xml:space="preserve">
+    <value>数字日期</value>
+  </data>
+  <data name="Settings_Display_DateCalendar" xml:space="preserve">
+    <value>日期历法</value>
+  </data>
+  <data name="Settings_Display_DateCalendarDescription" xml:space="preserve">
+    <value>日期那行要不要再带上农历</value>
+  </data>
+  <data name="Settings_Display_DateCalendarGregorian" xml:space="preserve">
+    <value>公历</value>
+  </data>
+  <data name="Settings_Display_DateCalendarLunar" xml:space="preserve">
+    <value>农历</value>
+  </data>
+  <data name="Settings_Display_DateCalendarBoth" xml:space="preserve">
+    <value>公历 + 农历</value>
+  </data>
+  <data name="Settings_Display_BoardScopeAll" xml:space="preserve">
+    <value>全部作业</value>
+  </data>
+  <data name="Settings_Display_BoardScopeDueToday" xml:space="preserve">
+    <value>只看今天要交的</value>
+  </data>
+  <data name="Settings_Display_AutoScroll" xml:space="preserve">
+    <value>自动轮播</value>
+  </data>
+  <data name="Settings_Display_AutoScrollDescription" xml:space="preserve">
+    <value>一屏放不下时慢慢往下滚，看的人不用动手</value>
+  </data>
+  <data name="Settings_Display_AutoScrollPause" xml:space="preserve">
+    <value>每屏停几秒</value>
+  </data>
+  <data name="Settings_Display_AutoScrollPauseDescription" xml:space="preserve">
+    <value>停久一点看得清，停短一点翻得快</value>
+  </data>
+  <data name="Settings_Display_AutoScrollRow" xml:space="preserve">
+    <value>自动往下滚</value>
+  </data>
+  <data name="Settings_Display_AutoScrollRowDescription" xml:space="preserve">
+    <value>关掉就一直停在最上面</value>
+  </data>
+  <data name="Settings_Display_Slots" xml:space="preserve">
+    <value>时段</value>
+  </data>
+  <data name="Settings_Display_SlotsDescription" xml:space="preserve">
+    <value>可以配好几段，每段自己选星期几</value>
+  </data>
+  <data name="Settings_Display_AddSlot" xml:space="preserve">
+    <value>再加一段</value>
+  </data>
+  <data name="Settings_Display_RemoveSlot" xml:space="preserve">
+    <value>删除这一段</value>
+  </data>
+  <data name="Settings_Display_SlotEmpty" xml:space="preserve">
+    <value>进和出是同一个时刻，这一段不会生效</value>
+  </data>
+  <data name="Settings_Display_Status" xml:space="preserve">
+    <value>现在什么样</value>
+  </data>
+  <data name="Settings_Display_StatusDescription" xml:space="preserve">
+    <value>现在开没开，一眼看清</value>
+  </data>
+  <data name="Settings_Display_StatusOpen" xml:space="preserve">
+    <value>现在正开着</value>
+  </data>
+  <data name="Settings_Display_StatusClosed" xml:space="preserve">
+    <value>现在没开</value>
+  </data>
+  <data name="Settings_Display_StatusSuppressed" xml:space="preserve">
+    <value>今天不再自动打开</value>
+  </data>
+  <data name="Settings_Display_WarningNothingVisible" xml:space="preserve">
+    <value>时钟、考试倒计时和作业都关掉了，全屏里只剩一句提示</value>
+  </data>
+  <data name="Settings_Display_DayMonday" xml:space="preserve">
+    <value>一</value>
+  </data>
+  <data name="Settings_Display_DayTuesday" xml:space="preserve">
+    <value>二</value>
+  </data>
+  <data name="Settings_Display_DayWednesday" xml:space="preserve">
+    <value>三</value>
+  </data>
+  <data name="Settings_Display_DayThursday" xml:space="preserve">
+    <value>四</value>
+  </data>
+  <data name="Settings_Display_DayFriday" xml:space="preserve">
+    <value>五</value>
+  </data>
+  <data name="Settings_Display_DaySaturday" xml:space="preserve">
+    <value>六</value>
+  </data>
+  <data name="Settings_Display_DaySunday" xml:space="preserve">
+    <value>日</value>
+  </data>
+  <data name="Settings_Display_Content_Title" xml:space="preserve">
+    <value>显示与版式</value>
+  </data>
+  <data name="Settings_Display_Layout_Title" xml:space="preserve">
+    <value>版式与字号</value>
+  </data>
+  <data name="Settings_Display_Widgets_Title" xml:space="preserve">
+    <value>一言与天气</value>
+  </data>
+  <data name="Settings_Display_Background_Title" xml:space="preserve">
+    <value>背景</value>
+  </data>
+  <data name="Settings_Display_Schedule_Title" xml:space="preserve">
+    <value>自动显示</value>
+  </data>
+  <data name="Settings_Display_BigSeconds" xml:space="preserve">
+    <value>秒数与主时间同字号</value>
+  </data>
+  <data name="Settings_Display_BigSecondsDescription" xml:space="preserve">
+    <value>关掉后秒数缩成钟表上的小尾巴</value>
+  </data>
+  <data name="Settings_Background_TitleDescription" xml:space="preserve">
+    <value>换背景只影响这块屏，别处照旧</value>
+  </data>
+  <data name="Settings_Background_Mode" xml:space="preserve">
+    <value>背景样式</value>
+  </data>
+  <data name="Settings_Background_ModeDescription" xml:space="preserve">
+    <value>跟随主题最省事，换图片记得调暗化</value>
+  </data>
+  <data name="Settings_Background_ModeTheme" xml:space="preserve">
+    <value>跟随主题</value>
+  </data>
+  <data name="Settings_Background_ModeSolid" xml:space="preserve">
+    <value>纯色</value>
+  </data>
+  <data name="Settings_Background_ModeGradient" xml:space="preserve">
+    <value>双色渐变</value>
+  </data>
+  <data name="Settings_Background_ModeImage" xml:space="preserve">
+    <value>图片</value>
+  </data>
+  <data name="Settings_Background_Color" xml:space="preserve">
+    <value>底色</value>
+  </data>
+  <data name="Settings_Background_ColorDescription" xml:space="preserve">
+    <value>整块屏幕铺这个颜色</value>
+  </data>
+  <data name="Settings_Background_GradientStart" xml:space="preserve">
+    <value>起点色</value>
+  </data>
+  <data name="Settings_Background_GradientEnd" xml:space="preserve">
+    <value>终点色</value>
+  </data>
+  <data name="Settings_Background_GradientAngle" xml:space="preserve">
+    <value>渐变方向</value>
+  </data>
+  <data name="Settings_Background_GradientAngleDescription" xml:space="preserve">
+    <value>0 度从左往右，角度越大越竖</value>
+  </data>
+  <data name="Settings_Background_Image" xml:space="preserve">
+    <value>图片</value>
+  </data>
+  <data name="Settings_Background_ImageDescription" xml:space="preserve">
+    <value>图片会复制一份进来，原图挪了也不影响</value>
+  </data>
+  <data name="Settings_Background_ImageEmpty" xml:space="preserve">
+    <value>还没选图片</value>
+  </data>
+  <data name="Settings_Background_ImagePick" xml:space="preserve">
+    <value>选择图片</value>
+  </data>
+  <data name="Settings_Background_ImageReplace" xml:space="preserve">
+    <value>更换</value>
+  </data>
+  <data name="Settings_Background_ImageClear" xml:space="preserve">
+    <value>清除</value>
+  </data>
+  <data name="Settings_Background_ImageFailed" xml:space="preserve">
+    <value>这张图片打不开，先按主题背景显示</value>
+  </data>
+  <data name="Settings_Background_Dim" xml:space="preserve">
+    <value>暗化</value>
+  </data>
+  <data name="Settings_Background_DimDescription" xml:space="preserve">
+    <value>往图片上压一层黑，字才看得清</value>
+  </data>
+  <data name="Settings_Background_Blur" xml:space="preserve">
+    <value>模糊</value>
+  </data>
+  <data name="Settings_Background_BlurDescription" xml:space="preserve">
+    <value>图片糊一点，后面的字更清楚</value>
+  </data>
+  <data name="Settings_Background_ImageFilter" xml:space="preserve">
+    <value>图片文件</value>
+  </data>
+  <data name="Settings_Background_PickTitle" xml:space="preserve">
+    <value>选择背景图片</value>
+  </data>
+  <data name="Settings_Widgets_Quote" xml:space="preserve">
+    <value>一言</value>
+  </data>
+  <data name="Settings_Widgets_QuoteDescription" xml:space="preserve">
+    <value>屏幕最下面那行字，隔一阵换一条</value>
+  </data>
+  <data name="Settings_Widgets_QuoteCategories" xml:space="preserve">
+    <value>类别</value>
+  </data>
+  <data name="Settings_Widgets_QuoteCategoriesDescription" xml:space="preserve">
+    <value>一个都不勾就是不限类别</value>
+  </data>
+  <data name="Settings_Widgets_QuoteLength" xml:space="preserve">
+    <value>字数</value>
+  </data>
+  <data name="Settings_Widgets_QuoteMinLength" xml:space="preserve">
+    <value>最少</value>
+  </data>
+  <data name="Settings_Widgets_QuoteMaxLength" xml:space="preserve">
+    <value>最多</value>
+  </data>
+  <data name="Settings_Widgets_QuoteExtraQuery" xml:space="preserve">
+    <value>附加参数</value>
+  </data>
+  <data name="Settings_Widgets_QuoteExtraQueryDescription" xml:space="preserve">
+    <value>照官方文档填，像 c=i&amp;max_length=20 这样</value>
+  </data>
+  <data name="Settings_Widgets_QuoteIgnored" xml:space="preserve">
+    <value>这几项由界面管，填了也不会用：{0}</value>
+  </data>
+  <data name="Settings_Widgets_QuoteRefresh" xml:space="preserve">
+    <value>换的时机</value>
+  </data>
+  <data name="Settings_Widgets_QuoteRefreshDescription" xml:space="preserve">
+    <value>每次打开看板都换，或者隔一阵换一条</value>
+  </data>
+  <data name="Settings_Widgets_RefreshOnOpen" xml:space="preserve">
+    <value>每次打开看板都换一条</value>
+  </data>
+  <data name="Settings_Widgets_RefreshEveryMinutes" xml:space="preserve">
+    <value>每 {0} 分钟换一条</value>
+  </data>
+  <data name="Settings_Widgets_QuoteInternational" xml:space="preserve">
+    <value>用海外接口</value>
+  </data>
+  <data name="Settings_Widgets_QuoteInternationalDescription" xml:space="preserve">
+    <value>国内接口限流紧，偶尔取不到时开这个</value>
+  </data>
+  <data name="Settings_Widgets_Weather" xml:space="preserve">
+    <value>天气</value>
+  </data>
+  <data name="Settings_Widgets_WeatherDescription" xml:space="preserve">
+    <value>屏幕右上角那行：城市、温度、湿度和空气</value>
+  </data>
+  <data name="Settings_Widgets_WeatherCity" xml:space="preserve">
+    <value>城市</value>
+  </data>
+  <data name="Settings_Widgets_WeatherCityDescription" xml:space="preserve">
+    <value>搜一下城市名，或者从常去的城市里挑</value>
+  </data>
+  <data name="Settings_Widgets_WeatherChangeCity" xml:space="preserve">
+    <value>换城市</value>
+  </data>
+  <data name="Settings_Widgets_WeatherCityPicker" xml:space="preserve">
+    <value>换个城市</value>
+  </data>
+  <data name="Settings_Widgets_WeatherPopularCities" xml:space="preserve">
+    <value>常去的城市</value>
+  </data>
+  <data name="Settings_Widgets_WeatherCityPlaceholder" xml:space="preserve">
+    <value>输入城市名</value>
+  </data>
+  <data name="Settings_Widgets_WeatherSearch" xml:space="preserve">
+    <value>搜索</value>
+  </data>
+  <data name="Settings_Widgets_WeatherSearching" xml:space="preserve">
+    <value>正在搜…</value>
+  </data>
+  <data name="Settings_Widgets_WeatherSearchFailed" xml:space="preserve">
+    <value>没搜到这个城市，换个说法试试</value>
+  </data>
+  <data name="Settings_Widgets_WeatherRefresh" xml:space="preserve">
+    <value>多久刷一次</value>
+  </data>
+  <data name="Settings_Widgets_WeatherRefreshDescription" xml:space="preserve">
+    <value>天气变化慢，半小时一次就够</value>
+  </data>
+  <data name="Settings_Widgets_Category_Animation" xml:space="preserve">
+    <value>动画</value>
+  </data>
+  <data name="Settings_Widgets_Category_Comic" xml:space="preserve">
+    <value>漫画</value>
+  </data>
+  <data name="Settings_Widgets_Category_Game" xml:space="preserve">
+    <value>游戏</value>
+  </data>
+  <data name="Settings_Widgets_Category_Literature" xml:space="preserve">
+    <value>文学</value>
+  </data>
+  <data name="Settings_Widgets_Category_Original" xml:space="preserve">
+    <value>原创</value>
+  </data>
+  <data name="Settings_Widgets_Category_Web" xml:space="preserve">
+    <value>网络</value>
+  </data>
+  <data name="Settings_Widgets_Category_Other" xml:space="preserve">
+    <value>其他</value>
+  </data>
+  <data name="Settings_Widgets_Category_Movie" xml:space="preserve">
+    <value>影视</value>
+  </data>
+  <data name="Settings_Widgets_Category_Poetry" xml:space="preserve">
+    <value>诗词</value>
+  </data>
+  <data name="Settings_Widgets_Category_Philosophy" xml:space="preserve">
+    <value>哲学</value>
+  </data>
+  <data name="Settings_Widgets_Category_Funny" xml:space="preserve">
+    <value>抖机灵</value>
+  </data>
+  <data name="Widgets_WeatherHumidity" xml:space="preserve">
+    <value>湿度 {0}%</value>
+  </data>
+  <data name="Widgets_WeatherAqi" xml:space="preserve">
+    <value>空气 {0}</value>
+  </data>
+  <data name="Widgets_WeatherRange" xml:space="preserve">
+    <value>今天 {0}–{1}°</value>
+  </data>
+  <data name="Widgets_WeatherTomorrow" xml:space="preserve">
+    <value>明天 {0} {1}–{2}°</value>
+  </data>
+  <data name="Weather_Condition_Clear" xml:space="preserve">
+    <value>晴</value>
+  </data>
+  <data name="Weather_Condition_PartlyCloudy" xml:space="preserve">
+    <value>局部多云</value>
+  </data>
+  <data name="Weather_Condition_Cloudy" xml:space="preserve">
+    <value>多云</value>
+  </data>
+  <data name="Weather_Condition_Overcast" xml:space="preserve">
+    <value>阴</value>
+  </data>
+  <data name="Weather_Condition_Shower" xml:space="preserve">
+    <value>阵雨</value>
+  </data>
+  <data name="Weather_Condition_Thunderstorm" xml:space="preserve">
+    <value>雷阵雨</value>
+  </data>
+  <data name="Weather_Condition_ThunderHail" xml:space="preserve">
+    <value>雷阵雨伴冰雹</value>
+  </data>
+  <data name="Weather_Condition_Sleet" xml:space="preserve">
+    <value>雨夹雪</value>
+  </data>
+  <data name="Weather_Condition_LightRain" xml:space="preserve">
+    <value>小雨</value>
+  </data>
+  <data name="Weather_Condition_ModerateRain" xml:space="preserve">
+    <value>中雨</value>
+  </data>
+  <data name="Weather_Condition_HeavyRain" xml:space="preserve">
+    <value>大雨</value>
+  </data>
+  <data name="Weather_Condition_Rainstorm" xml:space="preserve">
+    <value>暴雨</value>
+  </data>
+  <data name="Weather_Condition_LightSnow" xml:space="preserve">
+    <value>小雪</value>
+  </data>
+  <data name="Weather_Condition_ModerateSnow" xml:space="preserve">
+    <value>中雪</value>
+  </data>
+  <data name="Weather_Condition_HeavySnow" xml:space="preserve">
+    <value>大雪</value>
+  </data>
+  <data name="Weather_Condition_Blizzard" xml:space="preserve">
+    <value>暴雪</value>
+  </data>
+  <data name="Weather_Condition_Fog" xml:space="preserve">
+    <value>雾</value>
+  </data>
+  <data name="Weather_Condition_Haze" xml:space="preserve">
+    <value>霾</value>
+  </data>
+  <data name="Weather_Condition_FreezingRain" xml:space="preserve">
+    <value>冻雨</value>
+  </data>
+  <data name="Weather_Condition_Dust" xml:space="preserve">
+    <value>浮尘</value>
+  </data>
+  <data name="Weather_Condition_Sandstorm" xml:space="preserve">
+    <value>沙尘暴</value>
+  </data>
+  <data name="Weather_Condition_Unknown" xml:space="preserve">
+    <value>未知</value>
+  </data>
+  <data name="Settings_Display_Group" xml:space="preserve">
+    <value>看板模式</value>
+  </data>
+  <data name="Settings_Widgets_WeatherEveryMinutes" xml:space="preserve">
+    <value>每 {0} 分钟刷一次</value>
+  </data>
+  <data name="Settings_Widgets_WeatherCitySelected" xml:space="preserve">
+    <value>现在是：{0}</value>
+  </data>
+  <data name="Settings_Widgets_WeatherSearchEmpty" xml:space="preserve">
+    <value>没搜到这个城市</value>
+  </data>
+  <data name="Settings_Widgets_WeatherSearchResult" xml:space="preserve">
+    <value>找到 {0} 个结果，挑一个</value>
+  </data>
+  <data name="Settings_Widgets_WeatherLastSuccess" xml:space="preserve">
+    <value>上次成功 {0}</value>
+  </data>
+  <data name="Settings_Widgets_WeatherNeverFetched" xml:space="preserve">
+    <value>还没成功拉到过天气</value>
+  </data>
+  <data name="Settings_Exam_Display_Background" xml:space="preserve">
+    <value>背景</value>
+  </data>
+  <data name="Widgets_WeatherFeelsLike" xml:space="preserve">
+    <value>体感 {0}°</value>
+  </data>
+  <data name="Widgets_WeatherTomorrowNoTemperature" xml:space="preserve">
+    <value>明天 {0}</value>
+  </data>
+  <data name="Weather_Aqi_Excellent" xml:space="preserve">
+    <value>优</value>
+  </data>
+  <data name="Weather_Aqi_Good" xml:space="preserve">
+    <value>良</value>
+  </data>
+  <data name="Weather_Aqi_Light" xml:space="preserve">
+    <value>轻度污染</value>
+  </data>
+  <data name="Weather_Aqi_Moderate" xml:space="preserve">
+    <value>中度污染</value>
+  </data>
+  <data name="Weather_Aqi_Heavy" xml:space="preserve">
+    <value>重度污染</value>
+  </data>
+  <data name="Weather_Aqi_Severe" xml:space="preserve">
+    <value>严重污染</value>
+  </data>
+  <data name="Settings_Widgets_WeatherFields" xml:space="preserve">
+    <value>显示哪几块</value>
+  </data>
+  <data name="Settings_Widgets_WeatherFieldsDescription" xml:space="preserve">
+    <value>勾掉的那块不会出现在屏幕上</value>
+  </data>
+  <data name="Settings_Widgets_ShowWeatherIcon" xml:space="preserve">
+    <value>天气图标</value>
+  </data>
+  <data name="Settings_Widgets_ShowWeatherTemperature" xml:space="preserve">
+    <value>当前温度</value>
+  </data>
+  <data name="Settings_Widgets_ShowWeatherCondition" xml:space="preserve">
+    <value>天气现象</value>
+  </data>
+  <data name="Settings_Widgets_ShowWeatherCity" xml:space="preserve">
+    <value>城市名</value>
+  </data>
+  <data name="Settings_Widgets_ShowWeatherRange" xml:space="preserve">
+    <value>今日高低</value>
+  </data>
+  <data name="Settings_Widgets_ShowWeatherHumidity" xml:space="preserve">
+    <value>湿度</value>
+  </data>
+  <data name="Settings_Widgets_ShowWeatherAqi" xml:space="preserve">
+    <value>空气质量</value>
+  </data>
+  <data name="Settings_Widgets_ShowWeatherFeelsLike" xml:space="preserve">
+    <value>体感温度</value>
+  </data>
+  <data name="Settings_Widgets_ShowWeatherTomorrow" xml:space="preserve">
+    <value>明天天气</value>
+  </data>
+  <data name="Settings_Section_Stability" xml:space="preserve">
+    <value>稳定性</value>
+  </data>
+  <data name="Settings_Basic_CrashRecovery" xml:space="preserve">
+    <value>崩溃恢复</value>
+  </data>
+  <data name="Settings_Basic_CrashRecoveryDescription" xml:space="preserve">
+    <value>遇到未处理的错误时，是提示一下还是直接重启</value>
+  </data>
+  <data name="Settings_Basic_CrashRecovery_None" xml:space="preserve">
+    <value>不处理</value>
+  </data>
+  <data name="Settings_Basic_CrashRecovery_RestartOnly" xml:space="preserve">
+    <value>直接重启</value>
+  </data>
+  <data name="Settings_Basic_CrashRecovery_PromptThenRestart" xml:space="preserve">
+    <value>先提示，再让我重启</value>
+  </data>
+  <data name="Settings_Basic_CrashRecovery_PromptAndRestart" xml:space="preserve">
+    <value>提示并倒计时自动重启</value>
   </data>
 </root>
