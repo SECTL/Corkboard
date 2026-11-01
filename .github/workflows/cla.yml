@@ -30,7 +30,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: CLA Assistant
-        if: (github.event.comment.body == 'recheck' || github.event.comment.body == 'recheck 重新检查' || github.event_name == 'pull_request_target')
+        # 触发门槛：pull_request_target（PR 新建/更新/重开/关闭）、评论里写 recheck，或者直接把签署语句贴出来。
+        # ⚠️ 最后那一条（签署语句）必须有：只认 recheck 的话，贡献者按提示贴出语句时这个 job 会被整个跳过，
+        # 签名永远进不了账本、机器人也不回话，看起来就是「签了但机器人没反应」。
+        # action 内置正则本身还容忍语句内部的多余空白、也允许句尾追加 CLA.md §9.5 的追认声明，
+        # 所以这里用 contains 兜住前缀就够（contains 不区分大小写）。
+        if: |
+          github.event_name == 'pull_request_target' ||
+          github.event.comment.body == 'recheck' ||
+          github.event.comment.body == 'recheck 重新检查' ||
+          (github.event_name == 'issue_comment' &&
+           contains(github.event.comment.body || '', 'i have read the cla document and i hereby sign the cla'))
         uses: contributor-assistant/github-action@v2.6.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
