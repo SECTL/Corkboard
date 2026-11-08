@@ -1,7 +1,9 @@
 using System.Text.Json.Serialization;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Corkboard.Core.Models.SubConfigs.Action;
 using Corkboard.Core.Models.SubConfigs.Board;
 using Corkboard.Core.Models.SubConfigs.Cloud;
+using Corkboard.Core.Models.SubConfigs.Duty;
 using Corkboard.Core.Models.SubConfigs.Exam;
 using Corkboard.Core.Models.SubConfigs.Export;
 using Corkboard.Core.Models.SubConfigs.General;
@@ -54,6 +56,12 @@ public partial class MainConfigModel : ConfigBase
     /// <summary>看板模式上的「一言」与「天气」两行字：开关、类别、城市、刷新间隔。</summary>
     [ObservableProperty] private WidgetsSettingsConfig _widgets = new();
 
+    /// <summary>值日表的界面偏好。名册与排班规则在 <c>data/duty/duty.json</c>。</summary>
+    [ObservableProperty] private DutySettingsConfig _dutySettings = new();
+
+    /// <summary>行动窗口（日程中心）的开关。规则与执行记录在 <c>data/action/</c>。</summary>
+    [ObservableProperty] private ActionSettingsConfig _actionSettings = new();
+
     [JsonIgnore] public override string ConfigFilePath => Utils.GetFilePath("config", "settings.json");
 
     /// <summary>
@@ -76,6 +84,8 @@ public partial class MainConfigModel : ConfigBase
         Ntp.Normalize();
         Display.Normalize();
         Widgets.Normalize();
+        DutySettings.Normalize();
+        ActionSettings.Normalize();
     }
 
     [JsonIgnore]

@@ -26,6 +26,13 @@
   由 `BoardService` 在每次变更后落盘（`IBoardService.Subjects` 是「调用方直接改集合、
   改完调 `Save()`」的用法）。这样绕开了上一条的坑，也把「应用偏好」和「用户数据」分开。
   设置页负责编辑它们，但**存储位置不等于设置项**：编辑界面在设置里，数据仍在 `data/board/`。
+- **行动窗口的数据同样不进 `settings.json`**（`ActionStorePaths`，根目录 `Utils.GetDirectoryPath("action")`）：
+  `rules.json`（我的行动规则，整份读写、原子落盘、坏文件备份成 `<rules>.bad-<时间戳>.json` 并进入只读态）、
+  `state.json`（调度水位线 `last_checked` + 系统日程抑制 `suppressed`，**只改内存、必须显式 `Save()`**）、
+  `runs/<yyyy-MM-dd>.jsonl`（执行记录，一次一行、保留 90 天，写入失败只记日志不打断调度）。
+  设置里只留全局开关 `ActionSettings.Enabled` 与系统日程参数（考试自动放映、看板模式时段）；
+  **不要再把规则或执行记录塞回配置**，也不要在窗口关掉时才算「该落盘了」——窗口只是编辑入口。
+  `Schedule/` 下的考试投影与看板时段投影都是纯函数，必须与 `ExamAutoShowPolicy` / `DisplaySchedulePolicy` 对齐。
 - **一条作业一个专有文件**：`data/board/<年>/<月>/<日>/<作业 Id>.cbnote`（`NoteStore` + `NoteFileFormat`，
   扩展名 `.cbnote`、不是 JSON）：元数据、富文本内容（`text=` 块）、手写笔迹（`ink=` 块）全在同一个文件里；
   文件名就是作业 Id，改内容不换文件、删作业删文件。科目这类**定义**才写单份 `data/board/board.json`。

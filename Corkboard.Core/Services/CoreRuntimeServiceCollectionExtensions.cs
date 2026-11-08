@@ -7,6 +7,8 @@ using Corkboard.Core.Services.Logging;
 using Corkboard.Core.Board;
 using Corkboard.Core.Board.History;
 using Corkboard.Core.Exam;
+using Corkboard.Core.DutyRoster;
+using Corkboard.Core.DutyRoster.History;
 using Corkboard.Core.Homework;
 using Corkboard.Core.Notes;
 using Corkboard.Core.Time;
@@ -40,6 +42,10 @@ public static class CoreRuntimeServiceCollectionExtensions
         services.AddSingleton<IExamSlotPresetService, ExamSlotPresetService>();
         services.AddSingleton<NtpClient>();
         services.AddSingleton<NtpTimeService>();
+
+        // 值日表：名单/小组/职务/排班规则整份放在 data/duty/duty.json（学生姓名属于本机数据）。
+        services.AddSingleton<IDutyHistoryStore, DutyHistoryStore>();
+        services.AddSingleton<DutyRosterService>();
         return services;
     }
 

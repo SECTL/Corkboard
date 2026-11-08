@@ -37,8 +37,29 @@ internal sealed class Program
         // 必须放在数据根之后：「是不是同一个实例」按数据根算哈希判，便携版与安装版互不干扰。
         // ⚠️ 崩溃重启那一轮必须**跳过**转发：那是旧进程已经让出单实例、专门起来显示崩溃窗口的一份，
         // 转发出去等于把崩溃窗口直接丢掉。
-        if (CrashRecoveryRuntime.StartupPromptOptions is null && SingleInstanceGate.TryForwardToExistingInstance(args))
-            return;
+        if (CrashRecoveryRuntime.StartupPromptOptions is null)
+        {
+            SingleInstanceGate.Probe();
+
+            if (SingleInstanceGate.IsDuplicate)
+            {
+                // 命令式启动（corkboard:// 链接、带 --open-* 的快捷方式）：原样交给已在跑的那一份执行。
+                // 普通启动：只发一句 --duplicate-launch，由第一份按「再次打开时」的设置决定打开哪个窗口
+                // （或弹「重启 / 取消」的询问窗）。两种都**不退出到这里之后**——这一份不起 Avalonia、
+                // 不建窗口、也不碰数据文件，用户不会再看到第二份界面闪一下。
+                IReadOnlyList<string> payload = SingleInstanceGate.ShouldForwardToExistingInstance(args)
+                    ? args
+                    : [SingleInstanceGate.DuplicateLaunchCommand];
+
+                if (SingleInstanceGate.TryForwardToExistingInstance(payload))
+                    return;
+            }
+            else
+            {
+                // 第一份：占下转发管道，之后链接与「又启动一次」都靠它收。
+                SingleInstanceGate.StartListeningAsPrimary();
+            }
+        }
 
         ConfigurePlatformServices();
 

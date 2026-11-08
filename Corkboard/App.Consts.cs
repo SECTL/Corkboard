@@ -9,6 +9,9 @@ public static class AppConsts
     /// <summary>设置窗口标识。</summary>
     public const string SettingsWindowScope = "settings";
 
+    /// <summary>行动窗口标识（独立工具窗，不在主界面/设置壳的导航体系里）。</summary>
+    public const string ActionWindowScope = "action";
+
     /// <summary>主界面默认页面 Id。</summary>
     public const string DefaultMainPageId = "main.board";
 
@@ -32,4 +35,16 @@ public static class AppConsts
 
     /// <summary>「背景」页 Id：只给 <c>--open-display-background</c> 版式冒烟用。</summary>
     public const string SettingsDisplayBackgroundPageId = "settings.display.background";
+
+    /// <summary>「值日表」设置分组 Id：三个子页的 <c>PageInfo</c> 都拿它当 groupId。</summary>
+    public const string SettingsDutyGroupId = "settings.duty.group";
+
+    /// <summary>「名单与导入」页 Id。</summary>
+    public const string SettingsDutyMembersPageId = "settings.duty.members";
+
+    /// <summary>「小组与职务」页 Id。</summary>
+    public const string SettingsDutyGroupsPageId = "settings.duty.groups";
+
+    /// <summary>「排班规则」页 Id。</summary>
+    public const string SettingsDutySchedulePageId = "settings.duty.schedule";
 }

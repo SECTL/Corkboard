@@ -45,6 +45,7 @@
             -->
             <Grid Background="Transparent"
                   Tapped="OnNoteTapped"
+                  PointerMoved="OnNotePointerMoved"
                   PointerEntered="OnNotePointerEntered"
                   PointerExited="OnNotePointerExited">
                 <StackPanel Spacing="2">

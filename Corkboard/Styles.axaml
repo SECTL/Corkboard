@@ -5,4 +5,6 @@
         Core 侧样式改动不需要动这个文件。
     -->
     <StyleInclude Source="avares://Corkboard.Core/Styles/StylesBase.axaml" />
+    <!-- Avalonia 官方 DataGrid 的 Fluent 样式（值日表 / 名单 / 小组表格都靠它）。 -->
+    <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml" />
 </Styles>

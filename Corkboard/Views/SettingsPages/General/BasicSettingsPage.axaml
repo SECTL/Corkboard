@@ -103,6 +103,25 @@
             </fa:FASettingsExpander>
 
             <!--
+                再次启动：已经有一份在跑的时候，后启动的那一份把命令转给第一份、自己退出，
+                由第一份按这里选的窗口切过去——默认直接给考试看板窗口，不再先弹一句询问。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Basic_DuplicateLaunch}"
+                                   Description="{x:Static core:Resources.Settings_Basic_DuplicateLaunchDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <ComboBox MinWidth="180"
+                              ItemsSource="{Binding DuplicateLaunchOptions}"
+                              SelectedItem="{Binding SelectedDuplicateLaunchMode, Mode=TwoWay}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:DuplicateLaunchOption">
+                                <TextBlock Text="{Binding DisplayName}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <!--
                 链接调用：注册 corkboard:// 之后，别的程序 / 快捷方式能用链接唤起全屏。
                 这是个系统集成项（写注册表 / LaunchServices），不是看板模式里的排版设置，
                 所以放在基础设置的启动段里。

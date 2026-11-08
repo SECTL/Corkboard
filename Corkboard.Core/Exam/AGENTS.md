@@ -5,7 +5,9 @@
 ## 考试看板与 NTP 校时
 
 考试看板是**与作业板并列的第二块板子**，设置侧边栏里排在「作业板」分组正下方
-（`groupId = "settings.exam.group"`，子页依次是：考试安排 / 看板显示 / 看板字号 / 最小化与浮窗 / 时间同步 / 自动放映）。
+（`groupId = "settings.exam.group"`，子页依次是：考试安排 / 看板显示 / 看板字号 / 最小化与浮窗 / 时间同步）。
+**自动放映的全局参数不在这里**：它们已搬到「行动窗口 → 列表 → 系统日程 → 考试自动放映」那张详情卡里直接编辑
+（见下面「自动放映」一节），设置侧边栏不再有「自动放映」页。
 
 ### 一块看板 = 一个文件（多份看板可切换）
 
@@ -238,13 +240,14 @@
 - **参不参加由每块看板自己决定**：`ExamBoardDocument.AutoShowEnabled`（JSON 键 `auto_show_enabled`，**默认 `false`**）。
   开关在「设置 → 考试看板 → 考试安排」的看板列表每行最前面（`ExamBoardItem.AutoShowEnabled` → `IExamService.SetAutoShow`）。
   ⚠️ `SetAutoShow` **不换当前看板、也不发 `Changed`**：开关正被按着，列表一重建就把控件抽走了。
-- **全局参数在「设置 → 考试看板 → 自动放映」**（`PageInfo("settings.exam.autoplay")`，配置 `ExamAutoShowSettingsConfig`
-  挂在 `Config.ExamAutoShow`）：`LeadMinutes`（提前量，默认 10，夹 1–120）、`AlsoShowAfterStart`（**默认 `true`**：
-  软件中途启动、已经开考了也补弹一次）、`CloseDelayMinutes`（最后一场考完再放多久，默认 10，`0` = 收卷就收）。
-  数值走草稿 + 失焦提交，**不要双向绑配置**。
+- **全局参数在「行动窗口 → 列表 → 系统日程 → 考试自动放映」那张详情卡里直接编辑**（配置 `ExamAutoShowSettingsConfig`
+  挂在 `Config.ExamAutoShow`，**配置真源没变**，只是界面从设置页搬到了行动窗口；旧 `settings.exam.autoplay` 页已删除）：
+  `LeadMinutes`（提前量，默认 10，夹 1–120）、`AlsoShowAfterStart`（**默认 `true`**：软件中途启动、已经开考了也补弹一次）、
+  `CloseDelayMinutes`（最后一场考完再放多久，默认 10，`0` = 收卷就收）、`AutoSwitchBoard`。
+  ⚠️ 详情卡里的字段直接写 `MainConfigHandler.Data.ExamAutoShow.*` 后 `Save()`（不是双向绑）；**不要再把它加回设置侧边栏**。
 - **规则全在 `Corkboard.Core/Exam/ExamAutoShowPolicy`**（纯函数，`Corkboard.Core.Tests/ExamAutoShowTests.cs` 钉死）：
   放映期 = `[第一场开考 − 提前量, 最后一场收卷 + 延迟)`；`FindTrigger` 挑这一拍该弹的那一场，`IsFinished` 判该不该收，
-  `FindNextTrigger` 只给设置页状态卡用。边界**左闭右开**，与 `ExamStatusPolicy` 同一口径——
+  `FindNextTrigger` 只给行动窗口的系统日程投影/详情用。边界**左闭右开**，与 `ExamStatusPolicy` 同一口径——
   **别处不许再算一套「离考试还有几分钟」**。放映范围由考试本身决定，没考试的看板没有放映期，
   所以不会「今天把开关打开、明天就开始放」。
 - **看门狗 `Corkboard/Services/Exam/ExamAutoShowHostedService`**（`BackgroundService`，15 秒一拍，`BuildHost` 里
@@ -361,3 +364,14 @@
   订阅者拿到事件就改绑定属性、调 `NotifyCanExecuteChanged`，跨线程直接抛「The calling thread cannot access this object...」，
   而且是在 `finally` 里抛的，会顺着 `AsyncRelayCommand` 冒到 Dispatcher 变成**未处理崩溃**（「立即同步」点一下就可能崩，
   用户报过一次）。线程口径由服务保证，**不要再让每个订阅者自己判一次**；新加的事件型服务照这个写（对照 `CloudSyncService.RunOnUiThread`）。
+
+## 启动参数：`--open-exam-board-panel`
+
+- **解析在 Core、在 `Corkboard.Core/Exam/ExamBoardLaunchArguments.cs`**：`OpenPanelSwitch` 常量 + `TryOpenPanel(IEnumerable<string?>?)`。
+  纯函数、不抛异常、带单测 `Corkboard.Core.Tests/ExamBoardLaunchArgumentsTests.cs`（照 `DisplayBoardUri.TryParseAny` 那套写法）。
+  ⚠️ 比较是**全等**不是前缀：`--open-exam-board` 是「直接全屏放映」，`--open-exam-board-panel` 是「打开面板窗口」，
+  两个参数只差一段后缀，写成 `StartsWith` 会互相误吃。
+- **两个入口都要接**（都在 `Corkboard/App.axaml.cs`）：`StartHostAsync` 的起始参数分支（自己这次启动）
+  与 `HandleExternalArguments`（程序已经常驻、第二个实例把参数转发过来的那一次）。只接前者的话，
+  「双击快捷方式带参数」在程序已运行时会被静默丢弃。
+- 开关只是把面板窗口亮出来，**不改任何配置、不自动开全屏**；真正的放映仍然是 `App.ShowExamBoardWindow()`。

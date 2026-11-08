@@ -152,6 +152,16 @@ public partial class BoardSettingsConfig : ObservableObject
     [ObservableProperty] private Color? _defaultContentColor;
 
     /// <summary>
+    ///     点击作业卡片里的链接时是否用默认浏览器打开（对应「设置 → 作业板 → 内容与样式 → 链接」）。
+    ///     关掉后链接照旧显示成蓝色下划线，但点上去只当作普通的卡片点击（切换编辑 / 删除按钮）。
+    ///     <para>
+    ///         只影响作业板上的只读卡片；布置 / 编辑作业时编辑器里的链接仍然由富文本库自己处理
+    ///         （单击即打开，方便验证地址）。
+    ///     </para>
+    /// </summary>
+    [ObservableProperty] private bool _openLinksOnClick = true;
+
+    /// <summary>
     ///     科目标题的字号（对应「设置 → 作业板 → 字号 → 科目标题字号」）。
     ///     读的时候一律过一遍 <see cref="BoardTextStyle.ClampSubjectFontSize" />。
     /// </summary>

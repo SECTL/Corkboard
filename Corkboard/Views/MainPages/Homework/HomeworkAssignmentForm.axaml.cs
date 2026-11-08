@@ -14,6 +14,7 @@ using Corkboard.Core.Abstraction;
 using Corkboard.Core.Controls;
 using Corkboard.Core.Notes;
 using Corkboard.Core.Board;
+using Corkboard.Services.Desktop;
 using Corkboard.ViewModels.MainPages.Homework;
 
 namespace Corkboard.Views.MainPages.Homework;
@@ -61,6 +62,12 @@ public partial class HomeworkAssignmentForm : UserControl
 
     /// <summary>作业内容的富文本编辑区：加粗、字号、颜色这些格式都套在它当前的选区上。</summary>
     private readonly RichTextBlock? _editor;
+
+    /// <summary>
+    ///     编辑器里「打开链接」用的统一入口。Core 不直接开浏览器（那是应用层的职责），
+    ///     编辑控件只发 <see cref="RichTextBlock.HyperlinkClicked" />，这里接住再转给平台。
+    /// </summary>
+    private readonly IExternalLauncher _externalLauncher;
 
     /// <summary>内容区块，右下角手柄拖的是它。</summary>
     private readonly Grid? _contentArea;
@@ -129,6 +136,7 @@ public partial class HomeworkAssignmentForm : UserControl
         InitializeComponent();
         DataContext = IAppHost.GetService<HomeworkAssignmentFormViewModel>();
         _editor = this.FindControl<RichTextBlock>("ContentEditor");
+        _externalLauncher = IAppHost.GetService<IExternalLauncher>();
         _contentArea = this.FindControl<Grid>("ContentArea");
         _contentChrome = this.FindControl<Border>("ContentBoxChrome");
         _sheetBody = this.FindControl<StackPanel>("SheetBody");
@@ -147,7 +155,17 @@ public partial class HomeworkAssignmentForm : UserControl
         // 工具栏是编辑控件的兄弟而不是它的祖先（工具栏要显示在编辑框上面，但不是它的一部分），
         // XAML 里绑不过去，只能在代码里把目标指过去。
         if (_toolbar is not null && _editor is not null)
+        {
             _toolbar.Target = _editor;
+
+            // 库的格式栏没有「插入链接」入口（只有右键菜单，而且要先选中文字），
+            // 在工具栏尾巴上补一颗（见 RichTextLinkButton）。库版本对不上时它自己不加。
+            RichTextLinkButton.Attach(_toolbar);
+
+            // 编辑器里点已有链接会先弹「打开 / 编辑 / 移除」（RichTextLinkMenu）；
+            // 只有用户真的选了「打开」才走到这里，统一交给应用层的打开入口。
+            _editor.HyperlinkClicked += OnEditorHyperlinkClicked;
+        }
 
         // 库的工具条完全不认主题（反编译出来四十来处写死的浅色，见 RichTextToolbarTheme），
         // 只能在每次布局时把那些颜色换成本应用的主题画刷：首帧之后控件才挂进窗口、主题资源才查得到，
@@ -253,6 +271,9 @@ public partial class HomeworkAssignmentForm : UserControl
     }
 
     private void OnToolbarLayoutUpdated(object? sender, EventArgs e) => ApplyToolbarFixes();
+
+    /// <summary>编辑器链接菜单里选了「打开」：转给统一的打开入口（只放行绝对 URI，见 IExternalLauncher）。</summary>
+    private void OnEditorHyperlinkClicked(object? sender, string url) => _externalLauncher.TryOpenUri(url);
 
     #region 手写形态
 

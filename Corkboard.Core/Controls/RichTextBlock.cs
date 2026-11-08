@@ -453,6 +453,82 @@ public class RichTextBlock : RichEditor
         }
     }
 
+    #region 超链接
+
+    /// <summary>
+    ///     这一版 AvaloniaRichEditor 的私有成员是否还齐（见 <see cref="RichTextLinks" />）。
+    ///     不齐时工具条不出现「插入链接」按钮，卡片上的链接也退回普通点击。
+    /// </summary>
+    public static bool IsHyperlinkSupported => RichTextLinks.IsSupported;
+
+    /// <summary>当前编辑器里有没有选中文字：有的话「插入链接」会套在选中文字上，而不是另起一段。</summary>
+    public bool HasTextSelection => RichTextLinks.HasSelection(this);
+
+    /// <summary>给当前选中的文字套链接；<paramref name="url" /> 传 null 表示移除链接。</summary>
+    public bool TrySetHyperlink(string? url) => RichTextLinks.TrySetHyperlink(this, url);
+
+    /// <summary>坐标处（编辑器本地坐标）是链接的话返回它的地址，否则 null。</summary>
+    public string? GetLinkUriAt(Point position) => RichTextLinks.GetLinkUriAt(this, position);
+
+    /// <summary>
+    ///     这一版库能不能「编辑 / 移除点中的链接」：要额外的私有成员（见 <see cref="RichTextLinks.IsEditSupported" />）。
+    ///     为假时不拦单击，行为退回库的「单击直接打开」。
+    /// </summary>
+    public bool IsHyperlinkEditSupported => RichTextLinks.IsEditSupported;
+
+    /// <summary>修改（<paramref name="url" /> 为 null 则移除）坐标处那个链接；用于点中链接后的小浮层。</summary>
+    public bool TrySetHyperlinkAt(Point position, string? url) => RichTextLinks.TrySetHyperlinkAt(this, position, url);
+
+    /// <summary>
+    ///     编辑器里点中链接、且在浮层里选了「打开」时发它。Core 不直接开浏览器
+    ///     （打开网址必须走应用层的 <c>IExternalLauncher</c>），由宿主接住再打开。
+    /// </summary>
+    public event EventHandler<string>? HyperlinkClicked;
+
+    /// <summary>
+    ///     编辑器里单击链接时先弹「打开 / 编辑 / 移除」，不直接打开浏览器——
+    ///     库默认在 <c>OnPointerPressed</c> 里就 <c>Process.Start</c> 了，只能拦在它前面。
+    ///     <para>
+    ///         ⚠️ 代价：从链接文字上按下不能拖选（库的拖选也起点于这次按下）。链接之外的文字不受影响；
+    ///         要选链接文字可以从旁边按起，或者先选中再改。
+    ///     </para>
+    /// </summary>
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
+    {
+        if (!IsReadOnly
+            && IsHyperlinkEditSupported
+            && e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        {
+            var position = e.GetPosition(this);
+            var url = GetLinkUriAt(position);
+            if (!string.IsNullOrEmpty(url))
+            {
+                RichTextLinkMenu.Show(this, url, position, OpenLink);
+                e.Handled = true;
+                return;
+            }
+        }
+
+        base.OnPointerPressed(e);
+    }
+
+    private void OpenLink(string url) => HyperlinkClicked?.Invoke(this, url);
+
+    /// <summary>
+    ///     没有选中文字时在光标处插入一段链接：文字留空就用地址本身当显示文字。
+    ///     返回是否真的交给了库（库的 <c>InsertHtml</c> 在文档为空时是空操作）。
+    /// </summary>
+    public bool InsertHyperlink(string url, string? text)
+    {
+        if (IsReadOnly || Document is null || string.IsNullOrWhiteSpace(url))
+            return false;
+
+        InsertHtml(HyperlinkUrl.BuildAnchorHtml(url, text));
+        return true;
+    }
+
+    #endregion
+
     /// <summary>默认颜色：设置里指定的就用它，没指定就跟随主题前景色。</summary>
     private Color ResolveTextColor()
     {

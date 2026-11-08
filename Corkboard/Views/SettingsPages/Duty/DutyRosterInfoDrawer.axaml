@@ -1,0 +1,66 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:Corkboard.ViewModels.SettingsPages.Duty"
+             x:Class="Corkboard.Views.SettingsPages.Duty.DutyRosterInfoDrawer"
+             x:DataType="vm:DutyMembersSettingsPageViewModel"
+             Width="360"
+             Height="380">
+    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" Margin="16" RowSpacing="12">
+        <StackPanel Grid.Row="0" Spacing="8">
+            <TextBlock Text="当前名单" Theme="{StaticResource SubtitleTextBlockStyle}" />
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                <TextBox Grid.Column="0"
+                         VerticalAlignment="Center"
+                         Text="{Binding RosterNameDraft, Mode=TwoWay}"
+                         PlaceholderText="给这份名单起个名字" />
+                <Button Grid.Column="1" Content="重命名" Command="{Binding RenameRosterCommand}" />
+            </Grid>
+        </StackPanel>
+
+        <StackPanel Grid.Row="1" Spacing="4">
+            <TextBlock Text="名单统计" Classes="caption" />
+            <TextBlock Text="{Binding StatsText}" TextWrapping="Wrap" />
+        </StackPanel>
+
+        <StackPanel Grid.Row="2" Spacing="4">
+            <TextBlock Text="名单来源" Classes="caption" />
+            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="12" RowSpacing="4">
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="来源" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding SourceProviderText}" TextWrapping="Wrap" />
+
+                <TextBlock Grid.Row="1" Grid.Column="0"
+                           Text="名单名"
+                           IsVisible="{Binding HasRosterSourceName}"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <TextBlock Grid.Row="1" Grid.Column="1"
+                           Text="{Binding RosterSourceNameText}"
+                           IsVisible="{Binding HasRosterSourceName}"
+                           TextWrapping="Wrap" />
+
+                <TextBlock Grid.Row="2" Grid.Column="0"
+                           Text="导入方式"
+                           IsVisible="{Binding HasImportMethod}"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                <TextBlock Grid.Row="2" Grid.Column="1"
+                           Text="{Binding ImportMethodText}"
+                           IsVisible="{Binding HasImportMethod}"
+                           TextWrapping="Wrap" />
+            </Grid>
+        </StackPanel>
+
+        <StackPanel Grid.Row="3" Spacing="4" VerticalAlignment="Bottom">
+            <TextBlock Text="导入时间" Classes="caption" IsVisible="{Binding HasImportedAt}" />
+            <TextBlock Text="{Binding ImportedAtText}" IsVisible="{Binding HasImportedAt}" />
+        </StackPanel>
+
+        <StackPanel Grid.Row="4" Spacing="8">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Content="导入名单" Click="OnImportClick" />
+                <Button Content="清空名单"
+                        Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                        Click="OnClearClick" />
+            </StackPanel>
+            <Button Content="关闭" HorizontalAlignment="Right" Click="OnCloseClick" />
+        </StackPanel>
+    </Grid>
+</UserControl>

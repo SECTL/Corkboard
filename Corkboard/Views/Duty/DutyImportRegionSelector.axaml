@@ -1,0 +1,85 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:Corkboard.Views.Duty"
+             x:Class="Corkboard.Views.Duty.DutyImportRegionSelector"
+             x:DataType="local:DutyImportRegionSelector">
+    <StackPanel Spacing="8" IsVisible="{Binding HasGrid}">
+        <TextBlock Text="选择工作表、表头行和数据行范围，区域以外的内容不会被导入"
+                   TextWrapping="Wrap"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+
+        <Grid ColumnDefinitions="Auto,*"
+              RowDefinitions="Auto,Auto,Auto"
+              RowSpacing="8"
+              ColumnSpacing="10">
+            <TextBlock Grid.Row="0"
+                       Grid.Column="0"
+                       Text="工作表"
+                       VerticalAlignment="Center"
+                       IsVisible="{Binding HasSheetSelection}" />
+            <ComboBox Grid.Row="0"
+                      Grid.Column="1"
+                      HorizontalAlignment="Stretch"
+                      IsVisible="{Binding HasSheetSelection}"
+                      ItemsSource="{Binding SheetOptions}"
+                      SelectedItem="{Binding SelectedSheet, Mode=TwoWay}" />
+
+            <TextBlock Grid.Row="1" Grid.Column="0" Text="表头行" VerticalAlignment="Center" />
+            <ComboBox Grid.Row="1"
+                      Grid.Column="1"
+                      HorizontalAlignment="Stretch"
+                      ItemsSource="{Binding HeaderRowOptions}"
+                      SelectedItem="{Binding SelectedHeaderRowOption, Mode=TwoWay}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="local:RosterImportHeaderRowOption">
+                        <TextBlock Text="{Binding Label}" />
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+
+            <TextBlock Grid.Row="2" Grid.Column="0" Text="数据行范围" VerticalAlignment="Center" />
+            <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                <NumericUpDown Width="120"
+                               Minimum="1"
+                               Increment="1"
+                               Maximum="{Binding RowCountMaximum}"
+                               Value="{Binding DataFirstRow, Mode=TwoWay}" />
+                <TextBlock Text="至" VerticalAlignment="Center" />
+                <NumericUpDown Width="120"
+                               Minimum="1"
+                               Increment="1"
+                               Maximum="{Binding RowCountMaximum}"
+                               Value="{Binding DataLastRow, Mode=TwoWay}" />
+            </StackPanel>
+        </Grid>
+
+        <TextBlock Text="未能自动识别表头行，已按第一行处理，请手动确认"
+                   IsVisible="{Binding HasHeaderRowWarning}"
+                   TextWrapping="Wrap"
+                   Foreground="{DynamicResource SystemFillColorCautionBrush}" />
+
+        <TextBlock Text="点击下面任意一行，可将其设为表头行"
+                   TextWrapping="Wrap"
+                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+
+        <ListBox MaxHeight="200"
+                 Padding="0"
+                 ItemsSource="{Binding RawRows}"
+                 SelectedItem="{Binding SelectedRawRow, Mode=TwoWay}">
+            <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="local:RosterImportRawRow">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock MinWidth="52"
+                                   Text="{Binding RowLabel}"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        <TextBlock Text="{Binding Text}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <TextBlock Text="这里只显示表头行附近的 5 行，更靠后的行请在上方「表头行」里选择"
+                   TextWrapping="Wrap"
+                   Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+    </StackPanel>
+</UserControl>

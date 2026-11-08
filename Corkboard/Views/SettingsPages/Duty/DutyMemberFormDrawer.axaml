@@ -1,0 +1,65 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:fa="clr-namespace:FluentAvalonia.UI.Controls;assembly=FluentAvalonia"
+             xmlns:vm="clr-namespace:Corkboard.ViewModels.SettingsPages.Duty"
+             x:Class="Corkboard.Views.SettingsPages.Duty.DutyMemberFormDrawer"
+             x:DataType="vm:DutyMembersSettingsPageViewModel"
+             Width="380">
+    <Grid RowDefinitions="*,Auto" Margin="16">
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="10">
+                <TextBlock Text="{Binding FormTitle}" Theme="{StaticResource SubtitleTextBlockStyle}" />
+                <TextBlock Text="序号和姓名至少填一个；小组可以先不选，之后在「小组与职务」里分配"
+                           TextWrapping="Wrap"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+
+                <StackPanel Spacing="4">
+                    <TextBlock Text="序号" Classes="caption" />
+                    <TextBox Text="{Binding DraftId, Mode=TwoWay}" PlaceholderText="例如 01" />
+                </StackPanel>
+
+                <StackPanel Spacing="4">
+                    <TextBlock Text="姓名" Classes="caption" />
+                    <TextBox Text="{Binding DraftName, Mode=TwoWay}" PlaceholderText="学生姓名" />
+                </StackPanel>
+
+                <StackPanel Spacing="4">
+                    <TextBlock Text="性别" Classes="caption" />
+                    <TextBox Text="{Binding DraftGender, Mode=TwoWay}" PlaceholderText="男 / 女，可以不填" />
+                </StackPanel>
+
+                <StackPanel Spacing="4">
+                    <TextBlock Text="小组" Classes="caption" />
+                    <ComboBox HorizontalAlignment="Stretch"
+                              ItemsSource="{Binding GroupOptions}"
+                              SelectedItem="{Binding DraftGroup, Mode=TwoWay}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:DutyMemberGroupOption">
+                                <TextBlock Text="{Binding Name}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </StackPanel>
+
+                <StackPanel Spacing="4">
+                    <TextBlock Text="标签" Classes="caption" />
+                    <TextBox Text="{Binding DraftTags, Mode=TwoWay}" PlaceholderText="用逗号分隔，可以不填" />
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <TextBlock Text="参加值日" VerticalAlignment="Center" />
+                    <ToggleSwitch IsChecked="{Binding DraftIsActive, Mode=TwoWay}" />
+                </StackPanel>
+
+                <TextBlock Text="{Binding FormStatusText}"
+                           TextWrapping="Wrap"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            </StackPanel>
+        </ScrollViewer>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" Margin="0,12,0,0">
+            <Button Content="取消" Click="OnCancelClick" />
+            <Button Classes="accent" Content="{Binding SubmitButtonText}" Click="OnSaveClick" />
+        </StackPanel>
+    </Grid>
+</UserControl>

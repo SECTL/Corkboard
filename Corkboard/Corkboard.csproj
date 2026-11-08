@@ -22,6 +22,8 @@
     <ItemGroup>
         <!-- ClassIsland 通知走官方 IPC 包。 -->
         <PackageReference Include="ClassIsland.Shared.IPC" Version="2.1.0.1" />
+        <!-- 值日表 / 名单表格用 Fluent 风格的 DataGrid（Avalonia 官方控件，样式在 Styles.axaml 引入）。 -->
+        <PackageReference Include="Avalonia.Controls.DataGrid" Version="12.1.0" />
         <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.10" />
         <!-- 自动更新：解析更新源发布的 metadata.yaml（通道 → tag 的映射，见 Updates/UpdateCenterService.cs）。 -->
         <PackageReference Include="YamlDotNet" Version="18.1.0" />
@@ -42,6 +44,10 @@
             <Generator>PublicResXFileCodeGenerator</Generator>
             <LastGenOutput>Resources.Designer.cs</LastGenOutput>
         </EmbeddedResource>
+        <EmbeddedResource Update="Langs\Action\Resources.resx">
+            <Generator>PublicResXFileCodeGenerator</Generator>
+            <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+        </EmbeddedResource>
     </ItemGroup>
 
     <ItemGroup>
@@ -51,6 +57,11 @@
             <DependentUpon>Resources.resx</DependentUpon>
         </Compile>
         <Compile Update="Langs\CrashRecovery\Resources.Designer.cs">
+            <DesignTime>True</DesignTime>
+            <AutoGen>True</AutoGen>
+            <DependentUpon>Resources.resx</DependentUpon>
+        </Compile>
+        <Compile Update="Langs\Action\Resources.Designer.cs">
             <DesignTime>True</DesignTime>
             <AutoGen>True</AutoGen>
             <DependentUpon>Resources.resx</DependentUpon>

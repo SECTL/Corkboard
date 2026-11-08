@@ -112,6 +112,41 @@
   <data name="Board_ApplyColor" xml:space="preserve">
     <value>应用</value>
   </data>
+  <!-- 富文本工具栏「插入链接」按钮（由 RichTextLinkButton 补上）与它那颗浮层。 -->
+  <data name="Board_Link" xml:space="preserve">
+    <value>链接</value>
+  </data>
+  <data name="Board_LinkUrl" xml:space="preserve">
+    <value>链接地址</value>
+  </data>
+  <data name="Board_LinkUrlPlaceholder" xml:space="preserve">
+    <value>粘贴或输入网址</value>
+  </data>
+  <data name="Board_LinkText" xml:space="preserve">
+    <value>显示文字</value>
+  </data>
+  <data name="Board_LinkTextPlaceholder" xml:space="preserve">
+    <value>留空就用网址本身</value>
+  </data>
+  <data name="Board_LinkSelectionHint" xml:space="preserve">
+    <value>选中的文字会变成链接</value>
+  </data>
+  <data name="Board_LinkApply" xml:space="preserve">
+    <value>应用</value>
+  </data>
+  <data name="Board_LinkOpen" xml:space="preserve">
+    <value>打开链接</value>
+  </data>
+  <data name="Board_LinkEdit" xml:space="preserve">
+    <value>编辑链接</value>
+  </data>
+  <!-- 浮层里把选中文字的链接去掉；库的右键菜单也有同样一项。 -->
+  <data name="Board_LinkRemove" xml:space="preserve">
+    <value>移除链接</value>
+  </data>
+  <data name="Board_LinkInvalid" xml:space="preserve">
+    <value>请输入有效的 http 或 https 网址</value>
+  </data>
   <data name="Board_Uncategorized" xml:space="preserve">
     <value>未分类</value>
   </data>
@@ -249,6 +284,24 @@
   </data>
   <data name="Settings_Basic_AutoSaveWindowSizeDescription" xml:space="preserve">
     <value>下次打开时还是上次的大小和位置</value>
+  </data>
+  <data name="Settings_Basic_DuplicateLaunch" xml:space="preserve">
+    <value>再次打开时</value>
+  </data>
+  <data name="Settings_Basic_DuplicateLaunchDescription" xml:space="preserve">
+    <value>已经开着时再点一次，直接跳到这个窗口</value>
+  </data>
+  <data name="Settings_Basic_DuplicateLaunch_Panel" xml:space="preserve">
+    <value>考试看板窗口</value>
+  </data>
+  <data name="Settings_Basic_DuplicateLaunch_FullScreen" xml:space="preserve">
+    <value>全屏考试看板</value>
+  </data>
+  <data name="Settings_Basic_DuplicateLaunch_Display" xml:space="preserve">
+    <value>看板模式</value>
+  </data>
+  <data name="Settings_Basic_DuplicateLaunch_Prompt" xml:space="preserve">
+    <value>每次都问我</value>
   </data>
   <data name="Settings_Board_PinToDesktop" xml:space="preserve">
     <value>置底到桌面</value>
@@ -435,6 +488,16 @@
   </data>
   <data name="Settings_Board_PaletteMoveDown" xml:space="preserve">
     <value>后移一位</value>
+  </data>
+  <!-- 超链接：作业内容里的网址在作业板上怎么打开（编辑器里插入链接的浮层见 Board_Link*）。 -->
+  <data name="Settings_Board_Links" xml:space="preserve">
+    <value>链接</value>
+  </data>
+  <data name="Settings_Board_OpenLinksOnClick" xml:space="preserve">
+    <value>点击链接时打开浏览器</value>
+  </data>
+  <data name="Settings_Board_OpenLinksOnClickDescription" xml:space="preserve">
+    <value>关掉后链接只显示、点不开</value>
   </data>
   <!-- 自动清理：按截止日期把过了期的作业从板子上清掉。 -->
   <data name="Settings_Board_Cleanup" xml:space="preserve">
@@ -1848,6 +1911,9 @@
   </data>
   <data name="Menu_OpenExamBoard" xml:space="preserve">
     <value>考试看板</value>
+  </data>
+  <data name="Menu_OpenAction" xml:space="preserve">
+    <value>行动窗口</value>
   </data>
   <data name="Common_Minutes" xml:space="preserve">
     <value>分钟</value>
@@ -3551,5 +3617,119 @@
   </data>
   <data name="Settings_Basic_CrashRecovery_PromptAndRestart" xml:space="preserve">
     <value>提示并倒计时自动重启</value>
+  </data>
+  <data name="Exam_Panel_Title" xml:space="preserve">
+    <value>考试看板</value>
+  </data>
+  <data name="Exam_Panel_Create" xml:space="preserve">
+    <value>新建看板</value>
+  </data>
+  <data name="Exam_Panel_QuickPlan" xml:space="preserve">
+    <value>快速布置</value>
+  </data>
+  <data name="Exam_Panel_Import" xml:space="preserve">
+    <value>导入考试</value>
+  </data>
+  <data name="Exam_Panel_Present" xml:space="preserve">
+    <value>放映</value>
+  </data>
+  <data name="Exam_Panel_AutoShow" xml:space="preserve">
+    <value>自动放映</value>
+  </data>
+  <data name="Exam_Panel_Presenting" xml:space="preserve">
+    <value>放映中</value>
+  </data>
+  <data name="Exam_Panel_StopPresenting" xml:space="preserve">
+    <value>关闭放映</value>
+  </data>
+  <data name="Exam_Panel_PresentingFormat" xml:space="preserve">
+    <value>正在放映：{0}</value>
+  </data>
+  <data name="Exam_Panel_Edit" xml:space="preserve">
+    <value>编辑</value>
+  </data>
+  <data name="Exam_Panel_More" xml:space="preserve">
+    <value>更多</value>
+  </data>
+  <data name="Exam_Panel_SetActive" xml:space="preserve">
+    <value>设为当前</value>
+  </data>
+  <data name="Exam_Panel_Export" xml:space="preserve">
+    <value>导出</value>
+  </data>
+  <data name="Exam_Panel_Delete" xml:space="preserve">
+    <value>删除</value>
+  </data>
+  <data name="Exam_Panel_NoExamsHint" xml:space="preserve">
+    <value>还没有考试，先点「快速布置」排一场</value>
+  </data>
+  <data name="Exam_Panel_NoExamsTitle" xml:space="preserve">
+    <value>这块看板还没有考试</value>
+  </data>
+  <data name="Exam_Panel_NoExamsMessage" xml:space="preserve">
+    <value>直接放映只会看到一块空白看板，先排一场考试吧</value>
+  </data>
+  <data name="Exam_Panel_NoExamsFill" xml:space="preserve">
+    <value>去布置</value>
+  </data>
+  <data name="Exam_Panel_DeleteTitle" xml:space="preserve">
+    <value>删除看板</value>
+  </data>
+  <data name="Exam_Panel_DeleteMessage" xml:space="preserve">
+    <value>确定要删除「{0}」吗</value>
+  </data>
+  <data name="MultiInstance_Title" xml:space="preserve">
+    <value>Corkboard 已经在运行</value>
+  </data>
+  <data name="MultiInstance_Message" xml:space="preserve">
+    <value>已经有一个 Corkboard 在运行，要重启它吗</value>
+  </data>
+  <data name="MultiInstance_Restart" xml:space="preserve">
+    <value>重启</value>
+  </data>
+  <data name="MultiInstance_Cancel" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="Menu_OpenExamPanel" xml:space="preserve">
+    <value>打开看板窗口</value>
+  </data>
+  <data name="Menu_ExamPresent" xml:space="preserve">
+    <value>立即放映</value>
+  </data>
+  <data name="Settings_Duty_Group" xml:space="preserve">
+    <value>值日表</value>
+  </data>
+  <data name="Settings_Duty_Members_Title" xml:space="preserve">
+    <value>名单与导入</value>
+  </data>
+  <data name="Settings_Duty_Groups_Title" xml:space="preserve">
+    <value>小组与职务</value>
+  </data>
+  <data name="Settings_Duty_Schedule_Title" xml:space="preserve">
+    <value>排班规则</value>
+  </data>
+  <data name="Settings_Duty_Members_Description" xml:space="preserve">
+    <value>值日候选人名单，支持导入</value>
+  </data>
+  <data name="Settings_Duty_Groups_Description" xml:space="preserve">
+    <value>分成几个小组，每组定好任务</value>
+  </data>
+  <data name="Settings_Duty_Schedule_Description" xml:space="preserve">
+    <value>周起始日、轮换顺序与节假日规则</value>
+  </data>
+  <data name="Settings_Duty_Placeholder" xml:space="preserve">
+    <value>这一页还没做完，先把入口占住</value>
+  </data>
+  <data name="Duty_Roster_Title" xml:space="preserve">
+    <value>值日表</value>
+  </data>
+  <data name="Duty_Roster_Description" xml:space="preserve">
+    <value>按周或按月查看谁值日</value>
+  </data>
+  <data name="Duty_Roster_Placeholder" xml:space="preserve">
+    <value>周视图与月视图还在做，先占个位</value>
+  </data>
+  <data name="Menu_DutyRoster" xml:space="preserve">
+    <value>值日表</value>
   </data>
 </root>

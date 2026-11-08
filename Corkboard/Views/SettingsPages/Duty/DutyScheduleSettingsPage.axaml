@@ -1,0 +1,242 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fa="using:FluentAvalonia.UI.Controls"
+             xmlns:icons="using:Corkboard.Core.Icons"
+             xmlns:vm="using:Corkboard.ViewModels.SettingsPages.Duty"
+             xmlns:core="using:Corkboard.Core.Langs.Common"
+             mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="700"
+             x:Class="Corkboard.Views.SettingsPages.Duty.DutyScheduleSettingsPage"
+             x:DataType="vm:DutyScheduleSettingsPageViewModel">
+    <!--
+        「排班规则」：页标题 → 命令栏 → 状态行 → 设置卡。
+        固定周几 / 小组轮流两套逻辑互斥，切换后只显示对应那张表。
+        规则是业务数据（data/duty/duty.json），点「保存规则」才落盘；界面偏好走 settings.json。
+        文案先硬编码中文，TODO 资源键：Settings_Duty_Schedule_*。
+    -->
+    <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="8" Classes="page-container">
+        <TextBlock Grid.Row="0"
+                   Margin="0 4 0 0"
+                   FontWeight="Normal"
+                   Text="{x:Static core:Resources.Settings_Duty_Schedule_Title}"
+                   Theme="{StaticResource TitleTextBlockStyle}" />
+
+        <Border Grid.Row="1"
+                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{DynamicResource ControlElevationBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="4">
+            <fa:FACommandBar DefaultLabelPosition="Right">
+                <fa:FACommandBar.PrimaryCommands>
+                    <fa:FACommandBarButton Command="{Binding OpenRosterCommand}" Label="打开值日表">
+                        <fa:FACommandBarButton.IconSource>
+                            <fa:FAFontIconSource Glyph="{x:Static icons:FluentIcons.CalendarFilled}" />
+                        </fa:FACommandBarButton.IconSource>
+                    </fa:FACommandBarButton>
+
+                    <fa:FACommandBarButton Command="{Binding OpenHolidaysCommand}" Label="节假日设置">
+                        <fa:FACommandBarButton.IconSource>
+                            <fa:FAFontIconSource Glyph="{x:Static icons:FluentIcons.SettingsFilled}" />
+                        </fa:FACommandBarButton.IconSource>
+                    </fa:FACommandBarButton>
+
+                    <fa:FACommandBarButton Command="{Binding OpenGroupsCommand}" Label="小组与职务">
+                        <fa:FACommandBarButton.IconSource>
+                            <fa:FAFontIconSource Glyph="{x:Static icons:FluentIcons.PeopleFilled}" />
+                        </fa:FACommandBarButton.IconSource>
+                    </fa:FACommandBarButton>
+
+                    <fa:FACommandBarSeparator />
+
+                    <fa:FACommandBarButton Label="重新读取" Click="OnRefreshClick">
+                        <fa:FACommandBarButton.IconSource>
+                            <fa:FAFontIconSource Glyph="{x:Static icons:FluentIcons.ArrowClockwiseFilled}" />
+                        </fa:FACommandBarButton.IconSource>
+                    </fa:FACommandBarButton>
+
+                    <fa:FACommandBarButton Command="{Binding SaveScheduleCommand}" Label="保存规则">
+                        <fa:FACommandBarButton.IconSource>
+                            <fa:FAFontIconSource Glyph="{x:Static icons:FluentIcons.SaveFilled}" />
+                        </fa:FACommandBarButton.IconSource>
+                    </fa:FACommandBarButton>
+                </fa:FACommandBar.PrimaryCommands>
+            </fa:FACommandBar>
+        </Border>
+
+        <TextBlock Grid.Row="2"
+                   Foreground="{DynamicResource AccentTextFillColorPrimaryBrush}"
+                   IsVisible="{Binding StatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                   Text="{Binding StatusText}"
+                   TextWrapping="Wrap" />
+
+        <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="8">
+                <fa:FASettingsExpander Header="排班模式" Description="两套逻辑二选一：固定周几只排星期，轮流按小组整段轮" IsExpanded="True">
+                    <StackPanel Spacing="10">
+                        <ComboBox HorizontalAlignment="Stretch"
+                                  ItemsSource="{Binding ModeOptions}"
+                                  SelectedItem="{Binding SelectedMode, Mode=TwoWay}" />
+                        <TextBlock Classes="caption"
+                                   IsVisible="{Binding IsFixedMode}"
+                                   Text="固定模式：给周一到周日各绑一个小组；没绑的星期不算值日。"
+                                   TextWrapping="Wrap" />
+                        <TextBlock Classes="caption"
+                                   IsVisible="{Binding IsRotationMode}"
+                                   Text="轮流模式：按小组顺序，一组连续扫若干天，然后换下一组；可设正/倒序、起始组与起始日期。"
+                                   TextWrapping="Wrap" />
+                    </StackPanel>
+                </fa:FASettingsExpander>
+
+                <fa:FASettingsExpander Header="值日星期" Description="哪些星期算值日（两种模式都生效）">
+                    <StackPanel Spacing="8">
+                        <ItemsControl ItemsSource="{Binding WeekdayToggles}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:DutyWeekdayToggle">
+                                    <CheckBox Margin="0 0 16 4"
+                                              Content="{Binding Label}"
+                                              IsChecked="{Binding IsChecked, Mode=TwoWay}" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </fa:FASettingsExpander>
+
+                <fa:FASettingsExpander Header="固定周几"
+                                       Description="每周固定由哪个小组打扫；没绑的星期跳过"
+                                       IsExpanded="True"
+                                       IsVisible="{Binding IsFixedMode}">
+                    <Border BorderBrush="{DynamicResource ControlElevationBorderBrush}"
+                            BorderThickness="1"
+                            ClipToBounds="True"
+                            CornerRadius="4">
+                        <DataGrid Height="260"
+                                  AutoGenerateColumns="False"
+                                  CanUserResizeColumns="True"
+                                  CanUserSortColumns="False"
+                                  GridLinesVisibility="Horizontal"
+                                  IsReadOnly="True"
+                                  ItemsSource="{Binding FixedDays}"
+                                  SelectionMode="Single">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Width="140" Header="星期" Binding="{Binding Label}" />
+
+                                <DataGridTemplateColumn Width="*" Header="负责小组">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate x:DataType="vm:DutyFixedDayRow">
+                                            <ComboBox Margin="0 2"
+                                                      HorizontalAlignment="Stretch"
+                                                      ItemsSource="{Binding Groups}"
+                                                      PlaceholderText="不排（跳过这一天）"
+                                                      SelectedItem="{Binding SelectedGroup, Mode=TwoWay}">
+                                                <ComboBox.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:DutyGroupOption">
+                                                        <TextBlock Text="{Binding Name}" />
+                                                    </DataTemplate>
+                                                </ComboBox.ItemTemplate>
+                                            </ComboBox>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Border>
+                </fa:FASettingsExpander>
+
+                <fa:FASettingsExpander Header="轮流参数"
+                                       Description="按顺序一段一段轮，段长是值日天数（不是自然日）"
+                                       IsExpanded="True"
+                                       IsVisible="{Binding IsRotationMode}">
+                    <StackPanel Spacing="10">
+                        <Grid ColumnDefinitions="Auto,240,Auto,240">
+                            <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="方向" />
+                            <ComboBox Grid.Column="1"
+                                      Margin="8 0 16 0"
+                                      ItemsSource="{Binding DirectionOptions}"
+                                      SelectedItem="{Binding SelectedDirection, Mode=TwoWay}" />
+                            <TextBlock Grid.Column="2" VerticalAlignment="Center" Text="从哪个小组开始" />
+                            <ComboBox Grid.Column="3"
+                                      Margin="8 0 0 0"
+                                      ItemsSource="{Binding Groups}"
+                                      PlaceholderText="顺序第一组"
+                                      SelectedItem="{Binding RotationStartGroup, Mode=TwoWay}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:DutyGroupOption">
+                                        <TextBlock Text="{Binding Name}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </Grid>
+
+                        <Grid ColumnDefinitions="Auto,240,Auto,160">
+                            <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="从哪天开始" />
+                            <CalendarDatePicker Grid.Column="1"
+                                                Margin="8 0 16 0"
+                                                SelectedDate="{Binding RotationStartDate, Mode=TwoWay}" />
+                            <TextBlock Grid.Column="2" VerticalAlignment="Center" Text="一组连续扫几天" />
+                            <NumericUpDown Grid.Column="3"
+                                           Margin="8 0 0 0"
+                                           Maximum="60"
+                                           Minimum="1"
+                                           Value="{Binding DaysPerGroup, Mode=TwoWay}" />
+                        </Grid>
+                    </StackPanel>
+                </fa:FASettingsExpander>
+
+                <fa:FASettingsExpander Header="节假日与加罚" Description="节假日数据联网获取，也可以自己增减">
+                    <StackPanel Spacing="10">
+                        <ToggleSwitch Content="跳过法定节假日" IsChecked="{Binding SkipLegalHolidays, Mode=TwoWay}" />
+                        <ToggleSwitch Content="调休补班日照常值日" IsChecked="{Binding WorkOnMakeupDays, Mode=TwoWay}" />
+                        <ComboBox HorizontalAlignment="Stretch"
+                                  IsEnabled="{Binding IsRotationMode}"
+                                  ItemsSource="{Binding PenaltyOptions}"
+                                  SelectedItem="{Binding SelectedPenalty, Mode=TwoWay}" />
+                        <TextBlock Classes="caption"
+                                   IsVisible="{Binding IsFixedMode}"
+                                   Text="固定周几模式只有「吞掉」一种加罚：受罚组占用它后面的小组日子，被占的组这一段不扫。"
+                                   TextWrapping="Wrap" />
+                        <Button Command="{Binding OpenHolidaysCommand}" Content="打开节假日设置" />
+                    </StackPanel>
+                </fa:FASettingsExpander>
+
+                <fa:FASettingsExpander Header="界面偏好" Description="只影响显示，不影响排班结果">
+                    <StackPanel Spacing="10">
+                        <Grid ColumnDefinitions="Auto,200,Auto,200">
+                            <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="一周从哪天开始" />
+                            <ComboBox Grid.Column="1"
+                                      Margin="8 0 16 0"
+                                      ItemsSource="{Binding WeekStartOptions}"
+                                      SelectedItem="{Binding SelectedWeekStart, Mode=TwoWay}" />
+                            <TextBlock Grid.Column="2" VerticalAlignment="Center" Text="打开时默认显示" />
+                            <ComboBox Grid.Column="3"
+                                      Margin="8 0 0 0"
+                                      ItemsSource="{Binding ViewOptions}"
+                                      SelectedItem="{Binding SelectedDefaultView, Mode=TwoWay}" />
+                        </Grid>
+
+                        <ToggleSwitch Content="高亮今天" IsChecked="{Binding HighlightToday, Mode=TwoWay}" />
+                        <ToggleSwitch Content="显示图例" IsChecked="{Binding ShowLegend, Mode=TwoWay}" />
+                        <ToggleSwitch Content="显示「固」徽标（固定人员）" IsChecked="{Binding ShowFixedBadge, Mode=TwoWay}" />
+                        <ToggleSwitch Content="启用值日表" IsChecked="{Binding DutyEnabled, Mode=TwoWay}" />
+
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Command="{Binding SavePreferencesCommand}" Content="保存界面偏好" />
+                            <Button Command="{Binding OpenRosterCommand}" Content="打开值日表" />
+                            <Button Command="{Binding OpenGroupsCommand}" Content="去配小组与职务" />
+                        </StackPanel>
+                    </StackPanel>
+                </fa:FASettingsExpander>
+
+                <Button HorizontalAlignment="Right"
+                        Command="{Binding SaveScheduleCommand}"
+                        Content="保存排班规则"
+                        Theme="{StaticResource AccentButtonStyle}" />
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

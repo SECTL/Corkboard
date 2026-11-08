@@ -38,4 +38,7 @@ public sealed class LinuxPlatformServiceRoot : IPlatformServiceRoot
 
     /// <summary>写桌面项 + <c>xdg-mime</c> 设默认处理程序，都是用户级操作，不需要 root。</summary>
     public IUrlSchemeRegistrar UrlSchemes { get; } = new LinuxUrlSchemeRegistrar();
+
+    /// <summary>Linux 侧还没有接相机（V4L2 抓帧待做）；扫码导入那一块整块隐藏。</summary>
+    public ICameraScanner Camera { get; } = UnsupportedCameraScanner.Instance;
 }

@@ -473,3 +473,4 @@ $RECYCLE.BIN/
 /.playwright-cli
 /.tmp-run
 /.tmp-shot
+/tmp

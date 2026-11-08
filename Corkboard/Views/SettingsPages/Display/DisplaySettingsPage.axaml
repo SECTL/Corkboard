@@ -17,8 +17,8 @@
         里面一行一项用 `fa:FASettingsExpanderItem`**（左名称简介、右 Footer 控件）。
         设置项多的一整段收在一张卡里、默认收起，点标题才展开；只有一项的卡直接把控件放 Footer
         （FluentAvalonia 就不画折叠箭头了）。
-        这一页自己的控件只有两样特别：字号是滑块并在拖动时弹预览浮窗、
-        时段是「一行一段」的小编辑器。
+        这一页自己的控件只有一样特别：字号是滑块并在拖动时弹预览浮窗。
+        （时段编辑已搬到「行动窗口 → 系统日程 → 看板模式」，这里不再放时段小编辑器。）
         **不要去改 Core 里的全局设置卡样式**。
         ⚠️ 这里**没有**「时钟放在哪」这一项：时钟固定显示在左上角（用户要求
         「时间的显示位置不能改」），所以那一组分段按钮连同样式一起删掉了，别再搬回来。
@@ -40,33 +40,6 @@
             <Setter Property="TextWrapping" Value="Wrap" />
         </Style>
 
-        <!-- 星期几那颗小圆片：选中就是强调色反白，没选就是一层浅底。 -->
-        <Style Selector="ToggleButton.day-chip">
-            <Setter Property="Width" Value="30" />
-            <Setter Property="Height" Value="30" />
-            <Setter Property="Padding" Value="0" />
-            <Setter Property="CornerRadius" Value="15" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
-            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
-            <Setter Property="HorizontalContentAlignment" Value="Center" />
-            <Setter Property="VerticalContentAlignment" Value="Center" />
-        </Style>
-        <Style Selector="ToggleButton.day-chip:checked">
-            <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
-            <Setter Property="Foreground" Value="{DynamicResource TextOnAccentFillColorPrimaryBrush}" />
-        </Style>
-        <Style Selector="ToggleButton.day-chip:checked /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}" />
-        </Style>
-
-        <!-- 一段时段：浅底圆角一坨，和上下一段分开，删的那颗按钮贴右边。 -->
-        <Style Selector="Border.slot-row">
-            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
-            <Setter Property="CornerRadius" Value="8" />
-            <Setter Property="Padding" Value="12" />
-        </Style>
     </UserControl.Styles>
 
     <ScrollViewer>

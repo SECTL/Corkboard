@@ -14,7 +14,7 @@
   "settings.board.group", FluentIcons.BoardFilled))` 后接一串带 `groupId` 的页面），点它才展开**六个**子页：常规（`settings.board`）／内容与样式（`settings.board.content`）／
   科目与分类（`settings.board.sections`）／自动化与数据（`settings.board.automation`）／
   窗口与收纳（`settings.board.window`）／导出（`settings.board.export`）；**紧接着是「考试看板」**
-  （`groupId = "settings.exam.group"`，`FluentIcons.CalendarFilled`），子页是考试安排／看板显示／**看板字号**（`settings.exam.font`）／时间同步／自动放映五页。
+  （`groupId = "settings.exam.group"`，`FluentIcons.CalendarFilled`），子页是考试安排／看板显示／**看板字号**（`settings.exam.font`）／时间同步；
   **作业板专属的设置项一律进作业板组、考试专属的进考试看板组，基础设置里不许再放**。
   底部的「更新」「关于」由 `PageInfo.Location = Bottom` 沉到页脚，与注册顺序无关。
   **「账号」「云同步」两页当前入口隐藏**（页面 `PageInfo` 上 `isHide: true`，`PageItemsExtensions.ToNavigationViewItems`
@@ -229,6 +229,47 @@
 - `Corkboard.Desktop.csproj` 的 `ApplicationIcon`（`Corkboard.ico`，exe 文件图标 / 资源管理器用）不参与运行期；
   换图标时母版 PNG 与这份 ICO 要一起换。
 
+## 考试看板面板窗口与多实例检测
+
+**「考试看板」面板窗口**（`Views/ExamBoard/ExamBoardPanelWindow.axaml(.cs)`，`FAAppWindow`，1080×720）是
+考试看板的**日常入口**：一份看板一张卡，卡上直接有「放映」按钮 + 自动放映开关 + 编辑 / 设为当前 / 导出 / 删除，
+顶栏三颗入口是「快速布置」「导入考试」「新建看板」。它只读列表、不落任何草稿，所以 VM（`ExamBoardPanelViewModel`）
+只做 `Attach()` / `Detach()`（订阅 `IExamService.Changed`、`ExamBoardSettingsConfig` 的 `PropertyChanged`
+与 `App.ExamBoardWindowVisibilityChanged`，外加 15 秒 `DispatcherTimer` 刷状态），**没有 `CommitAll`**。
+- 行模型复用设置页那个 `ExamBoardItem`（`ViewModels/SettingsPages/Exam/ExamScheduleSettingsPageViewModel.cs`），
+  别为面板再抄一个；新增的 `HasNoExams` / `IsPresenting` 也加在它身上。
+- 「放映」= `selectBoard` + `App.ShowExamBoardWindow()`；空看板先弹确认（`Exam_Panel_NoExams*`）引导去「快速布置」，
+  **不要**放映一块空看板。全屏窗开着时底栏 `presenting-bar` 常驻、带「关闭放映」。
+- 单实例入口是 `App.ShowExamBoardPanelWindow()` / `App.IsExamBoardPanelWindowOpen`；
+  `App.ExamBoardWindowVisibilityChanged` 由 `ShowExamBoardWindow()` / `CloseExamBoardWindow()` / 全屏窗 `Closed`
+  三处发，漏一处面板上的「放映中」徽标就停在旧状态。
+- 窗口有任务栏按钮，所以构造里设 `((Window)this).Icon = AppIcon.LoadWindowIcon()`。
+- 启动参数是 `--open-exam-board-panel`，解析在 Core 的 `Corkboard.Core/Exam/ExamBoardLaunchArguments`
+  （`OpenPanelSwitch` + `TryOpenPanel(IEnumerable<string?>)`，纯函数、带单测）。**不要**在 `App` 里另写一份比较逻辑，
+  两个入口都要接：`StartHostAsync` 的起始参数分支 与 `HandleExternalArguments`（程序常驻时再启动的那次）。
+  ⚠️ 名字与已有的 `--open-exam-board`（直接全屏放映）只差一段后缀，改的时候别弄混。
+
+**多实例检测**（照上游 SecRandom-C 的「重复实例询问窗」）：
+- `SingleInstanceGate` 现在是「`Probe()` 判重复；重复时**普通启动只转发一句
+  `DuplicateLaunchCommand`（`--duplicate-launch`）就退出**，命令式启动（深链 / `--open-*`）原样转发」。
+  `IsDuplicate` / `ShouldForwardToExistingInstance` / `StartListeningAsPrimary` 是这层的公开面。
+  ⚠️ 走 `--duplicate-launch` 的第二份**不起 Avalonia**：不建窗口、不碰数据文件，用户不会再看到第二份界面闪一下。
+- **打开哪个窗口由「已经在跑的那一份」按设置决定**（`App.HandleDuplicateLaunch()`）：读
+  `BasicSettingsConfig.DuplicateLaunchMode`（`Corkboard.Core/Enums/Configs/DuplicateLaunchMode.cs`，四档
+  `ExamBoardPanel = 0`（默认）/ `ExamBoardFullScreen` / `DisplayBoard` / `Prompt`），分别
+  `ShowExamBoardPanelWindow()` / `ShowExamBoardWindow()` / `ShowDisplayBoardWindow()` / 弹询问窗。
+  ⚠️ 配置在数据根里，所以由第一份读；第二份还没建 Host，也不该去读。设置项在
+  「设置 → 基础设置 → 启动 → 再次打开时」（`BasicSettingsPage`，选项是 `DuplicateLaunchOption` 下拉）。
+- 询问窗（只在 `Prompt` 档）在 `Views/DuplicateInstanceDialog.cs`：`FAContentDialog` 只有「重启 / 取消」两颗按钮
+  （原来那颗「打开已有窗口」在真机上叫不回窗口——主窗口可能收着、置底着或压根没建——用户明确要求去掉）。
+  宿主是 `App.CreateDuplicateLaunchPromptHost()` 造的一块全屏透明无边框窗（`Topmost`），在 `Opened` 里异步弹，
+  选「重启」才走 `App.Restart()`；宿主 `Closed` 里清 `_duplicatePromptHost`，所以连点两下图标不会叠出两个窗。
+  **不要在同步的 `OnFrameworkInitializationCompleted` 里 `await` 对话框**。
+- `HandleExternalArguments` 现在认三样：`DuplicateLaunchCommand`（见上）、`--open-exam-board-panel`、
+  `corkboard://` 深链；`--open-*` 冒烟开关仍然只对自己启动的那一次有意义（别在转发侧硬接）。
+- ⚠️ **重启 / 重启到启动器之前必须 `SingleInstanceGate.Release()`**：不释放的话新进程会被旧进程当成第二实例、
+  把 `--duplicate-launch` 吞掉（`App.Restart()` 与 `App.RestartThroughLauncherAsync()` 两处都调）。
+
 ## 首次运行引导（OOBE）与「启用作业板」开关
 
 两块东西，一个决定「第一次打开看到什么」，一个决定「作业板还算不算存在」。
@@ -289,3 +330,55 @@
 - **托盘跟着那个键重建**：`TaskBarIconService.CreateMenuItems(bool boardEnabled)` 在关掉时不列
   「显示主窗口」；菜单是启动时拍下的快照，所以 `RefreshMenu()` 要在开关变化与 `Reloaded` 时重设
   `trayIcon.Menu` 并收掉已经弹出的左键菜单。左键自绘菜单每次弹都现算（`CurrentMenuItems`）。
+
+## 行动窗口（日程中心）
+
+独立于设置窗口的一扇窗，把「我的行动」（用户定的显隐规则）与「系统日程」（考试自动放映、看板模式到点进出）
+汇到一处，列表 / 周 / 月三种看法。它**不是**设置页，不进 `PagesRegistryService`，也不需要 `[PageInfo]`。
+
+- **窗口与生命周期**：`Corkboard/Views/Actions/ActionWindow.axaml(.cs)`，`App` 里静态
+  `_actionWindow` + `ShowActionWindow()` / `IsActionWindowOpen` / `CloseActionWindow()`，窗口 `Closed` 里清字段
+  （照考试看板那套，`App.axaml.cs` 的 `ShowActionWindow` 附近）。普通的 `FAAppWindow` 系统标题栏，
+  `Width=1120 Height=760 MinWidth=960 MinHeight=600`、`CenterScreen`、**不要**做无边框/透明——
+  那套坑（透明角、拖动捕获、焦点）只有主窗口置底时才值得付。窗口图标两条都写：
+  `Icon = AppIcon.LoadBitmap()` 与 `((Window)this).Icon = AppIcon.LoadWindowIcon()`。
+- **入口**：托盘 `TaskBarIconService.CreateMenuItems` 里一项 `CR.Menu_OpenAction`（位置在「打开考试看板」后，
+  原生菜单与左键自绘菜单自动同步）；主界面标题栏「更多」里一项（`MainView.axaml` 的 `more-action`）；
+  冒烟开关 `--open-action`（只开窗）与 `--action-new`（开窗 2 秒后再执行一次「新建行动」，专用于验证编辑器弹层）。
+  **不要**给它加全局快捷键。
+- **弹层宿主**：窗口构造里 `CreateHost(this, PageOverlayService.DialogOnlyHostPriority)`。⚠️ 这个优先级是
+  -10 的「只服务指名宿主」档，`PageOverlayService.Show(content, preferredOwner)` 靠它把弹层送回发起窗口；
+  **不要**用 `ShellHostPriority`（会跟主窗口/设置页抢弹层）或 `FullScreenHostPriority`（会抢全屏窗口的弹层）。
+  改 `PageOverlayService` 的 `_preferredOwner` / `FindHost` / `ResolveActiveHost` 时，四扇窗（主窗口、
+  设置、看板模式、行动窗口）都要一起想一遍。
+- **系统日程要能就地编辑**（用户明确要求：旧设置项删掉、都在行动里直接改）：列表 →「系统日程」分组 →
+  考试自动放映 / 看板模式 → 详情卡里直接写 `MainConfigHandler.Data.ExamAutoShow.*` / `Display.Slots`，
+  改完 `Save()`；**不要再跳去设置页**（`SettingsRequested` 那条路已删，旧 `settings.exam.autoplay` 页也没了，
+  看板模式页只剩「自动轮播」）。列表里那些行只做展示与「立即执行 / 今天不执行」。
+- **弹层版式**：详情卡/编辑器卡片必须显式 `MaxWidth` + `MaxHeight` + 内部 `ScrollViewer`，
+  `OverlayContentHost` 显式 `Stretch`，遮罩 `Border.scrim` 铺满——不写就会「卡片右边和下面被窗口裁掉、
+  左侧列表也没暗下来」（用户报过「添加行动根本用不了」）。用 `Popup` 不用 `Button.Flyout`
+  （Flyout 里 DataContext 不继承，绑定静默失效——同一个坑在收纳九宫格、一言类别浮层都踩过）。
+- **周/月视图**：仓库没有现成日程表控件；`Avalonia.Controls.DataGrid` 现在由值日表显式引用 12.1.0（`Corkboard.csproj`），
+  但行动窗口的周/月视图仍是手写 `Grid`（表头与行共用同一份 `ColumnDefinitions`），不要为了日程表去改值日表那套 DataGrid；
+  月视图借 `ReplayCalendarView.axaml` 的样式（7×6 格、周一为首列、42 颗按钮），
+  周视图是时间轴 + 七列。改版式先看 `Views/Actions/` 现有的那三份 `Action*View.axaml`。
+- **数据不在 settings.json**：规则 / 状态 / 执行记录在 `Utils.GetDirectoryPath("action")`（见
+  `Corkboard.Core/AGENTS.md`）；只有「全局开关」与「系统日程参数」走配置。执行记录一次一行 jsonl，
+  写入失败只记日志，不打断调度。
+
+## 值日表名单的相机扫码与云会话
+
+- **相机生命周期归导入抽屉**（`Views/Duty/DutyImportDrawer.axaml(.cs)`）：从 DI 拿 `ICameraScanner`
+  （`App.axaml.cs` 里 `services.AddSingleton(platform.Camera)`），`Loaded` 枚举设备、扫码模式才 `StartAsync`；
+  切模式 / 关抽屉 / 离开页面一律 `StopAsync` + `Preview.Clear()`。**别在 ViewModel 里开相机**——
+  帧事件在采集线程，解码后要 `Dispatcher.UIThread.Post` 再碰预览。
+  相机不可用（`IsSupported=false`：Linux、macOS、win-x86 / win-arm64）时整块相机 UI 隐藏，粘贴兜底仍在。
+- **抓帧只认原始像素**：`CameraFrame.Pixels` 是紧凑 BGR24，解码走 `Corkboard.Core/.../Import/QrFrameDecoder`
+  （ZXing.Net）；`Views/Duty/DutyQrCameraPreview` 把帧转 `WriteableBitmap` 并复用，别每帧新建位图。
+- **云传输走 `DutySyncTransferClient`**（typed HttpClient，`https://secrandom-sync.sectl.cn`，30s 超时）：
+  导出抽屉有「二维码导出（在线）」与「会话码导出」，导入抽屉有「扫码快速导入」与「会话码导入」。
+  **离开导出抽屉必须撤销会话**（`ReleaseResources` → `CancelCloud(revoke:true)`），否则云端要白等到过期。
+- 枚举成员顺序与上游对齐：`DutyExportMode`/`DutyImportMode` = File=0 / QuickQr=1 / OfflineQr=2 / SessionCode=3；
+  `DutyRosterSource.ImportMethod` 存这些英文串（外加 `Manual`），显示用中文映射在
+  `DutyMembersSettingsPageViewModel.MapImportMethod`。

@@ -117,4 +117,7 @@ public static class FluentIcons
 
     /// <summary>「链接调用」每行末尾那颗复制按钮。码位来自上游图标映射表 <c>copy_20_filled</c>。</summary>
     public const string CopyFilled = "\uE58A";
+
+    /// <summary>富文本工具栏的「插入链接」按钮。码位来自上游图标映射表 <c>link_20_filled</c>。</summary>
+    public const string LinkFilled = "\uEAAF";
 }

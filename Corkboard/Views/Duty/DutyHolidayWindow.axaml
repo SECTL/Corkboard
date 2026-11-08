@@ -1,0 +1,20 @@
+<faWindowing:FAAppWindow xmlns="https://github.com/avaloniaui"
+                         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                         xmlns:faWindowing="using:FluentAvalonia.UI.Windowing"
+                         xmlns:local="using:Corkboard.Views.Duty"
+                         mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="760"
+                         x:Class="Corkboard.Views.Duty.DutyHolidayWindow"
+                         Width="1000" Height="760"
+                         MinWidth="820" MinHeight="560"
+                         WindowStartupLocation="CenterScreen"
+                         Title="节假日">
+    <!--
+        「节假日」独立窗口：任务栏里要有按钮，所以必须是顶层 FAAppWindow（图标在 code-behind 里挂 AppIcon）。
+        内容全在 DutyHolidayPage 里；不要把这一页做成 PageOverlayService 的弹层，
+        也不要用 SettingsView.Current?.OpenDrawer——那两套宿主都是主窗口 / 设置壳的，独立窗口里点不开。
+        TODO(资源键: Settings_DutyHoliday_Title) Title 暂为硬编码中文。
+    -->
+    <local:DutyHolidayPage />
+</faWindowing:FAAppWindow>

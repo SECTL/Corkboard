@@ -1,0 +1,235 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Corkboard.ViewModels.Actions"
+             xmlns:lac="using:Corkboard.Langs.Action"
+             mc:Ignorable="d" d:DesignWidth="1080" d:DesignHeight="620"
+             x:Class="Corkboard.Views.Actions.ActionMonthView"
+             x:DataType="vm:ActionWindowViewModel">
+    <!--
+        月视图：一张铺满内容区的月历（42 格，周一为首列）+ 下方当天明细。
+        视觉沿用 ReplayCalendarView 的 Border.calendar-sheet：实体浅底 + 一圈描边 + 圆角 8，
+        日格等高、由 UniformGrid 均分，日格里最多 3 条日程 chip，装不下的写 +N。
+    -->
+    <UserControl.Styles>
+        <!-- 月历底板：与 ReplayCalendarView 的 .calendar-sheet 同一套视觉语言。 -->
+        <Style Selector="Border.calendar-sheet">
+            <Setter Property="Background" Value="{DynamicResource SolidBackgroundFillColorQuarternaryBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="12,10" />
+        </Style>
+
+        <!-- 日格：透明底、等高填满，靠 margin 留出格间空隙。 -->
+        <Style Selector="Button.day-cell">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="6,4" />
+            <Setter Property="Margin" Value="1" />
+            <Setter Property="MinHeight" Value="40" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="VerticalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="VerticalContentAlignment" Value="Stretch" />
+            <Setter Property="ClipToBounds" Value="True" />
+        </Style>
+        <Style Selector="Button.day-cell:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+        </Style>
+        <Style Selector="Button.day-cell.outside">
+            <Setter Property="Opacity" Value="0.4" />
+        </Style>
+        <Style Selector="Button.day-cell.today">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+        </Style>
+        <Style Selector="Button.day-cell.selected">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+        </Style>
+
+        <Style Selector="TextBlock.cell-day">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="TextBlock.cell-day.today">
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+        </Style>
+
+        <!-- 日格里的日程 chip：浅底 + 左侧 3px 色条区分来源（不只靠颜色，ToolTip 里还有全文）。 -->
+        <Style Selector="Border.chip">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="Padding" Value="4,1" />
+            <Setter Property="Margin" Value="0,1,0,0" />
+            <Setter Property="BorderThickness" Value="3,0,0,0" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
+        </Style>
+        <Style Selector="Border.chip.mine">
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+        </Style>
+        <Style Selector="Border.chip.exam">
+            <Setter Property="BorderBrush" Value="{DynamicResource SystemFillColorCautionBrush}" />
+        </Style>
+        <Style Selector="Border.chip.display">
+            <Setter Property="BorderBrush" Value="{DynamicResource SystemFillColorSuccessBrush}" />
+        </Style>
+        <Style Selector="Border.chip TextBlock">
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="TextBlock.cell-more">
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="Margin" Value="2,1,0,0" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        </Style>
+
+        <Style Selector="Border.detail-row">
+            <Setter Property="Padding" Value="8,6" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="Border.detail-row:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+        </Style>
+
+        <!-- 星期头的默认模板是 ContentPresenter：字号与前景色由这里统一给。 -->
+        <Style Selector="ItemsControl.weekday-header ContentPresenter">
+            <Setter Property="HorizontalAlignment" Value="Center" />
+            <Setter Property="TextBlock.FontSize" Value="12" />
+            <Setter Property="TextBlock.Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        </Style>
+    </UserControl.Styles>
+
+    <Grid RowDefinitions="*,Auto" RowSpacing="8">
+        <!-- 月历主体：导航 + 星期头 + 42 格。 -->
+        <Border Grid.Row="0" Classes="calendar-sheet">
+            <Grid RowDefinitions="Auto,Auto,*" RowSpacing="6">
+                <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,Auto,*,Auto" ColumnSpacing="8">
+                    <Button Grid.Column="0" Classes="mini" Command="{Binding PrevMonthCommand}">
+                        <Path Data="M 6,1 L 1,6 L 6,11"
+                              Stroke="{DynamicResource TextFillColorSecondaryBrush}" StrokeThickness="1.5" />
+                    </Button>
+                    <TextBlock Grid.Column="1" VerticalAlignment="Center" FontSize="15" FontWeight="SemiBold"
+                               Text="{Binding MonthTitle}" />
+                    <Button Grid.Column="2" Classes="mini" Command="{Binding NextMonthCommand}">
+                        <Path Data="M 1,1 L 6,6 L 1,11"
+                              Stroke="{DynamicResource TextFillColorSecondaryBrush}" StrokeThickness="1.5" />
+                    </Button>
+
+                    <Button Grid.Column="4" Classes="chip" Command="{Binding ThisMonthCommand}"
+                            Content="{x:Static lac:Resources.Action_Month_Today}" />
+                </Grid>
+
+                <ItemsControl Grid.Row="1" Classes="weekday-header" ItemsSource="{Binding WeekdayHeaders}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <UniformGrid Columns="7" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+
+                <ItemsControl Grid.Row="2" ItemsSource="{Binding MonthCells}" ClipToBounds="True">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <UniformGrid Columns="7" Rows="6" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ActionMonthCell">
+                            <Button Classes="day-cell"
+                                    Classes.today="{Binding IsToday}"
+                                    Classes.selected="{Binding IsSelected}"
+                                    Classes.outside="{Binding !IsCurrentMonth}"
+                                    Command="{Binding $parent[UserControl].((vm:ActionWindowViewModel)DataContext).SelectDayCommand}"
+                                    CommandParameter="{Binding}">
+                                <Grid RowDefinitions="Auto,*">
+                                    <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+                                        <TextBlock Grid.Column="0" Classes="cell-day"
+                                                   Classes.today="{Binding IsToday}"
+                                                   Text="{Binding DayText}" />
+                                        <TextBlock Grid.Column="1" Classes="cell-more"
+                                                   VerticalAlignment="Center"
+                                                   Text="{Binding MoreText}"
+                                                   IsVisible="{Binding HasHidden}" />
+                                    </Grid>
+
+                                    <ItemsControl Grid.Row="1" ItemsSource="{Binding Chips}" Margin="0,2,0,0"
+                                                  IsVisible="{Binding HasChips}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:ActionMonthChip">
+                                                <Border Classes="chip"
+                                                        Classes.mine="{Binding IsMine}"
+                                                        Classes.exam="{Binding IsExam}"
+                                                        Classes.display="{Binding IsDisplay}"
+                                                        ToolTip.Tip="{Binding Text}">
+                                                    <TextBlock Text="{Binding Text}" />
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Grid>
+                            </Button>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Grid>
+        </Border>
+
+        <!-- 当天明细：选中那天的发生点 + 系统区间 + 运行结果。 -->
+        <Border Grid.Row="1" Classes="card" Height="190" MinHeight="140">
+            <Grid RowDefinitions="Auto,*" RowSpacing="6">
+                <TextBlock Grid.Row="0" Classes="section-title" Text="{Binding DayTitle}" />
+
+                <Panel Grid.Row="1">
+                    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+                        <ItemsControl ItemsSource="{Binding DayItems}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ActionOccurrenceItem">
+                                    <Border Classes="detail-row" PointerPressed="OnDetailRowPressed"
+                                            Opacity="{Binding RowOpacity}"
+                                            ToolTip.Tip="{Binding EffectText}">
+                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                                            <TextBlock Grid.Column="0" FontSize="12" FontWeight="SemiBold"
+                                                       VerticalAlignment="Center"
+                                                       Text="{Binding RangeText}" />
+                                            <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center">
+                                                <TextBlock FontSize="12" Text="{Binding Title}"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock FontSize="11"
+                                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                           Text="{Binding SummaryText}"
+                                                           TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6"
+                                                        VerticalAlignment="Center">
+                                                <TextBlock FontSize="11"
+                                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                                           Text="{Binding ResultText}" />
+                                                <Button Classes="mini"
+                                                        Command="{Binding $parent[UserControl].((vm:ActionWindowViewModel)DataContext).RunNowCommand}"
+                                                        CommandParameter="{Binding}"
+                                                        ToolTip.Tip="{x:Static lac:Resources.Action_Run_Now}">
+                                                    <Path Data="M 1,1 L 9,5 L 1,9 Z"
+                                                          Fill="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+                                                </Button>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+
+                    <TextBlock IsVisible="{Binding IsMonthEmpty}" Classes="caption"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                               Text="{x:Static lac:Resources.Action_Month_DetailEmpty}" />
+                </Panel>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

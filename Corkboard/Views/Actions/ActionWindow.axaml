@@ -1,0 +1,428 @@
+<faWindowing:FAAppWindow xmlns="https://github.com/avaloniaui"
+                         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                         xmlns:faWindowing="using:FluentAvalonia.UI.Windowing"
+                         xmlns:vm="using:Corkboard.ViewModels.Actions"
+                         xmlns:dsp="using:Corkboard.ViewModels.SettingsPages.Display"
+                         xmlns:views="using:Corkboard.Views.Actions"
+                         xmlns:icons="using:Corkboard.Core.Icons"
+                         xmlns:lac="using:Corkboard.Langs.Action"
+                         mc:Ignorable="d" d:DesignWidth="1120" d:DesignHeight="760"
+                         x:Class="Corkboard.Views.Actions.ActionWindow"
+                         x:DataType="vm:ActionWindowViewModel"
+                         Title="{x:Static lac:Resources.Action_Title}"
+                         Width="1120" Height="760"
+                         MinWidth="960" MinHeight="600"
+                         WindowStartupLocation="CenterScreen"
+                         Background="{DynamicResource SolidBackgroundFillColorBaseBrush}">
+    <!--
+        行动窗口（日程中心）：独立工具窗，三页签（列表 / 周 / 月）合并三路日程。
+        壳只做工具区 + 页签 + 内容 + 状态栏；三个视图各自是独立 UserControl，
+        编辑器与系统日程详情画在窗口自己的 overlay 宿主里（DialogOnlyHostPriority）。
+    -->
+    <faWindowing:FAAppWindow.Resources>
+        <ResourceDictionary>
+        <!--
+            系统日程详情：窗口代码把 ViewModel 包进 ContentControl 再交给弹层宿主，
+            模板由 x:Key 取用。卡片样式复用 Core 的 Border.sheet（遮罩由宿主提供）。
+            设置项就地摆在这里改——不再给「去设置」按钮跳设置页。
+        -->
+        <DataTemplate x:Key="SystemScheduleDetailTemplate" x:DataType="vm:SystemScheduleDetailViewModel">
+            <Border Classes="sheet" Width="500" MaxHeight="660">
+                <Grid RowDefinitions="Auto,*,Auto" RowSpacing="10">
+                    <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <StackPanel Grid.Column="0" Spacing="2">
+                            <TextBlock Classes="h2" Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Classes="caption" Text="{Binding KindText}" />
+                        </StackPanel>
+                        <Button Grid.Column="1" Classes="mini" Command="{Binding CloseCommand}"
+                                ToolTip.Tip="{x:Static lac:Resources.Action_Cancel}"
+                                AutomationProperties.Name="{x:Static lac:Resources.Action_Cancel}">
+                            <TextBlock FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                       Text="{x:Static icons:FluentIcons.DismissRegular}" />
+                        </Button>
+                    </Grid>
+
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel Spacing="12">
+                            <TextBlock Text="{Binding Description}" TextWrapping="Wrap" FontSize="13" />
+
+                            <!-- 考试自动放映：跨看板参数 + 当前看板参不参加。 -->
+                            <Border Classes="card" IsVisible="{Binding IsExam}">
+                                <StackPanel Spacing="10">
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                        <TextBlock Grid.Column="0" VerticalAlignment="Center"
+                                                   Text="{x:Static lac:Resources.Action_System_ExamEnabled}" />
+                                        <ToggleSwitch Grid.Column="1"
+                                                      IsChecked="{Binding ExamEnabled, Mode=TwoWay}" />
+                                    </Grid>
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                        <TextBlock Grid.Column="0" VerticalAlignment="Center"
+                                                   TextWrapping="Wrap"
+                                                   Text="{x:Static lac:Resources.Action_System_AutoSwitchBoard}" />
+                                        <ToggleSwitch Grid.Column="1"
+                                                      IsChecked="{Binding ExamAutoSwitchBoard, Mode=TwoWay}" />
+                                    </Grid>
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                        <TextBlock Grid.Column="0" VerticalAlignment="Center"
+                                                   TextWrapping="Wrap"
+                                                   Text="{x:Static lac:Resources.Action_System_LeadMinutes}" />
+                                        <NumericUpDown Grid.Column="1" Width="110"
+                                                       Minimum="1" Maximum="120" Increment="1"
+                                                       FormatString="0"
+                                                       Value="{Binding LeadMinutesValue, Mode=TwoWay}" />
+                                    </Grid>
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                        <TextBlock Grid.Column="0" VerticalAlignment="Center"
+                                                   TextWrapping="Wrap"
+                                                   Text="{x:Static lac:Resources.Action_System_AlsoShowAfterStart}" />
+                                        <ToggleSwitch Grid.Column="1"
+                                                      IsChecked="{Binding AlsoShowAfterStart, Mode=TwoWay}" />
+                                    </Grid>
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                        <TextBlock Grid.Column="0" VerticalAlignment="Center"
+                                                   TextWrapping="Wrap"
+                                                   Text="{x:Static lac:Resources.Action_System_CloseDelay}" />
+                                        <NumericUpDown Grid.Column="1" Width="110"
+                                                       Minimum="0" Maximum="120" Increment="1"
+                                                       FormatString="0"
+                                                       Value="{Binding CloseDelayValue, Mode=TwoWay}" />
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- 看板模式自动进出：总开关 + 时段编辑器（与设置页同一套控件）。 -->
+                            <Border Classes="card" IsVisible="{Binding IsDisplay}">
+                                <StackPanel Spacing="10">
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                        <TextBlock Grid.Column="0" VerticalAlignment="Center" TextWrapping="Wrap"
+                                                   Text="{x:Static lac:Resources.Action_System_DisplayAutoShow}" />
+                                        <ToggleSwitch Grid.Column="1"
+                                                      IsChecked="{Binding DisplayAutoShow, Mode=TwoWay}" />
+                                    </Grid>
+
+                                    <TextBlock Classes="section-title" Margin="0,4,0,0"
+                                               Text="{x:Static lac:Resources.Action_System_Slots}" />
+
+                                    <ItemsControl ItemsSource="{Binding SlotItems}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="dsp:DisplaySlotItem">
+                                                <Border Classes="slot-row" Margin="0,0,0,8">
+                                                    <StackPanel Spacing="8">
+                                                        <Grid ColumnDefinitions="Auto,*,Auto">
+                                                            <ToggleSwitch IsChecked="{Binding Enabled, Mode=TwoWay}"
+                                                                          VerticalAlignment="Center" />
+                                                            <ItemsControl Grid.Column="1" Margin="12,0,0,0"
+                                                                          VerticalAlignment="Center"
+                                                                          ItemsSource="{Binding DayChoices}">
+                                                                <ItemsControl.ItemsPanel>
+                                                                    <ItemsPanelTemplate>
+                                                                        <StackPanel Orientation="Horizontal" Spacing="4" />
+                                                                    </ItemsPanelTemplate>
+                                                                </ItemsControl.ItemsPanel>
+                                                                <ItemsControl.ItemTemplate>
+                                                                    <DataTemplate x:DataType="dsp:DisplayDayChoice">
+                                                                        <ToggleButton Classes="day-chip"
+                                                                                      Content="{Binding Label}"
+                                                                                      IsChecked="{Binding IsSelected, Mode=TwoWay}" />
+                                                                    </DataTemplate>
+                                                                </ItemsControl.ItemTemplate>
+                                                            </ItemsControl>
+                                                            <Button Grid.Column="2" Classes="mini"
+                                                                    Command="{Binding RemoveCommand}"
+                                                                    ToolTip.Tip="{x:Static lac:Resources.Action_System_RemoveSlot}"
+                                                                    AutomationProperties.Name="{x:Static lac:Resources.Action_System_RemoveSlot}">
+                                                                <TextBlock FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                                                           Text="{x:Static icons:FluentIcons.DeleteFilled}" />
+                                                            </Button>
+                                                        </Grid>
+
+                                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                                            <TimePicker ClockIdentifier="24HourClock"
+                                                                        UseSeconds="False"
+                                                                        MinuteIncrement="1"
+                                                                        SelectedTime="{Binding EnterTimeDraft, Mode=TwoWay}"
+                                                                        LostFocus="OnSlotTimeLostFocus" />
+                                                            <TextBlock Text="→" VerticalAlignment="Center"
+                                                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                                            <TimePicker ClockIdentifier="24HourClock"
+                                                                        UseSeconds="False"
+                                                                        MinuteIncrement="1"
+                                                                        SelectedTime="{Binding ExitTimeDraft, Mode=TwoWay}"
+                                                                        LostFocus="OnSlotTimeLostFocus" />
+                                                        </StackPanel>
+
+                                                        <TextBlock FontSize="12"
+                                                                   TextWrapping="Wrap"
+                                                                   IsVisible="{Binding HasEmptyWarning}"
+                                                                   Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                                                                   Text="{x:Static lac:Resources.Action_System_SlotEmptyHint}" />
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <Button Classes="chip" HorizontalAlignment="Left"
+                                            Command="{Binding AddSlotCommand}"
+                                            IsVisible="{Binding CanAddSlot}"
+                                            Content="{x:Static lac:Resources.Action_System_AddSlot}" />
+                                </StackPanel>
+                            </Border>
+
+                            <!-- 下一次发生。 -->
+                            <Border Classes="card">
+                                <StackPanel Spacing="6">
+                                    <TextBlock Classes="section-title" Text="{Binding NextText}" />
+                                    <ItemsControl ItemsSource="{Binding NextRuns}" IsVisible="{Binding HasNext}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate DataType="{x:Type vm:SystemScheduleRunItem}">
+                                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                                    <TextBlock Grid.Column="0" Classes="caption" Text="{Binding TimeText}" />
+                                                    <TextBlock Grid.Column="1" FontSize="12" Text="{Binding Title}"
+                                                               TextTrimming="CharacterEllipsis" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+
+                            <TextBlock Text="{Binding ErrorText}" IsVisible="{Binding HasError}" TextWrapping="Wrap"
+                                       FontSize="12" Foreground="{DynamicResource SystemFillColorCriticalBrush}" />
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                        <Button Grid.Column="1" Classes="chip"
+                                IsVisible="{Binding CanPause}"
+                                Command="{Binding PauseTodayCommand}"
+                                Content="{Binding PauseTodayText}" />
+                        <Button Grid.Column="2" Classes="accent"
+                                Command="{Binding ExecuteNowCommand}"
+                                Content="{x:Static lac:Resources.Action_Run_Now}" />
+                    </Grid>
+                </Grid>
+            </Border>
+        </DataTemplate>
+        </ResourceDictionary>
+    </faWindowing:FAAppWindow.Resources>
+
+    <faWindowing:FAAppWindow.Styles>
+        <Style Selector="TextBlock.page-title">
+            <Setter Property="FontSize" Value="20" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <!-- 页签：三颗并排，选中那颗用强调色下划线 + 加重字重。 -->
+        <Style Selector="Button.tab">
+            <Setter Property="Padding" Value="14,6" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        </Style>
+        <Style Selector="Button.tab:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+        </Style>
+        <Style Selector="Button.tab.active">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource AccentTextFillColorPrimaryBrush}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+
+        <!-- 工具区右侧的筛选 chips。 -->
+        <Style Selector="Button.chip">
+            <Setter Property="Padding" Value="10,4" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        </Style>
+        <Style Selector="Button.chip:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+        </Style>
+        <Style Selector="Button.chip.active">
+            <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextOnAccentFillColorPrimaryBrush}" />
+        </Style>
+
+        <!-- 行内小图标按钮：28×28（列表操作列按设计稿固定这个尺寸）。 -->
+        <Style Selector="Button.mini">
+            <Setter Property="Width" Value="28" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        </Style>
+        <Style Selector="Button.mini:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+        </Style>
+        <Style Selector="Button.mini:disabled">
+            <Setter Property="Opacity" Value="0.4" />
+        </Style>
+
+        <!-- 顶部提示条：暂停、只读、保存失败都走这一族，颜色区分语义。 -->
+        <Style Selector="Border.banner">
+            <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="12,8" />
+        </Style>
+        <Style Selector="Border.banner.warning">
+            <Setter Property="BorderBrush" Value="{DynamicResource SystemFillColorCautionBrush}" />
+        </Style>
+        <Style Selector="Border.banner.error">
+            <Setter Property="BorderBrush" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+        </Style>
+
+        <Style Selector="Border.statusbar">
+            <Setter Property="BorderBrush" Value="{DynamicResource DividerStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="0,1,0,0" />
+            <Setter Property="Padding" Value="0,8,0,0" />
+        </Style>
+
+        <Style Selector="TextBlock.group-title">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+            <Setter Property="Margin" Value="12,10,0,4" />
+        </Style>
+
+        <!-- 看板模式时段编辑器：与设置页同一套样式（一段一坨、七颗圆角星期按钮）。 -->
+        <Style Selector="Border.slot-row">
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="12" />
+        </Style>
+        <Style Selector="ToggleButton.day-chip">
+            <Setter Property="Width" Value="30" />
+            <Setter Property="Height" Value="30" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="15" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorSecondaryBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="ToggleButton.day-chip:checked">
+            <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextOnAccentFillColorPrimaryBrush}" />
+        </Style>
+        <Style Selector="ToggleButton.day-chip:checked /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentFillColorDefaultBrush}" />
+        </Style>
+    </faWindowing:FAAppWindow.Styles>
+
+    <Panel ClipToBounds="True">
+        <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" RowSpacing="10" Margin="20,14,20,12">
+
+            <!-- 第 0 行：新建 / 搜索 / 暂停全部；右侧筛选 chips（三视图共用）。 -->
+            <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="12">
+                <Button Grid.Column="0" Classes="accent" Command="{Binding NewActionCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock VerticalAlignment="Center"
+                                   FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                   Text="{x:Static icons:FluentIcons.AddFilled}" />
+                        <TextBlock VerticalAlignment="Center" Text="{x:Static lac:Resources.Action_New}" />
+                    </StackPanel>
+                </Button>
+
+                <TextBox Grid.Column="1"
+                         MaxWidth="320" HorizontalAlignment="Left"
+                         VerticalAlignment="Center"
+                         Text="{Binding SearchText, Mode=TwoWay}"
+                         PlaceholderText="{x:Static lac:Resources.Action_SearchPlaceholder}"
+                         ToolTip.Tip="{x:Static lac:Resources.Action_Search}" />
+
+                <Button Grid.Column="2" Classes="chip"
+                        Classes.active="{Binding IsPaused}"
+                        Command="{Binding TogglePauseCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <!-- 暂停标记用一颗小圆点：仓库图标表里没有 Pause 字形。 -->
+                        <Ellipse Width="8" Height="8" VerticalAlignment="Center"
+                                 Fill="{DynamicResource SystemFillColorCautionBrush}"
+                                 IsVisible="{Binding IsPaused}" />
+                        <TextBlock VerticalAlignment="Center" Text="{Binding PauseText}" />
+                    </StackPanel>
+                </Button>
+
+                <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <Button Classes="chip" Classes.active="{Binding IsFilterAll}"
+                            Command="{Binding SetFilterCommand}" CommandParameter="all"
+                            Content="{x:Static lac:Resources.Action_Filter_All}" />
+                    <Button Classes="chip" Classes.active="{Binding IsFilterMine}"
+                            Command="{Binding SetFilterCommand}" CommandParameter="mine"
+                            Content="{x:Static lac:Resources.Action_Filter_MyActions}" />
+                    <Button Classes="chip" Classes.active="{Binding IsFilterSystem}"
+                            Command="{Binding SetFilterCommand}" CommandParameter="system"
+                            Content="{x:Static lac:Resources.Action_Filter_System}" />
+                </StackPanel>
+            </Grid>
+
+            <!-- 第 1 行：页签。 -->
+            <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="4">
+                <Button Classes="tab" Classes.active="{Binding IsListView}"
+                        Command="{Binding SwitchTabCommand}" CommandParameter="list"
+                        Content="{x:Static lac:Resources.Action_TabList}" />
+                <Button Classes="tab" Classes.active="{Binding IsWeekView}"
+                        Command="{Binding SwitchTabCommand}" CommandParameter="week"
+                        Content="{x:Static lac:Resources.Action_TabWeek}" />
+                <Button Classes="tab" Classes.active="{Binding IsMonthView}"
+                        Command="{Binding SwitchTabCommand}" CommandParameter="month"
+                        Content="{x:Static lac:Resources.Action_TabMonth}" />
+            </StackPanel>
+
+            <!-- 第 2 行：提示条（全局暂停 / 只读 / 执行失败）。 -->
+            <StackPanel Grid.Row="2" Spacing="6">
+                <Border Classes="banner warning" IsVisible="{Binding HasBanner}">
+                    <TextBlock Text="{Binding BannerText}" TextWrapping="Wrap" FontSize="12" />
+                </Border>
+
+                <Border Classes="banner error" IsVisible="{Binding HasError}">
+                    <TextBlock Text="{Binding ErrorText}" TextWrapping="Wrap" FontSize="12" />
+                </Border>
+            </StackPanel>
+
+            <!-- 第 3 行：三个视图共用同一块内容区，靠 IsVisible 切换。 -->
+            <Panel Grid.Row="3">
+                <views:ActionListView IsVisible="{Binding IsListView}" />
+                <views:ActionWeekView IsVisible="{Binding IsWeekView}" />
+                <views:ActionMonthView IsVisible="{Binding IsMonthView}" />
+            </Panel>
+
+            <!-- 第 4 行：状态栏。 -->
+            <Border Grid.Row="4" Classes="statusbar">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                    <TextBlock Grid.Column="0" Classes="caption"
+                               Text="{Binding NextText}" TextTrimming="CharacterEllipsis" />
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="14">
+                        <TextBlock Classes="caption" Text="{Binding CountText}" />
+                        <TextBlock Classes="caption" Text="{Binding TodayCountText}" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- 弹层宿主：编辑器 / 系统日程详情都画在这里（窗口自己的宿主，优先级 DialogOnly）。 -->
+        <Border x:Name="OverlayScrim" Classes="scrim" IsVisible="False">
+            <ContentControl x:Name="OverlayContentHost"
+                            HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+    </Panel>
+</faWindowing:FAAppWindow>

@@ -26,6 +26,15 @@ public partial class BasicSettingsConfig : ObservableObject
     /// <summary>记住窗口尺寸：关掉后不再写入，但已保存的尺寸保留（见 MainWindow）。</summary>
     [ObservableProperty] private bool _autoSaveWindowSize = true;
 
+    /// <summary>
+    ///     已经有一份在跑的时候，再启动一次打开什么：看板窗口（默认）/ 全屏放映 / 看板模式 / 总是问。
+    ///     <para>
+    ///         默认值即枚举的 0（<see cref="DuplicateLaunchMode.ExamBoardPanel" />），配置里没有这个键
+    ///         时也落到它——「双击图标就该把看板摆到眼前」，不该先问一句再点一下。
+    ///     </para>
+    /// </summary>
+    [ObservableProperty] private DuplicateLaunchMode _duplicateLaunchMode = DuplicateLaunchMode.ExamBoardPanel;
+
     [ObservableProperty] private bool _urlProtocol;
 
     /// <summary>

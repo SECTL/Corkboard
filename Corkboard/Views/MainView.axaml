@@ -258,6 +258,10 @@
                                     <MenuItem Classes="more-dock"
                                               Header="{x:Static core:Resources.Board_Dock_Collapse}"
                                               Click="DockButton_OnClick" />
+                                    <!-- 行动窗口：独立工具窗，日程 / 条件行动的表格、周、月三视图。 -->
+                                    <MenuItem Classes="more-action"
+                                              Header="{x:Static core:Resources.Menu_OpenAction}"
+                                              Click="ActionWindowButton_OnClick" />
                                 </MenuFlyout>
                             </Button.Flyout>
                         </Button>

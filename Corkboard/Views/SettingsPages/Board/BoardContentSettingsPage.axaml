@@ -182,6 +182,21 @@
             </fa:FASettingsExpander>
 
             <TextBlock Classes="section-title"
+                       Text="{x:Static core:Resources.Settings_Board_Links}" />
+
+            <!--
+                作业板卡片上的链接能不能点：只影响只读卡片。在「布置作业」里编辑时，
+                链接仍由富文本库自己处理（单击即打开，方便当场验证地址）。
+                这是一个纯布尔开关，直接双向绑配置（与这一页其他开关一致）。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_OpenLinksOnClick}"
+                                   Description="{x:Static core:Resources.Settings_Board_OpenLinksOnClickDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding Board.OpenLinksOnClick, Mode=TwoWay}" />
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <TextBlock Classes="section-title"
                        Text="{x:Static core:Resources.Settings_Board_Handwriting_Title}" />
 
             <!-- 默认笔粗：1–24（夹取规则在 HandwritingStyle 里）。 -->

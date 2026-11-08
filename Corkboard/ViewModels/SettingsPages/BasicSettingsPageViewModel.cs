@@ -51,6 +51,33 @@ public partial class BasicSettingsPageViewModel(
     /// <summary>语言改动后由页面请求重启（由 <c>SettingsView.RequestRestartApp</c> 在标题栏亮出提示）。</summary>
     public event EventHandler? LanguageChangeRequested;
 
+    /// <summary>
+    ///     「再次启动时打开什么」四档：默认打开考试看板窗口，也可以直接全屏放映、打开看板模式，
+    ///     或者保留原来那句「已经在运行」的询问窗。顺序与 <see cref="DuplicateLaunchMode" /> 一致。
+    /// </summary>
+    public IReadOnlyList<DuplicateLaunchOption> DuplicateLaunchOptions { get; } =
+    [
+        new(DuplicateLaunchMode.ExamBoardPanel, CR.Settings_Basic_DuplicateLaunch_Panel),
+        new(DuplicateLaunchMode.ExamBoardFullScreen, CR.Settings_Basic_DuplicateLaunch_FullScreen),
+        new(DuplicateLaunchMode.DisplayBoard, CR.Settings_Basic_DuplicateLaunch_Display),
+        new(DuplicateLaunchMode.Prompt, CR.Settings_Basic_DuplicateLaunch_Prompt)
+    ];
+
+    /// <summary>下拉选中项；配置里是未定义值时退回第一项「考试看板窗口」。</summary>
+    public DuplicateLaunchOption SelectedDuplicateLaunchMode
+    {
+        get => DuplicateLaunchOptions.FirstOrDefault(option => option.Mode == Basic.DuplicateLaunchMode)
+               ?? DuplicateLaunchOptions[0];
+        set
+        {
+            if (value is null || value.Mode == Basic.DuplicateLaunchMode)
+                return;
+
+            Basic.DuplicateLaunchMode = value.Mode;
+            OnPropertyChanged();
+        }
+    }
+
     /// <summary>隐私设置子树（在线状态上报）。统计开关放这里，不往基础设置里塞。</summary>
     public PrivacySettingsConfig PrivacySettings => Config.General.PrivacySettings;
 

@@ -1,0 +1,224 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:fa="clr-namespace:FluentAvalonia.UI.Controls;assembly=FluentAvalonia"
+             xmlns:local="clr-namespace:Corkboard.Views.Duty"
+             xmlns:vm="clr-namespace:Corkboard.ViewModels.Duty"
+             x:Class="Corkboard.Views.Duty.DutyImportDrawer"
+             x:DataType="vm:DutyImportViewModel"
+             Width="452">
+    <Grid RowDefinitions="*,Auto">
+        <ScrollViewer Grid.Row="0">
+            <StackPanel Margin="16,16,16,8" Spacing="12">
+                <StackPanel Spacing="4">
+                    <TextBlock Text="{Binding Title}" Theme="{StaticResource TitleTextBlockStyle}" />
+                    <TextBlock Text="{Binding TargetListDescription}"
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    <TextBlock Text="{Binding Description}"
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                </StackPanel>
+
+                <fa:FASettingsExpander Header="导入方式" IsExpanded="True">
+                    <StackPanel Spacing="10">
+                        <ComboBox HorizontalAlignment="Stretch"
+                                  ItemsSource="{Binding ImportModes}"
+                                  SelectedItem="{Binding SelectedImportMode, Mode=TwoWay}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:DutyImportModeOption">
+                                    <TextBlock Text="{Binding Label}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+
+                        <!-- 文件 + 粘贴：同一次导入二选一，都读成同一张表 -->
+                        <StackPanel Spacing="6" IsVisible="{Binding IsFileMode}">
+                            <Button Classes="accent"
+                                    HorizontalAlignment="Stretch"
+                                    Command="{Binding PickFileCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="选择文件" />
+                                </StackPanel>
+                            </Button>
+                            <TextBlock Text="{Binding FileNameText}"
+                                       TextWrapping="Wrap"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            <TextBlock Text="{Binding FileHint}"
+                                       TextWrapping="Wrap"
+                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                            <TextBlock Text="{Binding LegacyXlsHint}"
+                                       IsVisible="{Binding LegacyXlsHint, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                       TextWrapping="Wrap"
+                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+
+                            <TextBlock Text="{Binding PasteHint}"
+                                       TextWrapping="Wrap"
+                                       Margin="0,4,0,0"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            <TextBox Text="{Binding PasteText, Mode=TwoWay}"
+                                     AcceptsReturn="True"
+                                     Height="110"
+                                     TextWrapping="Wrap"
+                                     PlaceholderText="把表格里的内容直接粘贴到这里" />
+                            <Button Content="读入粘贴的文本"
+                                    HorizontalAlignment="Stretch"
+                                    Command="{Binding LoadPasteCommand}" />
+                        </StackPanel>
+
+                        <!-- 扫码：有相机就开预览，没有相机或识别不出来时仍可粘贴文本 -->
+                        <StackPanel Spacing="6" IsVisible="{Binding IsQrMode}">
+                            <TextBlock Text="{Binding QrModeDescription}"
+                                       TextWrapping="Wrap"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+
+                            <StackPanel Spacing="6" IsVisible="{Binding IsCameraSupported}">
+                                <Border BorderBrush="{DynamicResource ControlElevationBorderBrush}"
+                                        BorderThickness="1"
+                                        CornerRadius="6"
+                                        ClipToBounds="True">
+                                    <local:DutyQrCameraPreview x:Name="CameraPreview" Height="200" />
+                                </Border>
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                    <TextBlock Grid.Column="0" Text="相机" VerticalAlignment="Center" />
+                                    <ComboBox Grid.Column="1"
+                                              x:Name="CameraDeviceComboBox"
+                                              HorizontalAlignment="Stretch"
+                                              SelectionChanged="OnCameraDeviceChanged" />
+                                </Grid>
+                                <TextBlock Text="{Binding CameraStatusText}"
+                                           TextWrapping="Wrap"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                <TextBlock Text="{Binding CameraHint}"
+                                           TextWrapping="Wrap"
+                                           Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                            </StackPanel>
+
+                            <TextBlock Text="{Binding QrHint}"
+                                       TextWrapping="Wrap"
+                                       Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                            <TextBox Text="{Binding QrFrameText, Mode=TwoWay}"
+                                     PlaceholderText="粘贴一帧二维码文本" />
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Button Content="收下这一帧"
+                                        Command="{Binding AddQrFrameCommand}" />
+                                <Button Content="拼成名单"
+                                        IsEnabled="{Binding QrCanComplete}"
+                                        Command="{Binding CompleteQrCommand}" />
+                            </StackPanel>
+                            <TextBlock Text="{Binding QrProgressText}"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            <TextBlock Text="{Binding QrStatusText}"
+                                       IsVisible="{Binding QrStatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                       TextWrapping="Wrap"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                <TextBlock Grid.Column="0" Text="会话 ID" VerticalAlignment="Center" />
+                                <TextBox Grid.Column="1"
+                                         Text="{Binding QrSessionId}"
+                                         IsReadOnly="True"
+                                         FontFamily="Consolas" />
+                            </Grid>
+                        </StackPanel>
+
+                        <!-- 会话码：从云服务取回对方刚导出的名单 -->
+                        <StackPanel Spacing="6" IsVisible="{Binding IsSessionCodeMode}">
+                            <TextBlock Text="{Binding SessionStatusText}"
+                                       TextWrapping="Wrap"
+                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                            <TextBox Text="{Binding SessionCode, Mode=TwoWay}"
+                                     MaxLength="12"
+                                     FontFamily="Consolas"
+                                     PlaceholderText="12 位会话码" />
+                            <ProgressBar IsIndeterminate="True"
+                                         Height="4"
+                                         IsVisible="{Binding IsSessionBusy}" />
+                            <Button Content="取回名单"
+                                    HorizontalAlignment="Stretch"
+                                    IsEnabled="{Binding SessionCanFetch}"
+                                    Command="{Binding FetchSessionCodeCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+                </fa:FASettingsExpander>
+
+                <fa:FASettingsExpander Header="导入区域"
+                                       IsExpanded="True"
+                                       IsVisible="{Binding IsRegionVisible}">
+                    <local:DutyImportRegionSelector x:Name="RegionSelector" />
+                </fa:FASettingsExpander>
+
+                <fa:FASettingsExpander Header="列映射"
+                                       IsExpanded="True"
+                                       IsVisible="{Binding HasTable}">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="{Binding MappingDescription}"
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        <Grid ColumnDefinitions="Auto,*"
+                              RowDefinitions="Auto,Auto,Auto"
+                              RowSpacing="8"
+                              ColumnSpacing="10">
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="序号 / 编号" VerticalAlignment="Center" />
+                            <ComboBox Grid.Row="0" Grid.Column="1" HorizontalAlignment="Stretch"
+                                      ItemsSource="{Binding ColumnOptions}"
+                                      SelectedItem="{Binding IdColumn, Mode=TwoWay}" />
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="名称" VerticalAlignment="Center" />
+                            <ComboBox Grid.Row="1" Grid.Column="1" HorizontalAlignment="Stretch"
+                                      ItemsSource="{Binding ColumnOptions}"
+                                      SelectedItem="{Binding NameColumn, Mode=TwoWay}" />
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="性别" VerticalAlignment="Center" />
+                            <ComboBox Grid.Row="2" Grid.Column="1" HorizontalAlignment="Stretch"
+                                      ItemsSource="{Binding ColumnOptions}"
+                                      SelectedItem="{Binding GenderColumn, Mode=TwoWay}" />
+                        </Grid>
+                    </StackPanel>
+                </fa:FASettingsExpander>
+
+                <StackPanel Spacing="6" IsVisible="{Binding HasPreview}">
+                    <Border BorderBrush="{DynamicResource ControlElevationBorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            ClipToBounds="True">
+                        <DataGrid Height="130"
+                                  AutoGenerateColumns="False"
+                                  IsReadOnly="True"
+                                  CanUserSortColumns="False"
+                                  GridLinesVisibility="Horizontal"
+                                  ItemsSource="{Binding PreviewRows}">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Width="*" Header="序号" Binding="{Binding Id}" />
+                                <DataGridTextColumn Width="2*" Header="名称" Binding="{Binding Name}" />
+                                <DataGridTextColumn Width="*" Header="性别" Binding="{Binding Gender}" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Border>
+                    <TextBlock Text="{Binding PreviewSummary}"
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    <TextBlock Text="{Binding PreviewHint}"
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                </StackPanel>
+
+                <TextBlock Text="{Binding ErrorText}"
+                           IsVisible="{Binding ErrorText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                           TextWrapping="Wrap"
+                           Foreground="{DynamicResource SystemFillColorCriticalBrush}" />
+            </StackPanel>
+        </ScrollViewer>
+
+        <Grid Grid.Row="1" Margin="16,8,16,16" ColumnDefinitions="*,Auto">
+            <TextBlock Grid.Column="0"
+                       VerticalAlignment="Center"
+                       Text="{Binding StatusText}"
+                       TextWrapping="Wrap"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right">
+                <Button Content="取消" Click="OnCancelClick" />
+                <Button Classes="accent"
+                        Content="导入"
+                        IsEnabled="{Binding CanImport}"
+                        Click="OnImportClick" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>

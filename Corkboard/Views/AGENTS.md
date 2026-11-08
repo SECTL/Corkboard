@@ -119,8 +119,9 @@
   **别在外面再套一层 `ItemsControl`**——那样行不算它的容器，卡片给行准备的底色不生效，行会退回控件默认底色、
   比卡片亮一块（用户反馈过「这个设置项的底色不对，我感觉就是没复用，或者说是用错了」）。
   现有两处这么用：`ExamFontSettingsPage.axaml`（`FontSizeGroups` 的 `Items`）、`DisplaySettingsPage.axaml`（`FontItems`）。
-  页面自己的 `<UserControl.Styles>` 只留这几样：数值文本 `TextBlock.slider-value`、星期小方块 `ToggleButton.day-chip`
-  与一段时段的容器 `Border.slot-row`。字号/光标/轮播停顿用滑块。
+  页面自己的 `<UserControl.Styles>` 只留这几样：数值文本 `TextBlock.slider-value`。字号/光标/轮播停顿用滑块。
+  （星期小方块 `ToggleButton.day-chip` 与时段容器 `Border.slot-row` 已随时段编辑一起搬到
+  「行动窗口 → 系统日程 → 看板模式」，样式现在只在 `Views/Actions/ActionWindow.axaml` 里。）
   （原来的 `Border.mode-switch` + `ToggleButton.mode-tab` 那套分段按钮已随「时钟位置」设置项一起删掉，
   这一页现在没有分段按钮。）
   ⚠️ **设置卡不能套设置卡**：`FASettingsExpander` 的内容里再出现一张 `FASettingsExpander`
@@ -154,7 +155,12 @@
   （`DisplayDayChoice` + `SetDay`），「每天 / 工作日 / 周末」那三颗 `EveryDayCommand` / `WeekdaysCommand` / `WeekendCommand`
   已按用户要求删除（「不要有预设的什么工作日那些东西」），**不要再加回来**。
 - ⚠️ **集合元素不会被 `ConfigHandlerBase` 递归订阅**（见「设置怎么写」），改时段后必须显式
-  `MainConfigHandler.Save()`——设置页的 `OnSlotChanged` 就是干这个的。
+  `MainConfigHandler.Save()`——行动窗口时段编辑器的 `OnSlotChanged` 就是干这个的；设置页已不再放时段编辑器（编辑入口见下一条）。
+- ⚠️ **时段/自动进出的编辑入口已经搬到「行动窗口」**（用户要求：设置项删掉、都在行动里直接编辑）：
+  列表页「系统日程」分组 → 看板模式那几行 → 详情卡里内嵌时段编辑器（`ActionWindow.axaml` 里复用
+  `DisplaySettingsPageViewModel.DisplaySlotItem`，样式 `Border.slot-row` / `ToggleButton.day-chip` 也搬到了那份 XAML），
+  改完写 `MainConfigHandler.Data.Display` 后 `Save()`；考试自动放映的五个字段同理在「考试自动放映」详情卡里改。
+  **不要再把入口搬回设置页**，也不要在设置页里留“去行动窗口改”的跳转按钮。
 - **老配置只有那四个数（`EnterHour/EnterMinute/ExitHour/ExitMinute`）**：`DisplaySettingsConfig.Normalize()` 在
   列表为空时用它们造出第一段，再把第一段写回这四个字段（别处还在读），所以升级上来的用户时段不丢。这四个键**冻结**。
 - **到点自动进出**：`Services/Display/DisplayAutoShowHostedService`（照 `ExamAutoShowHostedService`：15 秒一拍、
@@ -397,6 +403,38 @@
   **位置在这条作业自己的内容下面**（不是卡片顶上）。⚠️ 库的 `MeasureContentHeight` 末尾固定 `+40.0`，
   卡片一旦只读就必须在 `RichTextBlock.MeasureOverride` 里扣掉（`MeasuredHeightSlack`），否则标签与内容
   之间会凭空多出一大段空白。
+- **超链接**：作业内容里的 `<a href>` 由富文本库 1.2.1 负责渲染（蓝字 + 下划线）与 HTML 往返，本仓库只补「插入」与「点击」两个入口：
+  - 编辑器（`HomeworkAssignmentForm`）格式栏尾巴那颗「插入链接」（`Corkboard.Core/Controls/RichTextLinkButton`，
+    走 `RichEditorToolbar.TrailingItems`）：浮层里填地址与显示文字；**有选中文字时把链接套在选中文字上**，
+    没有选区才在光标处插入「显示文字 + 地址」（文字留空就用地址本身），顺便带一颗「移除链接」。
+    `HomeworkAssignmentForm.axaml.cs` 设完 `Toolbar.Target` 后 `Attach` 一次即可，库版本对不上时它自己不加。
+  - 编辑器里点击**已有**链接：先弹 `RichTextLinkMenu`（打开 / 编辑 / 移除），不再一点就开浏览器——
+    库的 `OnPointerPressed` 命中链接就直接 `Process.Start`，所以由 `RichTextBlock.OnPointerPressed`
+    拦在库前面（`RichTextLinkMenu.Show`）。选「打开」发 `RichTextBlock.HyperlinkClicked`，
+    `HomeworkAssignmentForm` 接住转 `IExternalLauncher.TryOpenUri`；编辑 / 移除走
+    `RichTextLinks.TrySetHyperlinkAt`（先把选区收拢到点击处，再给命中的 `Run` 换地址，避免误改别处选区）。
+    ⚠️ 代价：**从链接文字上按下不能拖选**（库的拖选也起点于这次按下）；链接之外的文字不受影响。
+  - 作业板卡片点击：卡片里的 `RichTextBlock` 是 `IsHitTestVisible="False"`（整张卡片一个点击面），
+    库自带的链接点击永远收不到事件，所以命中判定由卡片根 `Grid` 做（`BoardPage.OnNotePointerMoved` /
+    `OnNoteTapped` → `FindNoteLinkUri` → `RichTextBlock.GetLinkUriAt`）；命中就 `IExternalLauncher.TryOpenUri`、
+    挂手型光标，并把完整地址挂成 `ToolTip`（只在地址变化时重设，否则悬停延迟一直被重置、提示永远弹不出来；
+    离开卡片时清掉），**命中时不要再切换编辑 / 删除按钮**（那是点空白处的行为）。
+  - 开关 `BoardSettingsConfig.OpenLinksOnClick`（默认开，设置 → 作业板 → 内容与样式 → 链接）：**只影响只读卡片**，
+    编辑器里链接不受它管（点击总是先弹「打开 / 编辑 / 移除」小浮层）。读它要现取 `MainConfigHandler.Data`
+    （VM 构造期捕获的 `Config` 会被云恢复整个换掉）；关掉后链接只是长得像链接——点击当普通卡片点击、
+    悬停也不换手型、不给地址提示。
+  - ⚠️ **库没有公开的选区 / 链接 API**：`Corkboard.Core/Controls/RichTextLinks` 反射
+    `_selectionStart` / `_selectionEnd` / `_caretPosition`、`SetHyperlink(string?, Run?)`、
+    `GetLinkRunAtPoint(Point)`、`GetPositionFromPoint(Point)`；分两档：`IsSupported`（插入按钮 + 卡片命中）与
+    `IsEditSupported`（点链接编辑 / 移除）。失配时静默降级：按钮不出现、卡片点击当普通点击；
+    `IsEditSupported` 为假时编辑器不拦单击，退回库的「单击即开」。**升级 AvaloniaRichEditor 先看这里**，
+    不要在没有兜底的情况下改成直接调用。
+    上游补公开 API 的补丁已提 PR（centwon/AvaloniaRichEditor#87）；本机 `docs/upstream/` 留有补丁与说明
+    （docs/ 被 gitignore），等库发版后再删这层反射。
+    地址规范化与 `<a>` 拼装在 `Corkboard.Core/RichText/HyperlinkUrl`
+    （补 `https://`、只放行 http/https、HTML 转义），单测 `Corkboard.Core.Tests/HyperlinkUrlTests.cs`。
+  - 卡片是连续排版（`PageSize = Continuous`），所以 `GetLinkUriAt` 收的就是控件坐标；以后若给卡片开分页，
+    要先过库的 `MapViewToDoc` 再命中（非分页时它是恒等映射）。
 - **作业板文字字号**（设置 → 作业板 → 字号一张卡里四行）：科目标题 `SubjectFontSize`、
   作业条小字 `NoteMetaFontSize`、二级分类小标题 `SectionFontSize`（与「科目与分类」页写同一个配置项）、
   快捷标签胶囊 `NoteTagFontSize`（新增，8–32，默认 12；卡片模板绑 `BoardNoteCardItem.NoteTagFontSize`）。

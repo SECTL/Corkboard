@@ -17,10 +17,12 @@ using Corkboard.Core.Board;
 using Corkboard.Core.Controls;
 using Corkboard.Core.Export;
 using Corkboard.Core.Icons;
+using Corkboard.Core.Models.SubConfigs.Board;
 using Corkboard.Core.Notes;
 using Corkboard.Core.Services.Config;
 using Corkboard.Core.Services.Stats;
 using Corkboard.Services.Board;
+using Corkboard.Services.Desktop;
 using Corkboard.Services.Stats;
 using Corkboard.Services.Ui;
 using Corkboard.ViewModels.Export;
@@ -75,6 +77,24 @@ public partial class BoardPage : UserControl
     /// </summary>
     private readonly StackPanel? _boardContent;
 
+    /// <summary>
+    ///     点作业里的网址时用的打开器。卡片上的链接不能像富文本库那样直接
+    ///     <c>Process.Start</c>——统一入口在这里，失败也只是静默返回 false。
+    /// </summary>
+    private readonly IExternalLauncher _externalLauncher;
+
+    /// <summary>
+    ///     「点链接时打开浏览器」开关所在的那份配置。
+    ///     <para>
+    ///         刻意不读 <c>ViewModel.Config</c>：那是在 ViewModel 构造时捕获的引用，
+    ///         而云端恢复设置会把 <see cref="ConfigHandlerBase.Data" /> 整个换掉，捕获的那份会过期。
+    ///     </para>
+    /// </summary>
+    private readonly MainConfigHandler _configHandler;
+
+    /// <summary>悬停在链接上时显示的手型光标（每帧 new 一个没必要，建一次共用）。</summary>
+    private static readonly Cursor LinkCursor = new(StandardCursorType.Hand);
+
     /// <summary>正在滑回原位的区块（见 <see cref="SlideFrame" />）。</summary>
     private readonly List<SlideEntry> _slides = [];
 
@@ -105,6 +125,8 @@ public partial class BoardPage : UserControl
         _boardService = IAppHost.GetService<IBoardService>();
         _replay = IAppHost.GetService<BoardReplayService>();
         _autoSave = IAppHost.GetService<BoardAutoSaveService>();
+        _externalLauncher = IAppHost.GetService<IExternalLauncher>();
+        _configHandler = IAppHost.GetService<MainConfigHandler>();
         _boardContent = this.FindControl<StackPanel>("BoardContent");
 
         // 自动存档要的那张图只能由页面渲：内容容器在这里，收起卡片按钮也得靠这里的 ViewModel。
@@ -226,14 +248,78 @@ public partial class BoardPage : UserControl
     /// <summary>
     ///     点一条作业：把它的编辑 / 删除按钮打开或收起（默认收着，点一下才出来、再点一下回去）。
     ///     用 Tapped 而不是 PointerPressed：按住不动 / 拖动时不该切换。
+    ///     <para>
+    ///         点在链接上时不切换按钮，而是打开浏览器（开关见
+    ///         <see cref="BoardSettingsConfig.OpenLinksOnClick" />）；开关关掉时链接只是长得像链接，
+    ///         点它照旧只当作「点卡片空白处」。
+    ///      </para>
     /// </summary>
     private void OnNoteTapped(object? sender, Avalonia.Input.TappedEventArgs e)
     {
-        if (sender is not Control { DataContext: BoardNoteCardItem item } || !item.CanModify)
+        if (sender is not Control { DataContext: BoardNoteCardItem item } card)
+            return;
+
+        // 链接优先：卡片的内容控件不接收指针，命中判定只能由卡片按坐标反查（见 FindNoteLinkUri）。
+        // 命中就打开浏览器并吃掉这次点击，别让卡片再弹出一排按钮。
+        if (LinksOpenOnClick && FindNoteLinkUri(card, visual => e.GetPosition(visual)) is { Length: > 0 } link)
+        {
+            _externalLauncher.TryOpenUri(link);
+            e.Handled = true;
+            return;
+        }
+
+        if (!item.CanModify)
             return;
 
         item.IsActionsVisible = !item.IsActionsVisible;
         e.Handled = true;
+    }
+
+    /// <summary>「点链接时打开浏览器」开关的当前值（随时读配置，覆盖云恢复后换掉配置对象的情况）。</summary>
+    private bool LinksOpenOnClick => _configHandler.Data.BoardSettings.OpenLinksOnClick;
+
+    /// <summary>
+    ///     指针在卡片上移动时，链接命中就换成手型光标——用户得先看得出「这里是能点的」；
+    ///     同时把完整地址挂成悬停提示（卡片上的链接文字可能被折行/截断，光看蓝字不知道会跳到哪）。
+    ///     开关关掉时链接不响应点击，也就不给手型、不给提示（不然是个骗人的提示）。
+    /// </summary>
+    private void OnNotePointerMoved(object? sender, Avalonia.Input.PointerEventArgs e)
+    {
+        if (sender is not Control card)
+            return;
+
+        var link = LinksOpenOnClick ? FindNoteLinkUri(card, visual => e.GetPosition(visual)) : null;
+        card.Cursor = string.IsNullOrEmpty(link) ? null : LinkCursor;
+
+        // 只在地址变了才重设：每次移动都 SetTip 会把提示的延迟反复重置，永远弹不出来。
+        if (string.IsNullOrEmpty(link))
+        {
+            if (ToolTip.GetTip(card) is not null)
+            {
+                ToolTip.SetIsOpen(card, false);
+                ToolTip.SetTip(card, null);
+            }
+        }
+        else if (!string.Equals(ToolTip.GetTip(card) as string, link, StringComparison.Ordinal))
+        {
+            ToolTip.SetTip(card, link);
+        }
+    }
+
+    /// <summary>
+    ///     找出卡片里指针位置下的链接地址，没有就返回 <c>null</c>。
+    ///     <para>
+    ///         卡片里的 <see cref="RichTextBlock" /> 是 <c>IsHitTestVisible="False"</c>（整张卡片算一个点击面），
+    ///         富文本库自带的链接点击因此永远收不到事件；库的坐标命中判定是私有的，只能走
+    ///         <see cref="RichTextBlock.GetLinkUriAt" /> 那座反射桥。
+    ///     </para>
+    /// </summary>
+    private static string? FindNoteLinkUri(Control card, Func<Visual, Point> positionOf)
+    {
+        var richText = card.GetVisualDescendants().OfType<RichTextBlock>()
+            .FirstOrDefault(control => control.IsVisible);
+
+        return richText is null ? null : richText.GetLinkUriAt(positionOf(richText));
     }
 
     /// <summary>
@@ -250,8 +336,13 @@ public partial class BoardPage : UserControl
 
     private void OnNotePointerExited(object? sender, Avalonia.Input.PointerEventArgs e)
     {
-        if (sender is Control { DataContext: BoardNoteCardItem item })
-            item.IsPointerOver = false;
+        if (sender is not Control card || card.DataContext is not BoardNoteCardItem item)
+            return;
+
+        item.IsPointerOver = false;
+        card.Cursor = null;
+        ToolTip.SetIsOpen(card, false);
+        ToolTip.SetTip(card, null);
     }
 
     private void OnEditNoteClick(object? sender, RoutedEventArgs e)

@@ -244,9 +244,20 @@ public partial class ExamBoardItem(ExamBoardDocument board, bool isActive, IExam
     [ObservableProperty]
     private bool _hasNext;
 
+    /// <summary>一场考试都没有：看板面板窗口在卡上提示「先排一场」，别让人以为文件坏了。</summary>
+    [ObservableProperty]
+    private bool _hasNoExams;
+
     /// <summary>是不是全屏看板正在显示的那一块。</summary>
     [ObservableProperty]
     private bool _isActive = isActive;
+
+    /// <summary>
+    ///     这一块是不是**正铺在屏幕上**的那一块（= 是当前看板 + 全屏看板开着）。
+    ///     只有看板面板窗口在用；设置页不设它，恒为 <see langword="false" />。
+    /// </summary>
+    [ObservableProperty]
+    private bool _isPresenting;
 
     /// <summary>
     ///     列表里的最后一行：底下没有下一行了，行尾那条分界线就不该画
@@ -267,6 +278,7 @@ public partial class ExamBoardItem(ExamBoardDocument board, bool isActive, IExam
 
         var exams = Board.Exams?.Where(exam => exam is not null).ToList() ?? [];
         CountText = string.Format(CR.Settings_Exam_Schedule_Count, exams.Count);
+        HasNoExams = exams.Count == 0;
 
         var next = exams
             .Where(exam => ExamStatusPolicy.Resolve(exam, now, upcomingMinutes) != ExamStatus.Finished)

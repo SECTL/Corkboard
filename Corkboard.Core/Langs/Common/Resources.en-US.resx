@@ -199,6 +199,41 @@
   <data name="Board_ApplyColor" xml:space="preserve">
     <value>Apply</value>
   </data>
+  <!-- 富文本工具栏「插入链接」按钮（由 RichTextLinkButton 补上）与它那颗浮层。 -->
+  <data name="Board_Link" xml:space="preserve">
+    <value>Link</value>
+  </data>
+  <data name="Board_LinkUrl" xml:space="preserve">
+    <value>Link address</value>
+  </data>
+  <data name="Board_LinkUrlPlaceholder" xml:space="preserve">
+    <value>Paste or type a URL</value>
+  </data>
+  <data name="Board_LinkText" xml:space="preserve">
+    <value>Display text</value>
+  </data>
+  <data name="Board_LinkTextPlaceholder" xml:space="preserve">
+    <value>Leave empty to use the URL</value>
+  </data>
+  <data name="Board_LinkSelectionHint" xml:space="preserve">
+    <value>The selected text becomes the link</value>
+  </data>
+  <data name="Board_LinkApply" xml:space="preserve">
+    <value>Apply</value>
+  </data>
+  <data name="Board_LinkOpen" xml:space="preserve">
+    <value>Open link</value>
+  </data>
+  <data name="Board_LinkEdit" xml:space="preserve">
+    <value>Edit link</value>
+  </data>
+  <!-- 浮层里把选中文字的链接去掉；库的右键菜单也有同样一项。 -->
+  <data name="Board_LinkRemove" xml:space="preserve">
+    <value>Remove link</value>
+  </data>
+  <data name="Board_LinkInvalid" xml:space="preserve">
+    <value>Enter a valid http or https URL</value>
+  </data>
   <data name="Settings_Title" xml:space="preserve">
     <value>Settings</value>
   </data>
@@ -251,6 +286,24 @@
   </data>
   <data name="Settings_Basic_AutoSaveWindowSizeDescription" xml:space="preserve">
     <value>Reopens at the same size and spot</value>
+  </data>
+  <data name="Settings_Basic_DuplicateLaunch" xml:space="preserve">
+    <value>When opened again</value>
+  </data>
+  <data name="Settings_Basic_DuplicateLaunchDescription" xml:space="preserve">
+    <value>Launches go straight to this window while it is running</value>
+  </data>
+  <data name="Settings_Basic_DuplicateLaunch_Panel" xml:space="preserve">
+    <value>Exam board window</value>
+  </data>
+  <data name="Settings_Basic_DuplicateLaunch_FullScreen" xml:space="preserve">
+    <value>Full-screen exam board</value>
+  </data>
+  <data name="Settings_Basic_DuplicateLaunch_Display" xml:space="preserve">
+    <value>Display mode</value>
+  </data>
+  <data name="Settings_Basic_DuplicateLaunch_Prompt" xml:space="preserve">
+    <value>Ask me every time</value>
   </data>
   <data name="Settings_Board_PinToDesktop" xml:space="preserve">
     <value>Pin to desktop</value>
@@ -437,6 +490,16 @@
   </data>
   <data name="Settings_Board_PaletteMoveDown" xml:space="preserve">
     <value>Move down</value>
+  </data>
+  <!-- 超链接：作业内容里的网址在作业板上怎么打开（编辑器里插入链接的浮层见 Board_Link*）。 -->
+  <data name="Settings_Board_Links" xml:space="preserve">
+    <value>Links</value>
+  </data>
+  <data name="Settings_Board_OpenLinksOnClick" xml:space="preserve">
+    <value>Open links when clicked</value>
+  </data>
+  <data name="Settings_Board_OpenLinksOnClickDescription" xml:space="preserve">
+    <value>When off, links show but no longer open</value>
   </data>
   <!-- Automatic cleanup: take assignments past their due date off the board. -->
   <data name="Settings_Board_Cleanup" xml:space="preserve">
@@ -1850,6 +1913,9 @@
   </data>
   <data name="Menu_OpenExamBoard" xml:space="preserve">
     <value>Exam board</value>
+  </data>
+  <data name="Menu_OpenAction" xml:space="preserve">
+    <value>Actions</value>
   </data>
   <data name="Common_Minutes" xml:space="preserve">
     <value>min</value>
@@ -3553,5 +3619,119 @@ Continuing to use it means you understand and accept the above.</value>
   </data>
   <data name="Settings_Basic_CrashRecovery_PromptAndRestart" xml:space="preserve">
     <value>Show a prompt and restart automatically</value>
+  </data>
+  <data name="Exam_Panel_Title" xml:space="preserve">
+    <value>Exam boards</value>
+  </data>
+  <data name="Exam_Panel_Create" xml:space="preserve">
+    <value>New board</value>
+  </data>
+  <data name="Exam_Panel_QuickPlan" xml:space="preserve">
+    <value>Quick plan</value>
+  </data>
+  <data name="Exam_Panel_Import" xml:space="preserve">
+    <value>Import exams</value>
+  </data>
+  <data name="Exam_Panel_Present" xml:space="preserve">
+    <value>Present</value>
+  </data>
+  <data name="Exam_Panel_AutoShow" xml:space="preserve">
+    <value>Auto show</value>
+  </data>
+  <data name="Exam_Panel_Presenting" xml:space="preserve">
+    <value>Presenting</value>
+  </data>
+  <data name="Exam_Panel_StopPresenting" xml:space="preserve">
+    <value>Stop presenting</value>
+  </data>
+  <data name="Exam_Panel_PresentingFormat" xml:space="preserve">
+    <value>Presenting: {0}</value>
+  </data>
+  <data name="Exam_Panel_Edit" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="Exam_Panel_More" xml:space="preserve">
+    <value>More</value>
+  </data>
+  <data name="Exam_Panel_SetActive" xml:space="preserve">
+    <value>Set as current</value>
+  </data>
+  <data name="Exam_Panel_Export" xml:space="preserve">
+    <value>Export</value>
+  </data>
+  <data name="Exam_Panel_Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="Exam_Panel_NoExamsHint" xml:space="preserve">
+    <value>No exams yet — use Quick plan</value>
+  </data>
+  <data name="Exam_Panel_NoExamsTitle" xml:space="preserve">
+    <value>This board has no exams</value>
+  </data>
+  <data name="Exam_Panel_NoExamsMessage" xml:space="preserve">
+    <value>Presenting now would show an empty board</value>
+  </data>
+  <data name="Exam_Panel_NoExamsFill" xml:space="preserve">
+    <value>Add exams</value>
+  </data>
+  <data name="Exam_Panel_DeleteTitle" xml:space="preserve">
+    <value>Delete board</value>
+  </data>
+  <data name="Exam_Panel_DeleteMessage" xml:space="preserve">
+    <value>Delete "{0}"?</value>
+  </data>
+  <data name="MultiInstance_Title" xml:space="preserve">
+    <value>Corkboard is already running</value>
+  </data>
+  <data name="MultiInstance_Message" xml:space="preserve">
+    <value>Corkboard is already running. Restart it?</value>
+  </data>
+  <data name="MultiInstance_Restart" xml:space="preserve">
+    <value>Restart</value>
+  </data>
+  <data name="MultiInstance_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Menu_OpenExamPanel" xml:space="preserve">
+    <value>Open board window</value>
+  </data>
+  <data name="Menu_ExamPresent" xml:space="preserve">
+    <value>Present now</value>
+  </data>
+  <data name="Settings_Duty_Group" xml:space="preserve">
+    <value>Duty roster</value>
+  </data>
+  <data name="Settings_Duty_Members_Title" xml:space="preserve">
+    <value>Members and import</value>
+  </data>
+  <data name="Settings_Duty_Groups_Title" xml:space="preserve">
+    <value>Groups and posts</value>
+  </data>
+  <data name="Settings_Duty_Schedule_Title" xml:space="preserve">
+    <value>Schedule rules</value>
+  </data>
+  <data name="Settings_Duty_Members_Description" xml:space="preserve">
+    <value>Who is on duty: the list, plus import</value>
+  </data>
+  <data name="Settings_Duty_Groups_Description" xml:space="preserve">
+    <value>Split the class into groups, each with its own tasks</value>
+  </data>
+  <data name="Settings_Duty_Schedule_Description" xml:space="preserve">
+    <value>Week start, rotation order and holiday rules</value>
+  </data>
+  <data name="Settings_Duty_Placeholder" xml:space="preserve">
+    <value>This page is not built yet, only the entry is here</value>
+  </data>
+  <data name="Duty_Roster_Title" xml:space="preserve">
+    <value>Duty roster</value>
+  </data>
+  <data name="Duty_Roster_Description" xml:space="preserve">
+    <value>See who is on duty by week or month</value>
+  </data>
+  <data name="Duty_Roster_Placeholder" xml:space="preserve">
+    <value>Week and month views are on the way</value>
+  </data>
+  <data name="Menu_DutyRoster" xml:space="preserve">
+    <value>Duty roster</value>
   </data>
 </root>

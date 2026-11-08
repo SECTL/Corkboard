@@ -1,0 +1,227 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fa="using:FluentAvalonia.UI.Controls"
+             xmlns:vm="using:Corkboard.ViewModels.Duty"
+             mc:Ignorable="d" d:DesignWidth="960" d:DesignHeight="720"
+             x:Class="Corkboard.Views.Duty.DutyHolidayPage"
+             x:DataType="vm:DutyHolidayViewModel">
+    <!--
+        「节假日」页：数据源与来源标注 → 年份表格 → 假期区间 → 手动新增 → 未来 14 天影响预览。
+        外层窗口是 DutyHolidayWindow（独立 FAAppWindow），这一页只负责内容。
+
+        设置卡一律 fa:FASettingsExpander（外层一张卡 + 卡内区块），不要在卡里再套卡——
+        FASettingsExpander 内容里再出现 FASettingsExpander 展开时整个程序会崩（见 Corkboard/Views/AGENTS.md）。
+        表格不引 DataGrid：仓库没有这个包，用 Grid 表头 + ItemsControl 画（与值日表、考试看板同一套做法）。
+
+        TODO(资源键): 本页所有中文文案暂为硬编码，资源键清单见交给 Lead 的回报；
+        换语言时把 Header / Description / Button Content / 行文案统一换成 core:Resources。
+    -->
+    <UserControl.Styles>
+        <Style Selector="TextBlock.table-head">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="TextBlock.cell">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        </Style>
+        <Style Selector="Button.row-action">
+            <Setter Property="Padding" Value="8,2" />
+            <Setter Property="FontSize" Value="12" />
+        </Style>
+    </UserControl.Styles>
+
+    <ScrollViewer>
+        <StackPanel Classes="page-container" Spacing="8">
+            <Border Background="{DynamicResource SystemFillColorCautionBackgroundBrush}"
+                    CornerRadius="6"
+                    IsVisible="{Binding ShowMissingBanner}"
+                    Padding="12">
+                <TextBlock Text="{Binding MissingBannerText}" TextWrapping="Wrap" />
+            </Border>
+
+            <TextBlock Classes="caption" Text="{Binding StatusText}" TextWrapping="Wrap" />
+
+            <!-- ① 数据源与来源标注 -->
+            <fa:FASettingsExpander Header="数据源"
+                                   Description="在线拉取放假安排，失败时自动退回缓存与内置数据"
+                                   IsExpanded="True">
+                <StackPanel Spacing="4">
+                    <Grid ColumnDefinitions="120,*">
+                        <TextBlock Classes="table-head" Text="数据来源" />
+                        <TextBlock Grid.Column="1" Classes="cell" Text="{Binding SourceNameText}" TextWrapping="Wrap" />
+                    </Grid>
+                    <Grid ColumnDefinitions="120,*">
+                        <TextBlock Classes="table-head" Text="条目" />
+                        <TextBlock Grid.Column="1" Classes="cell" Text="{Binding SourceDetailText}" TextWrapping="Wrap" />
+                    </Grid>
+                    <Grid ColumnDefinitions="120,*">
+                        <TextBlock Classes="table-head" Text="最近拉取" />
+                        <TextBlock Grid.Column="1" Classes="cell" Text="{Binding FetchedAtText}" />
+                    </Grid>
+                    <Grid ColumnDefinitions="120,*">
+                        <TextBlock Classes="table-head" Text="上次检查" />
+                        <TextBlock Grid.Column="1" Classes="cell" Text="{Binding LastCheckText}" />
+                    </Grid>
+                    <Grid ColumnDefinitions="120,*">
+                        <TextBlock Classes="table-head" Text="许可证" />
+                        <TextBlock Grid.Column="1" Classes="cell" Text="{Binding LicenseText}" />
+                    </Grid>
+                    <TextBlock Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                               IsVisible="{Binding ShowFailure}"
+                               Text="{Binding FailureText}"
+                               TextWrapping="Wrap" />
+                </StackPanel>
+                <fa:FASettingsExpander.Footer>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Command="{Binding RefreshCommand}"
+                                Content="立即刷新"
+                                IsEnabled="{Binding !IsRefreshing}" />
+                        <Button Click="OnOpenPaperClick"
+                                Content="查看国务院公告"
+                                IsVisible="{Binding HasPapers}" />
+                        <Button Click="OnOpenSourceClick" Content="数据源" />
+                        <Button Click="OnOpenLicenseClick" Content="许可证" />
+                    </StackPanel>
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <!-- ② 年份切换 + 日期表格 -->
+            <fa:FASettingsExpander Header="年份与日期"
+                                   Description="每年放假与调休补班；可单独把某天改成值日或不值日"
+                                   IsExpanded="True">
+                <StackPanel Spacing="8">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock VerticalAlignment="Center" Text="年份" />
+                        <ComboBox MinWidth="110"
+                                  ItemsSource="{Binding Years}"
+                                  SelectedItem="{Binding SelectedYear, Mode=TwoWay}" />
+                    </StackPanel>
+
+                    <Grid ColumnDefinitions="110,60,130,100,90,*" Margin="0,6,0,0">
+                        <TextBlock Classes="table-head" Text="日期" />
+                        <TextBlock Grid.Column="1" Classes="table-head" Text="星期" />
+                        <TextBlock Grid.Column="2" Classes="table-head" Text="节日" />
+                        <TextBlock Grid.Column="3" Classes="table-head" Text="类型" />
+                        <TextBlock Grid.Column="4" Classes="table-head" Text="来源" />
+                        <TextBlock Grid.Column="5" Classes="table-head" HorizontalAlignment="Right" Text="操作" />
+                    </Grid>
+
+                    <ItemsControl ItemsSource="{Binding Rows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:HolidayRowItem">
+                                <Grid ColumnDefinitions="110,60,130,100,90,*" Margin="0,3">
+                                    <TextBlock Classes="cell" Text="{Binding DateText}" />
+                                    <TextBlock Grid.Column="1" Classes="cell" Text="{Binding WeekdayText}" />
+                                    <TextBlock Grid.Column="2" Classes="cell"
+                                               Text="{Binding NameText}"
+                                               ToolTip.Tip="{Binding Note}" />
+                                    <TextBlock Grid.Column="3" Classes="cell" Text="{Binding TypeText}" />
+                                    <TextBlock Grid.Column="4" Classes="cell" Text="{Binding OriginText}" />
+                                    <StackPanel Grid.Column="5"
+                                                HorizontalAlignment="Right"
+                                                Orientation="Horizontal"
+                                                Spacing="6">
+                                        <Button Classes="row-action"
+                                                Click="OnMarkWorkClick"
+                                                Content="改为值日"
+                                                IsVisible="{Binding CanMarkWork}" />
+                                        <Button Classes="row-action"
+                                                Click="OnMarkOffClick"
+                                                Content="改为放假"
+                                                IsVisible="{Binding CanMarkOff}" />
+                                        <Button Classes="row-action"
+                                                Click="OnRestoreClick"
+                                                Content="恢复"
+                                                IsVisible="{Binding CanRestore}" />
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </fa:FASettingsExpander>
+
+            <!-- ③ 假期区间 -->
+            <fa:FASettingsExpander Header="假期区间"
+                                   Description="寒暑假、校历调整这类整段不排班的时间"
+                                   IsExpanded="True">
+                <StackPanel Spacing="8">
+                    <ItemsControl ItemsSource="{Binding Vacations}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:HolidayVacationRowItem">
+                                <Grid ColumnDefinitions="230,*,Auto" Margin="0,2">
+                                    <TextBlock Classes="cell" Text="{Binding DateText}" />
+                                    <TextBlock Grid.Column="1" Classes="cell" Text="{Binding Note}" />
+                                    <Button Grid.Column="2"
+                                            Classes="row-action"
+                                            Click="OnRemoveVacationClick"
+                                            Content="删除" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <Grid ColumnDefinitions="150,Auto,150,*,Auto" Margin="0,4,0,0">
+                        <CalendarDatePicker SelectedDate="{Binding VacationStart, Mode=TwoWay}"
+                                            PlaceholderText="开始日期" />
+                        <TextBlock Grid.Column="1"
+                                   Margin="8,0"
+                                   VerticalAlignment="Center"
+                                   Text="至" />
+                        <CalendarDatePicker Grid.Column="2"
+                                            SelectedDate="{Binding VacationEnd, Mode=TwoWay}"
+                                            PlaceholderText="结束日期" />
+                        <TextBox Grid.Column="3"
+                                 Margin="8,0"
+                                 Text="{Binding VacationNote, Mode=TwoWay}"
+                                 PlaceholderText="备注（如 暑假）" />
+                        <Button Grid.Column="4" Click="OnAddVacationClick" Content="添加区间" />
+                    </Grid>
+                </StackPanel>
+            </fa:FASettingsExpander>
+
+            <!-- ④ 手动新增 -->
+            <fa:FASettingsExpander Header="手动新增一天"
+                                   Description="数据源还没发布的日期（调课、校运会）可以单独标"
+                                   IsExpanded="True">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <CalendarDatePicker SelectedDate="{Binding ManualDate, Mode=TwoWay}"
+                                        PlaceholderText="日期" />
+                    <ComboBox MinWidth="130" SelectedIndex="{Binding ManualKindIndex, Mode=TwoWay}">
+                        <ComboBoxItem Content="放假（不值日）" />
+                        <ComboBoxItem Content="改为值日" />
+                    </ComboBox>
+                    <TextBox Width="220"
+                             Text="{Binding ManualNote, Mode=TwoWay}"
+                             PlaceholderText="备注（可选）" />
+                    <Button Click="OnAddManualClick" Content="添加" />
+                </StackPanel>
+            </fa:FASettingsExpander>
+
+            <!-- ⑤ 影响预览 -->
+            <fa:FASettingsExpander Header="影响预览"
+                                   Description="按当前排班规则看未来 14 天有没有值日"
+                                   IsExpanded="True">
+                <ItemsControl ItemsSource="{Binding Impact}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:HolidayImpactRowItem">
+                            <Grid ColumnDefinitions="110,60,70,*" Margin="0,2">
+                                <TextBlock Classes="cell" Text="{Binding DateText}" />
+                                <TextBlock Grid.Column="1" Classes="cell" Text="{Binding WeekdayText}" />
+                                <TextBlock Grid.Column="2" Classes="cell" Text="{Binding ActionText}" />
+                                <TextBlock Grid.Column="3" Classes="cell"
+                                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                           Text="{Binding ReasonText}" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </fa:FASettingsExpander>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

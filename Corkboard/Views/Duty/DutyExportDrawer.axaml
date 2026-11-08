@@ -1,0 +1,223 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:fa="clr-namespace:FluentAvalonia.UI.Controls;assembly=FluentAvalonia"
+             xmlns:vm="clr-namespace:Corkboard.ViewModels.Duty"
+             x:Class="Corkboard.Views.Duty.DutyExportDrawer"
+             x:DataType="vm:DutyExportViewModel"
+             Width="400">
+    <Grid RowDefinitions="*,Auto">
+        <ScrollViewer Grid.Row="0">
+            <StackPanel Margin="16,16,16,8" Spacing="12">
+                <TextBlock Text="{Binding Title}" Theme="{StaticResource TitleTextBlockStyle}" />
+                <StackPanel Spacing="2">
+                    <TextBlock Text="{Binding TargetListDescription}"
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    <TextBlock Text="{Binding MemberSummary}"
+                               Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                </StackPanel>
+
+                <fa:FASettingsExpander Header="选择导出方式">
+                    <StackPanel Spacing="8">
+                        <ComboBox HorizontalAlignment="Stretch"
+                                  ItemsSource="{Binding ExportModes}"
+                                  SelectedItem="{Binding SelectedExportMode, Mode=TwoWay}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:DutyExportModeOption">
+                                    <TextBlock Text="{Binding Label}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+
+                        <TextBlock Text="文件导出的列：序号、名称、性别、小组、标签、参加值日"
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                    </StackPanel>
+                </fa:FASettingsExpander>
+
+                <fa:FASettingsExpander Header="导出文件" IsVisible="{Binding IsFileMode}">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="支持 .xlsx 和 .csv 文件"
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                            <TextBlock Grid.Column="0" Text="格式" VerticalAlignment="Center" />
+                            <ComboBox Grid.Column="1" HorizontalAlignment="Stretch"
+                                      ItemsSource="{Binding FileFormats}"
+                                      SelectedItem="{Binding SelectedFileFormat, Mode=TwoWay}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:DutyExportFormatOption">
+                                        <TextBlock Text="{Binding Label}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </Grid>
+                        <Button Classes="accent"
+                                Content="导出文件"
+                                HorizontalAlignment="Stretch"
+                                Command="{Binding ExportFileCommand}" />
+                    </StackPanel>
+                </fa:FASettingsExpander>
+
+                <fa:FASettingsExpander Header="二维码导出（离线）" IsVisible="{Binding IsQrMode}">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="{Binding QrHint}"
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                            <TextBlock Grid.Column="0" Text="会话 ID" VerticalAlignment="Center" />
+                            <TextBox Grid.Column="1"
+                                     Text="{Binding QrSessionId}"
+                                     IsReadOnly="True"
+                                     FontFamily="Consolas" />
+                        </Grid>
+
+                        <Border Padding="3"
+                                HorizontalAlignment="Center"
+                                BorderBrush="{DynamicResource ControlElevationBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                ClipToBounds="True"
+                                IsVisible="{Binding QrImage, Converter={x:Static ObjectConverters.IsNotNull}}">
+                            <Image Source="{Binding QrImage}"
+                                   Width="256"
+                                   Height="256"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   Stretch="Uniform" />
+                        </Border>
+
+                        <TextBlock Text="{Binding QrFrameText}"
+                                   HorizontalAlignment="Center"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                        <ProgressBar Minimum="0"
+                                     Maximum="100"
+                                     Value="{Binding QrProgressPercent}"
+                                     Height="4" />
+
+                        <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+                            <Button Content="上一帧"
+                                    IsEnabled="{Binding CanGoPrevious}"
+                                    Command="{Binding PreviousFrameCommand}" />
+                            <Button Content="{Binding AutoPlayText}"
+                                    IsEnabled="{Binding HasQrFrames}"
+                                    Command="{Binding ToggleAutoPlayCommand}" />
+                            <Button Content="下一帧"
+                                    IsEnabled="{Binding CanGoNext}"
+                                    Command="{Binding NextFrameCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+                </fa:FASettingsExpander>
+
+                <fa:FASettingsExpander Header="二维码导出（在线）" IsVisible="{Binding IsQuickQrMode}">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="{Binding QuickQrHint}"
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+
+                        <ProgressBar IsIndeterminate="True"
+                                     IsVisible="{Binding IsCloudBusy}"
+                                     Height="4" />
+
+                        <Border Padding="3"
+                                HorizontalAlignment="Center"
+                                BorderBrush="{DynamicResource ControlElevationBorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                ClipToBounds="True"
+                                IsVisible="{Binding PairingQrImage, Converter={x:Static ObjectConverters.IsNotNull}}">
+                            <Image Source="{Binding PairingQrImage}"
+                                   Width="256"
+                                   Height="256"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   Stretch="Uniform" />
+                        </Border>
+
+                        <Grid ColumnDefinitions="Auto,*"
+                              ColumnSpacing="8"
+                              IsVisible="{Binding HasCloudTransfer}">
+                            <TextBlock Grid.Column="0" Text="配对链接" VerticalAlignment="Center" />
+                            <TextBox Grid.Column="1"
+                                     Text="{Binding PairingUrl}"
+                                     IsReadOnly="True"
+                                     FontFamily="Consolas" />
+                        </Grid>
+
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Button Content="复制链接"
+                                    IsVisible="{Binding HasCloudTransfer}"
+                                    Command="{Binding CopyPairingUrlCommand}" />
+                            <Button Content="重新生成"
+                                    IsEnabled="{Binding CanRefreshCloudTransfer}"
+                                    Command="{Binding RefreshCloudTransferCommand}" />
+                        </StackPanel>
+
+                        <TextBlock Text="{Binding CloudExpiresText}"
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                        <TextBlock Text="{Binding CloudStatusText}"
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                </fa:FASettingsExpander>
+
+                <fa:FASettingsExpander Header="会话码导出" IsVisible="{Binding IsSessionCodeMode}">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="{Binding SessionCodeHint}"
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+
+                        <ProgressBar IsIndeterminate="True"
+                                     IsVisible="{Binding IsCloudBusy}"
+                                     Height="4" />
+
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                            <TextBox Grid.Column="0"
+                                     Text="{Binding SessionCodeText}"
+                                     IsReadOnly="True"
+                                     FontFamily="Consolas"
+                                     FontSize="26"
+                                     HorizontalContentAlignment="Center" />
+                            <Button Grid.Column="1"
+                                    Content="复制"
+                                    VerticalAlignment="Center"
+                                    IsEnabled="{Binding HasCloudTransfer}"
+                                    Command="{Binding CopySessionCodeCommand}" />
+                        </Grid>
+
+                        <Button Content="重新生成"
+                                HorizontalAlignment="Left"
+                                IsEnabled="{Binding CanRefreshCloudTransfer}"
+                                Command="{Binding RefreshCloudTransferCommand}" />
+
+                        <TextBlock Text="{Binding CloudExpiresText}"
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextFillColorTertiaryBrush}" />
+                        <TextBlock Text="{Binding CloudStatusText}"
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    </StackPanel>
+                </fa:FASettingsExpander>
+
+                <TextBlock Text="{Binding ErrorText}"
+                           IsVisible="{Binding ErrorText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                           TextWrapping="Wrap"
+                           Foreground="{DynamicResource SystemFillColorCriticalBrush}" />
+            </StackPanel>
+        </ScrollViewer>
+
+        <Grid Grid.Row="1" Margin="16,8,16,16" ColumnDefinitions="*,Auto">
+            <TextBlock Grid.Column="0"
+                       VerticalAlignment="Center"
+                       Text="{Binding StatusText}"
+                       TextWrapping="Wrap"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+            <Button Grid.Column="1"
+                    Content="关闭"
+                    HorizontalAlignment="Right"
+                    Click="OnCloseClick" />
+        </Grid>
+    </Grid>
+</UserControl>

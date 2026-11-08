@@ -1,0 +1,486 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Action_Title" xml:space="preserve">
+    <value>Action</value>
+  </data>
+  <data name="Action_New" xml:space="preserve">
+    <value>New action</value>
+  </data>
+  <data name="Action_Search" xml:space="preserve">
+    <value>Search</value>
+  </data>
+  <data name="Action_SearchPlaceholder" xml:space="preserve">
+    <value>Search name or board</value>
+  </data>
+  <data name="Action_PauseAll" xml:space="preserve">
+    <value>Pause all actions</value>
+  </data>
+  <data name="Action_ResumeAll" xml:space="preserve">
+    <value>Resume all actions</value>
+  </data>
+  <data name="Action_Paused" xml:space="preserve">
+    <value>Actions paused</value>
+  </data>
+  <data name="Action_PausedBanner" xml:space="preserve">
+    <value>Actions are paused and will not run on time. System schedule is not affected</value>
+  </data>
+  <data name="Action_TabList" xml:space="preserve">
+    <value>List</value>
+  </data>
+  <data name="Action_TabWeek" xml:space="preserve">
+    <value>Week</value>
+  </data>
+  <data name="Action_TabMonth" xml:space="preserve">
+    <value>Month</value>
+  </data>
+  <data name="Action_Filter_All" xml:space="preserve">
+    <value>All</value>
+  </data>
+  <data name="Action_Filter_MyActions" xml:space="preserve">
+    <value>My actions</value>
+  </data>
+  <data name="Action_Filter_System" xml:space="preserve">
+    <value>System schedule</value>
+  </data>
+  <data name="Action_Column_Enabled" xml:space="preserve">
+    <value>On</value>
+  </data>
+  <data name="Action_Column_Condition" xml:space="preserve">
+    <value>When</value>
+  </data>
+  <data name="Action_Column_Target" xml:space="preserve">
+    <value>Boards</value>
+  </data>
+  <data name="Action_Column_Effect" xml:space="preserve">
+    <value>Effect</value>
+  </data>
+  <data name="Action_Column_Result" xml:space="preserve">
+    <value>Last result</value>
+  </data>
+  <data name="Action_Column_Actions" xml:space="preserve">
+    <value>Actions</value>
+  </data>
+  <data name="Action_None" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="Action_Empty_Title" xml:space="preserve">
+    <value>No actions yet</value>
+  </data>
+  <data name="Action_Empty_Hint" xml:space="preserve">
+    <value>Create one, or start from an example below</value>
+  </data>
+  <data name="Action_Example_1" xml:space="preserve">
+    <value>Show homework board at 07:40 every day</value>
+  </data>
+  <data name="Action_Example_2" xml:space="preserve">
+    <value>Hide homework board at 12:10 on weekdays</value>
+  </data>
+  <data name="Action_Example_3" xml:space="preserve">
+    <value>Show exam board once on 11-20 at 08:00</value>
+  </data>
+  <data name="Action_Group_System" xml:space="preserve">
+    <value>System schedule</value>
+  </data>
+  <data name="Action_Group_Mine" xml:space="preserve">
+    <value>My actions</value>
+  </data>
+  <data name="Action_Group_SystemHint" xml:space="preserve">
+    <value>From exam auto show and display mode, read-only</value>
+  </data>
+  <data name="Action_System_ExamAutoShow_Title" xml:space="preserve">
+    <value>Exam auto show</value>
+  </data>
+  <data name="Action_System_ExamAutoShow_Description" xml:space="preserve">
+    <value>Opens the exam board from the exam schedule</value>
+  </data>
+  <data name="Action_System_DisplayAutoShow_Title" xml:space="preserve">
+    <value>Display mode auto show</value>
+  </data>
+  <data name="Action_System_DisplayAutoShow_Description" xml:space="preserve">
+    <value>Enters and leaves display mode by time slot</value>
+  </data>
+  <data name="Action_System_ReadOnly" xml:space="preserve">
+    <value>Read-only</value>
+  </data>
+  <data name="Action_System_PauseToday" xml:space="preserve">
+    <value>Skip today</value>
+  </data>
+  <data name="Action_System_ResumeToday" xml:space="preserve">
+    <value>Run today again</value>
+  </data>
+  <data name="Action_System_TodayPaused" xml:space="preserve">
+    <value>Skipped today</value>
+  </data>
+  <data name="Action_System_NextRuns" xml:space="preserve">
+    <value>Next runs</value>
+  </data>
+  <data name="Action_System_DetailTitle" xml:space="preserve">
+    <value>System schedule</value>
+  </data>
+  <data name="Action_System_Effect_Exam" xml:space="preserve">
+    <value>Auto show / auto hide (per settings)</value>
+  </data>
+  <data name="Action_System_Effect_Display" xml:space="preserve">
+    <value>Auto enter / auto exit (per settings)</value>
+  </data>
+  <data name="Action_System_NotEnabled" xml:space="preserve">
+    <value>Not enabled</value>
+  </data>
+  <data name="Action_Schedule_Daily" xml:space="preserve">
+    <value>Every day</value>
+  </data>
+  <data name="Action_Schedule_Weekly" xml:space="preserve">
+    <value>Every week</value>
+  </data>
+  <data name="Action_Schedule_Once" xml:space="preserve">
+    <value>Once</value>
+  </data>
+  <data name="Action_Condition_DateRange" xml:space="preserve">
+    <value>Active</value>
+  </data>
+  <data name="Action_Expired" xml:space="preserve">
+    <value>Expired</value>
+  </data>
+  <data name="Action_Weekday_Monday" xml:space="preserve">
+    <value>Mon</value>
+  </data>
+  <data name="Action_Weekday_Tuesday" xml:space="preserve">
+    <value>Tue</value>
+  </data>
+  <data name="Action_Weekday_Wednesday" xml:space="preserve">
+    <value>Wed</value>
+  </data>
+  <data name="Action_Weekday_Thursday" xml:space="preserve">
+    <value>Thu</value>
+  </data>
+  <data name="Action_Weekday_Friday" xml:space="preserve">
+    <value>Fri</value>
+  </data>
+  <data name="Action_Weekday_Saturday" xml:space="preserve">
+    <value>Sat</value>
+  </data>
+  <data name="Action_Weekday_Sunday" xml:space="preserve">
+    <value>Sun</value>
+  </data>
+  <data name="Action_WeekdayHeader_Monday" xml:space="preserve">
+    <value>Monday</value>
+  </data>
+  <data name="Action_WeekdayHeader_Tuesday" xml:space="preserve">
+    <value>Tuesday</value>
+  </data>
+  <data name="Action_WeekdayHeader_Wednesday" xml:space="preserve">
+    <value>Wednesday</value>
+  </data>
+  <data name="Action_WeekdayHeader_Thursday" xml:space="preserve">
+    <value>Thursday</value>
+  </data>
+  <data name="Action_WeekdayHeader_Friday" xml:space="preserve">
+    <value>Friday</value>
+  </data>
+  <data name="Action_WeekdayHeader_Saturday" xml:space="preserve">
+    <value>Saturday</value>
+  </data>
+  <data name="Action_WeekdayHeader_Sunday" xml:space="preserve">
+    <value>Sunday</value>
+  </data>
+  <data name="Action_Status_Success" xml:space="preserve">
+    <value>Success</value>
+  </data>
+  <data name="Action_Status_Partial" xml:space="preserve">
+    <value>Partial</value>
+  </data>
+  <data name="Action_Status_Failed" xml:space="preserve">
+    <value>Failed</value>
+  </data>
+  <data name="Action_Status_Skipped" xml:space="preserve">
+    <value>Skipped</value>
+  </data>
+  <data name="Action_Status_NotRun" xml:space="preserve">
+    <value>Not run</value>
+  </data>
+  <data name="Action_Source_Schedule" xml:space="preserve">
+    <value>Auto</value>
+  </data>
+  <data name="Action_Source_Manual" xml:space="preserve">
+    <value>Manual</value>
+  </data>
+  <data name="Action_SourceKind_CustomRule" xml:space="preserve">
+    <value>My action</value>
+  </data>
+  <data name="Action_SourceKind_ExamAutoShow" xml:space="preserve">
+    <value>Exam auto show</value>
+  </data>
+  <data name="Action_SourceKind_DisplayAutoShow" xml:space="preserve">
+    <value>Display mode</value>
+  </data>
+  <data name="Action_RunHistory_Title" xml:space="preserve">
+    <value>Recent runs</value>
+  </data>
+  <data name="Action_RunHistory_Empty" xml:space="preserve">
+    <value>No runs yet</value>
+  </data>
+  <data name="Action_Editor_NewTitle" xml:space="preserve">
+    <value>New action</value>
+  </data>
+  <data name="Action_Editor_EditTitle" xml:space="preserve">
+    <value>Edit action</value>
+  </data>
+  <data name="Action_Field_Name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="Action_Field_NamePlaceholder" xml:space="preserve">
+    <value>Leave empty to use the step summary</value>
+  </data>
+  <data name="Action_Field_Enabled" xml:space="preserve">
+    <value>Enabled</value>
+  </data>
+  <data name="Action_Field_Trigger" xml:space="preserve">
+    <value>Trigger</value>
+  </data>
+  <data name="Action_Trigger_Once" xml:space="preserve">
+    <value>Once</value>
+  </data>
+  <data name="Action_Trigger_Daily" xml:space="preserve">
+    <value>Every day</value>
+  </data>
+  <data name="Action_Trigger_Weekly" xml:space="preserve">
+    <value>Every week</value>
+  </data>
+  <data name="Action_Field_Date" xml:space="preserve">
+    <value>Date</value>
+  </data>
+  <data name="Action_Field_Time" xml:space="preserve">
+    <value>Time</value>
+  </data>
+  <data name="Action_Field_Weekdays" xml:space="preserve">
+    <value>Weekdays</value>
+  </data>
+  <data name="Action_Field_Range" xml:space="preserve">
+    <value>Active date range</value>
+  </data>
+  <data name="Action_Field_RangeHint" xml:space="preserve">
+    <value>Leave empty to always run</value>
+  </data>
+  <data name="Action_Field_Steps" xml:space="preserve">
+    <value>Steps</value>
+  </data>
+  <data name="Action_Step_Add" xml:space="preserve">
+    <value>Add step</value>
+  </data>
+  <data name="Action_Step_Remove" xml:space="preserve">
+    <value>Remove step</value>
+  </data>
+  <data name="Action_Step_Target" xml:space="preserve">
+    <value>Board</value>
+  </data>
+  <data name="Action_Step_Operation" xml:space="preserve">
+    <value>Operation</value>
+  </data>
+  <data name="Action_Operation_Show" xml:space="preserve">
+    <value>Show</value>
+  </data>
+  <data name="Action_Operation_Hide" xml:space="preserve">
+    <value>Hide</value>
+  </data>
+  <data name="Action_Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="Action_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Action_Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="Action_DeleteConfirmTitle" xml:space="preserve">
+    <value>Delete this action</value>
+  </data>
+  <data name="Action_DeleteConfirmBody" xml:space="preserve">
+    <value>This cannot be undone</value>
+  </data>
+  <data name="Action_OverlapHint" xml:space="preserve">
+    <value>System schedule runs first at the same time, then your actions; later steps override earlier board states</value>
+  </data>
+  <data name="Action_ClearRange" xml:space="preserve">
+    <value>Clear</value>
+  </data>
+  <data name="Action_Editor_MaxSteps" xml:space="preserve">
+    <value>At most 8 steps</value>
+  </data>
+  <data name="Action_Editor_Unnamed" xml:space="preserve">
+    <value>Untitled action</value>
+  </data>
+  <data name="Action_Validation_NoStep" xml:space="preserve">
+    <value>Add at least one step</value>
+  </data>
+  <data name="Action_Validation_NoDay" xml:space="preserve">
+    <value>Pick at least one weekday</value>
+  </data>
+  <data name="Action_Validation_NoDate" xml:space="preserve">
+    <value>Pick a date</value>
+  </data>
+  <data name="Action_Validation_NoTime" xml:space="preserve">
+    <value>Pick a time</value>
+  </data>
+  <data name="Action_Validation_RangeOrder" xml:space="preserve">
+    <value>End date cannot be before start date</value>
+  </data>
+  <data name="Action_Validation_PastOnce" xml:space="preserve">
+    <value>That time has passed, this action will not run again</value>
+  </data>
+  <data name="Action_Validation_Conflict" xml:space="preserve">
+    <value>Steps cancel each other out</value>
+  </data>
+  <data name="Action_Next" xml:space="preserve">
+    <value>Next: {0}</value>
+  </data>
+  <data name="Action_NextNone" xml:space="preserve">
+    <value>Next: none</value>
+  </data>
+  <data name="Action_EnabledCount" xml:space="preserve">
+    <value>{0}/{1} enabled</value>
+  </data>
+  <data name="Action_TodayCount" xml:space="preserve">
+    <value>{0} runs today</value>
+  </data>
+  <data name="Action_PausedStatus" xml:space="preserve">
+    <value>Actions paused</value>
+  </data>
+  <data name="Action_Target_Homework" xml:space="preserve">
+    <value>Homework board</value>
+  </data>
+  <data name="Action_Target_Exam" xml:space="preserve">
+    <value>Exam board</value>
+  </data>
+  <data name="Action_Target_Display" xml:space="preserve">
+    <value>Display mode</value>
+  </data>
+  <data name="Action_Target_Unknown" xml:space="preserve">
+    <value>Unknown board</value>
+  </data>
+  <data name="Action_Message_TargetMissing" xml:space="preserve">
+    <value>Board target not found</value>
+  </data>
+  <data name="Action_Message_Unavailable" xml:space="preserve">
+    <value>The homework board is turned off in settings</value>
+  </data>
+  <data name="Action_Message_AlreadyInState" xml:space="preserve">
+    <value>Already in that state</value>
+  </data>
+  <data name="Action_Message_FullScreenYield" xml:space="preserve">
+    <value>Full-screen board is in use, yielded</value>
+  </data>
+  <data name="Action_Message_Exception" xml:space="preserve">
+    <value>Execution failed</value>
+  </data>
+  <data name="Action_Message_SystemSuppressed" xml:space="preserve">
+    <value>Skipped today</value>
+  </data>
+  <data name="Action_Message_Busy" xml:space="preserve">
+    <value>Already running, please wait</value>
+  </data>
+  <data name="Action_Error_RulesUnreadable" xml:space="preserve">
+    <value>Failed to read the rules file, the window is read-only</value>
+  </data>
+  <data name="Action_Error_SaveFailed" xml:space="preserve">
+    <value>Save failed, check that the data folder is writable</value>
+  </data>
+  <data name="Action_Week_Range" xml:space="preserve">
+    <value>{0} – {1}</value>
+  </data>
+  <data name="Action_Week_Today" xml:space="preserve">
+    <value>This week</value>
+  </data>
+  <data name="Action_Month_Today" xml:space="preserve">
+    <value>Today</value>
+  </data>
+  <data name="Action_Week_Empty" xml:space="preserve">
+    <value>No actions this week</value>
+  </data>
+  <data name="Action_Month_Empty" xml:space="preserve">
+    <value>No actions</value>
+  </data>
+  <data name="Action_Month_DetailTitle" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="Action_Month_DetailEmpty" xml:space="preserve">
+    <value>Nothing scheduled</value>
+  </data>
+  <data name="Action_Legend_Mine" xml:space="preserve">
+    <value>My actions</value>
+  </data>
+  <data name="Action_Legend_System" xml:space="preserve">
+    <value>System schedule</value>
+  </data>
+  <data name="Action_Run_Now" xml:space="preserve">
+    <value>Run now</value>
+  </data>
+  <data name="Action_Edit" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="Action_RunHistory_Show" xml:space="preserve">
+    <value>Show recent runs</value>
+  </data>
+  <data name="Action_NextFormat" xml:space="preserve">
+    <value>Next {0}</value>
+  </data>
+  <data name="Action_Relative_Today" xml:space="preserve">
+    <value>Today</value>
+  </data>
+  <data name="Action_Relative_Tomorrow" xml:space="preserve">
+    <value>Tomorrow</value>
+  </data>
+  <data name="Action_Editor_DragHint" xml:space="preserve">
+    <value>Drag the title bar to move this card</value>
+  </data>
+  <data name="Action_More" xml:space="preserve">
+    <value>+{0}</value>
+  </data>
+  <data name="Action_System_ExamEnabled" xml:space="preserve">
+    <value>Auto-show exams when they start</value>
+  </data>
+  <data name="Action_System_AutoSwitchBoard" xml:space="preserve">
+    <value>Switch to the exam board full screen</value>
+  </data>
+  <data name="Action_System_LeadMinutes" xml:space="preserve">
+    <value>Open ahead (minutes)</value>
+  </data>
+  <data name="Action_System_AlsoShowAfterStart" xml:space="preserve">
+    <value>Also open for exams already started</value>
+  </data>
+  <data name="Action_System_CloseDelay" xml:space="preserve">
+    <value>Close delay after (minutes)</value>
+  </data>
+  <data name="Action_System_DisplayAutoShow" xml:space="preserve">
+    <value>Enter board mode during these slots</value>
+  </data>
+  <data name="Action_System_Slots" xml:space="preserve">
+    <value>Time slots</value>
+  </data>
+  <data name="Action_System_AddSlot" xml:space="preserve">
+    <value>Add a slot</value>
+  </data>
+  <data name="Action_System_RemoveSlot" xml:space="preserve">
+    <value>Remove this slot</value>
+  </data>
+  <data name="Action_System_SlotEmptyHint" xml:space="preserve">
+    <value>Enter and exit are the same time, so this slot never triggers</value>
+  </data>
+  <data name="Action_Error_EditorFailed" xml:space="preserve">
+    <value>Could not open the editor: {0}</value>
+  </data>
+  <data name="Action_Error_RefreshFailed" xml:space="preserve">
+    <value>Could not refresh the schedule: {0}</value>
+  </data>
+</root>

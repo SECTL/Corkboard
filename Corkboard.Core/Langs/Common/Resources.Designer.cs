@@ -89,6 +89,17 @@ public static class Resources
     public static string Board_FontSize => ResourceManager.GetString(nameof(Board_FontSize), Culture)!;
     public static string Board_CustomColor => ResourceManager.GetString(nameof(Board_CustomColor), Culture)!;
     public static string Board_ApplyColor => ResourceManager.GetString(nameof(Board_ApplyColor), Culture)!;
+    public static string Board_Link => ResourceManager.GetString(nameof(Board_Link), Culture)!;
+    public static string Board_LinkUrl => ResourceManager.GetString(nameof(Board_LinkUrl), Culture)!;
+    public static string Board_LinkUrlPlaceholder => ResourceManager.GetString(nameof(Board_LinkUrlPlaceholder), Culture)!;
+    public static string Board_LinkText => ResourceManager.GetString(nameof(Board_LinkText), Culture)!;
+    public static string Board_LinkTextPlaceholder => ResourceManager.GetString(nameof(Board_LinkTextPlaceholder), Culture)!;
+    public static string Board_LinkSelectionHint => ResourceManager.GetString(nameof(Board_LinkSelectionHint), Culture)!;
+    public static string Board_LinkApply => ResourceManager.GetString(nameof(Board_LinkApply), Culture)!;
+    public static string Board_LinkOpen => ResourceManager.GetString(nameof(Board_LinkOpen), Culture)!;
+    public static string Board_LinkEdit => ResourceManager.GetString(nameof(Board_LinkEdit), Culture)!;
+    public static string Board_LinkRemove => ResourceManager.GetString(nameof(Board_LinkRemove), Culture)!;
+    public static string Board_LinkInvalid => ResourceManager.GetString(nameof(Board_LinkInvalid), Culture)!;
     public static string Board_Uncategorized => ResourceManager.GetString(nameof(Board_Uncategorized), Culture)!;
     public static string Board_SubjectLabel => ResourceManager.GetString(nameof(Board_SubjectLabel), Culture)!;
     public static string Board_EmptyTitle => ResourceManager.GetString(nameof(Board_EmptyTitle), Culture)!;
@@ -134,6 +145,12 @@ public static class Resources
     public static string Settings_Basic_ShowStartupWindowDescription => ResourceManager.GetString(nameof(Settings_Basic_ShowStartupWindowDescription), Culture)!;
     public static string Settings_Basic_AutoSaveWindowSize => ResourceManager.GetString(nameof(Settings_Basic_AutoSaveWindowSize), Culture)!;
     public static string Settings_Basic_AutoSaveWindowSizeDescription => ResourceManager.GetString(nameof(Settings_Basic_AutoSaveWindowSizeDescription), Culture)!;
+    public static string Settings_Basic_DuplicateLaunch => ResourceManager.GetString(nameof(Settings_Basic_DuplicateLaunch), Culture)!;
+    public static string Settings_Basic_DuplicateLaunchDescription => ResourceManager.GetString(nameof(Settings_Basic_DuplicateLaunchDescription), Culture)!;
+    public static string Settings_Basic_DuplicateLaunch_Panel => ResourceManager.GetString(nameof(Settings_Basic_DuplicateLaunch_Panel), Culture)!;
+    public static string Settings_Basic_DuplicateLaunch_FullScreen => ResourceManager.GetString(nameof(Settings_Basic_DuplicateLaunch_FullScreen), Culture)!;
+    public static string Settings_Basic_DuplicateLaunch_Display => ResourceManager.GetString(nameof(Settings_Basic_DuplicateLaunch_Display), Culture)!;
+    public static string Settings_Basic_DuplicateLaunch_Prompt => ResourceManager.GetString(nameof(Settings_Basic_DuplicateLaunch_Prompt), Culture)!;
     public static string Settings_Board_PinToDesktop => ResourceManager.GetString(nameof(Settings_Board_PinToDesktop), Culture)!;
     public static string Settings_Board_PinToDesktopDescription => ResourceManager.GetString(nameof(Settings_Board_PinToDesktopDescription), Culture)!;
     public static string Settings_Board_MainWindowOpacity => ResourceManager.GetString(nameof(Settings_Board_MainWindowOpacity), Culture)!;
@@ -195,6 +212,9 @@ public static class Resources
     public static string Settings_Board_PaletteDelete => ResourceManager.GetString(nameof(Settings_Board_PaletteDelete), Culture)!;
     public static string Settings_Board_PaletteMoveUp => ResourceManager.GetString(nameof(Settings_Board_PaletteMoveUp), Culture)!;
     public static string Settings_Board_PaletteMoveDown => ResourceManager.GetString(nameof(Settings_Board_PaletteMoveDown), Culture)!;
+    public static string Settings_Board_Links => ResourceManager.GetString(nameof(Settings_Board_Links), Culture)!;
+    public static string Settings_Board_OpenLinksOnClick => ResourceManager.GetString(nameof(Settings_Board_OpenLinksOnClick), Culture)!;
+    public static string Settings_Board_OpenLinksOnClickDescription => ResourceManager.GetString(nameof(Settings_Board_OpenLinksOnClickDescription), Culture)!;
     public static string Settings_Board_Cleanup => ResourceManager.GetString(nameof(Settings_Board_Cleanup), Culture)!;
     public static string Settings_Board_CleanupDescription => ResourceManager.GetString(nameof(Settings_Board_CleanupDescription), Culture)!;
     public static string Settings_Board_CleanupEnabled => ResourceManager.GetString(nameof(Settings_Board_CleanupEnabled), Culture)!;
@@ -639,6 +659,8 @@ public static class Resources
     public static string Settings_Exam_Plan_WriteReplace => ResourceManager.GetString(nameof(Settings_Exam_Plan_WriteReplace), Culture)!;
 
     public static string Menu_OpenExamBoard => ResourceManager.GetString(nameof(Menu_OpenExamBoard), Culture)!;
+
+    public static string Menu_OpenAction => ResourceManager.GetString(nameof(Menu_OpenAction), Culture)!;
     public static string Common_Minutes => ResourceManager.GetString(nameof(Common_Minutes), Culture)!;
     public static string Common_Milliseconds => ResourceManager.GetString(nameof(Common_Milliseconds), Culture)!;
     public static string Settings_Exam_Group => ResourceManager.GetString(nameof(Settings_Exam_Group), Culture)!;
@@ -1183,4 +1205,43 @@ public static string Settings_Widgets_ShowWeatherTomorrow => ResourceManager.Get
     public static string Settings_Basic_CrashRecovery_PromptThenRestart => ResourceManager.GetString(nameof(Settings_Basic_CrashRecovery_PromptThenRestart), Culture)!;
 
     public static string Settings_Basic_CrashRecovery_PromptAndRestart => ResourceManager.GetString(nameof(Settings_Basic_CrashRecovery_PromptAndRestart), Culture)!;
+
+    public static string Exam_Panel_Title => ResourceManager.GetString(nameof(Exam_Panel_Title), Culture)!;
+    public static string Exam_Panel_Create => ResourceManager.GetString(nameof(Exam_Panel_Create), Culture)!;
+    public static string Exam_Panel_QuickPlan => ResourceManager.GetString(nameof(Exam_Panel_QuickPlan), Culture)!;
+    public static string Exam_Panel_Import => ResourceManager.GetString(nameof(Exam_Panel_Import), Culture)!;
+    public static string Exam_Panel_Present => ResourceManager.GetString(nameof(Exam_Panel_Present), Culture)!;
+    public static string Exam_Panel_AutoShow => ResourceManager.GetString(nameof(Exam_Panel_AutoShow), Culture)!;
+    public static string Exam_Panel_Presenting => ResourceManager.GetString(nameof(Exam_Panel_Presenting), Culture)!;
+    public static string Exam_Panel_StopPresenting => ResourceManager.GetString(nameof(Exam_Panel_StopPresenting), Culture)!;
+    public static string Exam_Panel_PresentingFormat => ResourceManager.GetString(nameof(Exam_Panel_PresentingFormat), Culture)!;
+    public static string Exam_Panel_Edit => ResourceManager.GetString(nameof(Exam_Panel_Edit), Culture)!;
+    public static string Exam_Panel_More => ResourceManager.GetString(nameof(Exam_Panel_More), Culture)!;
+    public static string Exam_Panel_SetActive => ResourceManager.GetString(nameof(Exam_Panel_SetActive), Culture)!;
+    public static string Exam_Panel_Export => ResourceManager.GetString(nameof(Exam_Panel_Export), Culture)!;
+    public static string Exam_Panel_Delete => ResourceManager.GetString(nameof(Exam_Panel_Delete), Culture)!;
+    public static string Exam_Panel_NoExamsHint => ResourceManager.GetString(nameof(Exam_Panel_NoExamsHint), Culture)!;
+    public static string Exam_Panel_NoExamsTitle => ResourceManager.GetString(nameof(Exam_Panel_NoExamsTitle), Culture)!;
+    public static string Exam_Panel_NoExamsMessage => ResourceManager.GetString(nameof(Exam_Panel_NoExamsMessage), Culture)!;
+    public static string Exam_Panel_NoExamsFill => ResourceManager.GetString(nameof(Exam_Panel_NoExamsFill), Culture)!;
+    public static string Exam_Panel_DeleteTitle => ResourceManager.GetString(nameof(Exam_Panel_DeleteTitle), Culture)!;
+    public static string Exam_Panel_DeleteMessage => ResourceManager.GetString(nameof(Exam_Panel_DeleteMessage), Culture)!;
+    public static string MultiInstance_Title => ResourceManager.GetString(nameof(MultiInstance_Title), Culture)!;
+    public static string MultiInstance_Message => ResourceManager.GetString(nameof(MultiInstance_Message), Culture)!;
+    public static string MultiInstance_Restart => ResourceManager.GetString(nameof(MultiInstance_Restart), Culture)!;
+    public static string MultiInstance_Cancel => ResourceManager.GetString(nameof(MultiInstance_Cancel), Culture)!;
+    public static string Menu_OpenExamPanel => ResourceManager.GetString(nameof(Menu_OpenExamPanel), Culture)!;
+    public static string Menu_ExamPresent => ResourceManager.GetString(nameof(Menu_ExamPresent), Culture)!;
+    public static string Settings_Duty_Group => ResourceManager.GetString(nameof(Settings_Duty_Group), Culture)!;
+    public static string Settings_Duty_Members_Title => ResourceManager.GetString(nameof(Settings_Duty_Members_Title), Culture)!;
+    public static string Settings_Duty_Groups_Title => ResourceManager.GetString(nameof(Settings_Duty_Groups_Title), Culture)!;
+    public static string Settings_Duty_Schedule_Title => ResourceManager.GetString(nameof(Settings_Duty_Schedule_Title), Culture)!;
+    public static string Settings_Duty_Members_Description => ResourceManager.GetString(nameof(Settings_Duty_Members_Description), Culture)!;
+    public static string Settings_Duty_Groups_Description => ResourceManager.GetString(nameof(Settings_Duty_Groups_Description), Culture)!;
+    public static string Settings_Duty_Schedule_Description => ResourceManager.GetString(nameof(Settings_Duty_Schedule_Description), Culture)!;
+    public static string Settings_Duty_Placeholder => ResourceManager.GetString(nameof(Settings_Duty_Placeholder), Culture)!;
+    public static string Duty_Roster_Title => ResourceManager.GetString(nameof(Duty_Roster_Title), Culture)!;
+    public static string Duty_Roster_Description => ResourceManager.GetString(nameof(Duty_Roster_Description), Culture)!;
+    public static string Duty_Roster_Placeholder => ResourceManager.GetString(nameof(Duty_Roster_Placeholder), Culture)!;
+    public static string Menu_DutyRoster => ResourceManager.GetString(nameof(Menu_DutyRoster), Culture)!;
 }
