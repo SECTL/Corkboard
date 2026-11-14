@@ -13,10 +13,10 @@ using CR = Corkboard.Core.Langs.Common.Resources;
 namespace Corkboard.Views.SettingsPages.ControlCenter;
 
 /// <summary>
-///     「设置 → 集控」页：开关、连接状态、设备信息、接入与班级占用。
+///     「设置 → 集控」页：连接开关、连接状态、设备信息、接入与清空。
 ///     <para>
 ///         页面只做壳该做的事：取 ViewModel、在进出可视树时 <c>Attach</c> / <c>Detach</c>、
-///         把输入框的失焦转发成一次提交、以及接「取消接入」的确认框。状态展示与所有服务调用都在
+///         把输入框的失焦转发成一次提交、以及接「清空」的确认框。状态展示与所有服务调用都在
 ///         ViewModel 里。
 ///     </para>
 /// </summary>
@@ -40,11 +40,12 @@ public partial class ControlCenterSettingsPage : UserControl
     private ControlCenterSettingsPageViewModel? ViewModel =>
         DataContext as ControlCenterSettingsPageViewModel;
 
-    /// <summary>设备名 / 站点地址 / 地点 ID / 配对码输入框失焦就提交一次草稿。</summary>
+    /// <summary>设备名 / 地点 ID / 配对码输入框失焦就提交一次草稿。</summary>
     private void OnEditorLostFocus(object? sender, RoutedEventArgs e) => ViewModel?.CommitAll();
 
     /// <summary>
-    ///     「取消接入」：先弹一句确认框，确认后才执行 <see cref="ControlCenterSettingsPageViewModel.ForgetCommand" />。
+    ///     「清空」：先弹一句确认框，确认后才执行 <see cref="ControlCenterSettingsPageViewModel.ForgetCommand" />
+    ///     ——那一步会断开连接并删掉本机凭证，所以必须问一句。
     ///     对话框显示期间让窗口不透明，免得整窗 alpha 把对话框一起变淡（见 <see cref="ModalOpacityScope" />）。
     /// </summary>
     private async void OnForgetClick(object? sender, RoutedEventArgs e)
@@ -54,7 +55,7 @@ public partial class ControlCenterSettingsPage : UserControl
 
         var dialog = new FAContentDialog
         {
-            Title = CR.Settings_Control_Forget,
+            Title = CR.Settings_Control_ForgetTitle,
             Content = CR.Settings_Control_ForgetConfirm,
             PrimaryButtonText = CR.Settings_Control_Forget,
             CloseButtonText = CR.Common_Cancel

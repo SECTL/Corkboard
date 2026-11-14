@@ -3973,7 +3973,7 @@ Continuing to use it means you understand and accept the above.</value>
   </data>
   <data name="Settings_Control_Title" xml:space="preserve"><value>Control Center</value></data>
   <data name="Settings_Control_Enabled" xml:space="preserve"><value>Enable control center</value></data>
-  <data name="Settings_Control_EnabledDescription" xml:space="preserve"><value>Connects to the control center so teachers can take the class and view homework</value></data>
+  <data name="Settings_Control_EnabledDescription" xml:space="preserve"><value>Connects to the control center so teachers can see this device</value></data>
   <data name="Settings_Control_Status" xml:space="preserve"><value>Connection status</value></data>
   <data name="Settings_Control_Status_Disabled" xml:space="preserve"><value>Off</value></data>
   <data name="Settings_Control_Status_Unpaired" xml:space="preserve"><value>Not paired</value></data>
@@ -3995,8 +3995,7 @@ Continuing to use it means you understand and accept the above.</value>
   <data name="Settings_Control_DeviceSection" xml:space="preserve"><value>Device and connection</value></data>
   <data name="Settings_Control_DisplayName" xml:space="preserve"><value>Device name</value></data>
   <data name="Settings_Control_DisplayNameDescription" xml:space="preserve"><value>Name shown on the web console; defaults to the PC name</value></data>
-  <data name="Settings_Control_ServerUrl" xml:space="preserve"><value>Control center server</value></data>
-  <data name="Settings_Control_ServerUrlDescription" xml:space="preserve"><value>Defaults to sectl.cn; change it for a private deployment</value></data>
+  
   <data name="Settings_Control_DeviceId" xml:space="preserve"><value>Device ID</value></data>
   <data name="Settings_Control_SiteName" xml:space="preserve"><value>Site</value></data>
   <data name="Settings_Control_OpenConsole" xml:space="preserve"><value>Open web console</value></data>
@@ -4008,19 +4007,14 @@ Continuing to use it means you understand and accept the above.</value>
   <data name="Settings_Control_PasteHint" xml:space="preserve"><value>You can also paste the whole sentence from the web</value></data>
   <data name="Settings_Control_Enroll" xml:space="preserve"><value>Pair</value></data>
   <data name="Settings_Control_Enrolling" xml:space="preserve"><value>Pairing…</value></data>
-  <data name="Settings_Control_Forget" xml:space="preserve"><value>Unpair</value></data>
-  <data name="Settings_Control_ForgetConfirm" xml:space="preserve"><value>Unpairing clears the local credential; you will need to pair again</value></data>
+  <data name="Settings_Control_Forget" xml:space="preserve"><value>Clear</value></data>
+  <data name="Settings_Control_ForgetTitle" xml:space="preserve"><value>Clear pairing</value></data>
+  <data name="Settings_Control_ForgetConfirm" xml:space="preserve"><value>Clearing disconnects and removes the local credential</value></data>
   <data name="Settings_Control_Enroll_Success" xml:space="preserve"><value>Paired with the control center</value></data>
   <data name="Settings_Control_Enroll_Failed" xml:space="preserve"><value>Pairing failed: {0}</value></data>
-  <data name="Settings_Control_ClassSection" xml:space="preserve"><value>Class occupancy</value></data>
-  <data name="Settings_Control_ClassDescription" xml:space="preserve"><value>Only one device can occupy a class; another device will take it over</value></data>
-  <data name="Settings_Control_ClassNone" xml:space="preserve"><value>No class occupied</value></data>
-  <data name="Settings_Control_ClassCurrent" xml:space="preserve"><value>Current class</value></data>
-  <data name="Settings_Control_ClassSelect" xml:space="preserve"><value>Occupy</value></data>
-  <data name="Settings_Control_ClassRelease" xml:space="preserve"><value>Release</value></data>
-  <data name="Settings_Control_ClassRefresh" xml:space="preserve"><value>Refresh classes</value></data>
+  
   <data name="Settings_Control_SectionConnection" xml:space="preserve"><value>Connection</value></data>
-  <data name="Settings_Control_SectionAdvanced" xml:space="preserve"><value>Advanced</value></data>
+  
   <data name="Settings_Control_Enroll_Error_Network" xml:space="preserve"><value>Network unreachable; try again later</value></data>
   <data name="Settings_Control_Enroll_Error_InvalidResponse" xml:space="preserve"><value>The control center returned an unexpected response</value></data>
   <data name="Settings_Control_Enroll_Error_BadRequest" xml:space="preserve"><value>The request is malformed</value></data>

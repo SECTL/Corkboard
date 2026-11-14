@@ -50,6 +50,12 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
     /// <summary>只读查询：把作业板上的作业压成快照回给网页控制台（老师「查看作业」）。</summary>
     private const string CommandHomeworkRead = "homework.read";
 
+    /// <summary>
+    ///     <c>homework.read</c> 回执里手写笔迹的字符预算。走 WebSocket 单帧（上限 64 KiB），
+    ///     正文与元数据还要占地方，所以比备份上传（96 KiB）留得更紧。
+    /// </summary>
+    private const int HomeworkReadInkBudget = 32 * 1024;
+
     private readonly MainConfigHandler _configHandler;
     private readonly IControlNodeCredentialProvider _credentials;
     private readonly IBoardService _boardService;
@@ -259,16 +265,6 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
             RaiseSnapshotChanged();
         }
     }
-
-    /// <summary>读设备结构树（年级 → 班级）。失败返回空列表（Core 已兜底，不抛）。</summary>
-    public Task<IReadOnlyList<ControlGradeNode>> GetTreeAsync(CancellationToken ct = default) =>
-        EnsureClient().GetDeviceTreeAsync(ct);
-
-    /// <summary>占班（上课）：离线时只记住，重连后自动重占。</summary>
-    public Task SelectClassAsync(string classId) => EnsureClient().SelectClassAsync(classId);
-
-    /// <summary>释放班（下课）。</summary>
-    public Task ReleaseClassAsync() => EnsureClient().ReleaseClassAsync();
 
     /// <summary>
     ///     重建集控客户端：停掉旧连接、按当前配置造一个新的再启动。
@@ -573,7 +569,8 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
                 _boardService.Notes.ToList(),
                 _boardService.Subjects.ToList(),
                 _boardService.SubjectOrder.ToList(),
-                now))
+                now,
+                HomeworkReadInkBudget))
             .GetTask()
             .ConfigureAwait(false);
     }

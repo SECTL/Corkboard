@@ -162,6 +162,69 @@ public class ControlHomeworkSnapshotTests
     }
 
     [Fact]
+    public void Build_HandwritingCarriesInkText()
+    {
+        var note = NoteIn("语文");
+        note.Content = string.Empty;
+        note.Handwriting = "  CORKBOARD-INK/2\naspect=1.6000\nref=540.00\n#FF1A1A1A|4.00|0|0.1000,0.2000,1.000\n  ";
+
+        var snapshot = ControlHomeworkSnapshot.Build([note], ["语文"], [], Now);
+
+        var item = snapshot["subjects"]![0]!["items"]![0]!;
+        Assert.True(item["handwriting"]!.GetValue<bool>());
+        Assert.Equal(note.Handwriting.Trim(), item["ink"]!.GetValue<string>());
+        Assert.False(snapshot["truncated"]!.GetValue<bool>());
+    }
+
+    [Fact]
+    public void Build_NonHandwritingNoteHasNullInk()
+    {
+        var note = NoteIn("语文");
+
+        var snapshot = ControlHomeworkSnapshot.Build([note], ["语文"], [], Now);
+
+        var item = snapshot["subjects"]![0]!["items"]![0]!;
+        Assert.False(item["handwriting"]!.GetValue<bool>());
+        Assert.Null(item["ink"]);
+    }
+
+    [Fact]
+    public void Build_DropsInkOverPerItemLimit()
+    {
+        var note = NoteIn("语文");
+        note.Content = string.Empty;
+        note.Handwriting = new string('x', ControlHomeworkSnapshot.MaxInkLength + 1);
+
+        var snapshot = ControlHomeworkSnapshot.Build([note], ["语文"], [], Now);
+
+        var item = snapshot["subjects"]![0]!["items"]![0]!;
+        Assert.True(item["handwriting"]!.GetValue<bool>());
+        Assert.Null(item["ink"]);
+        Assert.True(snapshot["truncated"]!.GetValue<bool>());
+    }
+
+    [Fact]
+    public void Build_DropsInkOverTotalBudget()
+    {
+        var first = NoteIn("语文");
+        first.Content = string.Empty;
+        first.Handwriting = new string('a', 40);
+
+        var second = NoteIn("语文");
+        second.Content = string.Empty;
+        second.Handwriting = new string('b', 40);
+
+        // 预算只够第一页（40），第二页被挤掉；正文与条数不受影响。
+        var snapshot = ControlHomeworkSnapshot.Build([first, second], ["语文"], [], Now, inkBudget: 50);
+
+        var items = snapshot["subjects"]![0]!["items"]!.AsArray();
+        Assert.Equal(2, items.Count);
+        Assert.Equal(2, snapshot["noteCount"]!.GetValue<int>());
+        Assert.True(snapshot["truncated"]!.GetValue<bool>());
+        Assert.Single(items, node => node!["ink"] is not null);
+    }
+
+    [Fact]
     public void Build_TruncatesSubjectsOverLimit()
     {
         var notes = Enumerable.Range(0, ControlHomeworkSnapshot.MaxSubjects + 5)

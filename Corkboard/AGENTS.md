@@ -349,7 +349,7 @@
   ①只注册 `reloadConfig`（回 `{reloaded:true}` 后 **延迟 ~200ms** 再 `configHandler.Reload()`，
   不要在回执前重建连接）②配置变化（`Config.ControlCenter.PropertyChanged` 与
   `MainConfigHandler.Reloaded`，按 Enabled/ServerUrl/DisplayName 指纹）重建客户端，400ms 防抖；
-  ③接入/取消接入/占班/下课/取班级树。
+  ③接入 / 清空接入（不再暴露占班、下课、取班级树：设置页只留给用户一个「清空」）。
 - **作业自动备份**：开关是 `Config.ControlCenter.HomeworkBackupEnabled`（默认开，设置页卡片）。
   开集控且勾选时，作业板变化经 **8s 防抖**（`Corkboard/Helpers/DebounceTimer`）后
   `POST /control/api/device/homework-snapshots`（设备凭证，走
@@ -358,9 +358,13 @@
   去重，同样内容不重传。失败只弹一次 `IToastService`，状态记在 `HomeworkBackup` 供设置页显示。
   快照形状与 `homework.read` 回执一致（同一个 `ControlHomeworkSnapshot.Build`），单条上限 256 KiB；
   **淘汰在服务端做**（每地点保留最近 200 条 / 4 MiB，满了删最旧），客户端不要自己删。
+  手写作业的条目除了 `handwriting: true` 还带 `ink`（`Note.Handwriting` 原文，
+  `CORKBOARD-INK/2` 矢量文本），网页据此画 SVG——**不要**改成截图/位图，也**不要**在别处再复制一份笔迹；
+  预算：单页 32 KiB、整份 96 KiB（`homework.read` 走 64 KiB 单帧，所以托管服务传 32 KiB），
+  超预算的笔迹直接不带（`ink: null`）并把 `truncated` 置真。
 - ⚠️ **不要把公告卡 / 推图浮层加回来**：首版照 SecRandom-C 做过 `ControlCenterPresenter` +
   `ControlNoticeWindow` + `ControlImageWindow`，用户明确要求删掉（2026-11-14）。
-  集控这边只保留连接状态、占班/下课与配置重载；确实要提示用户时用既有的 `IToastService`，
+  集控这边只保留连接状态与配置重载；确实要提示用户时用既有的 `IToastService`，
   **不要再开新的顶层窗口**。
 - **设置页**是顶层项 `settings.control`（`Views|ViewModels/SettingsPages/Control/`，
   `[PageInfo("settings.control", FluentIcons.LinkFilled)]`，不带 `groupId`）。

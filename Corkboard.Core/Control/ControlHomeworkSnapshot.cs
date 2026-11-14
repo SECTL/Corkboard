@@ -19,9 +19,15 @@ namespace Corkboard.Core.ControlCenter;
 ///           "generatedAt": "...", "truncated": false, "noteCount": 12,
 ///           "subjects": [ { "subject": "语文", "items": [
 ///               { "id": "...", "section": "第一单元"|null, "content": "...",
-///                 "dueDate": "2026-11-15"|null, "handwriting": false, "createdAt": "..." } ] } ]
+///                 "dueDate": "2026-11-15"|null, "handwriting": false,
+///                 "ink": null|"CORKBOARD-INK/2…", "createdAt": "..." } ] } ]
 ///         }
 ///         </code>
+///     </para>
+///     <para>
+///         手写作业额外带 <c>ink</c>：就是 <see cref="Note.Handwriting" /> 的原文（自有文本格式
+///         <c>CORKBOARD-INK/2</c>，见 <c>HandwritingCodec</c>），网页据此把笔迹画成 SVG。
+///         它是**矢量轨迹**，不是截图；仍受字节预算约束（见 <see cref="Build" /> 的 inkBudget）。
 ///     </para>
 ///     <para>
 ///         为什么要截断：一节课的作业通常只有十几条，但故障时（或用户把整个学期都堆在板子上）
@@ -44,17 +50,35 @@ public static class ControlHomeworkSnapshot
     public const int MaxContentLength = 160;
 
     /// <summary>
+    ///     单条手写笔迹最多带多少字符。一页手写通常 2–8 KB，32 KiB 已经能放下很密集的一页；
+    ///     再大的多半是异常数据（或整本乱画），带上去只会把整份快照撑爆。
+    /// </summary>
+    public const int MaxInkLength = 32 * 1024;
+
+    /// <summary>
+    ///     整份快照里**所有**笔迹加起来的上限（默认值）。备份上传走这条（载荷上限 256 KiB，
+    ///     正文与元数据还要占地方，留 96 KiB 给笔迹）；<c>homework.read</c> 走 WebSocket 单帧
+    ///     （64 KiB），调用方要传更小的预算。
+    /// </summary>
+    public const int MaxTotalInkLength = 96 * 1024;
+
+    /// <summary>
     ///     生成快照。
     /// </summary>
     /// <param name="notes">作业板上的全部作业（已清理的会被本方法滤掉）。</param>
     /// <param name="subjects">设置里配置的科目清单（决定没有手动顺序时的分组先后）。</param>
     /// <param name="subjectOrder">用户拖动排序存下的科目先后。</param>
     /// <param name="now">生成时刻，写进 <c>generatedAt</c>。</param>
+    /// <param name="inkBudget">
+    ///     <c>ink</c> 字段总共最多带多少字符；超预算的笔迹**不带**（<c>ink</c> 为 null，
+    ///     <c>handwriting</c> 仍为 true），并把 <c>truncated</c> 置真。默认 <see cref="MaxTotalInkLength" />。
+    /// </param>
     public static JsonObject Build(
         IReadOnlyList<Note> notes,
         IEnumerable<string> subjects,
         IEnumerable<string> subjectOrder,
-        DateTimeOffset now)
+        DateTimeOffset now,
+        int inkBudget = MaxTotalInkLength)
     {
         // 只回还在板子上的作业：已清理的那些用户自己也看不见，没必要送到网页上。
         var onBoard = notes.Where(note => note.IsOnBoard).ToList();
@@ -96,6 +120,7 @@ public static class ControlHomeworkSnapshot
         var payloadSubjects = new JsonArray();
         var noteCount = 0;
         var truncated = false;
+        var inkLeft = Math.Max(0, inkBudget);
 
         foreach (var subject in orderedSubjects)
         {
@@ -117,7 +142,10 @@ public static class ControlHomeworkSnapshot
                     break;
                 }
 
-                items.Add(BuildItem(note));
+                items.Add(BuildItem(note, inkLeft, out var inkLength, out var inkDropped));
+                inkLeft -= inkLength;
+                if (inkDropped)
+                    truncated = true;
                 noteCount++;
             }
 
@@ -138,15 +166,41 @@ public static class ControlHomeworkSnapshot
     }
 
     /// <summary>单条作业：正文归一化成一行、截断，日期按日期格式给。</summary>
-    private static JsonObject BuildItem(Note note)
+    /// <param name="note">一条作业。</param>
+    /// <param name="inkLeft">还能带多少字符的笔迹（整份快照的剩余预算）。</param>
+    /// <param name="inkLength">实际带了多少字符的笔迹（0 = 没带）。</param>
+    /// <param name="inkDropped">有笔迹但因为太大没带上（要置 <c>truncated</c>）。</param>
+    private static JsonObject BuildItem(Note note, int inkLeft, out int inkLength, out bool inkDropped)
     {
+        inkLength = 0;
+        inkDropped = false;
+
+        var handwriting = !string.IsNullOrWhiteSpace(note.Handwriting);
+        string? ink = null;
+
+        if (handwriting)
+        {
+            var text = note.Handwriting!.Trim();
+            if (text.Length <= MaxInkLength && text.Length <= inkLeft)
+            {
+                ink = text;
+                inkLength = text.Length;
+            }
+            else
+            {
+                // 单独一页就超上限，或者整份预算已经不够：宁可不带笔迹，也要保住其它作业的正文。
+                inkDropped = true;
+            }
+        }
+
         return new JsonObject
         {
             ["id"] = note.Id.ToString("D"),
             ["section"] = string.IsNullOrWhiteSpace(note.Section) ? null : note.Section.Trim(),
             ["content"] = NormalizeContent(note.Content),
             ["dueDate"] = note.DueDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
-            ["handwriting"] = !string.IsNullOrWhiteSpace(note.Handwriting),
+            ["handwriting"] = handwriting,
+            ["ink"] = ink,
             ["createdAt"] = note.CreatedAt.ToString("O", CultureInfo.InvariantCulture)
         };
     }
