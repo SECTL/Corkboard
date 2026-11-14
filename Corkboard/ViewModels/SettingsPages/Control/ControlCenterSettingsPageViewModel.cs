@@ -39,8 +39,8 @@ public partial class ControlCenterSettingsPageViewModel(
     IToastService toastService,
     IExternalLauncher launcher) : ViewModelBase(configHandler)
 {
-    /// <summary>网页控制台地址（「打开控制台」按钮）。</summary>
-    private const string ConsoleUrl = "https://sectl.cn/dashboard/control";
+    /// <summary>网页控制台路径（拼在「集控站点」后面：私有部署时打开的是自己那台）。</summary>
+    private const string ConsolePath = "/dashboard/control";
 
     /// <summary>设备 ID / 地点没接入时的占位符。</summary>
     private const string EmptyValue = "—";
@@ -199,11 +199,17 @@ public partial class ControlCenterSettingsPageViewModel(
     // 命令
     // ---------------------------------------------------------------------------------------
 
-    /// <summary>用系统浏览器打开集控网页控制台。</summary>
+    /// <summary>用系统浏览器打开集控网页控制台（地址跟着当前的「集控站点」走）。</summary>
     [RelayCommand]
     private void OpenConsole()
     {
-        if (!launcher.TryOpenUri(ConsoleUrl))
+        var baseUrl = (ServerUrlDraft ?? string.Empty).Trim().TrimEnd('/');
+        if (baseUrl.Length == 0)
+            baseUrl = (Config.ControlCenter.ServerUrl ?? string.Empty).Trim().TrimEnd('/');
+        if (baseUrl.Length == 0)
+            baseUrl = "https://sectl.cn";
+
+        if (!launcher.TryOpenUri(baseUrl + ConsolePath))
             toastService.Show(CR.Settings_Control_Error_Unknown, ToastSeverity.Error);
     }
 
