@@ -4036,9 +4036,4 @@
   <data name="Settings_Control_Error_InvalidResponse" xml:space="preserve"><value>集控中心返回了无法识别的内容</value></data>
   <data name="Settings_Control_Error_NotEnrolled" xml:space="preserve"><value>还没有接入集控</value></data>
   <data name="Settings_Control_Error_Unknown" xml:space="preserve"><value>请求失败，稍后重试</value></data>
-  <data name="Control_Notice_DefaultTitle" xml:space="preserve"><value>公告</value></data>
-  <data name="Control_Notice_FromControl" xml:space="preserve"><value>来自集控中心</value></data>
-  <data name="Control_Notice_Close" xml:space="preserve"><value>知道了</value></data>
-  <data name="Control_Image_Close" xml:space="preserve"><value>关闭</value></data>
-  <data name="Control_Image_LoadFailed" xml:space="preserve"><value>图片加载失败</value></data>
 </root>

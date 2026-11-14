@@ -4038,9 +4038,4 @@ Continuing to use it means you understand and accept the above.</value>
   <data name="Settings_Control_Error_InvalidResponse" xml:space="preserve"><value>The control center returned an unexpected response</value></data>
   <data name="Settings_Control_Error_NotEnrolled" xml:space="preserve"><value>Not paired yet</value></data>
   <data name="Settings_Control_Error_Unknown" xml:space="preserve"><value>Request failed; try again later</value></data>
-  <data name="Control_Notice_DefaultTitle" xml:space="preserve"><value>Notice</value></data>
-  <data name="Control_Notice_FromControl" xml:space="preserve"><value>From the control center</value></data>
-  <data name="Control_Notice_Close" xml:space="preserve"><value>Got it</value></data>
-  <data name="Control_Image_Close" xml:space="preserve"><value>Close</value></data>
-  <data name="Control_Image_LoadFailed" xml:space="preserve"><value>Failed to load the image</value></data>
 </root>

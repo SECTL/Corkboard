@@ -417,11 +417,10 @@ public partial class App : Application
         services.AddSingleton<IToastService>(provider => provider.GetRequiredService<ToastService>());
 
         // 集控（SECTL 控制中心的客户端）：凭证（设备 id + secret）走 Core 的加密存储，不进 settings.json；
-        // 托管服务维持 WebSocket 长连接并把公告/图片交给 presenter 在 UI 线程弹窗。
+        // 托管服务维持 WebSocket 长连接，只负责状态（在线/占班/下课）与重载配置，不弹公告卡、不推图。
         // 设置页只经由托管服务读写状态，不自己 new 客户端（长连接只能有一个）。
         services.AddSingleton<IControlNodeCredentialProvider>(provider =>
             new NodeEnrollmentStore(provider.GetRequiredService<ILogger<NodeEnrollmentStore>>()));
-        services.AddSingleton<ControlCenterPresenter>();
         services.AddSingleton<ControlCenterHostedService>();
         services.AddHostedService(provider => provider.GetRequiredService<ControlCenterHostedService>());
 

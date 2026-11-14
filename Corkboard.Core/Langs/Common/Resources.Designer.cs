@@ -1392,9 +1392,4 @@ public static string Settings_Widgets_ShowWeatherTomorrow => ResourceManager.Get
     public static string Settings_Control_Error_InvalidResponse => ResourceManager.GetString(nameof(Settings_Control_Error_InvalidResponse), Culture)!;
     public static string Settings_Control_Error_NotEnrolled => ResourceManager.GetString(nameof(Settings_Control_Error_NotEnrolled), Culture)!;
     public static string Settings_Control_Error_Unknown => ResourceManager.GetString(nameof(Settings_Control_Error_Unknown), Culture)!;
-    public static string Control_Notice_DefaultTitle => ResourceManager.GetString(nameof(Control_Notice_DefaultTitle), Culture)!;
-    public static string Control_Notice_FromControl => ResourceManager.GetString(nameof(Control_Notice_FromControl), Culture)!;
-    public static string Control_Notice_Close => ResourceManager.GetString(nameof(Control_Notice_Close), Culture)!;
-    public static string Control_Image_Close => ResourceManager.GetString(nameof(Control_Image_Close), Culture)!;
-    public static string Control_Image_LoadFailed => ResourceManager.GetString(nameof(Control_Image_LoadFailed), Culture)!;
 }

@@ -1,7 +1,6 @@
 using System.ComponentModel;
 using System.Globalization;
 using System.Resources;
-using System.Text.Json;
 using System.Text.Json.Nodes;
 using Corkboard.Core.ControlCenter;
 using Corkboard.Core.Langs.Common;
@@ -16,8 +15,8 @@ namespace Corkboard.Services.ControlCenter;
 /// <summary>
 ///     集控（SECTL control center）的应用层运行时服务。
 ///     <para>
-///         Core 的 <see cref="ControlNodeClient" /> 只负责协议、连接与凭证；<b>所有用户可见的副作用</b>
-///         （弹公告、推图片、重载配置、toast）都在这里通过 <see cref="ControlNodeClient.RegisterHandler" />
+///         Core 的 <see cref="ControlNodeClient" /> 只负责协议、连接与凭证；<b>用户可见的副作用</b>
+///         （接入 / 配对的 toast、重载配置）都在这里通过 <see cref="ControlNodeClient.RegisterHandler" />
 ///         挂上去。这样 Core 不依赖 Avalonia，也不会在处理指令时直接碰界面。
 ///     </para>
 ///     <para>
@@ -26,8 +25,9 @@ namespace Corkboard.Services.ControlCenter;
 ///         重建是串行化的；地址 / 设备名这类随输入逐字变化的项做 400ms 防抖。
 ///     </para>
 ///     <para>
-///         处理器跑在后台线程上（不是 UI 线程），所以它们只把活交给 <see cref="ControlCenterPresenter" />，
-///         由后者切回 UI 线程开窗。
+///         <b>Corkboard 不做公告卡、也不做推图浮层</b>：服务端给 corkboard 平台留的
+///         <c>refreshNotice</c> / <c>pushImage</c> 这两条推送类命令这里故意不注册，
+///         客户端于是也不声明这两项能力，网页控制台对这台设备下发时会被服务端直接挡回。
 ///     </para>
 /// </summary>
 public sealed class ControlCenterHostedService : BackgroundService, IAsyncDisposable
@@ -35,30 +35,11 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
     /// <summary>服务器地址 / 设备名变更后等这么久再重连，免得每敲一个字就重连一次。</summary>
     private static readonly TimeSpan RestartDebounce = TimeSpan.FromMilliseconds(400);
 
-    /// <summary>公告标题的最大长度（超出截断，不是拒收）。</summary>
-    private const int NoticeTitleLimit = 60;
-
-    /// <summary>公告正文的最大长度（超出截断，不是拒收）。</summary>
-    private const int NoticeBodyLimit = 2000;
-
-    /// <summary>推图默认显示时长（秒）。</summary>
-    private const int DefaultImageSeconds = 10;
-
-    /// <summary>推图显示时长的上下限（秒）。</summary>
-    private const int MinImageSeconds = 1;
-
-    /// <summary>推图显示时长的上限（秒）。</summary>
-    private const int MaxImageSeconds = 3600;
-
-    /// <summary>服务端的三条命令名（与 <c>ControlV4Protocol</c> 的设备能力表一致）。</summary>
-    private const string CommandRefreshNotice = "refreshNotice";
-
-    private const string CommandPushImage = "pushImage";
+    /// <summary>唯一注册的命令：重载配置（不弹任何界面）。</summary>
     private const string CommandReloadConfig = "reloadConfig";
 
     private readonly MainConfigHandler _configHandler;
     private readonly IControlNodeCredentialProvider _credentials;
-    private readonly ControlCenterPresenter _presenter;
     private readonly IToastService _toastService;
     private readonly ILogger<ControlCenterHostedService> _logger;
 
@@ -91,13 +72,11 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
     public ControlCenterHostedService(
         MainConfigHandler configHandler,
         IControlNodeCredentialProvider credentials,
-        ControlCenterPresenter presenter,
         IToastService toastService,
         ILogger<ControlCenterHostedService> logger)
     {
         _configHandler = configHandler;
         _credentials = credentials;
-        _presenter = presenter;
         _toastService = toastService;
         _logger = logger;
 
@@ -308,7 +287,7 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
         GC.SuppressFinalize(this);
     }
 
-    /// <summary>构造客户端并在里面挂上三条命令处理器与状态订阅。</summary>
+    /// <summary>构造客户端并挂上命令处理器（只有重载配置一条）与状态订阅。</summary>
     private ControlNodeClient CreateClient()
     {
         var client = new ControlNodeClient(
@@ -316,8 +295,6 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
             logger: null,
             credentials: _credentials);
 
-        client.RegisterHandler(CommandRefreshNotice, HandleRefreshNoticeAsync);
-        client.RegisterHandler(CommandPushImage, HandlePushImageAsync);
         client.RegisterHandler(CommandReloadConfig, HandleReloadConfigAsync);
         client.StateChanged += OnClientStateChanged;
         return client;
@@ -467,40 +444,8 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
     }
 
     // ------------------------------------------------------------------
-    // 三条命令处理器（在后台线程上跑；返回值会被序列化进 cmd.result.data）
+    // 命令处理器（在后台线程上跑；返回值会被序列化进 cmd.result.data）
     // ------------------------------------------------------------------
-
-    /// <summary><c>refreshNotice</c>：弹一条公告。标题与正文超长时截断而不是拒收。</summary>
-    private Task<object?> HandleRefreshNoticeAsync(JsonObject args, CancellationToken cancellationToken)
-    {
-        var title = Truncate(ReadString(args, "title"), NoticeTitleLimit);
-        var body = Truncate(ReadString(args, "body"), NoticeBodyLimit);
-
-        _presenter.ShowNotice(title, body);
-        return Task.FromResult<object?>(new { shown = true });
-    }
-
-    /// <summary><c>pushImage</c>：全屏推一张图。url 必须是绝对 http/https 地址，否则抛异常（Core 转成失败回执）。</summary>
-    private Task<object?> HandlePushImageAsync(JsonObject args, CancellationToken cancellationToken)
-    {
-        var url = ReadString(args, "url")?.Trim();
-        if (string.IsNullOrWhiteSpace(url))
-            throw new ArgumentException("url 必填", nameof(args));
-
-        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
-            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
-        {
-            throw new ArgumentException("url 必须是绝对 http/https 地址", nameof(args));
-        }
-
-        var seconds = DefaultImageSeconds;
-        if (ReadNumber(args, "duration_seconds") is { } requested)
-            seconds = (int)Math.Clamp(Math.Round(requested), MinImageSeconds, MaxImageSeconds);
-
-        var normalized = uri.AbsoluteUri;
-        _presenter.ShowImage(normalized, seconds);
-        return Task.FromResult<object?>(new { shown = true, url = normalized, duration_seconds = seconds });
-    }
 
     /// <summary>
     ///     <c>reloadConfig</c>：让应用重新读一次 <c>settings.json</c>。
@@ -707,93 +652,6 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
         {
             // 已经退出了，忽略。
         }
-    }
-
-    // ------------------------------------------------------------------
-    // 命令参数读取：payload 既可能来自 JSON 文本（JsonElement 后端），
-    // 也可能是本机拼出来的 CLR 装箱值，两种都要认。
-    // ------------------------------------------------------------------
-
-    /// <summary>读字符串；缺失或转换失败返回 <see langword="null" />。</summary>
-    private static string? ReadString(JsonObject args, string name)
-    {
-        if (args[name] is not JsonValue value)
-            return null;
-
-        try
-        {
-            if (value.TryGetValue<string>(out var text))
-                return text;
-
-            if (value.TryGetValue<JsonElement>(out var element))
-            {
-                return element.ValueKind switch
-                {
-                    JsonValueKind.String => element.GetString(),
-                    JsonValueKind.Number or JsonValueKind.True or JsonValueKind.False => element.GetRawText(),
-                    _ => null
-                };
-            }
-
-            return ConvertValue<string>(value);
-        }
-        catch (Exception ex) when (ex is JsonException or InvalidOperationException or NotSupportedException)
-        {
-            return null;
-        }
-    }
-
-    /// <summary>读数字；缺失或不是数字返回 <see langword="null" />。</summary>
-    private static double? ReadNumber(JsonObject args, string name)
-    {
-        if (args[name] is not JsonValue value)
-            return null;
-
-        try
-        {
-            if (value.TryGetValue<double>(out var number))
-                return number;
-
-            if (value.TryGetValue<JsonElement>(out var element))
-            {
-                if (element.ValueKind == JsonValueKind.Number && element.TryGetDouble(out var parsed))
-                    return parsed;
-
-                if (element.ValueKind == JsonValueKind.String &&
-                    double.TryParse(element.GetString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var text))
-                    return text;
-
-                return null;
-            }
-
-            return ConvertValue<double?>(value);
-        }
-        catch (Exception ex) when (ex is JsonException or InvalidOperationException or NotSupportedException)
-        {
-            return null;
-        }
-    }
-
-    /// <summary>装箱值问不出目标类型时，经一次 JSON 文本往返再读——两种后端都能处理。</summary>
-    private static T? ConvertValue<T>(JsonValue value)
-    {
-        try
-        {
-            return JsonSerializer.Deserialize<T>(value.ToJsonString());
-        }
-        catch (JsonException)
-        {
-            return default;
-        }
-    }
-
-    private static string? Truncate(string? text, int limit)
-    {
-        if (string.IsNullOrEmpty(text))
-            return text;
-
-        var trimmed = text.Trim();
-        return trimmed.Length <= limit ? trimmed : trimmed[..limit];
     }
 
     /// <summary>把 Core 给的错误键翻成文案；键不认识时回退「稍后重试」。</summary>
