@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using System.Text.Json.Nodes;
+using Corkboard.Core.Export;
 using Corkboard.Core.Notes;
 
 namespace Corkboard.Core.ControlCenter;
@@ -197,12 +198,23 @@ public static class ControlHomeworkSnapshot
         {
             ["id"] = note.Id.ToString("D"),
             ["section"] = string.IsNullOrWhiteSpace(note.Section) ? null : note.Section.Trim(),
-            ["content"] = NormalizeContent(note.Content),
+            ["content"] = NormalizeContent(ToPlainText(note.Content)),
             ["dueDate"] = note.DueDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
             ["handwriting"] = handwriting,
             ["ink"] = ink,
             ["createdAt"] = note.CreatedAt.ToString("O", CultureInfo.InvariantCulture)
         };
+    }
+
+    /// <summary>
+    ///     把富文本正文摊成能直接显示的文字：先按编辑器 HTML 摊一次，再摊一次——
+    ///     旧数据里有「二次转义」的写法（<c>&amp;amp;#24352;</c> 解一次仍是 <c>&amp;#24352;</c>），
+    ///     第二遍既能再解一层实体，也顺带去掉第一遍解码出来的 <c>&lt;b&gt;</c> 这类字面标签。
+    /// </summary>
+    private static string ToPlainText(string? content)
+    {
+        var text = RichTextPlainText.Convert(content);
+        return text.Length == 0 ? text : RichTextPlainText.Convert(text);
     }
 
     /// <summary>

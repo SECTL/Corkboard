@@ -268,6 +268,20 @@ public class ControlHomeworkSnapshotTests
         Assert.Equal(1, snapshot["noteCount"]!.GetValue<int>());
     }
 
+    [Fact]
+    public void Build_ConvertsRichTextHtmlToPlainText()
+    {
+        // 应用里作业正文是所见即所得编辑器的 HTML（<p style> / <br> / 实体），
+        // 网页要的是能直接显示的字：块级标签断行、标签去掉、实体解码。
+        var note = NoteIn("语文");
+        note.Content = "<p>第一段</p><p>第二段&lt;b&gt;加粗&lt;/b&gt;</p>";
+
+        var snapshot = ControlHomeworkSnapshot.Build([note], ["语文"], [], Now);
+        var content = snapshot["subjects"]![0]!["items"]![0]!["content"]!.GetValue<string>();
+
+        Assert.Equal("第一段 第二段加粗", content);
+    }
+
     private static Note NoteIn(string subject) => new()
     {
         Content = "作业内容",
