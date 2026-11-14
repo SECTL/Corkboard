@@ -1,0 +1,40 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:core="using:Corkboard.Core.Langs.Common"
+        mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="720"
+        x:Class="Corkboard.Views.ControlCenter.ControlImageWindow"
+        Title="{x:Static core:Resources.Control_Image_Close}"
+        WindowState="FullScreen"
+        WindowDecorations="None"
+        CanResize="False"
+        ShowInTaskbar="False"
+        Topmost="True"
+        Background="Black">
+    <!--
+        集控推图的全屏浮窗：整屏只有一张等比铺开的图。
+
+        - 全屏 + 置顶 + 不进任务栏：老师从控制台推一张图时，学生桌面上只看到这张图。
+        - 黑色底：图片不满屏时四周用黑边，不跟主题走（投影/看图时的通行做法）。
+        - 点任意处或按 Esc 关闭；到时间也会自己关。加载失败时把标题换成一行提示，
+          窗口行为不变（照样能点掉），免得推一张坏图把屏幕锁死。
+    -->
+    <Grid>
+        <Image x:Name="Picture"
+               Stretch="Uniform"
+               HorizontalAlignment="Stretch"
+               VerticalAlignment="Stretch" />
+
+        <TextBlock x:Name="ErrorText"
+                   Text="{x:Static core:Resources.Control_Image_LoadFailed}"
+                   IsVisible="False"
+                   FontSize="28"
+                   Foreground="White"
+                   TextWrapping="Wrap"
+                   TextAlignment="Center"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"
+                   Margin="48" />
+    </Grid>
+</Window>

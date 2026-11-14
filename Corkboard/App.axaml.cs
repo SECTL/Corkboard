@@ -21,6 +21,7 @@ using Corkboard.Core;
 using Corkboard.Core.Abstraction;
 using Corkboard.Core.Attributes;
 using Corkboard.Core.Board;
+using Corkboard.Core.ControlCenter;
 using Corkboard.Core.Controls;
 using Corkboard.Core.CrashRecovery;
 using Corkboard.Core.Enums;
@@ -44,6 +45,7 @@ using Corkboard.Services;
 using Corkboard.Services.Widgets;
 using Corkboard.Services.Auth;
 using Corkboard.Services.Cloud;
+using Corkboard.Services.ControlCenter;
 using Corkboard.Services.CrashRecovery;
 using Corkboard.Services.Desktop;
 using Corkboard.Services.Exam;
@@ -62,6 +64,7 @@ using Corkboard.ViewModels.MainPages.Board;
 using Corkboard.ViewModels.MainPages.Homework;
 using Corkboard.ViewModels.SettingsPages;
 using Corkboard.ViewModels.SettingsPages.Board;
+using Corkboard.ViewModels.SettingsPages.Control;
 using Corkboard.ViewModels.SettingsPages.Exam;
 using Corkboard.ViewModels.SettingsPages.Export;
 using Corkboard.ViewModels.SettingsPages.Display;
@@ -74,6 +77,7 @@ using Corkboard.Views.SettingsPages.About;
 using Corkboard.Views.SettingsPages.Account;
 using Corkboard.Views.SettingsPages.Board;
 using Corkboard.Views.SettingsPages.Cloud;
+using Corkboard.Views.SettingsPages.ControlCenter;
 using Corkboard.Views.SettingsPages.Exam;
 using Corkboard.Views.SettingsPages.Export;
 using Corkboard.Views.SettingsPages.General;
@@ -412,6 +416,15 @@ public partial class App : Application
         services.AddSingleton<ToastService>();
         services.AddSingleton<IToastService>(provider => provider.GetRequiredService<ToastService>());
 
+        // 集控（SECTL 控制中心的客户端）：凭证（设备 id + secret）走 Core 的加密存储，不进 settings.json；
+        // 托管服务维持 WebSocket 长连接并把公告/图片交给 presenter 在 UI 线程弹窗。
+        // 设置页只经由托管服务读写状态，不自己 new 客户端（长连接只能有一个）。
+        services.AddSingleton<IControlNodeCredentialProvider>(provider =>
+            new NodeEnrollmentStore(provider.GetRequiredService<ILogger<NodeEnrollmentStore>>()));
+        services.AddSingleton<ControlCenterPresenter>();
+        services.AddSingleton<ControlCenterHostedService>();
+        services.AddHostedService(provider => provider.GetRequiredService<ControlCenterHostedService>());
+
         // 时空回放：入口在主界面标题栏，作业列表在主页面，两边靠这个单例共享状态。
         services.AddSingleton<BoardReplayService>();
 
@@ -469,6 +482,7 @@ public partial class App : Application
         services.AddTransient<AccountSettingsPageViewModel>();
         services.AddTransient<CloudSyncSettingsPageViewModel>();
         services.AddTransient<UpdateSettingsPageViewModel>();
+        services.AddTransient<ControlCenterSettingsPageViewModel>();
         services.AddTransient<BoardSectionsSettingsPageViewModel>();
         services.AddTransient<HandwritingSettingsPageViewModel>();
         services.AddTransient<QuickTagsSettingsPageViewModel>();
@@ -502,6 +516,7 @@ public partial class App : Application
         // 侧边栏顶部不再放分隔线（原来的 AddSettingsPageSeparator 已按用户要求删掉）。
         services.AddSettingsPage<BasicSettingsPage>(CR.Settings_Basic_Title);
         services.AddSettingsPage<AppearanceSettingsPage>(CR.Settings_Appearance_Title);
+        services.AddSettingsPage<ControlCenterSettingsPage>(CR.Settings_Control_Title);
         // 「看板模式」也是可折叠分组（用户要求的「侧边展开、下拉、再分类」）：一块全屏屏自己的显示与版式、
         // 背景、一言与天气、到点自己进出，四件事分四页，别挤在一页里。
         services.AddGroup(new PageGroupInfo(CR.Settings_Display_Group, "settings.display.group", FluentIcons.ClockFilled));

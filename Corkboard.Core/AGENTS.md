@@ -281,3 +281,46 @@
   `Settings_About_OnlineUsers`。
 - 纯逻辑（事件形状与字段名、类型判定、批量请求体与 `207` 解析、设备类型推断、隐私三态、增量取用与放回）
   都有单测：`Corkboard.Core.Tests/StatsReportEventTests.cs` 与 `Corkboard.Core.Tests/OnlineStatsTests.cs`。
+
+## 集控（SECTL control center）
+
+桌面端接入 SECTL 集控中心，接收老师从网页控制台下发的指令。**唯一协议事实源**是
+`D:\code\SECTL-auth\docs\control-center-protocol-v4.md`（v4.1；SecRandom-C 的 `docs/client-protocol.md`
+已断代，别照着它写）。Corkboard 在服务端是一个独立平台 `corkboard`，能力面比 SecRandom 小得多：
+
+| 项 | 内容 |
+| --- | --- |
+| 平台标识 | `ControlNodeConnectOptions.DefaultPlatform = "corkboard"`（WS hello 与命令里的 `platform` 都用它） |
+| 命令（3 条） | `refreshNotice`（title ≤ 60 / body ≤ 2000）、`pushImage`（url 必填 ≤ 2048、duration_seconds 1–3600）、`reloadConfig`（无参） |
+| 状态能力（3 项） | `status.read`、`class.select`、`class.release`（占班/下课走 **req class.select / class.release**，不是命令表） |
+| 已声明但**永远不要用** | `broadcast` —— 服务端 `PLATFORM_COMMANDS.corkboard` 里没有它，声明了只会拿到 `capability_unsupported`；`ControlV4Protocol.CapabilityBroadcast` 上的注释就是这个意思 |
+| 不做 | draw.lock / roster / media / lockScreen / restart / switchPage / settings.* —— Corkboard 没有对应能力，别为了「对齐 SecRandom」硬塞 |
+
+**分层固定**：`Corkboard.Core/Control/` 只做协议与连接（帧、会话、传输、接入、凭证、状态、幂等台账），
+**任何用户可见的副作用（弹窗、改配置、toast）都在应用层** `Corkboard/Services/ControlCenter/` 的
+`ControlCenterHostedService` 里通过 `RegisterHandler` 挂上去。Core 不引 Avalonia。
+
+| 文件 | 负责 |
+| --- | --- |
+| `ControlV4Protocol.cs` | 帧类型（`req`/`res`/`evt`）、topic 常量、各 payload 的 `FromPayload`/`ToPayload`、`StateCapabilities`、错误码；`TryParse` 只认三种已知帧类型 |
+| `ControlJson.cs`（internal） | payload 读取兜底：CLR 装箱的 `JsonValue` 问不出 `long`/`bool` 时转 JSON 串再反序列化；**新代码不要绕开它直接 `TryGetValue<T>`** |
+| `ControlNodeSession.cs` | 一轮连接的完整生命周期：hello → 读循环 → 命令派发（ack → 执行 → result，deadline − 200ms 代回 `timeout`）→ 断线重连（退避见 `ControlNodeConnectOptions()`）、`desired_state` 应用与 revision 落盘、探活 `req ping`（服务端有该 topic，回 `server_time`；连续失败 2 次主动断开触发重连） |
+| `ControlNodeClient.cs` | **应用层唯一门面**：`StartAsync` / `StopAsync` / `RegisterHandler` / `EnrollAsync` / `ForgetEnrollmentAsync` / `GetDeviceTreeAsync` / `SelectClassAsync` / `ReleaseClassAsync` / `State` + `StateChanged`；不暴露凭证 |
+| `ControlV4Protocol.cs` + `ControlCommandLedger.cs` | `command_id` 幂等台账，LRU 512 条（默认值 `DefaultCapacity`）；同一条指令重投**必须回同一份结果**，别再执行一次 |
+| `NodeEnrollment.cs` / `NodeEnrollmentStore.cs` | 地点 ID（`SC-` 前缀）与 8 位配对码的归一化/整句解析；凭证存 `data/config/security/control-node.json`（密文）+ 同目录 `control-node.key`（密钥），**不要并进 `settings.json`** |
+| `FileControlNodeStateStore.cs` | `data/config/control/node-state.json`：已应用的 `desired_state` revision 与上次占的班；重连 hello 必须上报 `applied_state_revision` |
+| `ControlNodeEnrollmentApi.cs` | `POST /control/api/enroll`，错误码 → 资源键 `Settings_Control_Enroll_Error_*` |
+
+**接入**是「地点 ID + 一次性配对码」双因子，成功后服务端下发 `deviceId` + `secret`；凭证只在本地加密保存。
+`StartAsync` 在配置里同时有 `SiteId` + `PairCode` 时会先自动接入并把一次性码写回空串——
+**配对码不留在配置里**（`settings.json` 会被云同步带走）。
+
+**配置**：`Models/SubConfigs/ControlCenter/ControlCenterSettingsConfig`（`Enabled` 默认 false、`ServerUrl`
+默认 `https://sectl.cn`、`DisplayName`、`SiteId`、`PairCode`、`SelectedClassId`），挂在
+`MainConfigModel.ControlCenter`，读盘后由 `NormalizeLoaded()` → `Normalize()` 收敛脏值
+（站址只认 http/https，地点 ID 归一成大写 `SC-` 形态）。子配置的属性变更**不会**冒泡成
+`MainConfigHandler` 的事件，要监听就订阅 `Data.ControlCenter.PropertyChanged`。
+
+**测试**在 `Corkboard.Core.Tests/Control/`（`ControlV4ProtocolTests` / `ControlNodeSessionTests` /
+`NodeEnrollmentTests` / `NodeEnrollmentStoreTests` 等）：协议解析、状态应用、命令校验顺序
+（过期 → 本地开关 → 能力 → 幂等）、凭证加解密、状态落盘。改协议/校验顺序时先改这些测试。

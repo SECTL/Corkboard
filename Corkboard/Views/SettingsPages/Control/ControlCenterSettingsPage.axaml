@@ -1,0 +1,182 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fa="using:FluentAvalonia.UI.Controls"
+             xmlns:vm="using:Corkboard.ViewModels.SettingsPages.Control"
+             xmlns:core="using:Corkboard.Core.Langs.Common"
+             mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="700"
+             x:Class="Corkboard.Views.SettingsPages.ControlCenter.ControlCenterSettingsPage"
+             x:DataType="vm:ControlCenterSettingsPageViewModel">
+    <ScrollViewer>
+        <StackPanel Classes="page-container">
+            <!-- 页标题画在 page-container 里：它才和设置卡同宽、同左边缘，并随卡片一起滚动。 -->
+            <TextBlock Margin="0 4 0 0"
+                       FontWeight="Normal"
+                       Text="{x:Static core:Resources.Settings_Control_Title}"
+                       Theme="{StaticResource TitleTextBlockStyle}" />
+
+            <!--
+                总开关：bool 配置项，直接双向绑即可（配置 handler 自带落盘）。
+                重连由后台服务监听配置后自己做，页面不调 Restart。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Control_Enabled}"
+                                   Description="{x:Static core:Resources.Settings_Control_EnabledDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <ToggleSwitch IsChecked="{Binding Config.ControlCenter.Enabled, Mode=TwoWay}" />
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <!-- 连接状态：状态行加粗、详情行用次要色；内容由服务的快照推送，没有手动刷新按钮。 -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Control_Status}"
+                                   IsExpanded="True">
+                <StackPanel Margin="0 4 0 0" Spacing="4">
+                    <TextBlock FontWeight="SemiBold"
+                               Text="{Binding StatusText}"
+                               TextWrapping="Wrap" />
+                    <TextBlock FontSize="12"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                               Text="{Binding DetailText}"
+                               TextWrapping="Wrap" />
+                </StackPanel>
+            </fa:FASettingsExpander>
+
+            <!-- 设备与连接：设备名、站点地址、只读的设备 ID / 地点，以及网页控制台入口。 -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Control_DeviceSection}">
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Control_DisplayName}"
+                                           Description="{x:Static core:Resources.Settings_Control_DisplayNameDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <!--
+                            绑草稿而不是配置：每敲一个字符就写一遍 settings.json 太浪费。
+                            失焦（或离开页面）时由 code-behind 调 CommitAll 落盘。
+                        -->
+                        <TextBox MinWidth="220"
+                                 VerticalAlignment="Center"
+                                 Text="{Binding DisplayNameDraft, Mode=TwoWay}"
+                                 LostFocus="OnEditorLostFocus" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Control_ServerUrl}"
+                                           Description="{x:Static core:Resources.Settings_Control_ServerUrlDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <TextBox MinWidth="220"
+                                 VerticalAlignment="Center"
+                                 Text="{Binding ServerUrlDraft, Mode=TwoWay}"
+                                 LostFocus="OnEditorLostFocus" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Control_DeviceId}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <SelectableTextBlock VerticalAlignment="Center"
+                                             Text="{Binding DeviceIdText}"
+                                             TextWrapping="Wrap" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Control_SiteName}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <TextBlock VerticalAlignment="Center"
+                                   Text="{Binding SiteNameText}"
+                                   TextWrapping="Wrap" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <Button Margin="0 4 0 0"
+                        HorizontalAlignment="Left"
+                        Command="{Binding OpenConsoleCommand}"
+                        Content="{x:Static core:Resources.Settings_Control_OpenConsole}" />
+            </fa:FASettingsExpander>
+
+            <!--
+                接入集控：地点 ID 支持把老师给的整句原样粘进来（Core 自己解析地点 ID 与配对码）。
+                配对码是一次性的，接完由 ViewModel 清空草稿。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Control_EnrollSection}"
+                                   IsExpanded="True">
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Control_SiteId}"
+                                           Description="{x:Static core:Resources.Settings_Control_SiteIdDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <TextBox MinWidth="260"
+                                 VerticalAlignment="Center"
+                                 Text="{Binding SiteIdDraft, Mode=TwoWay}"
+                                 LostFocus="OnEditorLostFocus" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Control_PairCode}"
+                                           Description="{x:Static core:Resources.Settings_Control_PairCodeDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <!-- 配对码是敏感输入，画成圆点。 -->
+                        <TextBox MinWidth="200"
+                                 VerticalAlignment="Center"
+                                 PasswordChar="●"
+                                 Text="{Binding PairCodeDraft, Mode=TwoWay}"
+                                 LostFocus="OnEditorLostFocus" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <TextBlock Margin="0 4 0 0"
+                           FontSize="12"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           Text="{x:Static core:Resources.Settings_Control_PasteHint}"
+                           TextWrapping="Wrap" />
+
+                <StackPanel Margin="0 8 0 0" Orientation="Horizontal" Spacing="8">
+                    <Button Command="{Binding EnrollCommand}"
+                            Content="{Binding EnrollButtonText}"
+                            IsEnabled="{Binding CanEnroll}" />
+
+                    <!--
+                        取消接入要先弹一句确认框（对话框是视图层的事，所以只有 Click，
+                        不绑 Command）；确认后 code-behind 再执行 ForgetCommand。
+                    -->
+                    <Button Click="OnForgetClick"
+                            Content="{x:Static core:Resources.Settings_Control_Forget}"
+                            IsEnabled="{Binding CanForget}"
+                            IsVisible="{Binding IsConfigured}" />
+                </StackPanel>
+            </fa:FASettingsExpander>
+
+            <!-- 班级占用：选班 / 释放班 / 刷新清单。 -->
+            <fa:FASettingsExpander Description="{x:Static core:Resources.Settings_Control_ClassDescription}"
+                                   Header="{x:Static core:Resources.Settings_Control_ClassSection}"
+                                   IsExpanded="True">
+                <StackPanel Margin="0 4 0 0" Spacing="8">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                        <TextBlock VerticalAlignment="Center"
+                                   Text="{x:Static core:Resources.Settings_Control_ClassCurrent}" />
+                        <TextBlock Grid.Column="1"
+                                   VerticalAlignment="Center"
+                                   FontWeight="SemiBold"
+                                   Text="{Binding CurrentClassText}"
+                                   TextWrapping="Wrap" />
+                    </Grid>
+
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <ComboBox MinWidth="240"
+                                  VerticalAlignment="Center"
+                                  ItemsSource="{Binding ClassOptions}"
+                                  SelectedItem="{Binding SelectedClassOption, Mode=TwoWay}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ControlClassOption">
+                                    <TextBlock Text="{Binding DisplayName}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+
+                        <Button Command="{Binding SelectClassCommand}"
+                                Content="{x:Static core:Resources.Settings_Control_ClassSelect}"
+                                IsEnabled="{Binding CanSelectClass}" />
+                        <Button Command="{Binding ReleaseClassCommand}"
+                                Content="{x:Static core:Resources.Settings_Control_ClassRelease}"
+                                IsEnabled="{Binding CanReleaseClass}" />
+                        <Button Command="{Binding RefreshClassesCommand}"
+                                Content="{x:Static core:Resources.Settings_Control_ClassRefresh}" />
+                    </StackPanel>
+                </StackPanel>
+            </fa:FASettingsExpander>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

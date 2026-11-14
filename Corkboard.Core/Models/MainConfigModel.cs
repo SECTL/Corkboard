@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Corkboard.Core.Models.SubConfigs.Board;
 using Corkboard.Core.Models.SubConfigs.Cloud;
+using Corkboard.Core.Models.SubConfigs.ControlCenter;
 using Corkboard.Core.Models.SubConfigs.Exam;
 using Corkboard.Core.Models.SubConfigs.Export;
 using Corkboard.Core.Models.SubConfigs.General;
@@ -60,6 +61,16 @@ public partial class MainConfigModel : ConfigBase
     /// <summary>看板模式上的「一言」与「天气」两行字：开关、类别、城市、刷新间隔。</summary>
     [ObservableProperty] private WidgetsSettingsConfig _widgets = new();
 
+    /// <summary>
+    ///     集控（远程控制）客户端：开关、站点地址、设备名、地点 id 与一次性配对码。
+    ///     <para>
+    ///         <b>安全边界：</b>导入 <c>settings.json</c> 不能悄悄打开远程控制（<c>enabled</c> 只由用户亲手打开）；
+    ///         设备凭据（<c>device_id</c> + <c>secret</c>）<b>不在这个文件里</b>——它们在数据根下单独的
+    ///         AES-GCM 加密文件 <c>data/config/security/control-node.json</c>，因此导出/云同步设置都不会带走凭证。
+    ///     </para>
+    /// </summary>
+    [ObservableProperty] private ControlCenterSettingsConfig _controlCenter = new();
+
     [JsonIgnore] public override string ConfigFilePath => Utils.GetFilePath("config", "settings.json");
 
     /// <summary>
@@ -86,6 +97,8 @@ public partial class MainConfigModel : ConfigBase
         Ntp.Normalize();
         Display.Normalize();
         Widgets.Normalize();
+        ControlCenter ??= new ControlCenterSettingsConfig();
+        ControlCenter.Normalize();
     }
 
     [JsonIgnore]

@@ -3969,4 +3969,76 @@
   <data name="Exam_Layout_Sample_Subject_English" xml:space="preserve">
     <value>英语</value>
   </data>
+  <data name="Settings_Control_Title" xml:space="preserve"><value>集控</value></data>
+  <data name="Settings_Control_Enabled" xml:space="preserve"><value>启用集控</value></data>
+  <data name="Settings_Control_EnabledDescription" xml:space="preserve"><value>打开后连到集控中心，接收老师下发的公告</value></data>
+  <data name="Settings_Control_Status" xml:space="preserve"><value>连接状态</value></data>
+  <data name="Settings_Control_Status_Disabled" xml:space="preserve"><value>已关闭</value></data>
+  <data name="Settings_Control_Status_Unpaired" xml:space="preserve"><value>未接入</value></data>
+  <data name="Settings_Control_Status_Connecting" xml:space="preserve"><value>连接中</value></data>
+  <data name="Settings_Control_Status_Online" xml:space="preserve"><value>在线</value></data>
+  <data name="Settings_Control_Status_Superseded" xml:space="preserve"><value>已被接管</value></data>
+  <data name="Settings_Control_Status_Revoked" xml:space="preserve"><value>接入已失效</value></data>
+  <data name="Settings_Control_Status_Stopped" xml:space="preserve"><value>已停止</value></data>
+  <data name="Settings_Control_Status_Unknown" xml:space="preserve"><value>未知</value></data>
+  <data name="Settings_Control_Detail_Disabled" xml:space="preserve"><value>集控没有打开</value></data>
+  <data name="Settings_Control_Detail_Unpaired" xml:space="preserve"><value>填入地点 ID 与配对码就能接入</value></data>
+  <data name="Settings_Control_Detail_Connecting" xml:space="preserve"><value>正在建立连接，断线会自动重连</value></data>
+  <data name="Settings_Control_Detail_Online" xml:space="preserve"><value>已连上集控中心，等老师下发</value></data>
+  <data name="Settings_Control_Detail_Retrying" xml:space="preserve"><value>连接断了，正在自动重连</value></data>
+  <data name="Settings_Control_Detail_Superseded" xml:space="preserve"><value>这个班已被另一台设备接管</value></data>
+  <data name="Settings_Control_Detail_Revoked" xml:space="preserve"><value>这台设备已被网页移除，需要重新接入</value></data>
+  <data name="Settings_Control_Detail_ProtocolTooOld" xml:space="preserve"><value>客户端版本太旧，升级后才能接入</value></data>
+  <data name="Settings_Control_Detail_Stopped" xml:space="preserve"><value>集控已手动停止</value></data>
+  <data name="Settings_Control_DeviceSection" xml:space="preserve"><value>设备与连接</value></data>
+  <data name="Settings_Control_DisplayName" xml:space="preserve"><value>设备名</value></data>
+  <data name="Settings_Control_DisplayNameDescription" xml:space="preserve"><value>控制台上看到的名字，默认用电脑名</value></data>
+  <data name="Settings_Control_ServerUrl" xml:space="preserve"><value>集控站点</value></data>
+  <data name="Settings_Control_ServerUrlDescription" xml:space="preserve"><value>默认是 sectl.cn，换私有部署时才需要改</value></data>
+  <data name="Settings_Control_DeviceId" xml:space="preserve"><value>设备 ID</value></data>
+  <data name="Settings_Control_SiteName" xml:space="preserve"><value>地点</value></data>
+  <data name="Settings_Control_OpenConsole" xml:space="preserve"><value>打开网页控制台</value></data>
+  <data name="Settings_Control_EnrollSection" xml:space="preserve"><value>接入集控</value></data>
+  <data name="Settings_Control_SiteId" xml:space="preserve"><value>地点 ID</value></data>
+  <data name="Settings_Control_SiteIdDescription" xml:space="preserve"><value>网页上显示的地点编号，形如 SC-6M34RQ</value></data>
+  <data name="Settings_Control_PairCode" xml:space="preserve"><value>配对码</value></data>
+  <data name="Settings_Control_PairCodeDescription" xml:space="preserve"><value>网页生成的一次性 8 位配对码</value></data>
+  <data name="Settings_Control_PasteHint" xml:space="preserve"><value>也可以把网页上那一整句直接粘进地点 ID 框</value></data>
+  <data name="Settings_Control_Enroll" xml:space="preserve"><value>接入</value></data>
+  <data name="Settings_Control_Enrolling" xml:space="preserve"><value>正在接入…</value></data>
+  <data name="Settings_Control_Forget" xml:space="preserve"><value>取消接入</value></data>
+  <data name="Settings_Control_ForgetConfirm" xml:space="preserve"><value>取消接入会清掉本机凭证，需要重新配对才能连上</value></data>
+  <data name="Settings_Control_Enroll_Success" xml:space="preserve"><value>已接入集控</value></data>
+  <data name="Settings_Control_Enroll_Failed" xml:space="preserve"><value>接入失败：{0}</value></data>
+  <data name="Settings_Control_ClassSection" xml:space="preserve"><value>班级占用</value></data>
+  <data name="Settings_Control_ClassDescription" xml:space="preserve"><value>同一个班只能有一台设备占班，换设备会把前一台顶掉</value></data>
+  <data name="Settings_Control_ClassNone" xml:space="preserve"><value>还没有占班</value></data>
+  <data name="Settings_Control_ClassCurrent" xml:space="preserve"><value>当前班级</value></data>
+  <data name="Settings_Control_ClassSelect" xml:space="preserve"><value>占班</value></data>
+  <data name="Settings_Control_ClassRelease" xml:space="preserve"><value>下课</value></data>
+  <data name="Settings_Control_ClassRefresh" xml:space="preserve"><value>刷新班级</value></data>
+  <data name="Settings_Control_Enroll_Error_Network" xml:space="preserve"><value>网络不通，稍后重试</value></data>
+  <data name="Settings_Control_Enroll_Error_InvalidResponse" xml:space="preserve"><value>集控中心返回了无法识别的内容</value></data>
+  <data name="Settings_Control_Enroll_Error_BadRequest" xml:space="preserve"><value>请求填写有误</value></data>
+  <data name="Settings_Control_Enroll_Error_SiteNotFound" xml:space="preserve"><value>地点不存在，请核对地点 ID</value></data>
+  <data name="Settings_Control_Enroll_Error_CodeNotFound" xml:space="preserve"><value>配对码不存在</value></data>
+  <data name="Settings_Control_Enroll_Error_CodeSiteMismatch" xml:space="preserve"><value>配对码不属于这个地点</value></data>
+  <data name="Settings_Control_Enroll_Error_CodeExpired" xml:space="preserve"><value>配对码已过期，请重新生成</value></data>
+  <data name="Settings_Control_Enroll_Error_CodeUsed" xml:space="preserve"><value>配对码已经用过了</value></data>
+  <data name="Settings_Control_Enroll_Error_CodeRevoked" xml:space="preserve"><value>配对码已被撤销</value></data>
+  <data name="Settings_Control_Enroll_Error_PlatformNotAllowed" xml:space="preserve"><value>这个地点不允许接入 Corkboard</value></data>
+  <data name="Settings_Control_Enroll_Error_DeviceConflict" xml:space="preserve"><value>这个地点已有同名设备，请改个设备名</value></data>
+  <data name="Settings_Control_Enroll_Error_TooManyRequests" xml:space="preserve"><value>操作太频繁，稍后再试</value></data>
+  <data name="Settings_Control_Enroll_Error_CodeInvalid" xml:space="preserve"><value>请填完整的地点 ID 与配对码</value></data>
+  <data name="Settings_Control_Enroll_Error_Disabled" xml:space="preserve"><value>集控没有启用</value></data>
+  <data name="Settings_Control_Enroll_Error_Unknown" xml:space="preserve"><value>接入失败，稍后重试</value></data>
+  <data name="Settings_Control_Error_Network" xml:space="preserve"><value>网络不通，稍后重试</value></data>
+  <data name="Settings_Control_Error_InvalidResponse" xml:space="preserve"><value>集控中心返回了无法识别的内容</value></data>
+  <data name="Settings_Control_Error_NotEnrolled" xml:space="preserve"><value>还没有接入集控</value></data>
+  <data name="Settings_Control_Error_Unknown" xml:space="preserve"><value>请求失败，稍后重试</value></data>
+  <data name="Control_Notice_DefaultTitle" xml:space="preserve"><value>公告</value></data>
+  <data name="Control_Notice_FromControl" xml:space="preserve"><value>来自集控中心</value></data>
+  <data name="Control_Notice_Close" xml:space="preserve"><value>知道了</value></data>
+  <data name="Control_Image_Close" xml:space="preserve"><value>关闭</value></data>
+  <data name="Control_Image_LoadFailed" xml:space="preserve"><value>图片加载失败</value></data>
 </root>

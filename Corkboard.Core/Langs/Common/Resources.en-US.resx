@@ -3971,4 +3971,76 @@ Continuing to use it means you understand and accept the above.</value>
   <data name="Exam_Layout_Sample_Subject_English" xml:space="preserve">
     <value>English</value>
   </data>
+  <data name="Settings_Control_Title" xml:space="preserve"><value>Control Center</value></data>
+  <data name="Settings_Control_Enabled" xml:space="preserve"><value>Enable control center</value></data>
+  <data name="Settings_Control_EnabledDescription" xml:space="preserve"><value>Connects to the control center to receive notices from teachers</value></data>
+  <data name="Settings_Control_Status" xml:space="preserve"><value>Connection status</value></data>
+  <data name="Settings_Control_Status_Disabled" xml:space="preserve"><value>Off</value></data>
+  <data name="Settings_Control_Status_Unpaired" xml:space="preserve"><value>Not paired</value></data>
+  <data name="Settings_Control_Status_Connecting" xml:space="preserve"><value>Connecting</value></data>
+  <data name="Settings_Control_Status_Online" xml:space="preserve"><value>Online</value></data>
+  <data name="Settings_Control_Status_Superseded" xml:space="preserve"><value>Taken over</value></data>
+  <data name="Settings_Control_Status_Revoked" xml:space="preserve"><value>Pairing revoked</value></data>
+  <data name="Settings_Control_Status_Stopped" xml:space="preserve"><value>Stopped</value></data>
+  <data name="Settings_Control_Status_Unknown" xml:space="preserve"><value>Unknown</value></data>
+  <data name="Settings_Control_Detail_Disabled" xml:space="preserve"><value>The control center is turned off</value></data>
+  <data name="Settings_Control_Detail_Unpaired" xml:space="preserve"><value>Enter the site ID and pair code to connect</value></data>
+  <data name="Settings_Control_Detail_Connecting" xml:space="preserve"><value>Connecting; drops are retried automatically</value></data>
+  <data name="Settings_Control_Detail_Online" xml:space="preserve"><value>Connected to the control center</value></data>
+  <data name="Settings_Control_Detail_Retrying" xml:space="preserve"><value>The connection dropped; retrying</value></data>
+  <data name="Settings_Control_Detail_Superseded" xml:space="preserve"><value>Another device took over this class</value></data>
+  <data name="Settings_Control_Detail_Revoked" xml:space="preserve"><value>This device was removed on the web; pair it again</value></data>
+  <data name="Settings_Control_Detail_ProtocolTooOld" xml:space="preserve"><value>Client protocol is too old; please upgrade</value></data>
+  <data name="Settings_Control_Detail_Stopped" xml:space="preserve"><value>The control center was stopped</value></data>
+  <data name="Settings_Control_DeviceSection" xml:space="preserve"><value>Device and connection</value></data>
+  <data name="Settings_Control_DisplayName" xml:space="preserve"><value>Device name</value></data>
+  <data name="Settings_Control_DisplayNameDescription" xml:space="preserve"><value>Name shown on the web console; defaults to the PC name</value></data>
+  <data name="Settings_Control_ServerUrl" xml:space="preserve"><value>Control center server</value></data>
+  <data name="Settings_Control_ServerUrlDescription" xml:space="preserve"><value>Defaults to sectl.cn; change it for a private deployment</value></data>
+  <data name="Settings_Control_DeviceId" xml:space="preserve"><value>Device ID</value></data>
+  <data name="Settings_Control_SiteName" xml:space="preserve"><value>Site</value></data>
+  <data name="Settings_Control_OpenConsole" xml:space="preserve"><value>Open web console</value></data>
+  <data name="Settings_Control_EnrollSection" xml:space="preserve"><value>Pair this device</value></data>
+  <data name="Settings_Control_SiteId" xml:space="preserve"><value>Site ID</value></data>
+  <data name="Settings_Control_SiteIdDescription" xml:space="preserve"><value>Site ID from the web console, e.g. SC-6M34RQ</value></data>
+  <data name="Settings_Control_PairCode" xml:space="preserve"><value>Pair code</value></data>
+  <data name="Settings_Control_PairCodeDescription" xml:space="preserve"><value>One-time 8-character code from the web console</value></data>
+  <data name="Settings_Control_PasteHint" xml:space="preserve"><value>You can also paste the whole sentence from the web</value></data>
+  <data name="Settings_Control_Enroll" xml:space="preserve"><value>Pair</value></data>
+  <data name="Settings_Control_Enrolling" xml:space="preserve"><value>Pairing…</value></data>
+  <data name="Settings_Control_Forget" xml:space="preserve"><value>Unpair</value></data>
+  <data name="Settings_Control_ForgetConfirm" xml:space="preserve"><value>Unpairing clears the local credential; you will need to pair again</value></data>
+  <data name="Settings_Control_Enroll_Success" xml:space="preserve"><value>Paired with the control center</value></data>
+  <data name="Settings_Control_Enroll_Failed" xml:space="preserve"><value>Pairing failed: {0}</value></data>
+  <data name="Settings_Control_ClassSection" xml:space="preserve"><value>Class occupancy</value></data>
+  <data name="Settings_Control_ClassDescription" xml:space="preserve"><value>Only one device can occupy a class; another device will take it over</value></data>
+  <data name="Settings_Control_ClassNone" xml:space="preserve"><value>No class occupied</value></data>
+  <data name="Settings_Control_ClassCurrent" xml:space="preserve"><value>Current class</value></data>
+  <data name="Settings_Control_ClassSelect" xml:space="preserve"><value>Occupy</value></data>
+  <data name="Settings_Control_ClassRelease" xml:space="preserve"><value>Release</value></data>
+  <data name="Settings_Control_ClassRefresh" xml:space="preserve"><value>Refresh classes</value></data>
+  <data name="Settings_Control_Enroll_Error_Network" xml:space="preserve"><value>Network unreachable; try again later</value></data>
+  <data name="Settings_Control_Enroll_Error_InvalidResponse" xml:space="preserve"><value>The control center returned an unexpected response</value></data>
+  <data name="Settings_Control_Enroll_Error_BadRequest" xml:space="preserve"><value>The request is malformed</value></data>
+  <data name="Settings_Control_Enroll_Error_SiteNotFound" xml:space="preserve"><value>Site not found; check the site ID</value></data>
+  <data name="Settings_Control_Enroll_Error_CodeNotFound" xml:space="preserve"><value>Pair code not found</value></data>
+  <data name="Settings_Control_Enroll_Error_CodeSiteMismatch" xml:space="preserve"><value>The pair code belongs to a different site</value></data>
+  <data name="Settings_Control_Enroll_Error_CodeExpired" xml:space="preserve"><value>The pair code expired; generate a new one</value></data>
+  <data name="Settings_Control_Enroll_Error_CodeUsed" xml:space="preserve"><value>The pair code has already been used</value></data>
+  <data name="Settings_Control_Enroll_Error_CodeRevoked" xml:space="preserve"><value>The pair code was revoked</value></data>
+  <data name="Settings_Control_Enroll_Error_PlatformNotAllowed" xml:space="preserve"><value>This site does not allow Corkboard</value></data>
+  <data name="Settings_Control_Enroll_Error_DeviceConflict" xml:space="preserve"><value>A device with this name exists; choose another name</value></data>
+  <data name="Settings_Control_Enroll_Error_TooManyRequests" xml:space="preserve"><value>Too many requests; try again later</value></data>
+  <data name="Settings_Control_Enroll_Error_CodeInvalid" xml:space="preserve"><value>Enter both the site ID and the pair code</value></data>
+  <data name="Settings_Control_Enroll_Error_Disabled" xml:space="preserve"><value>The control center is not enabled</value></data>
+  <data name="Settings_Control_Enroll_Error_Unknown" xml:space="preserve"><value>Pairing failed; try again later</value></data>
+  <data name="Settings_Control_Error_Network" xml:space="preserve"><value>Network unreachable; try again later</value></data>
+  <data name="Settings_Control_Error_InvalidResponse" xml:space="preserve"><value>The control center returned an unexpected response</value></data>
+  <data name="Settings_Control_Error_NotEnrolled" xml:space="preserve"><value>Not paired yet</value></data>
+  <data name="Settings_Control_Error_Unknown" xml:space="preserve"><value>Request failed; try again later</value></data>
+  <data name="Control_Notice_DefaultTitle" xml:space="preserve"><value>Notice</value></data>
+  <data name="Control_Notice_FromControl" xml:space="preserve"><value>From the control center</value></data>
+  <data name="Control_Notice_Close" xml:space="preserve"><value>Got it</value></data>
+  <data name="Control_Image_Close" xml:space="preserve"><value>Close</value></data>
+  <data name="Control_Image_LoadFailed" xml:space="preserve"><value>Failed to load the image</value></data>
 </root>

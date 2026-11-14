@@ -1,4 +1,4 @@
-﻿# Corkboard/ 子树约定
+# Corkboard/ 子树约定
 
 根目录 `AGENTS.md` 里的跨层规矩（技术栈、结构、域归类、设置怎么加、本地化、命令）在本子树同样成立，这里只补本子树自己的约定。
 
@@ -331,3 +331,42 @@
 - **托盘跟着那个键重建**：`TaskBarIconService.CreateMenuItems(bool boardEnabled)` 在关掉时不列
   「显示主窗口」；菜单是启动时拍下的快照，所以 `RefreshMenu()` 要在开关变化与 `Reloaded` 时重设
   `trayIcon.Menu` 并收掉已经弹出的左键菜单。左键自绘菜单每次弹都现算（`CurrentMenuItems`）。
+
+## 集控（SECTL 控制中心的客户端）
+
+协议事实源是 `SECTL-auth/docs/control-center-protocol-v4.md`（v4.1），**不要照 SecRandom-C 的 v1 文档写**。
+Corkboard 平台在服务端只有 **3 条命令**：`refreshNotice` / `pushImage` / `reloadConfig`；
+**没有 `broadcast`**（声明了会被服务端判未知能力，`test-options.mjs` 有断言）。
+
+- **分层**：协议、会话、传输、接入、凭证、幂等台账、配置模型全在 `Corkboard.Core/Control/`
+  （命名空间 `Corkboard.Core.ControlCenter`）；App 层只有 `Corkboard/Services/ControlCenter/`
+  （托管服务 + 浮窗调度）与 `Corkboard/Views/ControlCenter/`（两扇独立顶层窗口）。
+  **不要**在 App 层重写协议帧或重连逻辑。
+- **只有一个长连接**：`ControlCenterHostedService`（`BackgroundService`，单例 + `AddHostedService`）
+  持有唯一的 `ControlNodeClient`；设置页、指令处理器都只经由它。它负责
+  ①`refreshNotice`（title≤60 / body≤2000）、`pushImage`（url 必填、`duration_seconds` 默认 10）、
+  `reloadConfig`（回 `{reloaded:true}` 后 **延迟 ~200ms** 再 `configHandler.Reload()`，不要在回执前重建连接）
+  ②配置变化（`Config.ControlCenter.PropertyChanged` 与 `MainConfigHandler.Reloaded`，按
+  Enabled/ServerUrl/DisplayName 指纹）重建客户端，400ms 防抖；③接入/取消接入/占班/下课/取班级树。
+- **命令处理器在后台线程跑**，弹窗只能在 UI 线程：一律经 `ControlCenterPresenter`
+  （`Dispatcher.UIThread` 调度、异常只记日志）。同一时刻只留一扇公告窗、一扇图片窗，新的替换旧的。
+  推图窗口是**全屏置顶浮层**（黑底 `Stretch=Uniform`、按时长自动关、点任意处/Esc 关），
+  **不要**把图写进便签或改板子数据。
+- **设置页**是顶层项 `settings.control`（`Views|ViewModels/SettingsPages/Control/`，
+  `[PageInfo("settings.control", FluentIcons.LinkFilled)]`，不带 `groupId`）。
+  ⚠️ **视图命名空间必须叫 `Corkboard.Views.SettingsPages.ControlCenter`**：叫 `...SettingsPages.Control`
+  会生成子命名空间、把既有 SettingsPages 文件里的 `Avalonia.Controls.Control` 遮蔽掉（21 处 CS0118）。
+  文件路径仍在 `Views/SettingsPages/Control/`。
+  输入一律「草稿 + 失焦/离页 `CommitAll()`」，别双向绑 `TextBox.Text` 到配置。
+- **凭证不进 `settings.json`**：`device_id` + `secret` 在 `NodeEnrollmentStore`（AES-GCM，
+  `data/config/security/control-node.json`），导出/云同步设置都不会带走；`enabled` 只由用户亲手打开。
+  地点 ID 用 `SC-XXXXXX`、配对码 8 位一次性的，接入支持把网页上整句粘进地点 ID 框。
+- **状态能力（不走命令表）**：`class.select` / `class.release` 由会话直接发 `req` 帧；
+  同 `(班级, 平台)` 只允许一台设备，被顶掉会收 `evt evicted`（`superseded` 可重连，
+  `replaced` / `revoked` 不重连）。`desired_state` 的 `revision` 必须落盘并在下次 hello 回报，
+  corkboard 忽略 `draw_locked` 但 revision 照常。
+- **心跳是服务端 WS ping/pong**，会话另有 `req ping` 探活（连续 2 次失败主动重连）——
+  **不要**再自己编一套应用层心跳间隔。
+- 界面语言只有中英：文案在 `Corkboard.Core/Langs/Common/Resources.resx` 的 `Settings_Control_*` /
+  `Control_Notice_*` / `Control_Image_*`（三处键必须成对加：resx、en-US、手写 Designer）。
+  设置文案不加句号；用户可见处说「作业板」不说「主窗口」。
