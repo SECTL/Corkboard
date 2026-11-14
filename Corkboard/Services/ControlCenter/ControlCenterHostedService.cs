@@ -2,6 +2,8 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Resources;
 using System.Text.Json.Nodes;
+using Avalonia.Threading;
+using Corkboard.Core.Board;
 using Corkboard.Core.ControlCenter;
 using Corkboard.Core.Langs.Common;
 using Corkboard.Core.Models.SubConfigs.ControlCenter;
@@ -16,7 +18,7 @@ namespace Corkboard.Services.ControlCenter;
 ///     集控（SECTL control center）的应用层运行时服务。
 ///     <para>
 ///         Core 的 <see cref="ControlNodeClient" /> 只负责协议、连接与凭证；<b>用户可见的副作用</b>
-///         （接入 / 配对的 toast、重载配置）都在这里通过 <see cref="ControlNodeClient.RegisterHandler" />
+///         （接入 / 配对的 toast、重载配置、回传作业快照）都在这里通过 <see cref="ControlNodeClient.RegisterHandler" />
 ///         挂上去。这样 Core 不依赖 Avalonia，也不会在处理指令时直接碰界面。
 ///     </para>
 ///     <para>
@@ -38,8 +40,12 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
     /// <summary>唯一注册的命令：重载配置（不弹任何界面）。</summary>
     private const string CommandReloadConfig = "reloadConfig";
 
+    /// <summary>只读查询：把作业板上的作业压成快照回给网页控制台（老师「查看作业」）。</summary>
+    private const string CommandHomeworkRead = "homework.read";
+
     private readonly MainConfigHandler _configHandler;
     private readonly IControlNodeCredentialProvider _credentials;
+    private readonly IBoardService _boardService;
     private readonly IToastService _toastService;
     private readonly ILogger<ControlCenterHostedService> _logger;
 
@@ -72,11 +78,13 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
     public ControlCenterHostedService(
         MainConfigHandler configHandler,
         IControlNodeCredentialProvider credentials,
+        IBoardService boardService,
         IToastService toastService,
         ILogger<ControlCenterHostedService> logger)
     {
         _configHandler = configHandler;
         _credentials = credentials;
+        _boardService = boardService;
         _toastService = toastService;
         _logger = logger;
 
@@ -287,7 +295,7 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
         GC.SuppressFinalize(this);
     }
 
-    /// <summary>构造客户端并挂上命令处理器（只有重载配置一条）与状态订阅。</summary>
+    /// <summary>构造客户端并挂上命令处理器（重载配置 / 读取作业）与状态订阅。</summary>
     private ControlNodeClient CreateClient()
     {
         var client = new ControlNodeClient(
@@ -296,6 +304,7 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
             credentials: _credentials);
 
         client.RegisterHandler(CommandReloadConfig, HandleReloadConfigAsync);
+        client.RegisterHandler(CommandHomeworkRead, HandleHomeworkReadAsync);
         client.StateChanged += OnClientStateChanged;
         return client;
     }
@@ -474,6 +483,31 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
         });
 
         return Task.FromResult<object?>(new { reloaded = true });
+    }
+
+    /// <summary>
+    ///     <c>homework.read</c>：把当前作业板上的作业压成一份只读快照，作为回执数据回给网页控制台。
+    ///     <para>
+    ///         作业集合会随用户编辑在 UI 线程上变动，而处理器跑在后台线程——所以整份拷贝
+    ///         （<c>ToList</c>）必须在 UI 线程做完再交给纯逻辑的
+    ///         <see cref="ControlHomeworkSnapshot.Build" />，否则可能拿到半改的集合。
+    ///     </para>
+    ///     <para>
+    ///         这条命令只是「看」：不写作业、不改配置、不弹界面，所以也算不上需要注意的操作。
+    ///     </para>
+    /// </summary>
+    private async Task<object?> HandleHomeworkReadAsync(JsonObject args, CancellationToken cancellationToken)
+    {
+        var now = DateTimeOffset.Now;
+
+        return await Dispatcher.UIThread
+            .InvokeAsync<object?>(() => ControlHomeworkSnapshot.Build(
+                _boardService.Notes.ToList(),
+                _boardService.Subjects.ToList(),
+                _boardService.SubjectOrder.ToList(),
+                now))
+            .GetTask()
+            .ConfigureAwait(false);
     }
 
     // ------------------------------------------------------------------

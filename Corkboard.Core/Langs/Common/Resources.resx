@@ -4017,6 +4017,8 @@
   <data name="Settings_Control_ClassSelect" xml:space="preserve"><value>占班</value></data>
   <data name="Settings_Control_ClassRelease" xml:space="preserve"><value>下课</value></data>
   <data name="Settings_Control_ClassRefresh" xml:space="preserve"><value>刷新班级</value></data>
+  <data name="Settings_Control_SectionConnection" xml:space="preserve"><value>连接</value></data>
+  <data name="Settings_Control_SectionAdvanced" xml:space="preserve"><value>高级</value></data>
   <data name="Settings_Control_Enroll_Error_Network" xml:space="preserve"><value>网络不通，稍后重试</value></data>
   <data name="Settings_Control_Enroll_Error_InvalidResponse" xml:space="preserve"><value>集控中心返回了无法识别的内容</value></data>
   <data name="Settings_Control_Enroll_Error_BadRequest" xml:space="preserve"><value>请求填写有误</value></data>

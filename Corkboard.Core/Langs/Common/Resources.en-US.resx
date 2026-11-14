@@ -4019,6 +4019,8 @@ Continuing to use it means you understand and accept the above.</value>
   <data name="Settings_Control_ClassSelect" xml:space="preserve"><value>Occupy</value></data>
   <data name="Settings_Control_ClassRelease" xml:space="preserve"><value>Release</value></data>
   <data name="Settings_Control_ClassRefresh" xml:space="preserve"><value>Refresh classes</value></data>
+  <data name="Settings_Control_SectionConnection" xml:space="preserve"><value>Connection</value></data>
+  <data name="Settings_Control_SectionAdvanced" xml:space="preserve"><value>Advanced</value></data>
   <data name="Settings_Control_Enroll_Error_Network" xml:space="preserve"><value>Network unreachable; try again later</value></data>
   <data name="Settings_Control_Enroll_Error_InvalidResponse" xml:space="preserve"><value>The control center returned an unexpected response</value></data>
   <data name="Settings_Control_Enroll_Error_BadRequest" xml:space="preserve"><value>The request is malformed</value></data>

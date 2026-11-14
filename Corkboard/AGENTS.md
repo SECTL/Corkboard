@@ -335,7 +335,8 @@
 ## 集控（SECTL 控制中心的客户端）
 
 协议事实源是 `SECTL-auth/docs/control-center-protocol-v4.md`（v4.1），**不要照 SecRandom-C 的 v1 文档写**。
-服务端给 Corkboard 平台留了 3 条命令，但**本项目只注册 `reloadConfig` 一条**：
+服务端给 Corkboard 平台的命令表里有 4 条（`refreshNotice` / `pushImage` / `reloadConfig` / `homework.read`），
+**本项目只注册 2 条**：`reloadConfig`（重载配置）与 `homework.read`（只读回传作业快照）。
 `refreshNotice` / `pushImage` 是「公告卡 / 推图浮层」那类推送功能，**产品上明确不要**，
 处理器不注册、客户端能力也不声明，网页控制台对这台设备下发时会被服务端以 `capability_unsupported` 挡回。
 **没有 `broadcast`**（声明了会被服务端判未知能力，`test-options.mjs` 有断言）。
