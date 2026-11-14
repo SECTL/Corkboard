@@ -11,13 +11,16 @@
         CanResize="False"
         ShowInTaskbar="False"
         ShowActivated="False"
-        Topmost="True"
+        Topmost="False"
         Width="56" Height="56"
         Background="Transparent">
     <!--
-        作业板「收起」之后留在屏幕上的那颗小按钮。窗口就是按钮本身那么大、无边框、透明、置顶，
+        作业板「收起」之后留在屏幕上的那颗小按钮。窗口就是按钮本身那么大、无边框、透明、**不置顶**，
         不进任务栏、出现时不抢焦点（ShowActivated=False）——它只是桌面上的一颗开关，
         不该像普通窗口那样把焦点从用户正在用的程序手里抢走。
+        不置顶是用户明确要求的：老师上课时这颗按钮曾被误碰，而且它压在课件/课件窗口之上。
+        所以它和普通窗口同层，需要时会被其它窗口盖住；主窗口置底到桌面时，它也跟着进桌面层
+        （见 FloatingWindowLayer）。
 
         位置与大小由 BoardDockService 按「设置 → 作业板 → 收纳」算：窗口刚好包住按钮，
         Width/Height 与 CornerRadius 都在 SetButtonDiameter 里跟着按钮大小一起改，

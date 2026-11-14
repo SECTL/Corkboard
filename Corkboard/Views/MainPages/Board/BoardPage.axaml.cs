@@ -166,6 +166,20 @@ public partial class BoardPage : UserControl
     }
 
     /// <summary>
+    ///     这块板子是不是嵌在全屏看板窗口里。全屏看板有自己的编辑开关，
+    ///     宿主态下不再受主窗口锁定态（调整窗口态）影响。
+    /// </summary>
+    public bool IsHostedHost
+    {
+        get => ViewModel?.IsHosted ?? false;
+        set
+        {
+            if (ViewModel is { } viewModel)
+                viewModel.IsHosted = value;
+        }
+    }
+
+    /// <summary>
     ///     宿主只显示「今天要交的」（全屏看板模式的展示策略）。同样只影响这一块板子。
     /// </summary>
     public bool ShowDueTodayOnlyHost

@@ -143,7 +143,20 @@ public partial class BoardPageViewModel : ViewModelBase
     ///     宿主把这块板子设成只读（全屏看板模式关掉「允许编辑作业」）。
     ///     <para>值记在每个列表项上（<see cref="BoardNoteCardItem.CanModify" />），所以变化时要重建列表。</para>
     /// </summary>
-    public bool CanModifyNotes => !IsReadOnly && !_replay.IsActive && Config.Basic.WindowFixed;
+    public bool CanModifyNotes =>
+        !IsReadOnly && !_replay.IsActive && (Config.Basic.WindowFixed || IsHosted);
+
+    /// <summary>
+    ///     这块板子是不是被全屏看板窗口当着宿主（主窗口那块是 <see langword="false" />）。
+    ///     <para>
+    ///         全屏看板有自己的「允许编辑作业」开关，不该被主窗口的锁定态连带禁掉：老师平时解锁
+    ///         主窗口调整位置时，切到全屏看板仍然要能改 / 删作业。所以宿主态下
+    ///         <see cref="CanModifyNotes" /> 不再要求 <see cref="BasicSettingsConfig.WindowFixed" />。
+    ///     </para>
+    /// </summary>
+    [ObservableProperty] private bool _isHosted;
+
+    partial void OnIsHostedChanged(bool value) => RebuildNotes();
 
     /// <summary>
     ///     宿主强制只读（默认关）。全屏展示窗口里嵌的那块板子会按设置打开它，

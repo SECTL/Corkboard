@@ -25,13 +25,13 @@
   所以按钮上**不要**再写 `Content` 字形或 `FontFamily`。
 - **顶部「收纳」**：只有设置界面标题栏里有 `PaneToggleButtonStyle` 按钮，
   点一下切换 `NavigationView.IsPaneOpen`，折叠 / 展开设置导航栏。
-- **主界面标题栏右上角承载主页面动作**：「设置」「看板模式」「布置作业」「更多」与那颗锁都在这里（「排序」「导出」「时空回放」「收纳」收在「更多」的 `MenuFlyout` 里）。
+- **主界面标题栏右上角承载主页面动作**：「设置」「看板模式」「收纳」「布置作业」「更多」与那颗锁都在这里（「排序」「导出」「时空回放」收在「更多」的 `MenuFlyout` 里）。「收纳」必须单独露在标题栏——用户反馈「放任务栏里太隐蔽」，老师上课要能一眼找到收起板子的入口，不能再藏进「更多」。
   「设置」是主窗口里唯一的设置入口（`App.ShowSettingsWindow()`，另一个入口在托盘菜单），
   必须在「布置作业」左边、标 `ElementRole="User"`。
   ⚠️ **「看板模式」是紧挨「设置」的那颗按钮**（图标 `FluentIcons.FullScreenMaximizeFilled`，`ToolTip` 走
   `Menu_OpenDisplayBoard`，点击 `MainView.OpenDisplayModeButton_OnClick` → `App.ShowDisplayBoardWindow()`）：
   它是全屏看板模式的**日常入口**、**默认显示**，配置开关是 `BoardSettingsConfig.ShowTitleBarDisplay`
-  （JSON 键 `show_title_bar_display`，默认 `true`），在「设置 → 作业板 → 常规 → 顶部按钮」卡里逐颗关；
+  （JSON 键 `show_title_bar_display`，默认 `true`），在「设置 → 作业板 → 常规 → 界面入口」卡里逐颗关；
   不要把它藏进「更多」菜单，也不要在设置页里另加一颗「打开全屏」——看板模式设置页原先那张「立即使用」卡
   已按用户要求删掉。
   作业板页面上只剩列表与一句回放提示；**「导出」在「更多」菜单里**（`MainView` 里那颗 `SaveFilled` 项），
@@ -52,7 +52,8 @@
   「更多」里的「排序」与「时空回放」（`MainViewModel.ShowTitleBarAssign` / `ShowTitleBarSort` /
   `ShowTitleBarReplay` 都叠 `&& Config.Basic.WindowFixed`）、右下角布置作业浮标
   （`ShowCornerAssignButton` 同样叠）、作业条上的编辑/删除按钮
-  （`BoardPageViewModel.CanModifyNotes` = `!IsReadOnly && !_replay.IsActive && Config.Basic.WindowFixed`）。
+  （`BoardPageViewModel.CanModifyNotes` = `!IsReadOnly && !_replay.IsActive && (Config.Basic.WindowFixed || IsHosted)`；
+  `IsHosted` 由全屏看板宿主 `DisplayBoardWindow.SyncBoardHostState` 置真，看板里的编辑/布置不受主窗解锁影响）。
   **设置、导出、收纳与那颗锁照旧可用**——导出只读不写（`CanExportImage` 只剩 `HasNotes`），
   而且遮罩排在 `fa:FAFrame x:Name="NavigationFrame"` 之后、`Grid.RowSpan="2"` 盖的是内容区，
   自绘标题栏不在遮罩里，所以解锁时照样拖得动窗口、也点得到那颗锁。
@@ -77,13 +78,13 @@
   ⚠️ **别再往这颗锁上加花样**：点击穿透、`window_lock_mode`（锁点下去做什么）、长按整窗拖动都已整体下架，
   想加回任何一档都先跟用户确认；老配置里那几个键反序列化时静默忽略，没有迁移代码，**也别为兼容加回来**。
 - **主窗口置底时，主窗口之外那几颗浮钮也一起沉到桌面层**（`Corkboard/Services/Desktop/FloatingWindowLayer.cs`）：
-  收纳展开按钮（`BoardDockService` 管的 `BoardDockWindow`）本来浮在所有窗口之上，
-  板子沉到桌面后它再压在别人头上就很突兀
-  （用户反馈过）。置底生效时 `FloatingWindowLayer.Apply(window, true)` **先退 `Topmost`、再走
+  收纳展开按钮（`BoardDockService` 管的 `BoardDockWindow`）**默认不置顶**（`Topmost="False"`，
+  用户明确要求：老师上课点到它会误触，被别的窗口盖住才是预期）。板子沉到桌面后它跟着一起沉：
+  置底生效时 `FloatingWindowLayer.Apply(window, true)` **先退 `Topmost`、再走
   `WindowFeatures.DesktopBottom` 把窗口 `SetParent` 到 `Progman`/`WorkerW`**（与主窗口同一个桌面宿主、
   同一个层级）；置底没生效时先摘挂载恢复成顶层窗口，再还原成 `FloatingWindowLayer.Register(window)`
-  记下的**该窗口自己的默认值**——浮钮的 XAML 默认值并不统一（它本来就没写 `Topmost`），
-  **不能拿「置顶」当统一兜底**；所以窗口一创建就 `Register` 一次。
+  记下的**该窗口自己的默认值**——浮钮的 XAML 默认值就是 `false`，**不能拿「置顶」当统一兜底**；
+  所以窗口一创建就 `Register` 一次。
   ⚠️ **只退 `Topmost` 是不够的**（曾经这么做过，用户当场指出来「它不是置顶，是不能置底」）：
   那样窗口只是从「置顶」变回「普通顶层窗口」，仍然浮在桌面层之上，看起来还是「板子沉下去了、按钮没沉」。
   真置底必须改父窗口。

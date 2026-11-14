@@ -109,6 +109,10 @@ public class RichTextBlock : RichEditor
         // 控件完全自绘、自己不裁剪（实测高度不够时会把整篇画到边界之外），所以必须由它自己剪掉。
         ClipToBounds = true;
 
+        // 便签不是 A4 纸：显式固定成连续排版，别让主题 / 模板把它切到分页宽度。
+        // 分页模式下库按纸张宽度排版，卡片换到窄栏时内容会被裁掉，看上去就像「换栏之后字号变了」。
+        PageSize = RichEditorPageSize.Continuous;
+
         // 库的改动通知有两条，缺一不可：
         //   * 用户打字 / 改格式 → 只把内部 _textChangedPending 置真，等下一次**重绘**才异步发 TextChanged
         //     （RichEditor.cs 的 RaisePendingChangeEvents 是从 Render 里调的），同时把 IsModified 置真；
@@ -163,6 +167,11 @@ public class RichTextBlock : RichEditor
             // 这个属性名字骗人：它只决定段落行高，**不改字形大小**（离屏抓像素实测），字形大小只能靠
             // 上面注入的 font-size。这里同步过去只是让行距跟着默认字号走，免得大字号的行挤在一起。
             DefaultFontSize = RichTextHtmlStyling.ToPoints(fontSize);
+
+            // 控件自身的字号也显式写死：卡片宽度会随列数变化（窗口变宽时从一栏变两栏），
+            // 字号必须只认设置里的值，不能从模板 / 祖先继承到另一个默认字号。库本身不按宽度缩放，
+            // 这一句是给「换栏时换了模板实例、继承链变了」兜底，避免同一份内容在不同栏里观感不同。
+            SetValue(Avalonia.Controls.Documents.TextElement.FontSizeProperty, fontSize);
             ApplyAppFontFamily();
 
             // 光标也是库写死的黑色（反编译里 CaretBrush 默认 Brushes.Black），暗色主题下根本看不见：

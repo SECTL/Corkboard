@@ -109,11 +109,11 @@ public partial class MainViewModel : ViewModelBase
     public bool ShowTitleBarDock => Config.BoardSettings.ShowTitleBarDock && Config.BoardSettings.DockEnabled;
 
     /// <summary>
-    ///     标题栏那颗「更多」画不画：排序 / 导出 / 时空回放 / 收纳四件事全收在它的菜单里，
-    ///     四个都关掉就没什么可点的了，整颗一起收掉（免得弹出一个空菜单）。
+    ///     标题栏那颗「更多」画不画：排序 / 导出 / 时空回放三件事全收在它的菜单里，
+    ///     三个都关掉就没什么可点的了，整颗一起收掉（免得弹出一个空菜单）。
     /// </summary>
     public bool ShowTitleBarMore =>
-        ShowTitleBarSort || ShowTitleBarExport || ShowTitleBarReplay || ShowTitleBarDock;
+        ShowTitleBarSort || ShowTitleBarExport || ShowTitleBarReplay;
 
     /// <summary>
     ///     标题栏那颗「锁定」开关现在是不是拨在「锁上」。

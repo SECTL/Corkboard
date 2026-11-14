@@ -338,7 +338,7 @@ public partial class BoardDockService : ObservableObject, IDisposable
         window.ExpandRequested += OnDockExpandRequested;
         window.Closed += OnDockWindowClosed;
 
-        // 记下这颗窗口自己的默认层级（XAML 里写的是置顶），置底关掉时按它还原。
+        // 记下这颗窗口自己的默认层级（XAML 里刻意写了不置顶），置底关掉时按它还原。
         FloatingWindowLayer.Register(window);
 
         _dockWindow = window;
@@ -376,11 +376,11 @@ public partial class BoardDockService : ObservableObject, IDisposable
     }
 
     /// <summary>
-    ///     按主窗口是否置底，决定收纳浮钮是「置顶」还是「跟板子一样当普通窗口」。
+    ///     按主窗口是否置底，把收纳浮钮放进桌面层或从桌面层拿出来。
     ///     <para>
-    ///         用户反馈：开了置底之后，板子已经沉到桌面了，这颗展开按钮却还浮在所有窗口之上。
-    ///         所以置底生效时它跟着退掉置顶（被普通窗口盖住），与板子待在同一个层级；
-    ///         置底没生效时照旧置顶，板子被别的窗口盖住时也仍然点得到。
+    ///         用户反馈过两件事：开了置底之后，板子已经沉到桌面了，这颗展开按钮却还浮在所有窗口之上；
+    ///         后来又说这颗按钮平时也不该置顶（老师上课会误碰）。所以它在 XAML 里本来就不置顶，
+    ///         这里只负责跟板子同步层级：置底生效时挂进桌面层，置底没生效时它就是普通窗口。
     ///     </para>
     ///     <para>
     ///         ⚠️ 独立窗口不会自己跟着主窗口变层级：主窗口重放置底、浮钮显示之后都要调一次

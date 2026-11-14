@@ -193,6 +193,11 @@
 - **弹层要画在全屏窗口里**：`PageOverlayService` 是多宿主（`PageOverlayHost` + `CreateHost/RegisterHost/ReleaseHost`，
   `ShellHostPriority = 0`、`FullScreenHostPriority = 10`，优先级大的赢）。全屏里点「编辑作业」如果还画在主窗口上，
   用户眼前（全屏）什么都不发生。
+  ⚠️ **宿主转发必须同时认 `IsOpen` 与 `Content`**：`PageOverlayHost.Apply` 是先写 `IsOpen`、再写 `Content`，
+  只订阅 `IsOpen` 会在内容还没到时就刷新一次（遮罩亮起、`OverlayContentHost.Content` 仍是 null），
+  随后的 `Content` 通知被过滤掉——表现就是全屏里点「编辑 / 布置」只出现遮罩、表单永远不显示，用户只能退出看板。
+  `DisplayBoardWindow.OnOverlayHostChanged` 因此同时处理 `nameof(PageOverlayHost.IsOpen)` 与
+  `nameof(PageOverlayHost.Content)`，两个属性各自刷新 `OverlayScrim.IsVisible` / `OverlayContentHost.Content`。
 - **自动保存的渲染器也改成了多槽**（`BoardAutoSaveService.RegisterRenderer(owner, renderer)`）：全屏窗口里嵌的第二块
   `BoardPage` 会跟主窗口那块抢同一个单槽，Unloaded 时还会把主窗口那份抹成 `null`。取**最早注册**的那一份。
 - **内嵌的那块 `BoardPage` 靠宿主属性改行为**（`BoardPage` 上的三个 `*Host` 属性转发到 VM，**别在 VM 里读全局配置**，

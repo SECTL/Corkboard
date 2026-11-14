@@ -795,15 +795,14 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
         RefreshMoreMenu();
     }
 
-    /// <summary>「更多」菜单里四项的类名。认类名不认下标：菜单以后增删项不用回来改数字。</summary>
+    /// <summary>「更多」菜单里三项的类名。认类名不认下标：菜单以后增删项不用回来改数字。</summary>
     private const string MoreSortClass = "more-sort";
 
     private const string MoreExportClass = "more-export";
     private const string MoreReplayClass = "more-replay";
-    private const string MoreDockClass = "more-dock";
 
     /// <summary>
-    ///     按当前配置把「更多」菜单调成该有的样子：四项各自显隐、排序子菜单的标题写着当前档、
+    ///     按当前配置把「更多」菜单调成该有的样子：三项各自显隐、排序子菜单的标题写着当前档、
     ///     子菜单里勾上当前那一项（配置里是越界值时就一个都不勾）。
     /// </summary>
     private void RefreshMoreMenu()
@@ -829,8 +828,6 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
                 item.IsVisible = ViewModel.ShowTitleBarExport;
             else if (item.Classes.Contains(MoreReplayClass))
                 item.IsVisible = ViewModel.ShowTitleBarReplay;
-            else if (item.Classes.Contains(MoreDockClass))
-                item.IsVisible = ViewModel.ShowTitleBarDock;
         }
     }
 

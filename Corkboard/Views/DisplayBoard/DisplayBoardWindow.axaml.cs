@@ -189,6 +189,7 @@ public partial class DisplayBoardWindow : Window
             return;
 
         var settings = handler.Data.Display;
+        board.IsHostedHost = true;
         board.IsReadOnlyHost = !settings.Editable;
         board.ShowDueTodayOnlyHost = settings.BoardScope == DisplayBoardScope.DueToday;
         board.EmptyHintOverrideHost = Core.Langs.Common.Resources.Display_EmptyBoard;
@@ -244,7 +245,12 @@ public partial class DisplayBoardWindow : Window
 
     private void OnOverlayHostChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is not (null or nameof(PageOverlayHost.IsOpen)))
+        // Apply 是先写 IsOpen、再写 Content 的：只认 IsOpen 会在 Content 还是 null 时刷一次，
+        // 之后 Content 的通知又被过滤掉——全屏里就只剩遮罩、表单永远不出现（用户反馈的「布置/修改
+        // 作业得退出看板」）。两个属性都要接。
+        if (e.PropertyName is not (null
+            or nameof(PageOverlayHost.IsOpen)
+            or nameof(PageOverlayHost.Content)))
             return;
 
         OverlayScrim.IsVisible = _overlayHost.IsOpen;

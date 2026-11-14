@@ -128,11 +128,13 @@
                     </StackPanel>
 
                     <!--
-                        右上角只有五样：设置 / 看板模式 / 布置作业（唯一的实心强调色）/ 更多 / 锁定开关。
-                        排序、导出、时空回放、收纳都收进了「更多」菜单——它们是「偶尔点一次」的动作，
-                        平铺在一排里既挤又容易误点。进入回放后中间换成控制条。
+                        右上角只有六样：设置 / 看板模式 / 收纳 / 布置作业（唯一的实心强调色）/ 更多 / 锁定开关。
+                        排序、导出、时空回放收进了「更多」菜单——它们是「偶尔点一次」的动作，
+                        平铺在一排里既挤又容易误点。收纳单独留在外面：老师上课要能一眼找到，
+                        收起来这一步不该藏进两层菜单（用户反馈过「放任务栏里太隐蔽」）。
+                        进入回放后中间换成控制条。
                         整排始终在：解锁态下「布置作业」与「更多」里那几件动板子的事各自收起
-                        （见 MainViewModel 那几个 ShowTitleBar*），设置、看板模式与锁仍然可点。
+                        （见 MainViewModel 那几个 ShowTitleBar*），设置、看板模式、收纳与锁仍然可点。
                     -->
                     <StackPanel Grid.Column="2"
                                 Classes="titlebar-actions"
@@ -170,6 +172,22 @@
                         </Button>
 
                         <!--
+                            收纳：把作业板收起来，屏幕上只留一颗展开按钮。放在标题栏里而不是「更多」菜单：
+                            老师上课要收板子时得一眼看得到，不能先点开「更多」再找。
+                            默认显示，可以在「设置 → 作业板 → 界面入口」里关掉；
+                            「启用收纳」关着时整颗也不显示（ShowTitleBarDock）。
+                        -->
+                        <Button Classes="titlebar-icon"
+                                IsVisible="{Binding ViewModel.ShowTitleBarDock}"
+                                ToolTip.Tip="{x:Static core:Resources.Board_Dock_Collapse}"
+                                WindowDecorationProperties.ElementRole="User"
+                                Click="DockButton_OnClick">
+                            <TextBlock Text="{x:Static icons:FluentIcons.ArrowMinimizeFilled}"
+                                       FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                       VerticalAlignment="Center" />
+                        </Button>
+
+                        <!--
                             主操作：整排里唯一的实心强调色。图标 + 文字，与右下角那颗浮标同一个入口，
                             点下去开布置作业表单。
                         -->
@@ -189,10 +207,10 @@
                         </Button>
 
                         <!--
-                            更多：排序 / 导出 / 时空回放 / 收纳四件事都收进这个菜单。
+                            更多：排序 / 导出 / 时空回放三件事收进这个菜单。
                             它们都是「偶尔点一次」的动作，平铺在标题栏里既挤又容易误点，
-                            收进菜单之后标题栏只剩设置、布置作业、更多与锁定四样。
-                            四个开关全关掉时整颗按钮也不显示（ShowTitleBarMore）。
+                            收进菜单之后标题栏只剩设置、看板模式、收纳、布置作业、更多与锁定。
+                            三个开关全关掉时整颗按钮也不显示（ShowTitleBarMore）。
 
                             菜单项不在这个可视树里（画在弹出层），所以既不绑 IsVisible 也不绑 IsChecked、
                             不绑 Command：显隐与勾选都在弹出那一刻由代码按配置写，
@@ -247,17 +265,12 @@
                                     <MenuItem Classes="more-export"
                                               Header="{x:Static core:Resources.Export_DialogTitle}"
                                               Click="ExportImageButton_OnClick" />
-                                    <!--
-                                        回放入口：第一次点只是「就绪」，再点一次才真的进去，超时自动退回
-                                        （见 BoardReplayService.Enter）。一条作业都没有时这一项不显示。
+                                    <!-- 回放入口：第一次点只是「就绪」，再点一次才真的进去，超时自动退回
+                                         （见 BoardReplayService.Enter）。一条作业都没有时这一项不显示。
                                     -->
                                     <MenuItem Classes="more-replay"
                                               Header="{x:Static core:Resources.Board_Replay}"
                                               Click="ReplayEnterButton_OnClick" />
-                                    <!-- 收纳：把作业板收起来，屏幕上只留一颗展开按钮。 -->
-                                    <MenuItem Classes="more-dock"
-                                              Header="{x:Static core:Resources.Board_Dock_Collapse}"
-                                              Click="DockButton_OnClick" />
                                 </MenuFlyout>
                             </Button.Flyout>
                         </Button>
