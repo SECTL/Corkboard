@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
   <resheader name="resmimetype">
     <value>text/microsoft-resx</value>
@@ -1912,9 +1912,6 @@
   <data name="Menu_OpenExamBoard" xml:space="preserve">
     <value>考试看板</value>
   </data>
-  <data name="Menu_OpenAction" xml:space="preserve">
-    <value>行动窗口</value>
-  </data>
   <data name="Common_Minutes" xml:space="preserve">
     <value>分钟</value>
   </data>
@@ -3696,40 +3693,280 @@
   <data name="Menu_ExamPresent" xml:space="preserve">
     <value>立即放映</value>
   </data>
-  <data name="Settings_Duty_Group" xml:space="preserve">
-    <value>值日表</value>
+  <data name="Settings_Exam_Theme_Title" xml:space="preserve">
+    <value>看板主题</value>
   </data>
-  <data name="Settings_Duty_Members_Title" xml:space="preserve">
-    <value>名单与导入</value>
+  <data name="Settings_Exam_Theme_Source_Title" xml:space="preserve">
+    <value>主题来源</value>
   </data>
-  <data name="Settings_Duty_Groups_Title" xml:space="preserve">
-    <value>小组与职务</value>
+  <data name="Settings_Exam_Theme_Source_Description" xml:space="preserve">
+    <value>选择看板配色从哪来</value>
   </data>
-  <data name="Settings_Duty_Schedule_Title" xml:space="preserve">
-    <value>排班规则</value>
+  <data name="Settings_Exam_Theme_Source_FollowApp" xml:space="preserve">
+    <value>跟随应用外观</value>
   </data>
-  <data name="Settings_Duty_Members_Description" xml:space="preserve">
-    <value>值日候选人名单，支持导入</value>
+  <data name="Settings_Exam_Theme_Source_FollowAppDescription" xml:space="preserve">
+    <value>和设置里的浅色深色一起变</value>
   </data>
-  <data name="Settings_Duty_Groups_Description" xml:space="preserve">
-    <value>分成几个小组，每组定好任务</value>
+  <data name="Settings_Exam_Theme_Source_Custom" xml:space="preserve">
+    <value>自定义</value>
   </data>
-  <data name="Settings_Duty_Schedule_Description" xml:space="preserve">
-    <value>周起始日、轮换顺序与节假日规则</value>
+  <data name="Settings_Exam_Theme_Source_CustomDescription" xml:space="preserve">
+    <value>在底色上逐项改颜色</value>
   </data>
-  <data name="Settings_Duty_Placeholder" xml:space="preserve">
-    <value>这一页还没做完，先把入口占住</value>
+  <data name="Settings_Exam_Theme_CustomBase" xml:space="preserve">
+    <value>自定义基于</value>
   </data>
-  <data name="Duty_Roster_Title" xml:space="preserve">
-    <value>值日表</value>
+  <data name="Settings_Exam_Theme_CustomBase_Description" xml:space="preserve">
+    <value>自定义时先选一套底色</value>
   </data>
-  <data name="Duty_Roster_Description" xml:space="preserve">
-    <value>按周或按月查看谁值日</value>
+  <data name="Settings_Exam_Theme_CustomBase_FollowApp" xml:space="preserve">
+    <value>跟随应用外观</value>
   </data>
-  <data name="Duty_Roster_Placeholder" xml:space="preserve">
-    <value>周视图与月视图还在做，先占个位</value>
+  <data name="Settings_Exam_Theme_ResetTheme_Hint" xml:space="preserve">
+    <value>回到跟随应用外观，自定义颜色不再生效</value>
   </data>
-  <data name="Menu_DutyRoster" xml:space="preserve">
-    <value>值日表</value>
+  <data name="Settings_Exam_Theme_ResetTheme" xml:space="preserve">
+    <value>恢复默认主题</value>
+  </data>
+  <data name="Settings_Exam_Theme_ResetColors_Hint" xml:space="preserve">
+    <value>清掉所有自定义颜色，来源不变</value>
+  </data>
+  <data name="Settings_Exam_Theme_ResetColors" xml:space="preserve">
+    <value>恢复所有颜色</value>
+  </data>
+  <data name="Settings_Exam_Theme_Colors_Title" xml:space="preserve">
+    <value>看板配色</value>
+  </data>
+  <data name="Settings_Exam_Theme_Group_Text" xml:space="preserve">
+    <value>底色与文字</value>
+  </data>
+  <data name="Settings_Exam_Theme_Group_Status" xml:space="preserve">
+    <value>考试状态</value>
+  </data>
+  <data name="Settings_Exam_Theme_Group_Highlight" xml:space="preserve">
+    <value>强调色</value>
+  </data>
+  <data name="Settings_Exam_Theme_Group_Exit" xml:space="preserve">
+    <value>长按退出</value>
+  </data>
+  <data name="Settings_Exam_Theme_TokenReset" xml:space="preserve">
+    <value>重置这一项</value>
+  </data>
+  <data name="Settings_Exam_Theme_PickColor" xml:space="preserve">
+    <value>调整颜色</value>
+  </data>
+  <data name="Settings_Exam_Theme_Token_Surface" xml:space="preserve">
+    <value>看板底色</value>
+  </data>
+  <data name="Settings_Exam_Theme_Token_TextPrimary" xml:space="preserve">
+    <value>主要文字</value>
+  </data>
+  <data name="Settings_Exam_Theme_Token_TextSecondary" xml:space="preserve">
+    <value>次要文字</value>
+  </data>
+  <data name="Settings_Exam_Theme_Token_TextTertiary" xml:space="preserve">
+    <value>辅助文字</value>
+  </data>
+  <data name="Settings_Exam_Theme_Token_Subtitle" xml:space="preserve">
+    <value>看板副标题</value>
+  </data>
+  <data name="Settings_Exam_Theme_Token_Divider" xml:space="preserve">
+    <value>分隔线</value>
+  </data>
+  <data name="Settings_Exam_Theme_Token_Upcoming" xml:space="preserve">
+    <value>即将开始</value>
+  </data>
+  <data name="Settings_Exam_Theme_Token_InProgress" xml:space="preserve">
+    <value>进行中</value>
+  </data>
+  <data name="Settings_Exam_Theme_Token_Urgent" xml:space="preserve">
+    <value>紧急</value>
+  </data>
+  <data name="Settings_Exam_Theme_Token_Highlight" xml:space="preserve">
+    <value>强调色</value>
+  </data>
+  <data name="Settings_Exam_Theme_Token_ExitTrack" xml:space="preserve">
+    <value>退出进度条</value>
+  </data>
+  <data name="Settings_Exam_Theme_Token_ExitRingStart" xml:space="preserve">
+    <value>退出圆环起始</value>
+  </data>
+  <data name="Settings_Exam_Theme_Token_ExitRingEnd" xml:space="preserve">
+    <value>退出圆环末尾</value>
+  </data>
+  <data name="Settings_Exam_Theme_Preset_Midnight" xml:space="preserve">
+    <value>午夜自习</value>
+  </data>
+  <data name="Settings_Exam_Theme_Preset_MidnightDescription" xml:space="preserve">
+    <value>深蓝底冷色字，夜里不刺眼</value>
+  </data>
+  <data name="Settings_Exam_Theme_Preset_Paper" xml:space="preserve">
+    <value>纸张</value>
+  </data>
+  <data name="Settings_Exam_Theme_Preset_PaperDescription" xml:space="preserve">
+    <value>米白纸面配深色字，像打印的表</value>
+  </data>
+  <data name="Settings_Exam_Theme_Preset_Chalkboard" xml:space="preserve">
+    <value>黑板</value>
+  </data>
+  <data name="Settings_Exam_Theme_Preset_ChalkboardDescription" xml:space="preserve">
+    <value>墨绿板面配粉笔白字</value>
+  </data>
+  <data name="Settings_Exam_Theme_Preset_Focus" xml:space="preserve">
+    <value>专注</value>
+  </data>
+  <data name="Settings_Exam_Theme_Preset_FocusDescription" xml:space="preserve">
+    <value>低饱和灰底，只突出考试信息</value>
+  </data>
+  <data name="Settings_Exam_Theme_Preset_Contrast" xml:space="preserve">
+    <value>高对比</value>
+  </data>
+  <data name="Settings_Exam_Theme_Preset_ContrastDescription" xml:space="preserve">
+    <value>纯黑底配亮字，远处也看得清</value>
+  </data>
+  <data name="Settings_Exam_Layout_Title" xml:space="preserve">
+    <value>看板布局</value>
+  </data>
+  <data name="Settings_Exam_Layout_Intro_Title" xml:space="preserve">
+    <value>组件布局</value>
+  </data>
+  <data name="Settings_Exam_Layout_Intro_Description" xml:space="preserve">
+    <value>按考试状态分别摆放标题、时钟、考试信息和表格，改的是放映时的样子</value>
+  </data>
+  <data name="Settings_Exam_Layout_States_Title" xml:space="preserve">
+    <value>各状态布局</value>
+  </data>
+  <data name="Settings_Exam_Layout_States_Description" xml:space="preserve">
+    <value>每档状态单独保存，没改过的沿用默认版式</value>
+  </data>
+  <data name="Settings_Exam_Layout_Status_NotStarted" xml:space="preserve">
+    <value>未开始</value>
+  </data>
+  <data name="Settings_Exam_Layout_Status_Upcoming" xml:space="preserve">
+    <value>即将开始</value>
+  </data>
+  <data name="Settings_Exam_Layout_Status_InProgress" xml:space="preserve">
+    <value>进行中</value>
+  </data>
+  <data name="Settings_Exam_Layout_Status_Finished" xml:space="preserve">
+    <value>已结束</value>
+  </data>
+  <data name="Settings_Exam_Layout_State_Default" xml:space="preserve">
+    <value>默认布局</value>
+  </data>
+  <data name="Settings_Exam_Layout_State_Customized" xml:space="preserve">
+    <value>已自定义</value>
+  </data>
+  <data name="Settings_Exam_Layout_Edit" xml:space="preserve">
+    <value>编辑</value>
+  </data>
+  <data name="Settings_Exam_Layout_ResetState" xml:space="preserve">
+    <value>恢复默认</value>
+  </data>
+  <data name="Settings_Exam_Layout_Hint" xml:space="preserve">
+    <value>编辑时用示例考试和假时钟预览，点完成后才写回配置；显示哪些内容仍由「看板显示」控制</value>
+  </data>
+  <data name="Settings_Exam_Layout_Properties" xml:space="preserve">
+    <value>组件属性</value>
+  </data>
+  <data name="Settings_Exam_Layout_Field_X" xml:space="preserve">
+    <value>横坐标</value>
+  </data>
+  <data name="Settings_Exam_Layout_Field_Y" xml:space="preserve">
+    <value>纵坐标</value>
+  </data>
+  <data name="Settings_Exam_Layout_Field_Width" xml:space="preserve">
+    <value>宽度</value>
+  </data>
+  <data name="Settings_Exam_Layout_Field_Height" xml:space="preserve">
+    <value>高度</value>
+  </data>
+  <data name="Settings_Exam_Layout_Field_Alignment" xml:space="preserve">
+    <value>内容对齐</value>
+  </data>
+  <data name="Settings_Exam_Layout_Field_Scale" xml:space="preserve">
+    <value>缩放</value>
+  </data>
+  <data name="Settings_Exam_Layout_Field_Opacity" xml:space="preserve">
+    <value>不透明度</value>
+  </data>
+  <data name="Settings_Exam_Layout_EditorHint" xml:space="preserve">
+    <value>用右侧数值改位置和大小；颜色统一由「看板主题」控制</value>
+  </data>
+  <data name="Settings_Exam_Layout_Fonts" xml:space="preserve">
+    <value>字号</value>
+  </data>
+  <data name="Settings_Exam_Layout_FontsHint" xml:space="preserve">
+    <value>与「看板字号」页共用同一份配置，拖动松手后保存</value>
+  </data>
+  <data name="Settings_Exam_Layout_DragPanel" xml:space="preserve">
+    <value>拖动面板</value>
+  </data>
+  <data name="Settings_Exam_Layout_Reset" xml:space="preserve">
+    <value>恢复此状态</value>
+  </data>
+  <data name="Settings_Exam_Layout_Cancel" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="Settings_Exam_Layout_Done" xml:space="preserve">
+    <value>完成</value>
+  </data>
+  <data name="Settings_Exam_Layout_Component_Title" xml:space="preserve">
+    <value>标题与副标题</value>
+  </data>
+  <data name="Settings_Exam_Layout_Component_Clock" xml:space="preserve">
+    <value>时钟与日期</value>
+  </data>
+  <data name="Settings_Exam_Layout_Component_ExamInfo" xml:space="preserve">
+    <value>考试信息</value>
+  </data>
+  <data name="Settings_Exam_Layout_Component_ExamTable" xml:space="preserve">
+    <value>考试表格</value>
+  </data>
+  <data name="Settings_Exam_Layout_Component_ExitCorner" xml:space="preserve">
+    <value>退出区</value>
+  </data>
+  <data name="Settings_Exam_Layout_Alignment_TopLeft" xml:space="preserve">
+    <value>左上</value>
+  </data>
+  <data name="Settings_Exam_Layout_Alignment_Top" xml:space="preserve">
+    <value>上</value>
+  </data>
+  <data name="Settings_Exam_Layout_Alignment_TopRight" xml:space="preserve">
+    <value>右上</value>
+  </data>
+  <data name="Settings_Exam_Layout_Alignment_Left" xml:space="preserve">
+    <value>左</value>
+  </data>
+  <data name="Settings_Exam_Layout_Alignment_MiddleCenter" xml:space="preserve">
+    <value>居中</value>
+  </data>
+  <data name="Settings_Exam_Layout_Alignment_Right" xml:space="preserve">
+    <value>右</value>
+  </data>
+  <data name="Settings_Exam_Layout_Alignment_BottomLeft" xml:space="preserve">
+    <value>左下</value>
+  </data>
+  <data name="Settings_Exam_Layout_Alignment_Bottom" xml:space="preserve">
+    <value>下</value>
+  </data>
+  <data name="Settings_Exam_Layout_Alignment_BottomRight" xml:space="preserve">
+    <value>右下</value>
+  </data>
+  <data name="Exam_Layout_Sample_Title" xml:space="preserve">
+    <value>期末考试</value>
+  </data>
+  <data name="Exam_Layout_Sample_Subtitle" xml:space="preserve">
+    <value>示例看板 · 2026 年 6 月</value>
+  </data>
+  <data name="Exam_Layout_Sample_Subject_Chinese" xml:space="preserve">
+    <value>语文</value>
+  </data>
+  <data name="Exam_Layout_Sample_Subject_Math" xml:space="preserve">
+    <value>数学</value>
+  </data>
+  <data name="Exam_Layout_Sample_Subject_English" xml:space="preserve">
+    <value>英语</value>
   </data>
 </root>

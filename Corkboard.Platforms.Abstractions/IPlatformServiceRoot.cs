@@ -25,9 +25,4 @@ public interface IPlatformServiceRoot
     ///     设置页据此整张卡隐藏（不留一个点不动的开关）。
     /// </summary>
     IUrlSchemeRegistrar UrlSchemes { get; }
-
-    /// <summary>
-    ///     相机扫码；不支持的平台返回空实现，界面据此整块隐藏。
-    /// </summary>
-    ICameraScanner Camera { get; }
 }

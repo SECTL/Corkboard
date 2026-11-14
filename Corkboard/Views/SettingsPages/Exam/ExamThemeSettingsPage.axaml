@@ -1,0 +1,190 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:fa="using:FluentAvalonia.UI.Controls"
+             xmlns:vm="using:Corkboard.ViewModels.SettingsPages.Exam"
+             xmlns:core="using:Corkboard.Core.Langs.Common"
+             xmlns:icons="using:Corkboard.Core.Icons"
+             mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="900"
+             x:Class="Corkboard.Views.SettingsPages.Exam.ExamThemeSettingsPage"
+             x:DataType="vm:ExamThemeSettingsPageViewModel">
+    <!--
+        看板主题设置页：考试看板的 13 个语义颜色从哪来、以及自定义时逐项改色。
+
+        版式照其它考试设置页那套设置卡：标题一行、来源/自定义底各一张卡、
+        13 项颜色按用途分成四张卡（卡里一行一项，行右侧是色块 + 色值 + 拾色 + 重置），
+        最后两张卡是「恢复默认主题」与「恢复所有颜色」。
+        拾色面板是**页内展开**的：点调色按钮把 Avalonia 的 ColorView（带 alpha）铺在那一行下面，
+        不用 ColorPicker、也不塞 Flyout —— Flyout 里的 DataContext 不继承，颜色会静默写不回配置。
+    -->
+    <ScrollViewer>
+        <StackPanel Classes="page-container">
+            <!-- 页标题：设置壳不画，只有这一行、不加粗、不挂副标题。 -->
+            <TextBlock Margin="0 4 0 0"
+                       FontWeight="Normal"
+                       Text="{x:Static core:Resources.Settings_Exam_Theme_Title}"
+                       Theme="{StaticResource TitleTextBlockStyle}" />
+
+            <!--
+                「主题来源」：7 个单选（跟随应用外观 / 5 套预设 / 自定义）。
+                选预设会立刻把 Source=Preset + PresetId 写进配置，看板窗口马上跟着换色。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Exam_Theme_Source_Title}"
+                                   Description="{x:Static core:Resources.Settings_Exam_Theme_Source_Description}"
+                                   ItemsSource="{Binding SourceOptions}"
+                                   IsExpanded="True">
+                <fa:FASettingsExpander.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ExamThemeSourceOption">
+                        <fa:FASettingsExpanderItem Content="{Binding DisplayName}"
+                                                   Description="{Binding Description}">
+                            <fa:FASettingsExpanderItem.Footer>
+                                <RadioButton GroupName="ExamThemeSource"
+                                             IsChecked="{Binding IsSelected, Mode=TwoWay}" />
+                            </fa:FASettingsExpanderItem.Footer>
+                        </fa:FASettingsExpanderItem>
+                    </DataTemplate>
+                </fa:FASettingsExpander.ItemTemplate>
+            </fa:FASettingsExpander>
+
+            <!--
+                「自定义基于」：自定义时其余颜色从哪套底来。只在自定义来源下生效，
+                但它一直可改 —— 用户先在这里选底、再去下面改一两项，是最顺的路。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Exam_Theme_CustomBase}"
+                                   Description="{x:Static core:Resources.Settings_Exam_Theme_CustomBase_Description}"
+                                   IsExpanded="True">
+                <fa:FASettingsExpander.Footer>
+                    <ComboBox MinWidth="180"
+                              ItemsSource="{Binding CustomBaseOptions}"
+                              SelectedItem="{Binding SelectedCustomBaseOption, Mode=TwoWay}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ExamThemeBaseOption">
+                                <TextBlock Text="{Binding DisplayName}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <TextBlock Classes="section-title"
+                       Text="{x:Static core:Resources.Settings_Exam_Theme_Colors_Title}" />
+
+            <!--
+                13 项颜色：按用途分成四组，每组一张卡、卡里一行一项。
+                ⚠️ 一行一项要交给 FASettingsExpander **自己的** ItemsSource（与字号页同一条规矩），
+                外面不要套 ItemsControl 再包 FASettingsExpanderItem，那样卡片给行准备的底色不生效。
+                行右侧的拾色面板是同一行 Footer 里展开的一块 Border（IsVisible 跟着 IsPickerOpen），
+                所以打开时这一行会长高，列表整体向下推开，不会盖住别的行。
+            -->
+            <ItemsControl ItemsSource="{Binding TokenGroups}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ExamThemeTokenGroup">
+                        <fa:FASettingsExpander Header="{Binding Title}"
+                                               ItemsSource="{Binding Rows}">
+                            <fa:FASettingsExpander.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ExamThemeTokenRow">
+                                    <fa:FASettingsExpanderItem Content="{Binding Name}"
+                                                               Description="{Binding HexText}">
+                                        <fa:FASettingsExpanderItem.Footer>
+                                            <StackPanel Spacing="8" HorizontalAlignment="Right">
+                                                <StackPanel Orientation="Horizontal" Spacing="8"
+                                                            VerticalAlignment="Center">
+                                                    <!-- 色块：当前草稿色的即时预览。 -->
+                                                    <Border Width="36" Height="24"
+                                                            CornerRadius="4"
+                                                            BorderThickness="1"
+                                                            Background="{Binding SwatchBrush}"
+                                                            BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}" />
+
+                                                    <!-- 展开 / 收起拾色面板。 -->
+                                                    <Button Padding="8,4"
+                                                            Command="{Binding TogglePickerCommand}"
+                                                            ToolTip.Tip="{x:Static core:Resources.Settings_Exam_Theme_PickColor}">
+                                                        <TextBlock FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                                                   Text="{x:Static icons:FluentIcons.ColorFilled}" />
+                                                    </Button>
+
+                                                    <!-- 行重置：只在有覆盖时可用（清掉这一项，其它项不动）。 -->
+                                                    <Button Padding="8,4"
+                                                            Command="{Binding ResetColorCommand}"
+                                                            IsEnabled="{Binding HasOverride}"
+                                                            ToolTip.Tip="{x:Static core:Resources.Settings_Exam_Theme_TokenReset}">
+                                                        <TextBlock FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                                                   Text="{x:Static icons:FluentIcons.ArrowCounterclockwiseFilled}" />
+                                                    </Button>
+                                                </StackPanel>
+
+                                                <!-- 页内拾色面板：带 alpha；配色值支持 #RRGGBBAA。 -->
+                                                <Border IsVisible="{Binding IsPickerOpen}"
+                                                        Background="{DynamicResource SolidBackgroundFillColorSecondaryBrush}"
+                                                        BorderBrush="{DynamicResource CardStrokeColorDefaultBrush}"
+                                                        BorderThickness="1"
+                                                        CornerRadius="6"
+                                                        Padding="8">
+                                                    <ColorView Width="340"
+                                                               IsAlphaEnabled="True"
+                                                               Color="{Binding DraftColor, Mode=TwoWay}" />
+                                                </Border>
+                                            </StackPanel>
+                                        </fa:FASettingsExpanderItem.Footer>
+                                    </fa:FASettingsExpanderItem>
+                                </DataTemplate>
+                            </fa:FASettingsExpander.ItemTemplate>
+                        </fa:FASettingsExpander>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!--
+                「恢复默认主题」：来源 / 自定义底 / 预设都回到默认（不主动清覆盖色）。
+                与字号页的「恢复默认字号」同一套做法：不套可展开卡，就一句话 + 一颗按钮。
+            -->
+            <Border Classes="card" Margin="0 8 0 0">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                    <TextBlock Grid.Column="0"
+                               VerticalAlignment="Center"
+                               TextWrapping="Wrap"
+                               Text="{x:Static core:Resources.Settings_Exam_Theme_ResetTheme_Hint}"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    <Button Grid.Column="1"
+                            VerticalAlignment="Center"
+                            Command="{Binding ResetThemeCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock VerticalAlignment="Center"
+                                       FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                       Text="{x:Static icons:FluentIcons.ArrowCounterclockwiseFilled}" />
+                            <TextBlock VerticalAlignment="Center"
+                                       Text="{x:Static core:Resources.Settings_Exam_Theme_ResetTheme}" />
+                        </StackPanel>
+                    </Button>
+                </Grid>
+            </Border>
+
+            <!--
+                「恢复所有颜色」：只清 13 项覆盖，来源与自定义底保持不动 ——
+                用户可能只是想丢掉试出来的颜色、继续玩这套来源。
+            -->
+            <Border Classes="card">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                    <TextBlock Grid.Column="0"
+                               VerticalAlignment="Center"
+                               TextWrapping="Wrap"
+                               Text="{x:Static core:Resources.Settings_Exam_Theme_ResetColors_Hint}"
+                               Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                    <Button Grid.Column="1"
+                            VerticalAlignment="Center"
+                            Command="{Binding ResetAllColorsCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock VerticalAlignment="Center"
+                                       FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                                       Text="{x:Static icons:FluentIcons.ArrowCounterclockwiseFilled}" />
+                            <TextBlock VerticalAlignment="Center"
+                                       Text="{x:Static core:Resources.Settings_Exam_Theme_ResetColors}" />
+                        </StackPanel>
+                    </Button>
+                </Grid>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -9,10 +9,6 @@
 
     <ItemGroup>
         <PackageReference Include="Avalonia" Version="$(AvaloniaVersion)" />
-
-        <!-- 相机扫码抓帧。runtime.win 只带 win-x64 原生库；IsSupported 在 x86 / arm64 上会报假。 -->
-        <PackageReference Include="OpenCvSharp4" Version="4.13.0.20260627" />
-        <PackageReference Include="OpenCvSharp4.runtime.win" Version="4.13.0.20260302" />
     </ItemGroup>
 
 </Project>

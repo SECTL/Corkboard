@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:fa="using:FluentAvalonia.UI.Controls"
              xmlns:controls="using:Corkboard.Core.Controls"
+             xmlns:toast="using:Corkboard.Views.Controls"
              xmlns:icons="using:Corkboard.Core.Icons"
              xmlns:lang="using:Corkboard.Langs.SettingsView"
              xmlns:views="using:Corkboard.Views"
@@ -113,5 +114,15 @@
                             CacheSize="0" />
             </controls:DrawerHost>
         </fa:FANavigationView>
+
+        <!--
+            右下角轻提示：铺满整扇窗、但不拦鼠标（控件自己 IsHitTestVisible=False）。
+            必须排在导航与抽屉之后，否则会被页码内容或抽屉盖住。
+        -->
+        <toast:ToastHost Grid.Row="0"
+                         Grid.RowSpan="2"
+                         x:Name="ToastHost"
+                         HorizontalAlignment="Stretch"
+                         VerticalAlignment="Stretch" />
     </Grid>
 </ContentPage>

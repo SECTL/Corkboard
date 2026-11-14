@@ -19,7 +19,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Corkboard.Core;
 using Corkboard.Core.Abstraction;
-using Corkboard.Core.Actions;
 using Corkboard.Core.Attributes;
 using Corkboard.Core.Board;
 using Corkboard.Core.Controls;
@@ -42,7 +41,6 @@ using Corkboard.Core.Time;
 using Corkboard.Platforms;
 using Corkboard.Platforms.Abstractions;
 using Corkboard.Services;
-using Corkboard.Services.Actions;
 using Corkboard.Services.Widgets;
 using Corkboard.Services.Auth;
 using Corkboard.Services.Cloud;
@@ -67,11 +65,8 @@ using Corkboard.ViewModels.SettingsPages.Board;
 using Corkboard.ViewModels.SettingsPages.Exam;
 using Corkboard.ViewModels.SettingsPages.Export;
 using Corkboard.ViewModels.SettingsPages.Display;
-using Corkboard.ViewModels.SettingsPages.Duty;
 using Corkboard.ViewModels.DisplayBoard;
 using Corkboard.Views;
-using Corkboard.Views.Actions;
-using Corkboard.Views.Duty;
 using Corkboard.Views.ExamBoard;
 using Corkboard.Views.MainPages.Board;
 using Corkboard.Views.MainPages.Homework;
@@ -84,7 +79,6 @@ using Corkboard.Views.SettingsPages.Export;
 using Corkboard.Views.SettingsPages.General;
 using Corkboard.Views.SettingsPages.Personalized;
 using Corkboard.Views.SettingsPages.Display;
-using Corkboard.Views.SettingsPages.Duty;
 using Corkboard.Views.SettingsPages.Update;
 using Corkboard.Views.DisplayBoard;
 using CR = Corkboard.Core.Langs.Common.Resources;
@@ -106,12 +100,10 @@ public partial class App : Application
     private static ExamBoardWindow? _examBoardWindow;
     private static DisplayBoardWindow? _displayBoardWindow;
     private static ExamBoardEditorWindow? _examBoardEditorWindow;
+    private static ExamBoardLayoutEditorWindow? _examBoardLayoutEditorWindow;
     private static ExamBoardPanelWindow? _examBoardPanelWindow;
     private static Window? _duplicatePromptHost;
-    private static ActionWindow? _actionWindow;
     private static ExamPlanWizardWindow? _examPlanWizardWindow;
-    private static DutyRosterWindow? _dutyRosterWindow;
-    private static DutyHolidayWindow? _dutyHolidayWindow;
     private static IClassicDesktopStyleApplicationLifetime? _desktopLifetime;
     private static Task? _hostStartupTask;
 
@@ -359,9 +351,6 @@ public partial class App : Application
 
         // 平台原生服务：窗口能力契约由平台模块注册，视图只依赖 Platforms.Abstractions。
         services.AddPlatformServices(platform);
-        // 相机扫码：实现在平台工程（Windows 走 OpenCV，其余平台是 Unsupported）。
-        // 注册成单例，抽屉打开时 Start/Stop，同一时刻只有一路相机。
-        services.AddSingleton(platform.Camera);
 
         // Core 运行时（配置、日志、领域服务）。
         services.AddCoreRuntimeServices();
@@ -371,13 +360,6 @@ public partial class App : Application
         SectlAuthEndpoints.ProductVersion = GlobalConstants.Version;
         services.AddHttpClient();
 
-        // 名单云传输：SecRandom Sync 匿名中继（与上游 SecRandom 同一个服务）。
-        // 一次性 PUT，30 分钟后过期；类型化客户端让 VM 只声明构造参数。
-        services.AddHttpClient<Corkboard.Core.DutyRoster.Transfer.DutySyncTransferClient>(client =>
-        {
-            client.BaseAddress = new Uri(Corkboard.Core.DutyRoster.Transfer.DutySyncTransferClient.PublicUrl + "/");
-            client.Timeout = TimeSpan.FromSeconds(30);
-        });
         services.AddSingleton<SectlTokenStore>();
         services.AddSingleton<IDeviceIdProvider, SectlDeviceIdProvider>();
         services.AddSingleton<IAuthRedirectBrokerFactory, LoopbackAuthRedirectBrokerFactory>();
@@ -425,6 +407,11 @@ public partial class App : Application
         // 页面级弹层宿主：页面把表单塞进来，壳在窗口内容最上层画出来（遮罩才能盖住标题栏）。
         services.AddSingleton<PageOverlayService>();
 
+        // 右下角轻提示：只服务「已保存 / 已添加 / 已删除」这类一闪而过的反馈。
+        // 宿主是设置壳里的 ToastHost（SettingsView 构造时取这个单例并 Attach）。
+        services.AddSingleton<ToastService>();
+        services.AddSingleton<IToastService>(provider => provider.GetRequiredService<ToastService>());
+
         // 时空回放：入口在主界面标题栏，作业列表在主页面，两边靠这个单例共享状态。
         services.AddSingleton<BoardReplayService>();
 
@@ -433,6 +420,10 @@ public partial class App : Application
 
         // 考试文件的导入导出：一场考试存成 .cbexam，或者从这种文件读回来（格式在 Core 的 ExamEntryFile）。
         services.AddSingleton<ExamFileService>();
+
+        // 考试看板的主题：解析 13 个语义色、持有刷子实例，并在配置/应用亮暗变化时通知窗口刷新。
+        services.AddSingleton<ExamBoardThemeService>();
+        services.AddSingleton<ExamBoardLayoutService>();
 
         // 收纳：把主窗口收成屏幕角落的一颗展开按钮，位置与大小来自「设置 → 作业板 → 收纳」。
         services.AddSingleton<BoardDockService>();
@@ -462,9 +453,6 @@ public partial class App : Application
         // 只关「自动打开的那一次」，用户自己点开的不受 auto_hide 管；判定规则在 Core 的 DisplaySchedulePolicy。
         services.AddHostedService<DisplayAutoShowHostedService>();
 
-        // 行动窗口：规则存储、板子目标、日程投影、执行器与 15 秒调度器都在这一处装配。
-        services.AddActionServices();
-
         // ViewModel 与页面。AddMainPage/AddSettingsPage 同时写导航注册表和键控 DI，两者必须成对。
         services.AddTransient<MainViewModel>();
         services.AddTransient<FirstRunOobeViewModel>();
@@ -490,43 +478,22 @@ public partial class App : Application
         services.AddTransient<DockSettingsPageViewModel>();
         services.AddTransient<ExportSettingsPageViewModel>();
         services.AddTransient<ExamBoardViewModel>();
+        services.AddTransient<ExamBoardLayoutEditorViewModel>();
         services.AddTransient<ExamBoardEditorViewModel>();
         services.AddTransient<ExamBoardPanelViewModel>();
         services.AddTransient<ExamPlanWizardViewModel>();
         services.AddTransient<ExamScheduleSettingsPageViewModel>();
         services.AddTransient<ExamDisplaySettingsPageViewModel>();
+        services.AddTransient<ExamLayoutSettingsPageViewModel>();
+        services.AddTransient<ExamThemeSettingsPageViewModel>();
         services.AddTransient<ExamTimeSettingsPageViewModel>();
+        services.AddTransient<ExamAutoShowSettingsPageViewModel>();
         services.AddTransient<ExamFontSettingsPageViewModel>();
         services.AddTransient<ExamFloatingSettingsPageViewModel>();
         services.AddTransient<DisplayBoardViewModel>();
         services.AddTransient<DisplaySettingsPageViewModel>();
         services.AddTransient<DisplayWidgetsSettingsPageViewModel>();
         services.AddTransient<DisplayBackgroundSettingsPageViewModel>();
-        services.AddTransient<DutyMembersSettingsPageViewModel>();
-        services.AddTransient<DutyGroupsPostsSettingsPageViewModel>();
-        services.AddTransient<DutyScheduleSettingsPageViewModel>();
-        services.AddTransient<Corkboard.ViewModels.DutyRoster.DutyRosterViewModel>();
-        services.AddTransient<Corkboard.ViewModels.Duty.DutyImportViewModel>();
-        services.AddTransient<Corkboard.ViewModels.Duty.DutyExportViewModel>();
-        services.AddTransient<Corkboard.ViewModels.Duty.DutyHolidayViewModel>();
-
-        // 节假日：在线源 + 本地缓存 + 用户覆盖；值日表把它当 IDutyHolidayCalendar 用。
-        // 每个请求另有 15s 逐次 CTS（见 HolidayService），这里的客户端超时是兜底。
-        services.AddHttpClient(Corkboard.Services.Holidays.HolidayService.HttpClientName, client =>
-        {
-            client.Timeout = Corkboard.Services.Holidays.HolidayService.RequestTimeout;
-        });
-        services.AddSingleton<Corkboard.Core.Holidays.HolidayCacheStore>();
-        services.AddSingleton<Corkboard.Services.Holidays.HolidayService>();
-        services.AddSingleton<Corkboard.Core.DutyRoster.IDutyHolidayCalendar>(
-            provider => provider.GetRequiredService<Corkboard.Services.Holidays.HolidayService>());
-        // 延迟 20s 首刷，之后每 30 分钟判断一次「该不该刷」（失败退避在服务内部）。
-        services.AddHostedService<Corkboard.Services.Holidays.HolidayRefreshHostedService>();
-
-        // 行动窗口（日程中心）：窗口本身由 App.ShowActionWindow() 现建，三个 VM 走键控 DI。
-        services.AddTransient<Corkboard.ViewModels.Actions.ActionWindowViewModel>();
-        services.AddTransient<Corkboard.ViewModels.Actions.ActionEditorViewModel>();
-        services.AddTransient<Corkboard.ViewModels.Actions.SystemScheduleDetailViewModel>();
 
         // 主页面标题的默认文案；用户可以在作业板设置里改成别的名字。
         services.AddMainPage<BoardPage>(CR.Board_Title);
@@ -541,7 +508,7 @@ public partial class App : Application
         services.AddSettingsPage<DisplaySettingsPage>(CR.Settings_Display_Content_Title);
         services.AddSettingsPage<DisplayBackgroundSettingsPage>(CR.Settings_Display_Background_Title);
         services.AddSettingsPage<DisplayWidgetsSettingsPage>(CR.Settings_Display_Widgets_Title);
-        services.AddSettingsPage<DisplayScheduleSettingsPage>(CR.Settings_Display_AutoScroll);
+        services.AddSettingsPage<DisplayScheduleSettingsPage>(CR.Settings_Display_Schedule_Title);
 
         // 「作业板」是可折叠分组：分组本身出现在侧边栏，点开才是它底下的各个设置子页。
         // 子页的 PageInfo 上必须带同一个 groupId，否则会被当成顶层项平铺出去。
@@ -558,18 +525,16 @@ public partial class App : Application
         services.AddGroup(new PageGroupInfo(CR.Settings_Exam_Group, "settings.exam.group", FluentIcons.CalendarFilled));
         services.AddSettingsPage<ExamScheduleSettingsPage>(CR.Settings_Exam_Schedule_Title);
         services.AddSettingsPage<ExamDisplaySettingsPage>(CR.Settings_Exam_Display_Title);
+        // 「看板布局」紧跟「看板显示」：先决定显示什么，再决定各组件摆在哪。
+        services.AddSettingsPage<ExamLayoutSettingsPage>(CR.Settings_Exam_Layout_Title);
+        // 「看板主题」跟在「看板布局」后面：布局定结构、主题定配色，两页挨着最好找。
+        services.AddSettingsPage<ExamThemeSettingsPage>(CR.Settings_Exam_Theme_Title);
         // 「最小化与浮窗」紧跟在「看板显示」后面：两者都是「看板长什么样、怎么用」。
         services.AddSettingsPage<ExamFloatingSettingsPage>(CR.Settings_Exam_Floating_Title);
         // 「看板字号」单开一页：看板上每一处文字各有一个字号，塞进「看板显示」会把那一页撑到十几张卡。
         services.AddSettingsPage<ExamFontSettingsPage>(CR.Settings_Exam_Font_PageTitle);
         services.AddSettingsPage<ExamTimeSettingsPage>(CR.Settings_Exam_Time_Title);
-
-        // 「值日表」是第三个可折叠分组，排在「考试看板」下面：名单与导入、小组与职务、排班规则。
-        // M0 只搭骨架：三页各放一张占位卡，字段与表格等数据层接口稳定后再接。
-        services.AddGroup(new PageGroupInfo(CR.Settings_Duty_Group, AppConsts.SettingsDutyGroupId, FluentIcons.PeopleFilled));
-        services.AddSettingsPage<DutyMembersSettingsPage>(CR.Settings_Duty_Members_Title);
-        services.AddSettingsPage<DutyGroupsPostsSettingsPage>(CR.Settings_Duty_Groups_Title);
-        services.AddSettingsPage<DutyScheduleSettingsPage>(CR.Settings_Duty_Schedule_Title);
+        services.AddSettingsPage<ExamAutoShowSettingsPage>(CR.Settings_Exam_AutoShow_Title);
 
         // 「账号」「云同步」暂不开放入口：两个页面的 PageInfo 上标了 isHide: true，不进侧边栏。
         // 注册保留（键控 DI 仍按 Id 可取到），以后开放时去掉 PageInfo 上的 isHide 即可。
@@ -660,34 +625,6 @@ public partial class App : Application
             // 同上：带 --open-display-background 时直接落到「背景」页，方便对背景编辑器截图。
             if (args.Contains("--open-display-background", StringComparer.OrdinalIgnoreCase))
                 ShowSettingsWindow(AppConsts.SettingsDisplayBackgroundPageId);
-
-            // 同上：带 --open-action 时直接打开行动窗口，方便对三视图与编辑器截图。
-            if (args.Contains("--open-action", StringComparer.OrdinalIgnoreCase))
-                ShowActionWindow();
-
-            // 同上：带 --action-new 时打开行动窗口后再点一次「新建行动」，
-            // 用来验证编辑器弹层（overlay 宿主）确实能渲染出来。延迟两秒等窗口首次布局完成。
-            if (args.Contains("--action-new", StringComparer.OrdinalIgnoreCase))
-            {
-                ShowActionWindow();
-                DispatcherTimer.RunOnce(() =>
-                {
-                    if (_actionWindow?.DataContext is ViewModels.Actions.ActionWindowViewModel viewModel)
-                        viewModel.NewActionCommand.Execute(null);
-                }, TimeSpan.FromSeconds(2));
-            }
-
-            // 同上：带 --open-duty-roster 时直接打开值日表窗口，方便对周/月视图截图。
-            if (args.Contains("--open-duty-roster", StringComparer.OrdinalIgnoreCase))
-                ShowDutyRosterWindow();
-
-            // 同上：带 --open-duty-settings 时直接落到「名单与导入」页。
-            if (args.Contains("--open-duty-settings", StringComparer.OrdinalIgnoreCase))
-                ShowSettingsWindow(AppConsts.SettingsDutyMembersPageId);
-
-            // 同上：带 --open-duty-holiday 时直接打开节假日窗口。
-            if (args.Contains("--open-duty-holiday", StringComparer.OrdinalIgnoreCase))
-                ShowDutyHolidayWindow();
 
             // 命令行里带 corkboard://display… 时按链接打开 / 关掉看板模式（协议唤起走这条路）。
             if (DisplayBoardUri.TryParseAny(args, out var displayCommand))
@@ -960,7 +897,6 @@ public partial class App : Application
         CultureInfo.DefaultThreadCurrentUICulture = cultureInfo;
         CR.Culture = cultureInfo;
         Langs.SettingsView.Resources.Culture = cultureInfo;
-        Langs.Action.Resources.Culture = cultureInfo;
         RichTextLocalization.Apply(!string.Equals(cultureInfo.TwoLetterISOLanguageName, "en", StringComparison.OrdinalIgnoreCase));
     }
 
@@ -1427,48 +1363,6 @@ public partial class App : Application
     }
 
     /// <summary>
-    ///     打开行动窗口（日程中心）。独立工具窗：不挂在主界面 / 设置壳的导航里，
-    ///     主窗口收进托盘甚至没建出来时也能单独打开。
-    ///     <para>
-    ///         已开着就还原并激活；关掉之后把字段清空，下次点入口重新建一个
-    ///         （窗口里的 ViewModel 订阅了规则存储与日程投影，不跨窗口复用）。
-    ///     </para>
-    /// </summary>
-    public static void ShowActionWindow()
-    {
-        if (_actionWindow is { } existing)
-        {
-            ShowAndActivate(existing);
-            return;
-        }
-
-        var window = new ActionWindow();
-        _actionWindow = window;
-        window.Closed += (_, _) =>
-        {
-            if (ReferenceEquals(_actionWindow, window))
-                _actionWindow = null;
-        };
-
-        ShowAndActivate(window);
-    }
-
-    /// <summary>行动窗口此刻是不是开着（单实例入口据此决定「打开」还是「激活」）。</summary>
-    public static bool IsActionWindowOpen => _actionWindow is { IsVisible: true };
-
-    /// <summary>把行动窗口收起来；窗口本来就没开就什么都不做。</summary>
-    public static void CloseActionWindow()
-    {
-        var window = _actionWindow;
-        if (window is null)
-            return;
-
-        // 先摘掉字段再关窗：菜单 / 单实例转发可能立刻回读 IsActionWindowOpen。
-        _actionWindow = null;
-        window.Close();
-    }
-
-    /// <summary>
     ///     这一次展示临时使用的时段（来自 <c>corkboard://display?from=19:00&amp;to=21:30</c>）。
     ///     <see langword="null" /> 表示按设置里的时刻来；窗口一关就清空。
     /// </summary>
@@ -1548,6 +1442,26 @@ public partial class App : Application
         IAppHost.TryGetService<TaskBarIconService>()?.NotifyBoardVisibilityChanged();
 
     /// <summary>
+    ///     打开考试看板的布局编辑窗，进来就停在指定状态。
+    ///     编辑窗一次只开一个：已经开着就关掉按新状态重开，避免两套草稿互相盖。
+    /// </summary>
+    public static void ShowExamBoardLayoutEditorWindow(ExamStatus status)
+    {
+        if (_examBoardLayoutEditorWindow is { } existing)
+            existing.Close();
+
+        var window = new ExamBoardLayoutEditorWindow(status);
+        _examBoardLayoutEditorWindow = window;
+        window.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(_examBoardLayoutEditorWindow, window))
+                _examBoardLayoutEditorWindow = null;
+        };
+
+        ShowAndActivate(window);
+    }
+
+    /// <summary>
     ///     打开「编辑看板」窗口，编辑指定的那一块看板（<paramref name="boardId" /> 为 <see langword="null" /> 时编辑当前那块）。
     ///     窗口已经开着就换成新的一块、不再另开一个。
     /// </summary>
@@ -1599,52 +1513,6 @@ public partial class App : Application
         {
             if (ReferenceEquals(_examPlanWizardWindow, window))
                 _examPlanWizardWindow = null;
-        };
-
-        ShowAndActivate(window);
-    }
-
-    /// <summary>
-    ///     打开「值日表」窗口。
-    ///     <para>
-    ///         M0 阶段它只是一块占位：周视图与月视图还在做，先把入口与弹层宿主搭好。
-    ///         一次只开一个，已经开着就把它拉到前面。
-    ///     </para>
-    /// </summary>
-    public static void ShowDutyRosterWindow()
-    {
-        if (_dutyRosterWindow is { } existing)
-        {
-            ShowAndActivate(existing);
-            return;
-        }
-
-        var window = new DutyRosterWindow();
-        _dutyRosterWindow = window;
-        window.Closed += (_, _) =>
-        {
-            if (ReferenceEquals(_dutyRosterWindow, window))
-                _dutyRosterWindow = null;
-        };
-
-        ShowAndActivate(window);
-    }
-
-    /// <summary>打开「节假日」独立窗口（已在开着就激活）。</summary>
-    public static void ShowDutyHolidayWindow()
-    {
-        if (_dutyHolidayWindow is { } existing)
-        {
-            ShowAndActivate(existing);
-            return;
-        }
-
-        var window = new DutyHolidayWindow();
-        _dutyHolidayWindow = window;
-        window.Closed += (_, _) =>
-        {
-            if (ReferenceEquals(_dutyHolidayWindow, window))
-                _dutyHolidayWindow = null;
         };
 
         ShowAndActivate(window);

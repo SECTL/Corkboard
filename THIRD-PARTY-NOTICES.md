@@ -1,4 +1,4 @@
-# 第三方组件与来源说明
+﻿# 第三方组件与来源说明
 
 ## 许可
 
@@ -18,11 +18,6 @@ Corkboard 以 GNU GPLv3 发布（见 [LICENSE](../LICENSE)），再发布的衍�
 | Markdig | 1.1.2 | BSD-2-Clause | 只在旧作业内容迁移时解析 Markdown（`LegacyBoardContentConverter`，迁移路径删掉后可移除） |
 | BouncyCastle.Cryptography | 2.7.0 | MIT | Ed25519 更新清单验签（`Corkboard.Core/Updates/UpdateManifestVerifier`；与上游 SecRandom 同一套实现） |
 | YamlDotNet | 18.1.0 | MIT | 解析仓库根的 `metadata.yaml`（更新渠道 → 发布 tag，`UpdateCenterService`） |
-| QRCoder | 1.8.0 | MIT | 名单导出时把 `OfflineQrProtocol` 的帧画成二维码 PNG（`DutyRosterExporter`，与上游 SecRandom-C 同一个包） |
-| ZXing.Net | 0.16.9 | Apache-2.0 | 名单导入时从相机帧/图片里解二维码（`Corkboard.Core/QrFrameDecoder`，与上游 SecRandom-C 同一个包） |
-| OpenCvSharp4 | 4.13.0.20260627 | Apache-2.0 | 名单导入的相机抓帧：`VideoCapture` 按 DirectShow 序号开设备、读原始帧（`Corkboard.Platforms.Windows/OpenCvCameraScanner`，与上游 SecRandom-C 同一个包） |
-| OpenCV（原生库，编进 `OpenCvSharpExtern.dll`） | 4.13.0 | Apache-2.0 | 上面那层 OpenCvSharp 的底层实现，随 `OpenCvSharp4.runtime.win` 分发（只有 win-x64） |
-| FFmpeg（`opencv_videoio_ffmpeg4130_64.dll`，随 `OpenCvSharp4.runtime.win` 分发） | 4.13.0 对应的 OpenCV 构建 | LGPL-2.1-or-later | OpenCV 的 videoio 编解码后端；相机抓帧本身走 DirectShow，不经过它，但它随原生包一起进输出目录 |
 | SkiaSharp | 3.119.3-preview.1.1 | MIT | 复制图片到剪贴板：把 PNG 解成 BGRA 像素再写 Windows `CF_DIB`（`Corkboard/Services/Ui/Export/WindowsClipboardImage.cs`；版本与 Avalonia.Skia 传递依赖一致） |
 | SecRandom.SimpleGitInfoGenerator | 1.0.1.3 | 随上游 SecRandom 项目提供 | 构建期从 git 生成版本元数据（仅头程序集，`PrivateAssets=All`，不进输出目录） |
 | Microsoft.Extensions.Hosting / DependencyInjection / Http / Logging | 10.0.x | MIT | 宿主、DI、HTTP 客户端、日志 |

@@ -22,8 +22,6 @@ public sealed class PlatformServiceRootStub : IPlatformServiceRoot, IWindowFeatu
 
     public IUrlSchemeRegistrar UrlSchemes => UnsupportedUrlSchemeRegistrar.Instance;
 
-    public ICameraScanner Camera => UnsupportedCameraScanner.Instance;
-
     public global::Corkboard.Platforms.Abstractions.WindowFeatures SupportedFeatures =>
         global::Corkboard.Platforms.Abstractions.WindowFeatures.None;
 

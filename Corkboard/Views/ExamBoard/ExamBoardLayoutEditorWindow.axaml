@@ -1,0 +1,181 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:Corkboard.ViewModels.ExamBoard"
+        xmlns:local="using:Corkboard.Views.ExamBoard"
+        xmlns:settings="using:Corkboard.ViewModels.SettingsPages.Exam"
+        xmlns:icons="using:Corkboard.Core.Icons"
+        xmlns:core="using:Corkboard.Core.Langs.Common"
+        mc:Ignorable="d" d:DesignWidth="1600" d:DesignHeight="900"
+        x:Class="Corkboard.Views.ExamBoard.ExamBoardLayoutEditorWindow"
+        x:DataType="vm:ExamBoardLayoutEditorViewModel"
+        Title="{x:Static core:Resources.Settings_Exam_Layout_Title}"
+        WindowDecorations="None"
+        WindowState="FullScreen"
+        ShowInTaskbar="False"
+        Background="{DynamicResource ExamBoardSurfaceBrush}">
+    <Grid>
+        <!-- 真实的考试看板：示例考试 + 假时钟，切状态看到的就是放映时的样子。 -->
+        <local:ExamBoardView x:Name="BoardView" />
+
+        <!-- 顶部工具条 -->
+        <Border VerticalAlignment="Top"
+                HorizontalAlignment="Center"
+                Margin="0,16,0,0"
+                Padding="14,10"
+                CornerRadius="10"
+                BorderThickness="1"
+                BorderBrush="{DynamicResource ExamBoardDividerBrush}"
+                Background="{DynamicResource SolidBackgroundFillColorQuarternaryBrush}">
+            <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                <TextBlock Text="{x:Static core:Resources.Settings_Exam_Layout_Title}"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center" />
+                <ComboBox Width="150"
+                          ItemsSource="{Binding StatusOptions}"
+                          SelectedItem="{Binding SelectedStatus, Mode=TwoWay}"
+                          DisplayMemberBinding="{Binding Name}" />
+                <TextBlock Text="{Binding PreviewTimeText}"
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource ExamBoardTextSecondaryBrush}" />
+                <Button Content="{x:Static core:Resources.Settings_Exam_Layout_Reset}"
+                        Command="{Binding ResetStatusCommand}" />
+                <Button Content="{x:Static core:Resources.Settings_Exam_Layout_Cancel}"
+                        Command="{Binding CancelCommand}" />
+                <Button Classes="accent"
+                        Content="{x:Static core:Resources.Settings_Exam_Layout_Done}"
+                        Command="{Binding FinishCommand}" />
+            </StackPanel>
+        </Border>
+
+        <!--
+            属性面板：点击画布上的区块后浮到该区块旁边（由 code-behind 定位），
+            顶部那颗拖动手柄可以把它挪开；不编辑时整块画布让出来。
+        -->
+        <Canvas x:Name="OverlayCanvas">
+            <Border x:Name="Inspector"
+                    Width="380"
+                    MaxHeight="700"
+                    Padding="14"
+                    CornerRadius="10"
+                    BorderThickness="1"
+                    BorderBrush="{DynamicResource ExamBoardDividerBrush}"
+                    Background="{DynamicResource SolidBackgroundFillColorQuarternaryBrush}"
+                    IsVisible="{Binding HasSelection}">
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Spacing="10">
+                        <Grid ColumnDefinitions="Auto,*,32">
+                            <Border x:Name="InspectorDragHandle"
+                                    Grid.Column="0"
+                                    Width="24"
+                                    Height="28"
+                                    Margin="0,0,6,0"
+                                    Background="Transparent"
+                                    Cursor="SizeAll"
+                                    ToolTip.Tip="{x:Static core:Resources.Settings_Exam_Layout_DragPanel}"
+                                    PointerPressed="OnInspectorDragPressed"
+                                    PointerMoved="OnInspectorDragMoved"
+                                    PointerReleased="OnInspectorDragReleased"
+                                    PointerCaptureLost="OnInspectorDragCaptureLost">
+                                <TextBlock Text="{x:Static icons:FluentIcons.ReOrderDotsVerticalFilled}"
+                                           FontFamily="FluentSystemIconsResizeable"
+                                           FontSize="16"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           Foreground="{DynamicResource ExamBoardTextTertiaryBrush}" />
+                            </Border>
+                            <ComboBox Grid.Column="1"
+                                      HorizontalAlignment="Stretch"
+                                      ItemsSource="{Binding ComponentOptions}"
+                                      SelectedItem="{Binding SelectedComponent, Mode=TwoWay}"
+                                      DisplayMemberBinding="{Binding Name}" />
+                            <Button Grid.Column="2"
+                                    Margin="6,0,0,0"
+                                    Padding="0"
+                                    Content="×"
+                                    HorizontalContentAlignment="Center"
+                                    VerticalContentAlignment="Center"
+                                    Command="{Binding ClearSelectionCommand}"
+                                    ToolTip.Tip="{x:Static core:Resources.Settings_Exam_Layout_Cancel}" />
+                        </Grid>
+                        <TextBlock Text="{Binding SelectedStatusName}"
+                                   Foreground="{DynamicResource ExamBoardTextSecondaryBrush}" />
+
+                        <Grid ColumnDefinitions="*,120" RowDefinitions="Auto,Auto,Auto,Auto">
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="{x:Static core:Resources.Settings_Exam_Layout_Field_X}" VerticalAlignment="Center" />
+                            <NumericUpDown Grid.Row="0" Grid.Column="1" Margin="0,2"
+                                           Minimum="0" Maximum="100" Increment="0.5" FormatString="0.0"
+                                           HorizontalAlignment="Stretch"
+                                           Value="{Binding SelectedLayout.X, Mode=TwoWay}" />
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="{x:Static core:Resources.Settings_Exam_Layout_Field_Y}" VerticalAlignment="Center" />
+                            <NumericUpDown Grid.Row="1" Grid.Column="1" Margin="0,2"
+                                           Minimum="0" Maximum="100" Increment="0.5" FormatString="0.0"
+                                           HorizontalAlignment="Stretch"
+                                           Value="{Binding SelectedLayout.Y, Mode=TwoWay}" />
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="{x:Static core:Resources.Settings_Exam_Layout_Field_Width}" VerticalAlignment="Center" />
+                            <NumericUpDown Grid.Row="2" Grid.Column="1" Margin="0,2"
+                                           Minimum="5" Maximum="100" Increment="0.5" FormatString="0.0"
+                                           HorizontalAlignment="Stretch"
+                                           Value="{Binding SelectedLayout.Width, Mode=TwoWay}" />
+                            <TextBlock Grid.Row="3" Grid.Column="0" Text="{x:Static core:Resources.Settings_Exam_Layout_Field_Height}" VerticalAlignment="Center" />
+                            <NumericUpDown Grid.Row="3" Grid.Column="1" Margin="0,2"
+                                           Minimum="5" Maximum="100" Increment="0.5" FormatString="0.0"
+                                           HorizontalAlignment="Stretch"
+                                           Value="{Binding SelectedLayout.Height, Mode=TwoWay}" />
+                        </Grid>
+
+                        <TextBlock Text="{x:Static core:Resources.Settings_Exam_Layout_Field_Alignment}" />
+                        <ComboBox HorizontalAlignment="Stretch"
+                                  ItemsSource="{Binding AlignmentOptions}"
+                                  SelectedItem="{Binding SelectedAlignment, Mode=TwoWay}"
+                                  DisplayMemberBinding="{Binding Name}" />
+
+                        <TextBlock Text="{x:Static core:Resources.Settings_Exam_Layout_Field_Scale}" />
+                        <Slider Minimum="0.5" Maximum="2" TickFrequency="0.1" IsSnapToTickEnabled="True"
+                                Value="{Binding SelectedLayout.Scale, Mode=TwoWay}" />
+
+                        <TextBlock Text="{x:Static core:Resources.Settings_Exam_Layout_Field_Opacity}" />
+                        <Slider Minimum="0.2" Maximum="1" TickFrequency="0.05" IsSnapToTickEnabled="True"
+                                Value="{Binding SelectedLayout.Opacity, Mode=TwoWay}" />
+
+                        <!-- 与「设置 → 考试看板 → 看板字号」同一份配置、同一张表，只列当前组件用到的那几项。 -->
+                        <TextBlock Text="{x:Static core:Resources.Settings_Exam_Layout_Fonts}"
+                                   FontWeight="SemiBold"
+                                   Margin="0,6,0,0" />
+                        <ItemsControl ItemsSource="{Binding FontItems}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="settings:ExamFontSizeItem">
+                                    <StackPanel Spacing="2" Margin="0,4">
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <TextBlock Grid.Column="0"
+                                                       Text="{Binding Name}"
+                                                       TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Grid.Column="1"
+                                                       Margin="8,0,0,0"
+                                                       Text="{Binding ValueText}"
+                                                       Foreground="{DynamicResource ExamBoardTextSecondaryBrush}" />
+                                        </Grid>
+                                        <Slider Minimum="{Binding Minimum}"
+                                                Maximum="{Binding Maximum}"
+                                                TickFrequency="1"
+                                                IsSnapToTickEnabled="True"
+                                                Value="{Binding SliderValue, Mode=TwoWay}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock Text="{x:Static core:Resources.Settings_Exam_Layout_FontsHint}"
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource ExamBoardTextTertiaryBrush}" />
+
+                        <TextBlock Text="{x:Static core:Resources.Settings_Exam_Layout_EditorHint}"
+                                   TextWrapping="Wrap"
+                                   Margin="0,4,0,0"
+                                   Foreground="{DynamicResource ExamBoardTextTertiaryBrush}" />
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Canvas>
+    </Grid>
+</Window>

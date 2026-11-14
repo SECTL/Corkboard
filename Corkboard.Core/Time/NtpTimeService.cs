@@ -1,5 +1,6 @@
 using Avalonia.Threading;
 using Microsoft.Extensions.Logging;
+using Corkboard.Core.Exam;
 using Corkboard.Core.Models.SubConfigs.Exam;
 using Corkboard.Core.Services.Config;
 
@@ -17,7 +18,7 @@ namespace Corkboard.Core.Time;
 ///         关掉校时（<see cref="NtpSettingsConfig.Enabled" />）才把偏差归零、退回系统时钟。
 ///     </para>
 /// </summary>
-public sealed class NtpTimeService
+public sealed class NtpTimeService : IExamBoardTimeSource
 {
     /// <summary>同一次同步只允许一条在路上（设置页的「立即同步」与后台定时可能撞在一起）。</summary>
     private readonly SemaphoreSlim _gate = new(1, 1);

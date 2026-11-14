@@ -1,0 +1,126 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Corkboard.ViewModels.ExamBoard"
+             xmlns:core="using:Corkboard.Core.Langs.Common"
+             x:Class="Corkboard.Views.ExamBoard.ExamBoardExamTableBlock"
+             x:DataType="vm:ExamBoardViewModel">
+    <UserControl.Styles>
+        <!-- 表格：内容突出、框线退到几乎看不见。字号一律绑 VM，不在这里写死。 -->
+        <Style Selector="TextBlock.col-head">
+            <Setter Property="Foreground" Value="{DynamicResource ExamBoardTextTertiaryBrush}" />
+        </Style>
+        <Style Selector="TextBlock.cell">
+            <Setter Property="Foreground" Value="{DynamicResource ExamBoardTextSecondaryBrush}" />
+            <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+        </Style>
+        <Style Selector="TextBlock.cell.subject">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource ExamBoardTextPrimaryBrush}" />
+        </Style>
+        <Style Selector="Border.row-separator">
+            <Setter Property="Height" Value="1" />
+            <Setter Property="Background" Value="{DynamicResource ExamBoardDividerBrush}" />
+            <Setter Property="Opacity" Value="0.45" />
+        </Style>
+        <Style Selector="TextBlock.cell.status">
+            <Setter Property="Foreground" Value="{DynamicResource ExamBoardTextSecondaryBrush}" />
+        </Style>
+        <Style Selector="TextBlock.cell.status.upcoming">
+            <Setter Property="Foreground" Value="{DynamicResource ExamBoardUpcomingBrush}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="TextBlock.cell.status.progress">
+            <Setter Property="Foreground" Value="{DynamicResource ExamBoardInProgressBrush}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="TextBlock.cell.status.finished">
+            <Setter Property="Opacity" Value="0.5" />
+        </Style>
+        <Style Selector="TextBlock.cell.hint">
+            <Setter Property="Foreground" Value="{DynamicResource ExamBoardTextTertiaryBrush}" />
+        </Style>
+        <Style Selector="Border.exam-row.next">
+            <Setter Property="Background" Value="{DynamicResource ExamBoardHighlightBrush}" />
+            <Setter Property="CornerRadius" Value="10" />
+        </Style>
+    </UserControl.Styles>
+
+    <Grid IsVisible="{Binding ShowList}"
+          RowDefinitions="Auto,Auto,*">
+        <!--
+            ⚠️ 表头与数据行必须用同一份列宽（见 AGENTS.md「表格对齐」）：
+            日期 190 / 科目 *（MinWidth 130）/ 时间 190 / 状态 140。
+        -->
+        <Grid Grid.Row="0" Margin="20,0,20,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="190" />
+                <ColumnDefinition Width="*" MinWidth="130" />
+                <ColumnDefinition Width="190" />
+                <ColumnDefinition Width="140" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Classes="col-head"
+                       FontSize="{Binding TableHeaderFontSize}"
+                       Text="{x:Static core:Resources.Exam_Board_Table_Date}" />
+            <TextBlock Grid.Column="1" Classes="col-head"
+                       FontSize="{Binding TableHeaderFontSize}"
+                       Text="{x:Static core:Resources.Exam_Board_Table_Subject}" />
+            <TextBlock Grid.Column="2" Classes="col-head"
+                       FontSize="{Binding TableHeaderFontSize}"
+                       Text="{x:Static core:Resources.Exam_Board_Table_Time}" />
+            <TextBlock Grid.Column="3" Classes="col-head"
+                       FontSize="{Binding TableHeaderFontSize}"
+                       Text="{x:Static core:Resources.Exam_Board_Table_Status}" />
+        </Grid>
+        <Border Grid.Row="1" Classes="row-separator" Margin="20,0" />
+
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <ItemsControl ItemsSource="{Binding Rows}" Margin="0,6,0,0">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ExamRowItem">
+                        <StackPanel>
+                            <Border Classes="exam-row"
+                                    Classes.next="{Binding IsNext}"
+                                    Padding="20,14">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="190" />
+                                        <ColumnDefinition Width="*" MinWidth="130" />
+                                        <ColumnDefinition Width="190" />
+                                        <ColumnDefinition Width="140" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Classes="cell" Text="{Binding DateText}"
+                                               FontSize="{Binding $parent[UserControl].((vm:ExamBoardViewModel)DataContext).TableFontSize}" />
+                                    <TextBlock Grid.Column="1" Classes="cell subject" Text="{Binding Subject}"
+                                               FontSize="{Binding $parent[UserControl].((vm:ExamBoardViewModel)DataContext).TableSubjectFontSize}" />
+                                    <TextBlock Grid.Column="2" Classes="cell" Text="{Binding TimeText}"
+                                               FontSize="{Binding $parent[UserControl].((vm:ExamBoardViewModel)DataContext).TableFontSize}"
+                                               FontFeatures="{Binding $parent[UserControl].((vm:ExamBoardViewModel)DataContext).NumericFontFeatures}" />
+                                    <TextBlock Grid.Column="3" Classes="cell status"
+                                               FontSize="{Binding $parent[UserControl].((vm:ExamBoardViewModel)DataContext).TableFontSize}"
+                                               Classes.upcoming="{Binding IsUpcoming}"
+                                               Classes.progress="{Binding IsInProgress}"
+                                               Classes.finished="{Binding IsFinished}"
+                                               Text="{Binding StatusText}" />
+                                </Grid>
+                            </Border>
+                            <Border Classes="row-separator" Margin="20,0" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <!-- 一场都没排：说清楚去哪儿加，别让用户对着空屏幕发呆。 -->
+        <StackPanel Grid.Row="2" VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10"
+                    IsVisible="{Binding !HasExams}">
+            <TextBlock Text="{x:Static core:Resources.Exam_Board_NoExam}"
+                       FontSize="{Binding EmptyFontSize}"
+                       HorizontalAlignment="Center"
+                       Foreground="{DynamicResource ExamBoardTextSecondaryBrush}" />
+            <TextBlock Text="{x:Static core:Resources.Exam_Board_NoExamHint}"
+                       FontSize="{Binding EmptyHintFontSize}"
+                       HorizontalAlignment="Center"
+                       Foreground="{DynamicResource ExamBoardTextTertiaryBrush}" />
+        </StackPanel>
+    </Grid>
+</UserControl>

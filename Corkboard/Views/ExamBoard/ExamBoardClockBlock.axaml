@@ -1,0 +1,19 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Corkboard.ViewModels.ExamBoard"
+             x:Class="Corkboard.Views.ExamBoard.ExamBoardClockBlock"
+             x:DataType="vm:ExamBoardViewModel">
+    <!-- 时钟 + 日期（考试信息块另拆成 ExamBoardInfoBlock，方便自定义布局分别摆放）。 -->
+    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
+        <TextBlock Text="{Binding ClockTime}"
+                   FontSize="{Binding ClockFontSize}"
+                   FontFeatures="{Binding NumericFontFeatures}"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource ExamBoardTextPrimaryBrush}"
+                   HorizontalAlignment="Center" />
+        <TextBlock Text="{Binding ClockDate}"
+                   FontSize="{Binding ClockDateFontSize}"
+                   HorizontalAlignment="Center"
+                   Foreground="{DynamicResource ExamBoardTextSecondaryBrush}" />
+    </StackPanel>
+</UserControl>

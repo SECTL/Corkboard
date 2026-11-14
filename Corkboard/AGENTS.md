@@ -1,4 +1,4 @@
-# Corkboard/ 子树约定
+﻿# Corkboard/ 子树约定
 
 根目录 `AGENTS.md` 里的跨层规矩（技术栈、结构、域归类、设置怎么加、本地化、命令）在本子树同样成立，这里只补本子树自己的约定。
 
@@ -14,7 +14,7 @@
   "settings.board.group", FluentIcons.BoardFilled))` 后接一串带 `groupId` 的页面），点它才展开**六个**子页：常规（`settings.board`）／内容与样式（`settings.board.content`）／
   科目与分类（`settings.board.sections`）／自动化与数据（`settings.board.automation`）／
   窗口与收纳（`settings.board.window`）／导出（`settings.board.export`）；**紧接着是「考试看板」**
-  （`groupId = "settings.exam.group"`，`FluentIcons.CalendarFilled`），子页是考试安排／看板显示／**看板字号**（`settings.exam.font`）／时间同步；
+  （`groupId = "settings.exam.group"`，`FluentIcons.CalendarFilled`），子页是考试安排／看板显示／看板布局／看板主题／最小化与浮窗／**看板字号**（`settings.exam.font`）／时间同步；
   **作业板专属的设置项一律进作业板组、考试专属的进考试看板组，基础设置里不许再放**。
   底部的「更新」「关于」由 `PageInfo.Location = Bottom` 沉到页脚，与注册顺序无关。
   **「账号」「云同步」两页当前入口隐藏**（页面 `PageInfo` 上 `isHide: true`，`PageItemsExtensions.ToNavigationViewItems`
@@ -330,55 +330,3 @@
 - **托盘跟着那个键重建**：`TaskBarIconService.CreateMenuItems(bool boardEnabled)` 在关掉时不列
   「显示主窗口」；菜单是启动时拍下的快照，所以 `RefreshMenu()` 要在开关变化与 `Reloaded` 时重设
   `trayIcon.Menu` 并收掉已经弹出的左键菜单。左键自绘菜单每次弹都现算（`CurrentMenuItems`）。
-
-## 行动窗口（日程中心）
-
-独立于设置窗口的一扇窗，把「我的行动」（用户定的显隐规则）与「系统日程」（考试自动放映、看板模式到点进出）
-汇到一处，列表 / 周 / 月三种看法。它**不是**设置页，不进 `PagesRegistryService`，也不需要 `[PageInfo]`。
-
-- **窗口与生命周期**：`Corkboard/Views/Actions/ActionWindow.axaml(.cs)`，`App` 里静态
-  `_actionWindow` + `ShowActionWindow()` / `IsActionWindowOpen` / `CloseActionWindow()`，窗口 `Closed` 里清字段
-  （照考试看板那套，`App.axaml.cs` 的 `ShowActionWindow` 附近）。普通的 `FAAppWindow` 系统标题栏，
-  `Width=1120 Height=760 MinWidth=960 MinHeight=600`、`CenterScreen`、**不要**做无边框/透明——
-  那套坑（透明角、拖动捕获、焦点）只有主窗口置底时才值得付。窗口图标两条都写：
-  `Icon = AppIcon.LoadBitmap()` 与 `((Window)this).Icon = AppIcon.LoadWindowIcon()`。
-- **入口**：托盘 `TaskBarIconService.CreateMenuItems` 里一项 `CR.Menu_OpenAction`（位置在「打开考试看板」后，
-  原生菜单与左键自绘菜单自动同步）；主界面标题栏「更多」里一项（`MainView.axaml` 的 `more-action`）；
-  冒烟开关 `--open-action`（只开窗）与 `--action-new`（开窗 2 秒后再执行一次「新建行动」，专用于验证编辑器弹层）。
-  **不要**给它加全局快捷键。
-- **弹层宿主**：窗口构造里 `CreateHost(this, PageOverlayService.DialogOnlyHostPriority)`。⚠️ 这个优先级是
-  -10 的「只服务指名宿主」档，`PageOverlayService.Show(content, preferredOwner)` 靠它把弹层送回发起窗口；
-  **不要**用 `ShellHostPriority`（会跟主窗口/设置页抢弹层）或 `FullScreenHostPriority`（会抢全屏窗口的弹层）。
-  改 `PageOverlayService` 的 `_preferredOwner` / `FindHost` / `ResolveActiveHost` 时，四扇窗（主窗口、
-  设置、看板模式、行动窗口）都要一起想一遍。
-- **系统日程要能就地编辑**（用户明确要求：旧设置项删掉、都在行动里直接改）：列表 →「系统日程」分组 →
-  考试自动放映 / 看板模式 → 详情卡里直接写 `MainConfigHandler.Data.ExamAutoShow.*` / `Display.Slots`，
-  改完 `Save()`；**不要再跳去设置页**（`SettingsRequested` 那条路已删，旧 `settings.exam.autoplay` 页也没了，
-  看板模式页只剩「自动轮播」）。列表里那些行只做展示与「立即执行 / 今天不执行」。
-- **弹层版式**：详情卡/编辑器卡片必须显式 `MaxWidth` + `MaxHeight` + 内部 `ScrollViewer`，
-  `OverlayContentHost` 显式 `Stretch`，遮罩 `Border.scrim` 铺满——不写就会「卡片右边和下面被窗口裁掉、
-  左侧列表也没暗下来」（用户报过「添加行动根本用不了」）。用 `Popup` 不用 `Button.Flyout`
-  （Flyout 里 DataContext 不继承，绑定静默失效——同一个坑在收纳九宫格、一言类别浮层都踩过）。
-- **周/月视图**：仓库没有现成日程表控件；`Avalonia.Controls.DataGrid` 现在由值日表显式引用 12.1.0（`Corkboard.csproj`），
-  但行动窗口的周/月视图仍是手写 `Grid`（表头与行共用同一份 `ColumnDefinitions`），不要为了日程表去改值日表那套 DataGrid；
-  月视图借 `ReplayCalendarView.axaml` 的样式（7×6 格、周一为首列、42 颗按钮），
-  周视图是时间轴 + 七列。改版式先看 `Views/Actions/` 现有的那三份 `Action*View.axaml`。
-- **数据不在 settings.json**：规则 / 状态 / 执行记录在 `Utils.GetDirectoryPath("action")`（见
-  `Corkboard.Core/AGENTS.md`）；只有「全局开关」与「系统日程参数」走配置。执行记录一次一行 jsonl，
-  写入失败只记日志，不打断调度。
-
-## 值日表名单的相机扫码与云会话
-
-- **相机生命周期归导入抽屉**（`Views/Duty/DutyImportDrawer.axaml(.cs)`）：从 DI 拿 `ICameraScanner`
-  （`App.axaml.cs` 里 `services.AddSingleton(platform.Camera)`），`Loaded` 枚举设备、扫码模式才 `StartAsync`；
-  切模式 / 关抽屉 / 离开页面一律 `StopAsync` + `Preview.Clear()`。**别在 ViewModel 里开相机**——
-  帧事件在采集线程，解码后要 `Dispatcher.UIThread.Post` 再碰预览。
-  相机不可用（`IsSupported=false`：Linux、macOS、win-x86 / win-arm64）时整块相机 UI 隐藏，粘贴兜底仍在。
-- **抓帧只认原始像素**：`CameraFrame.Pixels` 是紧凑 BGR24，解码走 `Corkboard.Core/.../Import/QrFrameDecoder`
-  （ZXing.Net）；`Views/Duty/DutyQrCameraPreview` 把帧转 `WriteableBitmap` 并复用，别每帧新建位图。
-- **云传输走 `DutySyncTransferClient`**（typed HttpClient，`https://secrandom-sync.sectl.cn`，30s 超时）：
-  导出抽屉有「二维码导出（在线）」与「会话码导出」，导入抽屉有「扫码快速导入」与「会话码导入」。
-  **离开导出抽屉必须撤销会话**（`ReleaseResources` → `CancelCloud(revoke:true)`），否则云端要白等到过期。
-- 枚举成员顺序与上游对齐：`DutyExportMode`/`DutyImportMode` = File=0 / QuickQr=1 / OfflineQr=2 / SessionCode=3；
-  `DutyRosterSource.ImportMethod` 存这些英文串（外加 `Manual`），显示用中文映射在
-  `DutyMembersSettingsPageViewModel.MapImportMethod`。

@@ -5,9 +5,8 @@
 ## 考试看板与 NTP 校时
 
 考试看板是**与作业板并列的第二块板子**，设置侧边栏里排在「作业板」分组正下方
-（`groupId = "settings.exam.group"`，子页依次是：考试安排 / 看板显示 / 看板字号 / 最小化与浮窗 / 时间同步）。
-**自动放映的全局参数不在这里**：它们已搬到「行动窗口 → 列表 → 系统日程 → 考试自动放映」那张详情卡里直接编辑
-（见下面「自动放映」一节），设置侧边栏不再有「自动放映」页。
+（`groupId = "settings.exam.group"`，子页依次是：考试安排 / 看板显示 / 看板布局 / 看板主题 / 最小化与浮窗 / 看板字号 / 时间同步 / 自动放映）。
+**自动放映的全局参数在「设置 → 考试看板 → 自动放映」页**（`settings.exam.autoplay`），见下面「自动放映」一节。
 
 ### 一块看板 = 一个文件（多份看板可切换）
 
@@ -240,14 +239,13 @@
 - **参不参加由每块看板自己决定**：`ExamBoardDocument.AutoShowEnabled`（JSON 键 `auto_show_enabled`，**默认 `false`**）。
   开关在「设置 → 考试看板 → 考试安排」的看板列表每行最前面（`ExamBoardItem.AutoShowEnabled` → `IExamService.SetAutoShow`）。
   ⚠️ `SetAutoShow` **不换当前看板、也不发 `Changed`**：开关正被按着，列表一重建就把控件抽走了。
-- **全局参数在「行动窗口 → 列表 → 系统日程 → 考试自动放映」那张详情卡里直接编辑**（配置 `ExamAutoShowSettingsConfig`
-  挂在 `Config.ExamAutoShow`，**配置真源没变**，只是界面从设置页搬到了行动窗口；旧 `settings.exam.autoplay` 页已删除）：
-  `LeadMinutes`（提前量，默认 10，夹 1–120）、`AlsoShowAfterStart`（**默认 `true`**：软件中途启动、已经开考了也补弹一次）、
-  `CloseDelayMinutes`（最后一场考完再放多久，默认 10，`0` = 收卷就收）、`AutoSwitchBoard`。
-  ⚠️ 详情卡里的字段直接写 `MainConfigHandler.Data.ExamAutoShow.*` 后 `Save()`（不是双向绑）；**不要再把它加回设置侧边栏**。
+- **全局参数在「设置 → 考试看板 → 自动放映」**（`PageInfo("settings.exam.autoplay")`，配置 `ExamAutoShowSettingsConfig`
+  挂在 `Config.ExamAutoShow`）：`LeadMinutes`（提前量，默认 10，夹 1–120）、`AlsoShowAfterStart`（**默认 `true`**：
+  软件中途启动、已经开考了也补弹一次）、`CloseDelayMinutes`（最后一场考完再放多久，默认 10，`0` = 收卷就收）。
+  数值走草稿 + 失焦提交，**不要双向绑配置**。
 - **规则全在 `Corkboard.Core/Exam/ExamAutoShowPolicy`**（纯函数，`Corkboard.Core.Tests/ExamAutoShowTests.cs` 钉死）：
   放映期 = `[第一场开考 − 提前量, 最后一场收卷 + 延迟)`；`FindTrigger` 挑这一拍该弹的那一场，`IsFinished` 判该不该收，
-  `FindNextTrigger` 只给行动窗口的系统日程投影/详情用。边界**左闭右开**，与 `ExamStatusPolicy` 同一口径——
+  `FindNextTrigger` 只给设置页状态卡用。边界**左闭右开**，与 `ExamStatusPolicy` 同一口径——
   **别处不许再算一套「离考试还有几分钟」**。放映范围由考试本身决定，没考试的看板没有放映期，
   所以不会「今天把开关打开、明天就开始放」。
 - **看门狗 `Corkboard/Services/Exam/ExamAutoShowHostedService`**（`BackgroundService`，15 秒一拍，`BuildHost` 里
@@ -295,6 +293,58 @@
 - ⚠️ 导出/导入按钮要加在考试表的**第 5 列**，表头与数据行的 `ColumnDefinitions` 必须同步改（`140,*,150,150,104`），
   否则 `*` 列宽不同、后面几列整体错位。
 
+### 看板主题（颜色 token）
+
+- 看板颜色全部收成 **13 个语义 token**（`ExamBoardThemeToken`：surface / text_primary / text_secondary /
+  text_tertiary / subtitle / divider / upcoming / in_progress / urgent / highlight / exit_track /
+  exit_ring_start / exit_ring_end），纯逻辑在 `Corkboard.Core/Exam/Theme/`：`ExamBoardThemeColors` 是解析结果、
+  `ExamBoardThemePresets` 是 5 套预设、`ExamBoardThemeResolver` 按 `ExamBoardThemeConfig`
+  （`Source` = FollowApp/Preset/Custom，`CustomBase` = FollowApp/Preset，`PresetId`，`Palette` 13 个 `Color?`）
+  叠出自定义色。
+- **窗口侧靠资源字典换色**：放映窗与布局编辑窗各自把 `ExamBoardThemeResources.Create()` 塞进
+  `Window.Resources.MergedDictionaries`，用 `ExamBoard<Name>Brush` 这组键重写 13 个笔刷；
+  ⚠️ **必须用「替换字典里的条目」而不是改 `SolidColorBrush.Color`**——后者不会触发
+  `{DynamicResource}` 重新解析，窗口里的颜色会停在旧值。
+- `ExamBoardThemeService`（单例）负责算色与通知：订阅 `ExamBoardThemeConfig` + 嵌套 `Palette` 的
+  `PropertyChanged`（单改一项颜色只发 Palette 的事件）、云端 `Reloaded` 后重挂、跟随应用外观时再吃
+  `ActualThemeVariantChanged`；`Changed` 统一切 UI 线程。跟随外观的资源键映射在服务里，
+  退路是 `ExamBoardThemeColors.FollowAppDefaults`。
+- 设置页 `settings.exam.theme`（`ExamThemeSettingsPage`）只改配置；**不要**在页面里自己画一套颜色逻辑，
+  也不要给单个组件加颜色覆盖——「组件级颜色」归主题，布局只摆位置与大小。
+
+### 看板布局（组件位置 / 大小 / 样式 + 独立编辑窗）
+
+- **5 个固定组件**（`ExamBoardLayoutComponentId`）：`Title` / `Clock` / `ExamInfo` / `ExamTable` / `ExitCorner`；
+  四档状态（`ExamStatus`：NotStarted / Upcoming / InProgress / Finished）各存一套
+  `ExamBoardStatusLayout`（`IsCustomized` + 5 个 `ExamBoardComponentLayout`）。
+  `ExamBoardComponentLayout` 存百分比矩形 `X/Y/Width/Height`（以看板视图整幅为基准）+ `Scale` / `Opacity` /
+  `ContentAlignment`；数值一律 `Normalize()` 夹取（宽高 ≥5、Scale 0.5–2、Opacity 0.2–1）。
+- `ExamBoardLayoutConfig` 是 `MainConfigModel` 上的子配置（`ExamBoardLayout`），**整体是一次替换**
+  （编辑完 `Config.ExamBoardLayout = draft.Clone()`）：`ConfigHandlerBase` 只写一次盘、只重新 Attach 一次；
+  ⚠️ **不要**在编辑过程中逐字段写配置，那会变成每个像素一格落盘。
+- `Corkboard.Core/Exam/Layout/` 是纯逻辑：`ExamBoardLayoutMath`（百分比↔DIP、12 列横向吸附、1% 纵向吸附、
+  夹取、8 手柄缩放）、`ExamBoardLayoutDefaults`（默认矩形与 DIP 下限）、`ExamBoardLayoutTypes`。
+  默认 `IsCustomized=false` 时**仍走原 `Grid` 版式**（默认零变化），只有自定义过的状态才用
+  `ExamBoardLayoutPanel` 按百分比排。
+- 视图拆成 `Corkboard/Views/ExamBoard/ExamBoardView.axaml` + 5 个 block（`ExamBoardTitleBlock` /
+  `ExamBoardClockBlock` / `ExamBoardInfoBlock` / `ExamBoardExamTableBlock` / `ExamBoardExitBlock`）：
+  放映窗与布局编辑窗**宿主同一份视图**，别再为预览抄一份简化版式；表格里原来的
+  `$parent[Window]` 字号绑定已改成 `$parent[UserControl]`（把视图放进没有 Window 祖先的弹层会失效）。
+- 布局编辑窗是独立全屏窗口 `ExamBoardLayoutEditorWindow`（`App.ShowExamBoardLayoutEditorWindow(ExamStatus)`）：
+  内容用 `ExamBoardSampleContentSource`（固定 2026-06-07 三场示例考试）+ `ExamBoardPreviewTimeSource`
+  （切状态直接把假时钟拨到对应时刻，状态仍由 `ExamStatusPolicy` 算）。**点画布上的区块才出现属性面板**
+  （点空白或 × 收起，组件下拉会同步到刚点中的区块，也可用它切到被「看板显示」隐藏的区块）；
+  面板**浮在选中区块旁边**（放不下就翻到左侧，顶部那颗拖动手柄可以挪开），改选中组件的
+  百分比/对齐/缩放/透明度，并列出这个组件用到的字号滑块。
+  缩放锚点按区块所在半区朝屏幕内侧（左上角的往右下长），别用中心锚点把边缘区块顶出屏幕。
+  **编辑期间只改内存草稿**，点「完成」才原子写回，点「取消」丢弃。编辑窗同样要注入主题资源字典，
+  否则看到的不是放映时的颜色。
+- **字号表只有一份**：`ExamBoardFontSizeCatalog`（`Corkboard/ViewModels/ExamBoard/`）同时供
+  「看板字号」设置页与布局编辑窗面板使用，`IdsFor(组件)` 决定每个组件在面板里列哪几项；
+  加一项字号只改这张表（以及 resx/Designer），不要在编辑窗里另写一套滑块逻辑。
+- 设置页 `settings.exam.layout`（`ExamLayoutSettingsPage`）只列四档状态的「默认 / 已自定义」并提供
+  编辑 / 恢复默认；显示哪些内容仍由「看板显示」的开关决定，布局不新增显隐开关。
+
 ### 看板字号（考试看板上每一处文字的大小都可调）
 
 - **一处文字一个字号，全在 `ExamBoardSettingsConfig` 上**（`title_font_size` / `subtitle_font_size` /
@@ -318,8 +368,9 @@
   **别退回手写的 `Border.setting-group` / `Border.setting-row` 行**：那版被用户指着说过
   「单独设置框换成组件里的设置项、不要用之前那种，全部换掉」；也别在卡里再嵌一层卡。
 - **一项字号 = `ExamFontSizeItem` 一行**（`Id` / 名称 / 简介 / 默认值 / 是否时钟 / 读写两个委托），
-  页面遍历 `FontSizeGroups` 画，**不给每项单写一遍 XAML**；加一项新文字只要在 `BuildItems()` 加一行、
-  在 `BuildGroups()` 归到某组、再加三个资源键（名称 / 简介 / …），`Resources.Designer.cs` 同步。
+  页面遍历 `FontSizeGroups` 画，**不给每项单写一遍 XAML**；加一项新文字只要在
+  `ExamBoardFontSizeCatalog.Create()` 加一行、在 `BuildGroups()` 归到某组、再加三个资源键（名称 / 简介 / …），
+  `Resources.Designer.cs` 同步。
 - **字号用滑块调，不设精确输入框**（用户明确要求「把输入框改成滑块」+「不留精确输入」）：
   `Slider` 的 `Minimum` / `Maximum` 直接读 `ExamFontSizeItem.Minimum` / `Maximum`（下限 8、一般上限 120、
   时钟那两档 480），`TickFrequency="1"` + `IsSnapToTickEnabled` 保证只出整数；当前值显示在滑块右边那一行

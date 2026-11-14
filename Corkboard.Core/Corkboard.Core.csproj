@@ -23,10 +23,6 @@
         <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.10" />
         <!-- 自动更新清单的 Ed25519 验签（见 Updates/UpdateManifestVerifier.cs）；曲线实现不自己写。 -->
         <PackageReference Include="BouncyCastle.Cryptography" Version="2.7.0" />
-        <!-- 名单二维码导出：把 OfflineQrProtocol 的帧编成 PNG（PngByteQRCode，纯托管）。 -->
-        <PackageReference Include="QRCoder" Version="1.8.0" />
-        <!-- 名单二维码导入：相机帧/截图的 QR 解码（QrFrameDecoder，纯托管、不需要图片库）。 -->
-        <PackageReference Include="ZXing.Net" Version="0.16.9" />
     </ItemGroup>
 
     <ItemGroup>

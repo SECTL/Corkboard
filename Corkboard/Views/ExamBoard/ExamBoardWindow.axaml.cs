@@ -3,7 +3,9 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Corkboard.Core.Abstraction;
 using Corkboard.Core.Models.SubConfigs.Exam;
+using Corkboard.Services.Exam;
 using Corkboard.ViewModels.ExamBoard;
+using Corkboard.Views.Common;
 
 namespace Corkboard.Views.ExamBoard;
 
@@ -24,12 +26,21 @@ namespace Corkboard.Views.ExamBoard;
 /// </summary>
 public partial class ExamBoardWindow : Window
 {
+    private readonly ExamBoardThemeService _theme;
+    private readonly ResourceDictionary _themeDictionary;
     private ExamBoardFloatingWindow? _floatingWindow;
 
     public ExamBoardWindow()
     {
         InitializeComponent();
         DataContext = IAppHost.GetService<ExamBoardViewModel>();
+
+        // 主题字典必须在首帧前就位，否则会闪一下默认 Fluent 色。
+        _theme = IAppHost.GetService<ExamBoardThemeService>();
+        _themeDictionary = ExamBoardThemeResources.Create();
+        Resources.MergedDictionaries.Add(_themeDictionary);
+        ExamBoardThemeResources.Apply(_themeDictionary, _theme.Brushes);
+        _theme.Changed += OnThemeChanged;
 
         // ViewModel 是 transient、服务是单例：订阅与计时器必须在窗口关闭时一起收掉，
         // 否则每开一次看板就多挂一份处理器、多跑一个每秒的计时器。
@@ -52,10 +63,15 @@ public partial class ExamBoardWindow : Window
             }
 
             CloseFloatingWindow();
+            _theme.Changed -= OnThemeChanged;
+            Resources.MergedDictionaries.Remove(_themeDictionary);
         };
     }
 
     private ExamBoardViewModel? ViewModel => DataContext as ExamBoardViewModel;
+
+    private void OnThemeChanged(object? sender, EventArgs e) =>
+        ExamBoardThemeResources.Apply(_themeDictionary, _theme.Brushes);
 
     /// <summary>
     ///     是不是「收起来了」：窗口本身藏起来了、屏幕上只剩浮窗按钮。
@@ -167,37 +183,4 @@ public partial class ExamBoardWindow : Window
 
     /// <summary>按住浮窗满 2 秒：真的关掉看板（浮窗由 <c>Closed</c> 收掉）。</summary>
     private void OnFloatingExitRequested(object? sender, EventArgs e) => Close();
-
-    /// <summary>按下左下角那颗图标：开始计时，进度圈从零长起。</summary>
-    private void OnExitHintPointerPressed(object? sender, PointerPressedEventArgs e)
-    {
-        if (sender is not Control host)
-            return;
-
-        // 只有主键 / 触摸才算「按住」；右键、中键不该能退出。
-        if (!e.GetCurrentPoint(host).Properties.IsLeftButtonPressed && e.Pointer.Type != PointerType.Touch)
-            return;
-
-        e.Pointer.Capture(host);
-        ViewModel?.BeginHold();
-        e.Handled = true;
-    }
-
-    /// <summary>
-    ///     松手：长按走满的话 ViewModel 已经在计时器里发了退出请求（窗口正在关），
-    ///     没走满则交给 ViewModel 判断——手势是「单击最小化」时它会发最小化请求。
-    ///     <para>
-    ///         ⚠️ **先问 ViewModel、再放掉捕获**：<c>Capture(null)</c> 会同步触发
-    ///         <c>PointerCaptureLost</c> → <c>CancelHold()</c> 把 <c>IsHolding</c> 清掉，
-    ///         反过来写的话「单击最小化」永远判不出这一下是不是点击（点击看着毫无反应）。
-    ///     </para>
-    /// </summary>
-    private void OnExitHintPointerReleased(object? sender, PointerReleasedEventArgs e)
-    {
-        ViewModel?.FinishCornerPress();
-        e.Pointer.Capture(null);
-    }
-
-    /// <summary>指针被别处抢走（窗口失焦、弹窗弹出）：同样算松手，不然计时器还会自己走完。</summary>
-    private void OnExitHintCaptureLost(object? sender, PointerCaptureLostEventArgs e) => ViewModel?.CancelHold();
 }

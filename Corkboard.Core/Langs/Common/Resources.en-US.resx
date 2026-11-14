@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
   <resheader name="resmimetype">
     <value>text/microsoft-resx</value>
@@ -1914,9 +1914,6 @@
   <data name="Menu_OpenExamBoard" xml:space="preserve">
     <value>Exam board</value>
   </data>
-  <data name="Menu_OpenAction" xml:space="preserve">
-    <value>Actions</value>
-  </data>
   <data name="Common_Minutes" xml:space="preserve">
     <value>min</value>
   </data>
@@ -3698,40 +3695,280 @@ Continuing to use it means you understand and accept the above.</value>
   <data name="Menu_ExamPresent" xml:space="preserve">
     <value>Present now</value>
   </data>
-  <data name="Settings_Duty_Group" xml:space="preserve">
-    <value>Duty roster</value>
+  <data name="Settings_Exam_Theme_Title" xml:space="preserve">
+    <value>Board theme</value>
   </data>
-  <data name="Settings_Duty_Members_Title" xml:space="preserve">
-    <value>Members and import</value>
+  <data name="Settings_Exam_Theme_Source_Title" xml:space="preserve">
+    <value>Theme source</value>
   </data>
-  <data name="Settings_Duty_Groups_Title" xml:space="preserve">
-    <value>Groups and posts</value>
+  <data name="Settings_Exam_Theme_Source_Description" xml:space="preserve">
+    <value>Choose where the board colors come from</value>
   </data>
-  <data name="Settings_Duty_Schedule_Title" xml:space="preserve">
-    <value>Schedule rules</value>
+  <data name="Settings_Exam_Theme_Source_FollowApp" xml:space="preserve">
+    <value>Follow app appearance</value>
   </data>
-  <data name="Settings_Duty_Members_Description" xml:space="preserve">
-    <value>Who is on duty: the list, plus import</value>
+  <data name="Settings_Exam_Theme_Source_FollowAppDescription" xml:space="preserve">
+    <value>Changes with the app light and dark theme</value>
   </data>
-  <data name="Settings_Duty_Groups_Description" xml:space="preserve">
-    <value>Split the class into groups, each with its own tasks</value>
+  <data name="Settings_Exam_Theme_Source_Custom" xml:space="preserve">
+    <value>Custom</value>
   </data>
-  <data name="Settings_Duty_Schedule_Description" xml:space="preserve">
-    <value>Week start, rotation order and holiday rules</value>
+  <data name="Settings_Exam_Theme_Source_CustomDescription" xml:space="preserve">
+    <value>Change colors on top of a base</value>
   </data>
-  <data name="Settings_Duty_Placeholder" xml:space="preserve">
-    <value>This page is not built yet, only the entry is here</value>
+  <data name="Settings_Exam_Theme_CustomBase" xml:space="preserve">
+    <value>Custom base</value>
   </data>
-  <data name="Duty_Roster_Title" xml:space="preserve">
-    <value>Duty roster</value>
+  <data name="Settings_Exam_Theme_CustomBase_Description" xml:space="preserve">
+    <value>Pick a base before customizing</value>
   </data>
-  <data name="Duty_Roster_Description" xml:space="preserve">
-    <value>See who is on duty by week or month</value>
+  <data name="Settings_Exam_Theme_CustomBase_FollowApp" xml:space="preserve">
+    <value>App appearance</value>
   </data>
-  <data name="Duty_Roster_Placeholder" xml:space="preserve">
-    <value>Week and month views are on the way</value>
+  <data name="Settings_Exam_Theme_ResetTheme_Hint" xml:space="preserve">
+    <value>Back to the app appearance; custom colors stop applying</value>
   </data>
-  <data name="Menu_DutyRoster" xml:space="preserve">
-    <value>Duty roster</value>
+  <data name="Settings_Exam_Theme_ResetTheme" xml:space="preserve">
+    <value>Reset default theme</value>
+  </data>
+  <data name="Settings_Exam_Theme_ResetColors_Hint" xml:space="preserve">
+    <value>Clear every custom color, keep the source</value>
+  </data>
+  <data name="Settings_Exam_Theme_ResetColors" xml:space="preserve">
+    <value>Reset all colors</value>
+  </data>
+  <data name="Settings_Exam_Theme_Colors_Title" xml:space="preserve">
+    <value>Board colors</value>
+  </data>
+  <data name="Settings_Exam_Theme_Group_Text" xml:space="preserve">
+    <value>Surface and text</value>
+  </data>
+  <data name="Settings_Exam_Theme_Group_Status" xml:space="preserve">
+    <value>Exam status</value>
+  </data>
+  <data name="Settings_Exam_Theme_Group_Highlight" xml:space="preserve">
+    <value>Accent</value>
+  </data>
+  <data name="Settings_Exam_Theme_Group_Exit" xml:space="preserve">
+    <value>Long press exit</value>
+  </data>
+  <data name="Settings_Exam_Theme_TokenReset" xml:space="preserve">
+    <value>Reset this color</value>
+  </data>
+  <data name="Settings_Exam_Theme_PickColor" xml:space="preserve">
+    <value>Adjust color</value>
+  </data>
+  <data name="Settings_Exam_Theme_Token_Surface" xml:space="preserve">
+    <value>Board surface</value>
+  </data>
+  <data name="Settings_Exam_Theme_Token_TextPrimary" xml:space="preserve">
+    <value>Primary text</value>
+  </data>
+  <data name="Settings_Exam_Theme_Token_TextSecondary" xml:space="preserve">
+    <value>Secondary text</value>
+  </data>
+  <data name="Settings_Exam_Theme_Token_TextTertiary" xml:space="preserve">
+    <value>Tertiary text</value>
+  </data>
+  <data name="Settings_Exam_Theme_Token_Subtitle" xml:space="preserve">
+    <value>Board subtitle</value>
+  </data>
+  <data name="Settings_Exam_Theme_Token_Divider" xml:space="preserve">
+    <value>Divider</value>
+  </data>
+  <data name="Settings_Exam_Theme_Token_Upcoming" xml:space="preserve">
+    <value>Upcoming</value>
+  </data>
+  <data name="Settings_Exam_Theme_Token_InProgress" xml:space="preserve">
+    <value>In progress</value>
+  </data>
+  <data name="Settings_Exam_Theme_Token_Urgent" xml:space="preserve">
+    <value>Urgent</value>
+  </data>
+  <data name="Settings_Exam_Theme_Token_Highlight" xml:space="preserve">
+    <value>Accent</value>
+  </data>
+  <data name="Settings_Exam_Theme_Token_ExitTrack" xml:space="preserve">
+    <value>Exit progress track</value>
+  </data>
+  <data name="Settings_Exam_Theme_Token_ExitRingStart" xml:space="preserve">
+    <value>Exit ring start</value>
+  </data>
+  <data name="Settings_Exam_Theme_Token_ExitRingEnd" xml:space="preserve">
+    <value>Exit ring end</value>
+  </data>
+  <data name="Settings_Exam_Theme_Preset_Midnight" xml:space="preserve">
+    <value>Midnight study</value>
+  </data>
+  <data name="Settings_Exam_Theme_Preset_MidnightDescription" xml:space="preserve">
+    <value>Dark blue with cool text, easy on the eyes at night</value>
+  </data>
+  <data name="Settings_Exam_Theme_Preset_Paper" xml:space="preserve">
+    <value>Paper</value>
+  </data>
+  <data name="Settings_Exam_Theme_Preset_PaperDescription" xml:space="preserve">
+    <value>Warm paper with dark text, like a printed sheet</value>
+  </data>
+  <data name="Settings_Exam_Theme_Preset_Chalkboard" xml:space="preserve">
+    <value>Chalkboard</value>
+  </data>
+  <data name="Settings_Exam_Theme_Preset_ChalkboardDescription" xml:space="preserve">
+    <value>Deep green board with chalk white text</value>
+  </data>
+  <data name="Settings_Exam_Theme_Preset_Focus" xml:space="preserve">
+    <value>Focus</value>
+  </data>
+  <data name="Settings_Exam_Theme_Preset_FocusDescription" xml:space="preserve">
+    <value>Muted gray with only exam info standing out</value>
+  </data>
+  <data name="Settings_Exam_Theme_Preset_Contrast" xml:space="preserve">
+    <value>High contrast</value>
+  </data>
+  <data name="Settings_Exam_Theme_Preset_ContrastDescription" xml:space="preserve">
+    <value>Pure black with bright text, readable from afar</value>
+  </data>
+  <data name="Settings_Exam_Layout_Title" xml:space="preserve">
+    <value>Exam board layout</value>
+  </data>
+  <data name="Settings_Exam_Layout_Intro_Title" xml:space="preserve">
+    <value>Component layout</value>
+  </data>
+  <data name="Settings_Exam_Layout_Intro_Description" xml:space="preserve">
+    <value>Arrange the title, clock, exam info, and table for each exam status; changes apply to the live board</value>
+  </data>
+  <data name="Settings_Exam_Layout_States_Title" xml:space="preserve">
+    <value>Layout by status</value>
+  </data>
+  <data name="Settings_Exam_Layout_States_Description" xml:space="preserve">
+    <value>Each status is saved separately; untouched ones keep the default layout</value>
+  </data>
+  <data name="Settings_Exam_Layout_Status_NotStarted" xml:space="preserve">
+    <value>Not started</value>
+  </data>
+  <data name="Settings_Exam_Layout_Status_Upcoming" xml:space="preserve">
+    <value>Upcoming</value>
+  </data>
+  <data name="Settings_Exam_Layout_Status_InProgress" xml:space="preserve">
+    <value>In progress</value>
+  </data>
+  <data name="Settings_Exam_Layout_Status_Finished" xml:space="preserve">
+    <value>Finished</value>
+  </data>
+  <data name="Settings_Exam_Layout_State_Default" xml:space="preserve">
+    <value>Default layout</value>
+  </data>
+  <data name="Settings_Exam_Layout_State_Customized" xml:space="preserve">
+    <value>Customized</value>
+  </data>
+  <data name="Settings_Exam_Layout_Edit" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="Settings_Exam_Layout_ResetState" xml:space="preserve">
+    <value>Reset to default</value>
+  </data>
+  <data name="Settings_Exam_Layout_Hint" xml:space="preserve">
+    <value>Editing previews with sample exams and a fake clock; changes are saved when you finish. Which parts appear is still controlled by Board display</value>
+  </data>
+  <data name="Settings_Exam_Layout_Properties" xml:space="preserve">
+    <value>Component properties</value>
+  </data>
+  <data name="Settings_Exam_Layout_Field_X" xml:space="preserve">
+    <value>X</value>
+  </data>
+  <data name="Settings_Exam_Layout_Field_Y" xml:space="preserve">
+    <value>Y</value>
+  </data>
+  <data name="Settings_Exam_Layout_Field_Width" xml:space="preserve">
+    <value>Width</value>
+  </data>
+  <data name="Settings_Exam_Layout_Field_Height" xml:space="preserve">
+    <value>Height</value>
+  </data>
+  <data name="Settings_Exam_Layout_Field_Alignment" xml:space="preserve">
+    <value>Content alignment</value>
+  </data>
+  <data name="Settings_Exam_Layout_Field_Scale" xml:space="preserve">
+    <value>Scale</value>
+  </data>
+  <data name="Settings_Exam_Layout_Field_Opacity" xml:space="preserve">
+    <value>Opacity</value>
+  </data>
+  <data name="Settings_Exam_Layout_EditorHint" xml:space="preserve">
+    <value>Use the fields on the right to set position and size; colors come from Board theme</value>
+  </data>
+  <data name="Settings_Exam_Layout_Fonts" xml:space="preserve">
+    <value>Text size</value>
+  </data>
+  <data name="Settings_Exam_Layout_FontsHint" xml:space="preserve">
+    <value>Shares the same settings as Board text size; changes are saved when you release the slider</value>
+  </data>
+  <data name="Settings_Exam_Layout_DragPanel" xml:space="preserve">
+    <value>Drag panel</value>
+  </data>
+  <data name="Settings_Exam_Layout_Reset" xml:space="preserve">
+    <value>Reset this status</value>
+  </data>
+  <data name="Settings_Exam_Layout_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="Settings_Exam_Layout_Done" xml:space="preserve">
+    <value>Done</value>
+  </data>
+  <data name="Settings_Exam_Layout_Component_Title" xml:space="preserve">
+    <value>Title and subtitle</value>
+  </data>
+  <data name="Settings_Exam_Layout_Component_Clock" xml:space="preserve">
+    <value>Clock and date</value>
+  </data>
+  <data name="Settings_Exam_Layout_Component_ExamInfo" xml:space="preserve">
+    <value>Exam info</value>
+  </data>
+  <data name="Settings_Exam_Layout_Component_ExamTable" xml:space="preserve">
+    <value>Exam table</value>
+  </data>
+  <data name="Settings_Exam_Layout_Component_ExitCorner" xml:space="preserve">
+    <value>Exit corner</value>
+  </data>
+  <data name="Settings_Exam_Layout_Alignment_TopLeft" xml:space="preserve">
+    <value>Top left</value>
+  </data>
+  <data name="Settings_Exam_Layout_Alignment_Top" xml:space="preserve">
+    <value>Top</value>
+  </data>
+  <data name="Settings_Exam_Layout_Alignment_TopRight" xml:space="preserve">
+    <value>Top right</value>
+  </data>
+  <data name="Settings_Exam_Layout_Alignment_Left" xml:space="preserve">
+    <value>Left</value>
+  </data>
+  <data name="Settings_Exam_Layout_Alignment_MiddleCenter" xml:space="preserve">
+    <value>Center</value>
+  </data>
+  <data name="Settings_Exam_Layout_Alignment_Right" xml:space="preserve">
+    <value>Right</value>
+  </data>
+  <data name="Settings_Exam_Layout_Alignment_BottomLeft" xml:space="preserve">
+    <value>Bottom left</value>
+  </data>
+  <data name="Settings_Exam_Layout_Alignment_Bottom" xml:space="preserve">
+    <value>Bottom</value>
+  </data>
+  <data name="Settings_Exam_Layout_Alignment_BottomRight" xml:space="preserve">
+    <value>Bottom right</value>
+  </data>
+  <data name="Exam_Layout_Sample_Title" xml:space="preserve">
+    <value>Final exams</value>
+  </data>
+  <data name="Exam_Layout_Sample_Subtitle" xml:space="preserve">
+    <value>Sample board · June 2026</value>
+  </data>
+  <data name="Exam_Layout_Sample_Subject_Chinese" xml:space="preserve">
+    <value>Chinese</value>
+  </data>
+  <data name="Exam_Layout_Sample_Subject_Math" xml:space="preserve">
+    <value>Mathematics</value>
+  </data>
+  <data name="Exam_Layout_Sample_Subject_English" xml:space="preserve">
+    <value>English</value>
   </data>
 </root>

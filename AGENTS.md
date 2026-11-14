@@ -50,16 +50,13 @@ Corkboard/
 │   ├── ViewModels/MainPages/   #   子目录 Board/、Homework/
 │   ├── Views/SettingsPages/    #   子目录 Board/、Exam/
 │   ├── Views/ExamBoard/        #   全屏考试看板窗口
-│   ├── Views/Actions/          #   行动窗口（日程中心）：壳、列表、周/月视图、编辑器
 │   ├── ViewModels/ExamBoard/   #   全屏考试看板的 ViewModel
-│   ├── ViewModels/Actions/     #   行动窗口的 ViewModel（命名空间复数 Actions）
-│   └── Services/               #   Ui/、Board/、Homework/、Exam/、Actions/、Time/、Cloud/、Auth/、Desktop/、Ipc/
+│   └── Services/               #   Ui/、Board/、Homework/、Exam/、Time/、Cloud/、Auth/、Desktop/、Ipc/
 ├── Corkboard.Core/             # 核心：契约、配置/日志、领域服务、可复用控件与样式、Langs/Common
 │   ├── Notes/                  #   Note、NoteStore、NoteDayFile、INoteStore、Legacy/（旧数据迁移）
 │   ├── RichText/               #   RichTextStyle/Palette/HtmlStyling/ContentKind
 │   ├── Board/                  #   板子框架：BoardService、NoteGrouping、排布排序枚举、回放
 │   ├── Homework/               #   作业专属：HomeworkConfig、SectionCatalog、截止日期、清理、合并
-│   ├── Actions/                #   跨板子调度：ActionRule/ActionSchedule/IBoardTarget、Schedule/ 系统日程投影
 │   ├── Exam/                   #   考试专属：ExamEntry、三档状态判定、时间格式化、ExamService、自动放映与看板切换策略、考试文件导入导出
 │   ├── Time/                   #   NTP 校时：报文/客户端/国内源目录 + NtpTimeService（应用唯一时间来源）
 │   ├── Imaging/                #   位图工具：IconRaster（面积平均缩帧）、IcoFile（拼多尺寸 ICO）
@@ -100,10 +97,6 @@ Corkboard/
   `Services/Board|Homework/`；弹层、对话框、窗口能力留在 `Services/Ui/`、`Views/` 根。
 - **新板子**（课程表、待办……）：新建 `Core/<名>/` + `Views/MainPages/<名>/` + `ViewModels/MainPages/<名>/`，
   只复用 `Notes` / `RichText` / `Controls`，别改 `Board` / `Homework` 的公共契约。
-- **行动窗口（日程中心）是跨板子的调度层，不挂在某一块板子上**：领域在 `Core/Actions/`（`ActionRule` / `ActionSchedule` /
-  `IBoardTarget` / `Schedule` 投影）、服务在 `Services/Actions/`、界面在 `Views|ViewModels/Actions/`（命名空间用复数 `Actions`，
-  避开 `System.Action` 冲突）。以后加「值日表」这类新板子要能被行动显隐，**只加一个 `IBoardTarget` 实现 + 一个 Id**，
-  不要去改 `ActionExecutor` 或窗口；详见 `Corkboard/AGENTS.md`「行动窗口」一节。
 - ⚠️ **改名 ≠ 改数据**：类名、命名空间、文件名随意改；**属性名、JSON 键、枚举数值、`PageInfo.Id`、
   资源键、数据路径、云端文件名全部冻结**。改完跑 build + test + `-culture en-US`。
 - `Core/Notes/Legacy/` 三件套（`LegacyNoteFile` / `LegacyNoteContentConverter` / `LegacyTextFormatRange`）
@@ -535,9 +528,9 @@ dotnet run --project Corkboard.Desktop\Corkboard.Desktop.csproj
 
 | 位置 | 管什么 |
 | --- | --- |
-| `Corkboard.Core/AGENTS.md` | 配置管道与自动保存、本机专属项 `[LocalOnly]`、行动数据目录（`data/action/`）、历史存储与时空回放、字体、平台统计上报 |
+| `Corkboard.Core/AGENTS.md` | 配置管道与自动保存、本机专属项 `[LocalOnly]`、历史存储与时空回放、字体、平台统计上报 |
 | `Corkboard.Core/Exam/AGENTS.md` | 考试看板（多份看板、编辑窗口、快速布置、模板、全屏三档、自动放映、导入导出、看板字号）与 NTP 校时 |
-| `Corkboard/AGENTS.md` | 壳层与导航（主界面/设置界面标题栏、那颗锁、收纳、弹层、账号与云同步页）、行动窗口（日程中心）、应用图标、首次运行引导（OOBE） |
+| `Corkboard/AGENTS.md` | 壳层与导航（主界面/设置界面标题栏、那颗锁、收纳、弹层、账号与云同步页）、应用图标、首次运行引导（OOBE） |
 | `Corkboard/Views/AGENTS.md` | 看板模式（全屏大时钟 + 一言/天气）、作业板界面功能（便签、富文本、手写、排序、清理入口、导出） |
 
 **文里说「见「## 某某」」时**：先在根目录这份里找，没有就按上表去对应的子目录 `AGENTS.md` 找；

@@ -1,0 +1,65 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Corkboard.ViewModels.ExamBoard"
+             xmlns:bg="using:Corkboard.Views.Common"
+             xmlns:local="using:Corkboard.Views.ExamBoard"
+             xmlns:layout="using:Corkboard.Core.Controls.ExamBoard"
+             x:Class="Corkboard.Views.ExamBoard.ExamBoardView"
+             x:DataType="vm:ExamBoardViewModel">
+    <!--
+        考试看板的共享视图：放映窗与布局编辑窗都宿主它。
+        - 默认态（ActiveLayout.IsCustomized=false）走原来那套 Grid，保证默认零变化；
+        - 自定义态走 ExamBoardLayoutPanel，按百分比矩形摆五个区块。
+    -->
+    <Grid>
+        <bg:BoardBackgroundLayer x:Name="BackgroundLayer" Settings="{Binding Settings}" />
+
+        <!-- ── 默认版式：与原放映窗逐像素一致 ── -->
+        <Grid Margin="64,48,64,36"
+              RowDefinitions="Auto,*,Auto"
+              IsVisible="{Binding !IsCustomLayout}">
+            <local:ExamBoardTitleBlock x:Name="DefaultTitle" Grid.Row="0" />
+
+            <Grid Grid.Row="1" ColumnDefinitions="*,*" Margin="0,28,0,20">
+                <StackPanel Grid.Column="{Binding ClockColumn}"
+                            Grid.ColumnSpan="{Binding ClockColumnSpan}"
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Center"
+                            Spacing="10">
+                    <local:ExamBoardClockBlock x:Name="DefaultClock" />
+                    <local:ExamBoardInfoBlock x:Name="DefaultInfo" />
+                </StackPanel>
+                <Grid Grid.Column="{Binding ListColumn}"
+                      VerticalAlignment="Center"
+                      HorizontalAlignment="Stretch"
+                      MaxWidth="720">
+                    <local:ExamBoardExamTableBlock x:Name="DefaultTable" />
+                </Grid>
+            </Grid>
+
+            <local:ExamBoardExitBlock x:Name="DefaultExit" Grid.Row="2" />
+        </Grid>
+
+        <!-- ── 自定义版式：五个区块按百分比矩形独立摆放 ── -->
+        <layout:ExamBoardLayoutPanel x:Name="LayoutPanel"
+                                     Layout="{Binding ActiveLayout}"
+                                     Background="Transparent"
+                                     IsVisible="{Binding IsCustomLayout}">
+            <ContentControl layout:ExamBoardLayoutPanel.Component="Title">
+                <local:ExamBoardTitleBlock />
+            </ContentControl>
+            <ContentControl layout:ExamBoardLayoutPanel.Component="Clock">
+                <local:ExamBoardClockBlock />
+            </ContentControl>
+            <ContentControl layout:ExamBoardLayoutPanel.Component="ExamInfo">
+                <local:ExamBoardInfoBlock />
+            </ContentControl>
+            <ContentControl layout:ExamBoardLayoutPanel.Component="ExamTable">
+                <local:ExamBoardExamTableBlock />
+            </ContentControl>
+            <ContentControl layout:ExamBoardLayoutPanel.Component="ExitCorner">
+                <local:ExamBoardExitBlock />
+            </ContentControl>
+        </layout:ExamBoardLayoutPanel>
+    </Grid>
+</UserControl>

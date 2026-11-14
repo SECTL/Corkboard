@@ -7,8 +7,6 @@ using Corkboard.Core.Services.Logging;
 using Corkboard.Core.Board;
 using Corkboard.Core.Board.History;
 using Corkboard.Core.Exam;
-using Corkboard.Core.DutyRoster;
-using Corkboard.Core.DutyRoster.History;
 using Corkboard.Core.Homework;
 using Corkboard.Core.Notes;
 using Corkboard.Core.Time;
@@ -38,14 +36,13 @@ public static class CoreRuntimeServiceCollectionExtensions
 
         // 考试看板：考试安排（业务数据在 data/exam/）与 NTP 校时（看板时钟的时间源）。
         services.AddSingleton<IExamService, ExamService>();
+        // 看板视图只依赖最小内容源 / 时间源，示例编辑窗也实现它们；真实实现各注册一次即可。
+        services.AddSingleton<IExamBoardContentSource>(provider => provider.GetRequiredService<IExamService>());
+        services.AddSingleton<IExamBoardTimeSource>(provider => provider.GetRequiredService<NtpTimeService>());
         services.AddSingleton<IExamTemplateService, ExamTemplateService>();
         services.AddSingleton<IExamSlotPresetService, ExamSlotPresetService>();
         services.AddSingleton<NtpClient>();
         services.AddSingleton<NtpTimeService>();
-
-        // 值日表：名单/小组/职务/排班规则整份放在 data/duty/duty.json（学生姓名属于本机数据）。
-        services.AddSingleton<IDutyHistoryStore, DutyHistoryStore>();
-        services.AddSingleton<DutyRosterService>();
         return services;
     }
 

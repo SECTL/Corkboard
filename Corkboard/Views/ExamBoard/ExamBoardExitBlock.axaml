@@ -1,0 +1,64 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Corkboard.ViewModels.ExamBoard"
+             x:Class="Corkboard.Views.ExamBoard.ExamBoardExitBlock"
+             x:DataType="vm:ExamBoardViewModel">
+    <UserControl.Styles>
+        <Style Selector="Border.exit-hint">
+            <Setter Property="Width" Value="64" />
+            <Setter Property="Height" Value="64" />
+            <Setter Property="CornerRadius" Value="32" />
+            <Setter Property="Background" Value="{DynamicResource SubtleFillColorTransparentBrush}" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Border.exit-hint:pointerover">
+            <Setter Property="Background" Value="{DynamicResource ExamBoardHighlightBrush}" />
+        </Style>
+        <Style Selector="Border.exit-hint.holding">
+            <Setter Property="Background" Value="{DynamicResource ExamBoardHighlightBrush}" />
+        </Style>
+        <Style Selector="Border.exit-hint TextBlock.icon">
+            <Setter Property="Foreground" Value="{DynamicResource ExamBoardTextTertiaryBrush}" />
+        </Style>
+        <Style Selector="Border.exit-hint:pointerover TextBlock.icon">
+            <Setter Property="Foreground" Value="{DynamicResource ExamBoardTextSecondaryBrush}" />
+        </Style>
+    </UserControl.Styles>
+
+    <!--
+        左下角：长按退出 / 单击最小化（按住 2 秒，中途松手就取消）。
+        图标与提示语绑 ViewModel（CornerGlyph / CornerToolTip），换最小化形态时跟着变。
+    -->
+    <Border Classes="exit-hint"
+            Classes.holding="{Binding IsHolding}"
+            HorizontalAlignment="Left"
+            VerticalAlignment="Bottom"
+            ToolTip.Tip="{Binding CornerToolTip}"
+            PointerPressed="OnExitHintPointerPressed"
+            PointerReleased="OnExitHintPointerReleased"
+            PointerCaptureLost="OnExitHintCaptureLost">
+        <Grid Width="64" Height="64">
+            <Ellipse Width="52" Height="52"
+                     HorizontalAlignment="Center"
+                     VerticalAlignment="Center"
+                     IsVisible="{Binding IsHolding}"
+                     Stroke="{DynamicResource ExamBoardExitTrackBrush}"
+                     StrokeThickness="3" />
+            <Arc Width="52" Height="52"
+                 HorizontalAlignment="Center"
+                 VerticalAlignment="Center"
+                 StartAngle="-90"
+                 SweepAngle="{Binding HoldSweepAngle}"
+                 IsVisible="{Binding IsHolding}"
+                 Stroke="{Binding HoldRingBrush}"
+                 StrokeThickness="3"
+                 StrokeLineCap="Round" />
+            <TextBlock Classes="icon"
+                       Text="{Binding CornerGlyph}"
+                       FontFamily="{DynamicResource FluentSystemIconsResizeable}"
+                       FontSize="{Binding ExitIconSize}"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center" />
+        </Grid>
+    </Border>
+</UserControl>

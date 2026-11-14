@@ -307,9 +307,6 @@ public sealed class TaskBarIconService : IDisposable
         // 考试看板两项：上面那条开「面板窗口」（看板列表 + 放映入口），下面那条直接铺全屏。
         items.Add(new TrayMenuItem(CR.Menu_OpenExamPanel, static () => App.ShowExamBoardPanelWindow()));
         items.Add(new TrayMenuItem(CR.Menu_OpenExamBoard, static () => App.ShowExamBoardWindow()));
-        // 值日表：独立窗口，M0 阶段只有占位界面，先把托盘入口接上。
-        items.Add(new TrayMenuItem(CR.Menu_DutyRoster, static () => App.ShowDutyRosterWindow()));
-        items.Add(new TrayMenuItem(CR.Menu_OpenAction, static () => App.ShowActionWindow()));
         items.Add(new TrayMenuItem(CR.Menu_OpenSettings, static () => App.ShowSettingsWindow()));
         items.Add(TrayMenuItem.Separator);
         items.Add(new TrayMenuItem(CR.Menu_RestartProgram, static () => App.Current.Restart()));

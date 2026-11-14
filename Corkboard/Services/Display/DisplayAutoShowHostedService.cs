@@ -1,11 +1,8 @@
 using Avalonia.Threading;
-using Corkboard.Core.Actions;
-using Corkboard.Core.Actions.Schedule;
 using Corkboard.Core.Display;
 using Corkboard.Core.Models.SubConfigs.Display;
 using Corkboard.Core.Services.Config;
 using Corkboard.Core.Time;
-using Corkboard.Services.Actions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -39,8 +36,6 @@ namespace Corkboard.Services.Display;
 public sealed class DisplayAutoShowHostedService(
     MainConfigHandler configHandler,
     NtpTimeService time,
-    ActionExecutor actionExecutor,
-    ActionStateStore actionState,
     ILogger<DisplayAutoShowHostedService> logger) : BackgroundService
 {
     /// <summary>自动进出的时刻是分钟级的，十几秒看一次足够，也不至于占着 UI 线程。</summary>
@@ -126,7 +121,7 @@ public sealed class DisplayAutoShowHostedService(
             }
 
             if (App.IsDisplayBoardWindowOpen)
-                ExecuteSystem([new ActionStep { TargetId = BoardTargetIds.DisplayBoard, Operation = BoardOperation.Hide }], now);
+                App.CloseDisplayBoardWindow();
 
             return;
         }
@@ -179,42 +174,20 @@ public sealed class DisplayAutoShowHostedService(
         if (App.IsDisplaySuppressed(now))
             return;
 
-        // 窗口里对「看板模式自动进出」点了「今天不执行」：这一拍不进入（App 那边的抑制是另一套，照旧保留）。
-        if (actionState.IsSuppressed(DisplayScheduleProjection.SourceId, DateOnly.FromDateTime(now)))
-            return;
-
         if (!DisplaySchedulePolicy.ShouldEnter(false, now, slots))
             return;
 
         logger.LogDebug("看板模式到点自动进入");
-        ExecuteSystem([new ActionStep { TargetId = BoardTargetIds.DisplayBoard, Operation = BoardOperation.Show }], now);
+        App.ShowDisplayBoardWindow();
         _autoShown = true;
         App.IsDisplayAutoShown = true;
     }
 
     private void CloseAutoShown()
     {
-        ExecuteSystem([new ActionStep { TargetId = BoardTargetIds.DisplayBoard, Operation = BoardOperation.Hide }],
-            time.NowLocal);
+        App.CloseDisplayBoardWindow();
         _autoShown = false;
         App.IsDisplayAutoShown = false;
-    }
-
-    /// <summary>
-    ///     把「看板模式窗口开 / 关」交给行动执行器：判定与抑制还在这个服务里，执行与记录统一走
-    ///     <see cref="ActionExecutor.ExecuteSystemAsync" />（记录里能看到一条「看板模式」）。
-    /// </summary>
-    private void ExecuteSystem(IReadOnlyList<ActionStep> steps, DateTime occurrenceAt)
-    {
-        var title = ActionTextFormatter.DescribeSourceKind(ActionRunSourceKind.DisplayAutoShow);
-        _ = actionExecutor
-            .ExecuteSystemAsync(ActionRunSourceKind.DisplayAutoShow, DisplayScheduleProjection.SourceId, title, steps,
-                occurrenceAt)
-            .ContinueWith(
-                task => logger.LogError(task.Exception, "执行看板模式动作失败：{Title}", title),
-                CancellationToken.None,
-                TaskContinuationOptions.OnlyOnFaulted,
-                TaskScheduler.Default);
     }
 
     /// <summary>

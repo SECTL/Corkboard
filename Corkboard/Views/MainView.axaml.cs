@@ -946,10 +946,6 @@ public partial class MainView : ContentPage, IFANavigationPageFactory
     private void DockButton_OnClick(object? sender, RoutedEventArgs e) =>
         Dock.Collapse(TopLevel.GetTopLevel(this) as Window);
 
-    /// <summary>「更多」里的「行动窗口」：独立工具窗，关掉不影响作业板。</summary>
-    private void ActionWindowButton_OnClick(object? sender, RoutedEventArgs e) =>
-        App.ShowActionWindow();
-
     #endregion
 
     private bool IsInTitleBar(object? source)

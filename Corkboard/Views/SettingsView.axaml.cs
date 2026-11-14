@@ -17,6 +17,7 @@ using Corkboard.Core.Services;
 using Corkboard.Platforms.Abstractions;
 using Corkboard.Services.Ui;
 using Corkboard.ViewModels;
+using Corkboard.Views.Controls;
 using CR = Corkboard.Core.Langs.Common.Resources;
 using LR = Corkboard.Langs.SettingsView.Resources;
 
@@ -43,6 +44,11 @@ public partial class SettingsView : ContentPage, IFANavigationPageFactory
     /// <summary>Debug 构建的版本水印是否已经挂上（见 <see cref="OnLoadedForDevelopmentAdorner" />）。</summary>
     private bool _isDevelopmentAdornerAdded;
 
+    /// <summary>右下角轻提示的宿主与转发服务（设置壳是唯一挂点）。</summary>
+    private readonly ToastHost? _toastHost;
+
+    private readonly ToastService? _toastService;
+
     /// <summary>
     ///     窗口还没跑完首次导航时，外部（托盘菜单）要求的落地页先记在这儿，
     ///     由 <see cref="OnLoadedForInitialNavigation" /> 一并导航过去。
@@ -68,6 +74,8 @@ public partial class SettingsView : ContentPage, IFANavigationPageFactory
         _navigationView = this.FindControl<FANavigationView>("NavigationView");
         _titleBarActionArea = this.FindControl<StackPanel>("TitleBarActionArea");
         _windowFeatures = IAppHost.TryGetService<IWindowFeatureService>();
+        _toastHost = this.FindControl<ToastHost>("ToastHost");
+        _toastService = IAppHost.TryGetService<ToastService>();
 
         if (_navigationFrame is not null)
             _navigationFrame.NavigationPageFactory = this;
@@ -86,9 +94,11 @@ public partial class SettingsView : ContentPage, IFANavigationPageFactory
         Loaded += OnLoadedForInitialNavigation;
         Loaded += OnLoadedForSystemButtonsReserve;
         Loaded += OnLoadedForDevelopmentAdorner;
+        Loaded += OnLoadedForToastHost;
         UpdateBackButtonState();
         Unloaded += (_, _) =>
         {
+            OnUnloadedForToastHost();
             if (ReferenceEquals(Current, this))
                 Current = null;
         };
@@ -114,6 +124,20 @@ public partial class SettingsView : ContentPage, IFANavigationPageFactory
                 _pendingPageId = null;
             },
             DispatcherPriority.Background);
+    }
+
+    /// <summary>把设置壳的 Toast 宿主交给通知服务；窗口离开可视树时再摘掉。</summary>
+    private void OnLoadedForToastHost(object? sender, RoutedEventArgs e)
+    {
+        Loaded -= OnLoadedForToastHost;
+        if (_toastHost is not null)
+            _toastService?.Attach(_toastHost);
+    }
+
+    private void OnUnloadedForToastHost()
+    {
+        if (_toastHost is not null)
+            _toastService?.Detach(_toastHost);
     }
 
     /// <summary>

@@ -4,7 +4,7 @@ using Corkboard.Platforms.Abstractions;
 namespace Corkboard.Platforms.Windows;
 
 /// <summary>
-///     Windows 平台根：窗口能力、开机自启、URL 协议注册与相机抓帧都只在这个平台上可用，
+///     Windows 平台根：窗口能力、开机自启与 URL 协议注册都只在这个平台上可用，
 ///     调用方（入口层）已经用 <c>OperatingSystem.IsWindows()</c> 挡过一道。
 /// </summary>
 [SupportedOSPlatform("windows")]
@@ -16,7 +16,6 @@ public sealed class WindowsPlatformServiceRoot : IPlatformServiceRoot
         Autostart = new WindowsAutostartService();
         Pointer = new WindowsPointerLocator();
         UrlSchemes = new WindowsUrlSchemeRegistrar();
-        Camera = new OpenCvCameraScanner();
     }
 
     public PlatformKind Kind => PlatformKind.Windows;
@@ -46,6 +45,4 @@ public sealed class WindowsPlatformServiceRoot : IPlatformServiceRoot
     public IPointerLocator Pointer { get; }
 
     public IUrlSchemeRegistrar UrlSchemes { get; }
-
-    public ICameraScanner Camera { get; }
 }

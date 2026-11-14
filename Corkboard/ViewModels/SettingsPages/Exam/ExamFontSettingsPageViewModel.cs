@@ -8,6 +8,7 @@ using Corkboard.Core.Icons;
 using Corkboard.Core.Models.SubConfigs.Exam;
 using Corkboard.Core.Services.Config;
 using Corkboard.ViewModels;
+using Corkboard.ViewModels.ExamBoard;
 using CR = Corkboard.Core.Langs.Common.Resources;
 
 namespace Corkboard.ViewModels.SettingsPages.Exam;
@@ -33,7 +34,7 @@ public partial class ExamFontSettingsPageViewModel : ViewModelBase
 
     public ExamFontSettingsPageViewModel(MainConfigHandler configHandler) : base(configHandler)
     {
-        FontSizes = BuildItems();
+        FontSizes = ExamBoardFontSizeCatalog.Create(Settings);
         FontSizeGroups = BuildGroups(FontSizes);
         ResetDrafts();
     }
@@ -57,83 +58,6 @@ public partial class ExamFontSettingsPageViewModel : ViewModelBase
     ///     界面照这张表画四张可折叠卡，默认全部收起——十几项平铺一页要滚半天才找得到要改的那一项。
     /// </summary>
     public IReadOnlyList<ExamFontGroup> FontSizeGroups { get; }
-
-    /// <summary>
-    ///     这 16 项就是看板上全部的字（外加左下角那颗退出图标），顺序即界面顺序。
-    ///     <c>Id</c> 决定资源键与读写的配置属性，**不要**随手改（改了老配置里对应那项就回默认值）。
-    /// </summary>
-    private IReadOnlyList<ExamFontSizeItem> BuildItems() =>
-    [
-        // 顶部：主标题与副标题。
-        new("Title", CR.Settings_Exam_Font_MainTitle, CR.Settings_Exam_Font_MainTitleDescription,
-            ExamBoardTextStyle.DefaultTitleFontSize, false,
-            () => Settings.TitleFontSize, value => Settings.TitleFontSize = value),
-
-        new("Subtitle", CR.Settings_Exam_Font_Subtitle, CR.Settings_Exam_Font_SubtitleDescription,
-            ExamBoardTextStyle.DefaultSubtitleFontSize, false,
-            () => Settings.SubtitleFontSize, value => Settings.SubtitleFontSize = value),
-
-        // 时钟那一组：两个档位，旁边有表 vs 只剩时钟。
-        new("Clock", CR.Settings_Exam_Font_Clock, CR.Settings_Exam_Font_ClockDescription,
-            ExamBoardTextStyle.DefaultClockFontSize, true,
-            () => Settings.ClockFontSize, value => Settings.ClockFontSize = value),
-
-        new("ClockAlone", CR.Settings_Exam_Font_ClockAlone, CR.Settings_Exam_Font_ClockAloneDescription,
-            ExamBoardTextStyle.DefaultClockAloneFontSize, true,
-            () => Settings.ClockAloneFontSize, value => Settings.ClockAloneFontSize = value),
-
-        new("ClockDate", CR.Settings_Exam_Font_ClockDate, CR.Settings_Exam_Font_ClockDateDescription,
-            ExamBoardTextStyle.DefaultClockDateFontSize, false,
-            () => Settings.ClockDateFontSize, value => Settings.ClockDateFontSize = value),
-
-        // 时钟下面那组考试信息。
-        new("InfoCaption", CR.Settings_Exam_Font_InfoCaption, CR.Settings_Exam_Font_InfoCaptionDescription,
-            ExamBoardTextStyle.DefaultInfoCaptionFontSize, false,
-            () => Settings.InfoCaptionFontSize, value => Settings.InfoCaptionFontSize = value),
-
-        new("InfoSubject", CR.Settings_Exam_Font_InfoSubject, CR.Settings_Exam_Font_InfoSubjectDescription,
-            ExamBoardTextStyle.DefaultInfoSubjectFontSize, false,
-            () => Settings.InfoSubjectFontSize, value => Settings.InfoSubjectFontSize = value),
-
-        new("InfoTime", CR.Settings_Exam_Font_InfoTime, CR.Settings_Exam_Font_InfoTimeDescription,
-            ExamBoardTextStyle.DefaultInfoTimeFontSize, false,
-            () => Settings.InfoTimeFontSize, value => Settings.InfoTimeFontSize = value),
-
-        new("InfoRemaining", CR.Settings_Exam_Font_InfoRemaining, CR.Settings_Exam_Font_InfoRemainingDescription,
-            ExamBoardTextStyle.DefaultInfoRemainingFontSize, false,
-            () => Settings.InfoRemainingFontSize, value => Settings.InfoRemainingFontSize = value),
-
-        new("InfoPaper", CR.Settings_Exam_Font_InfoPaper, CR.Settings_Exam_Font_InfoPaperDescription,
-            ExamBoardTextStyle.DefaultInfoPaperFontSize, false,
-            () => Settings.InfoPaperFontSize, value => Settings.InfoPaperFontSize = value),
-
-        // 右侧那张考试表。
-        new("TableHeader", CR.Settings_Exam_Font_TableHeader, CR.Settings_Exam_Font_TableHeaderDescription,
-            ExamBoardTextStyle.DefaultTableHeaderFontSize, false,
-            () => Settings.TableHeaderFontSize, value => Settings.TableHeaderFontSize = value),
-
-        new("Table", CR.Settings_Exam_Font_Table, CR.Settings_Exam_Font_TableDescription,
-            ExamBoardTextStyle.DefaultTableFontSize, false,
-            () => Settings.TableFontSize, value => Settings.TableFontSize = value),
-
-        new("TableSubject", CR.Settings_Exam_Font_TableSubject, CR.Settings_Exam_Font_TableSubjectDescription,
-            ExamBoardTextStyle.DefaultTableSubjectFontSize, false,
-            () => Settings.TableSubjectFontSize, value => Settings.TableSubjectFontSize = value),
-
-        // 一场都没排时的空状态。
-        new("Empty", CR.Settings_Exam_Font_Empty, CR.Settings_Exam_Font_EmptyDescription,
-            ExamBoardTextStyle.DefaultEmptyFontSize, false,
-            () => Settings.EmptyFontSize, value => Settings.EmptyFontSize = value),
-
-        new("EmptyHint", CR.Settings_Exam_Font_EmptyHint, CR.Settings_Exam_Font_EmptyHintDescription,
-            ExamBoardTextStyle.DefaultEmptyHintFontSize, false,
-            () => Settings.EmptyHintFontSize, value => Settings.EmptyHintFontSize = value),
-
-        // 左下角长按退出那颗图标：它不是字，是字形，但同属「看板上这块东西多大」。
-        new("ExitIcon", CR.Settings_Exam_Font_ExitIcon, CR.Settings_Exam_Font_ExitIconDescription,
-            ExamBoardTextStyle.DefaultExitIconSize, false,
-            () => Settings.ExitIconSize, value => Settings.ExitIconSize = value)
-    ];
 
     /// <summary>
     ///     把 <see cref="FontSizes" /> 按看板上的区域切成四组，顺序就是看板上从上到下的顺序。

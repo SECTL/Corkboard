@@ -13,6 +13,7 @@ using Corkboard.Core.Models.SubConfigs.Exam;
 using Corkboard.Core.Services.Fonts;
 using Corkboard.Core.Services.Config;
 using Corkboard.Core.Time;
+using Corkboard.Services.Exam;
 using CR = Corkboard.Core.Langs.Common.Resources;
 
 namespace Corkboard.ViewModels.ExamBoard;
@@ -51,23 +52,20 @@ public partial class ExamBoardViewModel : ViewModelBase
     /// <summary>进度圈的重绘间隔：约 60 fps，两秒 120 帧，顺滑又不费。</summary>
     private static readonly TimeSpan HoldFrameInterval = TimeSpan.FromMilliseconds(16);
 
-    /// <summary>进度圈起点色（蓝）：刚按下，还没什么危险。</summary>
-    private static readonly Color HoldRingStartColor = Color.Parse("#0078D4");
-
-    /// <summary>进度圈终点色（红）：走满了就要退了，颜色得先提醒到。</summary>
-    private static readonly Color HoldRingEndColor = Color.Parse("#E81123");
-
     private readonly MainConfigHandler _configHandler;
-    private readonly NtpTimeService _time;
+    private readonly IExamBoardTimeSource _time;
+    private readonly ExamBoardThemeService _theme;
+    private readonly ExamBoardLayoutService _layoutService;
     private readonly DispatcherTimer _timer;
     private readonly DispatcherTimer _holdTimer;
     private readonly Stopwatch _holdWatch = new();
 
     /// <summary>进度圈的颜色笔刷：一个实例反复改 <see cref="SolidColorBrush.Color" />，不每帧新建对象。</summary>
-    private readonly SolidColorBrush _holdRingBrush = new(HoldRingStartColor);
+    private readonly SolidColorBrush _holdRingBrush;
 
     private bool _isAttached;
     private DateOnly _today;
+    private ExamStatus _currentStatus = ExamStatus.NotStarted;
 
     /// <summary>
     ///     这一刻那颗角标是不是「最小化」——每秒重算一次（考试状态会随时间翻面），
@@ -75,12 +73,20 @@ public partial class ExamBoardViewModel : ViewModelBase
     /// </summary>
     private bool _canMinimize;
 
-    public ExamBoardViewModel(MainConfigHandler configHandler, IExamService examService, NtpTimeService time)
+    public ExamBoardViewModel(
+        MainConfigHandler configHandler,
+        IExamBoardContentSource contentSource,
+        IExamBoardTimeSource timeSource,
+        ExamBoardThemeService theme,
+        ExamBoardLayoutService layoutService)
         : base(configHandler)
     {
         _configHandler = configHandler;
-        _time = time;
-        Exams = examService;
+        _time = timeSource;
+        _theme = theme;
+        _layoutService = layoutService;
+        _holdRingBrush = new SolidColorBrush(theme.Colors.ExitRingStart);
+        Exams = contentSource;
 
         _timer = new DispatcherTimer { Interval = TickInterval };
         _timer.Tick += (_, _) => Tick();
@@ -93,11 +99,44 @@ public partial class ExamBoardViewModel : ViewModelBase
     }
 
     /// <summary>考试安排数据源（窗口开着时它会随设置页的改动实时更新）。</summary>
-    public IExamService Exams { get; }
+    public IExamBoardContentSource Exams { get; }
 
     public ExamBoardSettingsConfig Settings => Config.ExamBoard;
 
-    /// <summary>右侧 / 另一侧的考试表格行（按开考时间升序）。</summary>
+    /// <summary>布局配置（编辑窗的子类会用它自己的草稿覆盖）。</summary>
+    public virtual ExamBoardLayoutConfig LayoutConfig => Config.ExamBoardLayout;
+
+    /// <summary>当前这一刻的考试状态；四档状态各有一套布局。</summary>
+    public ExamStatus CurrentStatus
+    {
+        get => _currentStatus;
+        private set
+        {
+            if (_currentStatus == value)
+            {
+                return;
+            }
+
+            _currentStatus = value;
+            OnPropertyChanged(nameof(CurrentStatus));
+            OnPropertyChanged(nameof(ActiveLayout));
+            OnPropertyChanged(nameof(IsCustomLayout));
+        }
+    }
+
+    /// <summary>当前状态生效的布局（未自定义时仍返回默认矩形，但不参与渲染）。</summary>
+    public ExamBoardStatusLayout ActiveLayout => LayoutConfig.For(CurrentStatus);
+
+    /// <summary>编辑窗子类强制走自定义面板，哪怕当前状态还没自定义过。</summary>
+    protected virtual bool ForceCustomLayout => false;
+
+    /// <summary>当前状态是否使用自定义布局。为假时仍走原来的 Grid 版式，保证默认零变化。</summary>
+    public bool IsCustomLayout => ForceCustomLayout || ActiveLayout.IsCustomized;
+
+    /// <summary>时间源（编辑窗用假时钟切状态）。</summary>
+    protected IExamBoardTimeSource TimeSource => _time;
+
+    /// <summary>右边 / 另一侧的考试表格行（按开考时间升序）。</summary>
     public ObservableCollection<ExamRowItem> Rows { get; } = new();
 
     [ObservableProperty]
@@ -302,7 +341,7 @@ public partial class ExamBoardViewModel : ViewModelBase
 
         IsHolding = true;
         HoldSweepAngle = 0;
-        _holdRingBrush.Color = HoldRingStartColor;
+        _holdRingBrush.Color = _theme.Colors.ExitRingStart;
 
         _holdTimer.Start();
     }
@@ -315,7 +354,7 @@ public partial class ExamBoardViewModel : ViewModelBase
 
         IsHolding = false;
         HoldSweepAngle = 0;
-        _holdRingBrush.Color = HoldRingStartColor;
+        _holdRingBrush.Color = _theme.Colors.ExitRingStart;
     }
 
     /// <summary>
@@ -326,7 +365,7 @@ public partial class ExamBoardViewModel : ViewModelBase
         var progress = Math.Clamp(_holdWatch.Elapsed / HoldToExitDuration, 0d, 1d);
 
         HoldSweepAngle = progress * 360;
-        _holdRingBrush.Color = LerpColor(HoldRingStartColor, HoldRingEndColor, progress);
+        _holdRingBrush.Color = LerpColor(_theme.Colors.ExitRingStart, _theme.Colors.ExitRingEnd, progress);
 
         if (progress < 1)
             return;
@@ -379,6 +418,8 @@ public partial class ExamBoardViewModel : ViewModelBase
         Exams.Changed += OnExamsChanged;
         Settings.PropertyChanged += OnSettingsChanged;
         _time.StatusChanged += OnTimeStatusChanged;
+        _theme.Changed += OnThemeChanged;
+        _layoutService.Changed += OnLayoutChanged;
 
         RebuildRows();
         _timer.Start();
@@ -397,6 +438,8 @@ public partial class ExamBoardViewModel : ViewModelBase
         Exams.Changed -= OnExamsChanged;
         Settings.PropertyChanged -= OnSettingsChanged;
         _time.StatusChanged -= OnTimeStatusChanged;
+        _theme.Changed -= OnThemeChanged;
+        _layoutService.Changed -= OnLayoutChanged;
     }
 
     /// <summary>每秒一次：先刷新时钟，跨日了才重建行（日期列会从「今天」变成「明天」）。</summary>
@@ -529,7 +572,7 @@ public partial class ExamBoardViewModel : ViewModelBase
     ///     每秒刷新的那一批：时钟文字、下一场考试的状态，以及「这一刻该显示什么」。
     ///     形态与行状态都在这里算，切换点（开考前 30 分钟、开考、考完）到点即生效。
     /// </summary>
-    private void RefreshNow()
+    protected void RefreshNow()
     {
         var now = _time.NowLocal;
 
@@ -539,6 +582,7 @@ public partial class ExamBoardViewModel : ViewModelBase
         var threshold = ExamStatusPolicy.ClampUpcomingMinutes(Settings.UpcomingThresholdMinutes);
         var next = ExamStatusPolicy.FindNext(Exams.Exams, now);
         var nextStatus = next is null ? ExamStatus.Finished : ExamStatusPolicy.Resolve(next, now, threshold);
+        CurrentStatus = nextStatus;
 
         // 两种形态：整表 / 只剩下「时钟 + 下面那组信息」。
         // 列表收起时不再另开一张卡，统一由时钟下面那组字承载（科目、时间、剩余、卷面）。
@@ -657,12 +701,7 @@ public partial class ExamBoardViewModel : ViewModelBase
         if (Exams.ActiveBoard.SubtitleColor is { } color)
             return new SolidColorBrush(color);
 
-        if (Application.Current is { } app
-            && app.TryGetResource("TextFillColorSecondaryBrush", app.ActualThemeVariant, out var resource)
-            && resource is IBrush brush)
-            return brush;
-
-        return Brushes.Gray;
+        return new SolidColorBrush(_theme.Colors.Subtitle);
     }
 
     /// <summary>考试增删改 / 切看板 / 改标题副标题都会走这里（服务只在落盘后发一次通知）。</summary>
@@ -689,6 +728,24 @@ public partial class ExamBoardViewModel : ViewModelBase
     }
 
     private void OnTimeStatusChanged(object? sender, EventArgs e) => RefreshNow();
+
+    /// <summary>设置页 / 编辑器提交了一份新布局：通知界面重读当前状态的那套矩形。</summary>
+    private void OnLayoutChanged(object? sender, EventArgs e)
+    {
+        OnPropertyChanged(nameof(LayoutConfig));
+        OnPropertyChanged(nameof(ActiveLayout));
+        OnPropertyChanged(nameof(IsCustomLayout));
+    }
+
+    private void OnThemeChanged(object? sender, EventArgs e)
+    {
+        // 正在长按时下一帧 Lerp 会读新终点；没在长按时把本地刷子拨回新起点。
+        if (!IsHolding)
+            _holdRingBrush.Color = _theme.Colors.ExitRingStart;
+
+        SubtitleBrush = ResolveSubtitleBrush();
+        OnPropertyChanged(nameof(HoldRingBrush));
+    }
 }
 
 /// <summary>

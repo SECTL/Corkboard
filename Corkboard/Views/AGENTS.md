@@ -119,9 +119,8 @@
   **别在外面再套一层 `ItemsControl`**——那样行不算它的容器，卡片给行准备的底色不生效，行会退回控件默认底色、
   比卡片亮一块（用户反馈过「这个设置项的底色不对，我感觉就是没复用，或者说是用错了」）。
   现有两处这么用：`ExamFontSettingsPage.axaml`（`FontSizeGroups` 的 `Items`）、`DisplaySettingsPage.axaml`（`FontItems`）。
-  页面自己的 `<UserControl.Styles>` 只留这几样：数值文本 `TextBlock.slider-value`。字号/光标/轮播停顿用滑块。
-  （星期小方块 `ToggleButton.day-chip` 与时段容器 `Border.slot-row` 已随时段编辑一起搬到
-  「行动窗口 → 系统日程 → 看板模式」，样式现在只在 `Views/Actions/ActionWindow.axaml` 里。）
+  页面自己的 `<UserControl.Styles>` 只留这几样：数值文本 `TextBlock.slider-value`、星期小方块 `ToggleButton.day-chip`
+  与一段时段的容器 `Border.slot-row`。字号/光标/轮播停顿用滑块。
   （原来的 `Border.mode-switch` + `ToggleButton.mode-tab` 那套分段按钮已随「时钟位置」设置项一起删掉，
   这一页现在没有分段按钮。）
   ⚠️ **设置卡不能套设置卡**：`FASettingsExpander` 的内容里再出现一张 `FASettingsExpander`
@@ -155,12 +154,7 @@
   （`DisplayDayChoice` + `SetDay`），「每天 / 工作日 / 周末」那三颗 `EveryDayCommand` / `WeekdaysCommand` / `WeekendCommand`
   已按用户要求删除（「不要有预设的什么工作日那些东西」），**不要再加回来**。
 - ⚠️ **集合元素不会被 `ConfigHandlerBase` 递归订阅**（见「设置怎么写」），改时段后必须显式
-  `MainConfigHandler.Save()`——行动窗口时段编辑器的 `OnSlotChanged` 就是干这个的；设置页已不再放时段编辑器（编辑入口见下一条）。
-- ⚠️ **时段/自动进出的编辑入口已经搬到「行动窗口」**（用户要求：设置项删掉、都在行动里直接编辑）：
-  列表页「系统日程」分组 → 看板模式那几行 → 详情卡里内嵌时段编辑器（`ActionWindow.axaml` 里复用
-  `DisplaySettingsPageViewModel.DisplaySlotItem`，样式 `Border.slot-row` / `ToggleButton.day-chip` 也搬到了那份 XAML），
-  改完写 `MainConfigHandler.Data.Display` 后 `Save()`；考试自动放映的五个字段同理在「考试自动放映」详情卡里改。
-  **不要再把入口搬回设置页**，也不要在设置页里留“去行动窗口改”的跳转按钮。
+  `MainConfigHandler.Save()`——设置页的 `OnSlotChanged` 就是干这个的。
 - **老配置只有那四个数（`EnterHour/EnterMinute/ExitHour/ExitMinute`）**：`DisplaySettingsConfig.Normalize()` 在
   列表为空时用它们造出第一段，再把第一段写回这四个字段（别处还在读），所以升级上来的用户时段不丢。这四个键**冻结**。
 - **到点自动进出**：`Services/Display/DisplayAutoShowHostedService`（照 `ExamAutoShowHostedService`：15 秒一拍、

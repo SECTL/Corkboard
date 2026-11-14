@@ -1,0 +1,18 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Corkboard.ViewModels.ExamBoard"
+             x:Class="Corkboard.Views.ExamBoard.ExamBoardTitleBlock"
+             x:DataType="vm:ExamBoardViewModel">
+    <!-- 左上角：主标题 + 副标题（副标题更小更淡，颜色可在设置里改）。 -->
+    <StackPanel Spacing="6">
+        <TextBlock Text="{Binding Title}"
+                   FontSize="{Binding TitleFontSize}"
+                   FontWeight="SemiBold"
+                   Foreground="{DynamicResource ExamBoardTextPrimaryBrush}" />
+        <TextBlock Text="{Binding Subtitle}"
+                   IsVisible="{Binding HasSubtitle}"
+                   FontSize="{Binding SubtitleFontSize}"
+                   TextWrapping="Wrap"
+                   Foreground="{Binding SubtitleBrush}" />
+    </StackPanel>
+</UserControl>

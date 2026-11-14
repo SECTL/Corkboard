@@ -38,7 +38,4 @@ public sealed class MacOsPlatformServiceRoot : IPlatformServiceRoot
     ///     所以这里报不支持，设置页整张卡隐藏。
     /// </summary>
     public IUrlSchemeRegistrar UrlSchemes { get; } = UnsupportedUrlSchemeRegistrar.Instance;
-
-    /// <summary>macOS 侧还没有接相机（AVFoundation 抓帧待做）；扫码导入那一块整块隐藏。</summary>
-    public ICameraScanner Camera { get; } = UnsupportedCameraScanner.Instance;
 }

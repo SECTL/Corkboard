@@ -1,11 +1,8 @@
 using Avalonia.Threading;
-using Corkboard.Core.Actions;
-using Corkboard.Core.Actions.Schedule;
 using Corkboard.Core.Exam;
 using Corkboard.Core.Models.SubConfigs.Exam;
 using Corkboard.Core.Services.Config;
 using Corkboard.Core.Time;
-using Corkboard.Services.Actions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -31,8 +28,6 @@ public sealed class ExamAutoShowHostedService(
     IExamService examService,
     MainConfigHandler configHandler,
     NtpTimeService time,
-    ActionExecutor actionExecutor,
-    ActionStateStore actionState,
     ILogger<ExamAutoShowHostedService> logger) : BackgroundService
 {
     /// <summary>自动放映的时刻是分钟级的，十几秒看一次足够，也不至于占着 UI 线程。</summary>
@@ -138,11 +133,7 @@ public sealed class ExamAutoShowHostedService(
 
             if (ExamAutoShowPolicy.IsFinished(session.Exams, now, settings.CloseDelayMinutes))
             {
-                // 收窗也走执行器：这样「到点收了」在行动记录里能看到一条（手动/自动一致）。
-                ExecuteSystem(
-                    $"{ActionTextFormatter.DescribeSourceKind(ActionRunSourceKind.ExamAutoShow)} · {session.ResolveTitle()}",
-                    [new ActionStep { TargetId = BoardTargetIds.ExamBoard, Operation = BoardOperation.Hide }],
-                    now);
+                App.CloseExamBoardWindow();
                 // 这一轮整场考试都过去了：把弹过的记录一起清掉，下一季从零开始。
                 EndSession("最后一场已考完", clearShown: true);
             }
@@ -165,14 +156,6 @@ public sealed class ExamAutoShowHostedService(
             return;
         }
 
-        // 「今天不执行」：窗口里对考试自动放映点了暂停，这一拍不弹。
-        // 不记 _shownExamIds / _sessionBoardId —— 用户取消暂停后下一拍还能补弹，而不是默默错过。
-        if (actionState.IsSuppressed(ExamScheduleProjection.SourceId, DateOnly.FromDateTime(now)))
-        {
-            logger.LogDebug("考试自动放映今天已被抑制，跳过这一拍");
-            return;
-        }
-
         // 全屏看板显示的是「当前看板」，所以先把参与放映的那块切过去（换看板会重读考试集合）。
         if (!ReferenceEquals(examService.ActiveBoard, targetBoard))
             SwitchTo(targetBoard.Id);
@@ -182,17 +165,10 @@ public sealed class ExamAutoShowHostedService(
 
         // 看板模式也是全屏窗：考试到点要放，先把它收掉，别让两块全屏叠在一起
         // （那边看门狗见 App.IsExamBoardWindowOpen 就只清账、不记抑制，考完还能自己回来）。
-        // 走执行器后这串动作会记进行动运行记录；Hide 幂等，执行器自己的全屏互斥再藏一次也无害。
-        var steps = new List<ActionStep>(2);
         if (App.IsDisplayBoardWindowOpen)
-            steps.Add(new ActionStep { TargetId = BoardTargetIds.DisplayBoard, Operation = BoardOperation.Hide });
+            App.CloseDisplayBoardWindow();
 
-        steps.Add(new ActionStep { TargetId = BoardTargetIds.ExamBoard, Operation = BoardOperation.Show });
-
-        ExecuteSystem(
-            $"{ActionTextFormatter.DescribeSourceKind(ActionRunSourceKind.ExamAutoShow)} · {targetBoard.ResolveTitle()}",
-            steps,
-            now);
+        App.ShowExamBoardWindow();
 
         logger.LogInformation("自动放映开始：{Board} · {Exam} {Time}", targetBoard.ResolveTitle(), targetExam.Subject,
             ExamTimeFormatter.FormatTimeRange(targetExam));
@@ -279,23 +255,6 @@ public sealed class ExamAutoShowHostedService(
         }
 
         return best;
-    }
-
-    /// <summary>
-    ///     把「放映到哪里」的动作交给行动执行器：判定与抑制还在这个服务里，执行与记录统一走
-    ///     <see cref="ActionExecutor.ExecuteSystemAsync" />。已经在 UI 线程上，动作段同步做完；
-    ///     返回的 Task 只等文件落盘，失败不弹窗。
-    /// </summary>
-    private void ExecuteSystem(string title, IReadOnlyList<ActionStep> steps, DateTime occurrenceAt)
-    {
-        _ = actionExecutor
-            .ExecuteSystemAsync(ActionRunSourceKind.ExamAutoShow, ExamScheduleProjection.SourceId, title, steps,
-                occurrenceAt)
-            .ContinueWith(
-                task => logger.LogError(task.Exception, "执行考试看板放映动作失败：{Title}", title),
-                CancellationToken.None,
-                TaskContinuationOptions.OnlyOnFaulted,
-                TaskScheduler.Default);
     }
 
     /// <summary>收掉这一轮自动放映。</summary>

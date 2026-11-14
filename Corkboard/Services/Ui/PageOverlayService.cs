@@ -72,22 +72,10 @@ public partial class PageOverlayService : ObservableObject
     /// <summary>全屏展示窗口的层级：比壳高，压在主窗口之上。</summary>
     public const int FullScreenHostPriority = 10;
 
-    /// <summary>
-    ///     只服务「指名要它画」的宿主（行动窗口这类独立工具窗）。
-    ///     <para>
-    ///         低于所有常规宿主，且<b>不参与全局兜底</b>：不指名时弹层永远轮不到它。
-    ///         否则它一旦注册，就会把主窗口 / 设置页的表单抢到自己身上。
-    ///     </para>
-    /// </summary>
-    public const int DialogOnlyHostPriority = -10;
-
     private readonly List<PageOverlayHost> _hosts = [];
 
     private bool _useSeparateWindow;
     private PageOverlayWindow? _window;
-
-    /// <summary>本次弹层指名要画到谁身上；为 null 时走原来的「最高优先级宿主」。</summary>
-    private object? _preferredOwner;
 
     [ObservableProperty] private bool _isOpen;
     [ObservableProperty] private object? _content;
@@ -147,41 +135,20 @@ public partial class PageOverlayService : ObservableObject
             return;
 
         host.Apply(false, null);
-
-        // 指名宿主没了，弹层不能留在别人身上（那会变成抢别人的模态）。
-        if (IsOpen && _preferredOwner is not null && ReferenceEquals(host.Owner, _preferredOwner))
-        {
-            Close();
-            return;
-        }
-
         RefreshHosts();
 
         if (IsOpen && !UseSeparateWindow && ResolveActiveHost() is null)
             Close();
     }
 
-    /// <summary>
-    ///     显示一层弹层。内容通常是某个表单控件。
-    /// </summary>
-    /// <param name="content">要画的内容。</param>
-    /// <param name="preferredOwner">
-    ///     指名要画到哪个宿主身上（该宿主的 <see cref="PageOverlayHost.Owner" />）。
-    ///     独立工具窗（行动窗口）用它自己的宿主，避免与主窗口 / 设置页的弹层互相抢；
-    ///     指名时即使 <see cref="UseSeparateWindow" /> 为真也就地渲染——它自己是正常窗口，拿得到焦点。
-    /// </param>
-    public void Show(object content, object? preferredOwner = null)
+    /// <summary>显示一层弹层。内容通常是某个表单控件。</summary>
+    public void Show(object content)
     {
-        _preferredOwner = preferredOwner;
-
-        if (UseSeparateWindow && preferredOwner is null)
+        if (UseSeparateWindow)
         {
             ShowInSeparateWindow(content);
             return;
         }
-
-        // 两条路不能同时画，切回壳内时先收掉独立窗口。
-        CloseSeparateWindow();
 
         Content = content;
         IsOpen = true;
@@ -191,7 +158,6 @@ public partial class PageOverlayService : ObservableObject
     {
         CloseSeparateWindow();
 
-        _preferredOwner = null;
         IsOpen = false;
         Content = null;
         Closed?.Invoke(this, EventArgs.Empty);
@@ -208,10 +174,6 @@ public partial class PageOverlayService : ObservableObject
         // 同层级时后注册的赢（>= 而不是 >）。
         foreach (var host in _hosts)
         {
-            // DialogOnly 宿主不参与全局兜底，只能被 Show(..., preferredOwner) 指名。
-            if (host.Priority == DialogOnlyHostPriority)
-                continue;
-
             if (active is null || host.Priority >= active.Priority)
                 active = host;
         }
@@ -219,21 +181,9 @@ public partial class PageOverlayService : ObservableObject
         return active;
     }
 
-    private PageOverlayHost? FindHost(object owner)
-    {
-        foreach (var host in _hosts)
-        {
-            if (ReferenceEquals(host.Owner, owner))
-                return host;
-        }
-
-        return null;
-    }
-
     private void RefreshHosts()
     {
-        var preferred = _preferredOwner is { } owner ? FindHost(owner) : null;
-        var active = preferred ?? (UseSeparateWindow ? null : ResolveActiveHost());
+        var active = UseSeparateWindow ? null : ResolveActiveHost();
 
         foreach (var host in _hosts)
         {
