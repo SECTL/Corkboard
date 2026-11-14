@@ -350,6 +350,14 @@
   不要在回执前重建连接）②配置变化（`Config.ControlCenter.PropertyChanged` 与
   `MainConfigHandler.Reloaded`，按 Enabled/ServerUrl/DisplayName 指纹）重建客户端，400ms 防抖；
   ③接入/取消接入/占班/下课/取班级树。
+- **作业自动备份**：开关是 `Config.ControlCenter.HomeworkBackupEnabled`（默认开，设置页卡片）。
+  开集控且勾选时，作业板变化经 **8s 防抖**（`Corkboard/Helpers/DebounceTimer`）后
+  `POST /control/api/device/homework-snapshots`（设备凭证，走
+  `ControlNodeEnrollmentApi.UploadHomeworkSnapshotAsync`），连上集控补传一次、10 分钟兜底；
+  内容指纹（`ControlHomeworkBackup.CreateContentFingerprint`：Id/正文/截止/分类/清理时间 SHA-256）
+  去重，同样内容不重传。失败只弹一次 `IToastService`，状态记在 `HomeworkBackup` 供设置页显示。
+  快照形状与 `homework.read` 回执一致（同一个 `ControlHomeworkSnapshot.Build`），单条上限 256 KiB；
+  **淘汰在服务端做**（每地点保留最近 200 条 / 4 MiB，满了删最旧），客户端不要自己删。
 - ⚠️ **不要把公告卡 / 推图浮层加回来**：首版照 SecRandom-C 做过 `ControlCenterPresenter` +
   `ControlNoticeWindow` + `ControlImageWindow`，用户明确要求删掉（2026-11-14）。
   集控这边只保留连接状态、占班/下课与配置重载；确实要提示用户时用既有的 `IToastService`，
