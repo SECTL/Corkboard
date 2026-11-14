@@ -38,6 +38,9 @@ public static class ControlV4Protocol
     /// <summary>设备自助改自己所属的班（凭证放请求体）。</summary>
     public const string DeviceAssignPath = "/control/api/device/assign";
 
+    /// <summary>上传作业板只读快照（凭证放请求体，快照形状同 <c>homework.read</c> 回执）。</summary>
+    public const string DeviceHomeworkPath = "/control/api/device/homework-snapshots";
+
     /// <summary>服务端默认的单条指令超时；握手回包 <c>limits.cmdTimeoutMs</c> 有值就以服务端为准。</summary>
     public const int DefaultCommandTimeoutMs = 5000;
 

@@ -4040,4 +4040,17 @@ Continuing to use it means you understand and accept the above.</value>
   <data name="Settings_Control_Error_InvalidResponse" xml:space="preserve"><value>The control center returned an unexpected response</value></data>
   <data name="Settings_Control_Error_NotEnrolled" xml:space="preserve"><value>Not paired yet</value></data>
   <data name="Settings_Control_Error_Unknown" xml:space="preserve"><value>Request failed; try again later</value></data>
+  <data name="Settings_Control_Error_BadRequest" xml:space="preserve"><value>The control center rejected the backup</value></data>
+  <data name="Settings_Control_Error_PayloadTooLarge" xml:space="preserve"><value>The board is too large to back up</value></data>
+  <data name="Settings_Control_Error_BadSecret" xml:space="preserve"><value>The pairing is no longer valid; pair again</value></data>
+  <data name="Settings_Control_Error_Forbidden" xml:space="preserve"><value>This device was removed from the control center</value></data>
+  <data name="Settings_Control_Error_DeviceNotFound" xml:space="preserve"><value>The control center does not know this device</value></data>
+  <data name="Settings_Control_Error_RateLimited" xml:space="preserve"><value>Backups are too frequent; will retry automatically</value></data>
+  <data name="Settings_Control_HomeworkBackup_Title" xml:space="preserve"><value>Back up homework automatically</value></data>
+  <data name="Settings_Control_HomeworkBackup_Description" xml:space="preserve"><value>Sends a snapshot to the control center whenever the board changes</value></data>
+  <data name="Settings_Control_HomeworkBackup_Status" xml:space="preserve"><value>Last backup</value></data>
+  <data name="Settings_Control_HomeworkBackup_StatusFormat" xml:space="preserve"><value>Last backup: {0}</value></data>
+  <data name="Settings_Control_HomeworkBackup_Never" xml:space="preserve"><value>Not backed up yet</value></data>
+  <data name="Settings_Control_HomeworkBackup_Failed" xml:space="preserve"><value>The last backup failed</value></data>
+  <data name="Settings_Control_HomeworkBackup_FailedToast" xml:space="preserve"><value>Automatic backup keeps failing; teachers may not see the board</value></data>
 </root>

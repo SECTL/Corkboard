@@ -32,6 +32,16 @@ public partial class ControlCenterSettingsConfig : ObservableObject
     /// <summary>是否启用集控（默认关；导入设置不许替用户打开）。</summary>
     [ObservableProperty] private bool _enabled;
 
+    /// <summary>
+    ///     作业自动备份（默认开）：作业板有变化就把只读快照传到集控，老师那边能看到历史备份。
+    ///     <para>
+    ///         它<b>不</b>等于远程控制：只是把板子的一份只读副本朝外传，服务端没法借此改本机任何东西，
+    ///         所以默认值是开——但导入设置时仍然<b>不要</b>替用户强制打开或关闭它，
+    ///         缺键时保留这里的默认值就够了。
+    ///     </para>
+    /// </summary>
+    [ObservableProperty] private bool _homeworkBackupEnabled = true;
+
     /// <summary>集控中心地址（缺 <c>https://</c> 时由 <see cref="Normalize" /> 补上）。</summary>
     [ObservableProperty] private string _serverUrl = DefaultServerUrl;
 

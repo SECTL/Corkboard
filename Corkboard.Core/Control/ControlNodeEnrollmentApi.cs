@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Text;
 using System.Text.Json;
@@ -56,6 +57,37 @@ public sealed record ControlDeviceTreeResult(
     /// <summary>失败。</summary>
     public static ControlDeviceTreeResult Failure(string errorKey, string? message = null) =>
         new(false, [], errorKey, message);
+}
+
+/// <summary>
+///     上传作业快照（<c>POST /control/api/device/homework-snapshots</c>）的结果。
+///     <para>
+///         <see cref="ErrorKey" /> 与接入接口同一条规矩：Core 只给本地化键，界面自己取词。
+///     </para>
+/// </summary>
+/// <param name="Ok">是否上传成功。</param>
+/// <param name="SnapshotId">服务端给这份快照的 id（成功时可能有）。</param>
+/// <param name="ReceivedAt">服务端收到的时间。</param>
+/// <param name="ErrorKey">失败时的本地化错误键。</param>
+/// <param name="Message">服务端给的人话（只进日志 / 兜底展示）。</param>
+/// <param name="Evicted">服务端为腾配额而挤掉的旧快照数量。</param>
+public sealed record ControlHomeworkUploadResult(
+    bool Ok,
+    string? SnapshotId,
+    DateTimeOffset? ReceivedAt,
+    string? ErrorKey,
+    string? Message,
+    int Evicted)
+{
+    /// <summary>成功。</summary>
+    public static ControlHomeworkUploadResult Success(
+        string? snapshotId,
+        DateTimeOffset? receivedAt,
+        int evicted) => new(true, snapshotId, receivedAt, null, null, evicted);
+
+    /// <summary>失败。</summary>
+    public static ControlHomeworkUploadResult Failure(string errorKey, string? message = null) =>
+        new(false, null, null, errorKey, message, 0);
 }
 
 /// <summary>接入失败的本地化键（下一波在 resx 里补中文；测试直接比常量）。</summary>
@@ -124,6 +156,24 @@ public static class ControlApiErrorKeys
 
     /// <summary>还没接入（没有凭证）。</summary>
     public const string NotEnrolled = Prefix + "NotEnrolled";
+
+    /// <summary>请求本身不合法（服务端 <c>bad_request</c>）。</summary>
+    public const string BadRequest = Prefix + "BadRequest";
+
+    /// <summary>请求体太大（服务端 <c>payload_too_large</c> / HTTP 413）。</summary>
+    public const string PayloadTooLarge = Prefix + "PayloadTooLarge";
+
+    /// <summary>凭证不对（服务端 <c>bad_secret</c> / HTTP 401）。</summary>
+    public const string BadSecret = Prefix + "BadSecret";
+
+    /// <summary>设备已被移除或不允许（服务端 <c>device_revoked</c> / HTTP 403）。</summary>
+    public const string Forbidden = Prefix + "Forbidden";
+
+    /// <summary>服务端不认识这台设备（服务端 <c>device_not_found</c> / HTTP 404）。</summary>
+    public const string DeviceNotFound = Prefix + "DeviceNotFound";
+
+    /// <summary>请求太频繁（服务端 <c>too_many_requests</c> / HTTP 429）。</summary>
+    public const string RateLimited = Prefix + "RateLimited";
 
     /// <summary>认不出来的错误。</summary>
     public const string Unknown = Prefix + "Unknown";
@@ -278,6 +328,93 @@ public sealed class ControlNodeEnrollmentApi : IDisposable
             tree.Site?.Name);
     }
 
+    /// <summary>
+    ///     把一份只读作业快照传给集控（<c>POST /control/api/device/homework-snapshots</c>）。
+    ///     <para>
+    ///         凭证走请求体（与 <see cref="GetDeviceTreeAsync" /> 同一条规矩）；
+    ///         <paramref name="snapshot" /> 就是 <c>homework.read</c> 回执里那一份，
+    ///         形状由 <see cref="ControlHomeworkSnapshot.Build" /> 保证。
+    ///     </para>
+    ///     <para>
+    ///         服务端可能因为配额挤掉旧快照（<c>data.evicted</c>），也可能因为太大直接拒绝
+    ///         （<c>payload_too_large</c>）：两种都只是「这次没备份成」，不影响本机作业板。
+    ///     </para>
+    /// </summary>
+    public async Task<ControlHomeworkUploadResult> UploadHomeworkSnapshotAsync(
+        ControlNodeCredential credential,
+        JsonObject snapshot,
+        string? classId,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(credential);
+        ArgumentNullException.ThrowIfNull(snapshot);
+
+        if (!credential.IsComplete)
+            return ControlHomeworkUploadResult.Failure(ControlApiErrorKeys.NotEnrolled);
+
+        var payload = new JsonObject
+        {
+            ["deviceId"] = credential.DeviceId,
+            ["secret"] = credential.Secret,
+            ["classId"] = string.IsNullOrWhiteSpace(classId) ? null : classId.Trim(),
+            ["snapshot"] = snapshot
+        };
+
+        string text;
+        HttpStatusCode statusCode;
+        try
+        {
+            using var request = new HttpRequestMessage(
+                HttpMethod.Post,
+                _options.ResolveHttpEndpoint(ControlV4Protocol.DeviceHomeworkPath))
+            {
+                Content = new StringContent(payload.ToJsonString(ControlV4Protocol.JsonOptions),
+                    Encoding.UTF8, "application/json")
+            };
+            using var response = await _http.SendAsync(request, ct).ConfigureAwait(false);
+            statusCode = response.StatusCode;
+            text = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            // HttpClient.Timeout 到点也抛 OperationCanceledException（没带取消令牌），按网络失败处理。
+            return ControlHomeworkUploadResult.Failure(ControlApiErrorKeys.Network);
+        }
+        catch (HttpRequestException)
+        {
+            return ControlHomeworkUploadResult.Failure(ControlApiErrorKeys.Network);
+        }
+
+        JsonObject? root;
+        try
+        {
+            root = JsonNode.Parse(text) as JsonObject;
+        }
+        catch (JsonException)
+        {
+            root = null;
+        }
+
+        if (root is null)
+            return ControlHomeworkUploadResult.Failure(ControlApiErrorKeys.InvalidResponse);
+
+        var ok = ReadBool(root, "ok") ?? IsSuccessStatusCode(statusCode);
+        if (!ok)
+        {
+            // 错误体是 { ok:false, error:{ code, message?, detail? } }；也容忍平铺在顶层的旧写法。
+            var error = root["error"] as JsonObject;
+            var code = ReadString(error, "code") ?? ReadString(root, "code");
+            var message = ReadString(error, "message") ?? ReadString(root, "message");
+            return ControlHomeworkUploadResult.Failure(MapHomeworkUploadErrorKey(code, statusCode), message);
+        }
+
+        var data = root["data"] as JsonObject ?? root;
+        return ControlHomeworkUploadResult.Success(
+            ReadString(data, "snapshotId") ?? ReadString(data, "snapshot_id"),
+            ReadDateTimeOffset(data, "receivedAt") ?? ReadDateTimeOffset(data, "received_at"),
+            ControlJson.ReadInt32(data, "evicted"));
+    }
+
     /// <summary>释放自己建的 <see cref="HttpClient" />（注入进来的不归我管）。</summary>
     public void Dispose()
     {
@@ -364,10 +501,42 @@ public sealed class ControlNodeEnrollmentApi : IDisposable
         _ => ControlEnrollErrorKeys.Unknown
     };
 
+    private static string MapHomeworkUploadErrorKey(string? code, HttpStatusCode statusCode) => code switch
+    {
+        "bad_request" or "invalid_request" => ControlApiErrorKeys.BadRequest,
+        "payload_too_large" or "too_large" => ControlApiErrorKeys.PayloadTooLarge,
+        "bad_secret" or "invalid_secret" => ControlApiErrorKeys.BadSecret,
+        "device_revoked" => ControlApiErrorKeys.Forbidden,
+        "device_not_found" => ControlApiErrorKeys.DeviceNotFound,
+        "too_many_requests" => ControlApiErrorKeys.RateLimited,
+        _ => statusCode switch
+        {
+            HttpStatusCode.BadRequest => ControlApiErrorKeys.BadRequest,
+            HttpStatusCode.Unauthorized => ControlApiErrorKeys.BadSecret,
+            HttpStatusCode.Forbidden => ControlApiErrorKeys.Forbidden,
+            HttpStatusCode.NotFound => ControlApiErrorKeys.DeviceNotFound,
+            HttpStatusCode.RequestEntityTooLarge => ControlApiErrorKeys.PayloadTooLarge,
+            HttpStatusCode.TooManyRequests => ControlApiErrorKeys.RateLimited,
+            _ => ControlApiErrorKeys.Unknown
+        }
+    };
+
     private static bool? ReadBool(JsonObject? obj, string name) => ControlJson.ReadBool(obj, name);
 
     private static string? ReadString(JsonObject? obj, string name) => ControlJson.ReadString(obj, name);
 
     private static string? ReadNestedString(JsonObject? obj, string parent, string name) =>
         obj?[parent] is JsonObject child ? ReadString(child, name) : null;
+
+    private static DateTimeOffset? ReadDateTimeOffset(JsonObject? obj, string name)
+    {
+        var text = ReadString(obj, name);
+        return DateTimeOffset.TryParse(
+            text,
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+            out var value)
+            ? value
+            : null;
+    }
 }

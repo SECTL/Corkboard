@@ -54,6 +54,24 @@
                 </fa:FASettingsExpander.Footer>
             </fa:FASettingsExpander>
 
+            <!--
+                作业自动备份：默认开，只往集控传一份只读快照（不是远程控制）。
+                状态行由服务推送，最近一次成功时间 / 上次失败 / 还没备份过。
+                开关直接双向绑 bool 配置即可（与上面的总开关同一条规矩）。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Control_HomeworkBackup_Title}"
+                                   Description="{x:Static core:Resources.Settings_Control_HomeworkBackup_Description}">
+                <fa:FASettingsExpander.Footer>
+                    <StackPanel Spacing="4">
+                        <ToggleSwitch IsChecked="{Binding Config.ControlCenter.HomeworkBackupEnabled, Mode=TwoWay}" />
+                        <TextBlock FontSize="12"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Text="{Binding HomeworkBackupStatusText}"
+                                   TextWrapping="Wrap" />
+                    </StackPanel>
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
             <!-- ============================ 设备与连接 ============================ -->
             <TextBlock Margin="0 12 0 4"
                        FontSize="12"

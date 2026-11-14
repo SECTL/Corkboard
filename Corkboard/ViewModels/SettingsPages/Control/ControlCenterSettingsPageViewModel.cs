@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -84,6 +85,9 @@ public partial class ControlCenterSettingsPageViewModel(
 
     [ObservableProperty] private string _currentClassText = string.Empty;
 
+    /// <summary>「最近备份」那一行：成功时是本地时间，没成功过 / 失败时给对应文案。</summary>
+    [ObservableProperty] private string _homeworkBackupStatusText = string.Empty;
+
     [ObservableProperty] private ObservableCollection<ControlClassOption> _classOptions = [];
 
     [ObservableProperty]
@@ -149,9 +153,12 @@ public partial class ControlCenterSettingsPageViewModel(
         // 先减后加，防止同一个 VM 被重复 Attach 时挂两遍。
         controlService.SnapshotChanged -= OnSnapshotChanged;
         controlService.SnapshotChanged += OnSnapshotChanged;
+        controlService.HomeworkBackupChanged -= OnHomeworkBackupChanged;
+        controlService.HomeworkBackupChanged += OnHomeworkBackupChanged;
 
         _wasConnected = controlService.Snapshot.IsConnected;
         ApplySnapshot(controlService.Snapshot);
+        ApplyHomeworkBackup(controlService.HomeworkBackup);
 
         // 班级清单只在「已接入且还没有缓存」时补拉一次；失败静默，不影响页面其余部分。
         if (controlService.IsConfigured && ClassOptions.Count == 0)
@@ -159,7 +166,11 @@ public partial class ControlCenterSettingsPageViewModel(
     }
 
     /// <summary>页面离开可视树：断掉对单例服务的订阅（必须，见类注释）。</summary>
-    public void Detach() => controlService.SnapshotChanged -= OnSnapshotChanged;
+    public void Detach()
+    {
+        controlService.SnapshotChanged -= OnSnapshotChanged;
+        controlService.HomeworkBackupChanged -= OnHomeworkBackupChanged;
+    }
 
     // ---------------------------------------------------------------------------------------
     // 提交
@@ -348,6 +359,38 @@ public partial class ControlCenterSettingsPageViewModel(
         RefreshCurrentClassText();
 
         NotifyCommandStates();
+    }
+
+    /// <summary>备份状态可能在后台线程推送，先切回 UI 线程再改可观察属性。</summary>
+    private void OnHomeworkBackupChanged(object? sender, ControlHomeworkBackupState state)
+    {
+        if (Dispatcher.UIThread.CheckAccess())
+            ApplyHomeworkBackup(state);
+        else
+            Dispatcher.UIThread.Post(() => ApplyHomeworkBackup(state));
+    }
+
+    /// <summary>「自动备份作业」的状态行：最近一次成功的本地时间 / 上次失败 / 还没备份过。</summary>
+    private void ApplyHomeworkBackup(ControlHomeworkBackupState state)
+    {
+        string value;
+        if (state.LastSuccessAt is { } successAt)
+        {
+            value = successAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.CurrentCulture);
+        }
+        else if (state.LastErrorKey is not null)
+        {
+            value = CR.Settings_Control_HomeworkBackup_Failed;
+        }
+        else
+        {
+            value = CR.Settings_Control_HomeworkBackup_Never;
+        }
+
+        HomeworkBackupStatusText = string.Format(
+            CultureInfo.CurrentCulture,
+            CR.Settings_Control_HomeworkBackup_StatusFormat,
+            value);
     }
 
     /// <summary>详情行没有 <c>DetailKey</c> 时按状态给一句通用说明。</summary>

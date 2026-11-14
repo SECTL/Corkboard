@@ -4038,4 +4038,17 @@
   <data name="Settings_Control_Error_InvalidResponse" xml:space="preserve"><value>集控中心返回了无法识别的内容</value></data>
   <data name="Settings_Control_Error_NotEnrolled" xml:space="preserve"><value>还没有接入集控</value></data>
   <data name="Settings_Control_Error_Unknown" xml:space="preserve"><value>请求失败，稍后重试</value></data>
+  <data name="Settings_Control_Error_BadRequest" xml:space="preserve"><value>备份内容被集控拒绝了</value></data>
+  <data name="Settings_Control_Error_PayloadTooLarge" xml:space="preserve"><value>作业板内容太多，这次没备份成功</value></data>
+  <data name="Settings_Control_Error_BadSecret" xml:space="preserve"><value>接入信息已失效，需要重新接入</value></data>
+  <data name="Settings_Control_Error_Forbidden" xml:space="preserve"><value>这台设备已被集控移除</value></data>
+  <data name="Settings_Control_Error_DeviceNotFound" xml:space="preserve"><value>集控里找不到这台设备</value></data>
+  <data name="Settings_Control_Error_RateLimited" xml:space="preserve"><value>备份太频繁，稍后会自动重试</value></data>
+  <data name="Settings_Control_HomeworkBackup_Title" xml:space="preserve"><value>自动备份作业</value></data>
+  <data name="Settings_Control_HomeworkBackup_Description" xml:space="preserve"><value>作业板一变就把快照传到集控，老师能看到历史</value></data>
+  <data name="Settings_Control_HomeworkBackup_Status" xml:space="preserve"><value>最近备份</value></data>
+  <data name="Settings_Control_HomeworkBackup_StatusFormat" xml:space="preserve"><value>最近备份：{0}</value></data>
+  <data name="Settings_Control_HomeworkBackup_Never" xml:space="preserve"><value>还没备份过</value></data>
+  <data name="Settings_Control_HomeworkBackup_Failed" xml:space="preserve"><value>上次备份失败</value></data>
+  <data name="Settings_Control_HomeworkBackup_FailedToast" xml:space="preserve"><value>自动备份一直没成功，老师那边可能看不到作业</value></data>
 </root>

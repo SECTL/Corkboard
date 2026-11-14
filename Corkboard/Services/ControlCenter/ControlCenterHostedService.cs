@@ -8,6 +8,7 @@ using Corkboard.Core.ControlCenter;
 using Corkboard.Core.Langs.Common;
 using Corkboard.Core.Models.SubConfigs.ControlCenter;
 using Corkboard.Core.Services.Config;
+using Corkboard.Helpers;
 using Corkboard.Services.Ui;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -37,6 +38,12 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
     /// <summary>服务器地址 / 设备名变更后等这么久再重连，免得每敲一个字就重连一次。</summary>
     private static readonly TimeSpan RestartDebounce = TimeSpan.FromMilliseconds(400);
 
+    /// <summary>作业板变化后等这么久再上传，避开一次编辑过程中反复触发。</summary>
+    private static readonly TimeSpan UploadDebounce = TimeSpan.FromSeconds(8);
+
+    /// <summary>兜底巡检间隔：板子没动也隔一阵补传一次（服务端丢了、网络刚恢复都能补上）。</summary>
+    private static readonly TimeSpan UploadHeartbeatInterval = TimeSpan.FromMinutes(10);
+
     /// <summary>唯一注册的命令：重载配置（不弹任何界面）。</summary>
     private const string CommandReloadConfig = "reloadConfig";
 
@@ -58,12 +65,49 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
     /// <summary>400ms 防抖的取消源；每次新的地址 / 设备名变更都会替换它。</summary>
     private readonly object _debounceGate = new();
 
+    /// <summary>上传的串行闸门：防抖、连上补传、10 分钟巡检三条路不能同时传。</summary>
+    private readonly SemaphoreSlim _uploadGate = new(1, 1);
+
+    /// <summary>10 分钟兜底巡检循环的取消源（停服 / 释放时取消）。</summary>
+    private readonly CancellationTokenSource _uploadLoopCts = new();
+
+    /// <summary>保护上传相关的记账与 HTTP 客户端（<see cref="_uploadApi" />）。</summary>
+    private readonly object _uploadStateGate = new();
+
     private CancellationTokenSource? _pendingRestart;
 
     /// <summary>当前订阅着的子配置对象（<c>Reload()</c> 会整个换掉它，所以要跟着换订阅）。</summary>
     private ControlCenterSettingsConfig? _watchedConfig;
 
     private ControlNodeClient? _client;
+
+    /// <summary>作业备份的 HTTP 客户端：站点地址变了就换一个（地址只影响请求目标）。</summary>
+    private ControlNodeEnrollmentApi? _uploadApi;
+
+    private string _uploadApiServerUrl = string.Empty;
+
+    /// <summary>8 秒防抖计时器；基于 <see cref="DebounceTimer" />（DispatcherTimer），只能在 UI 线程上建。</summary>
+    private DebounceTimer? _uploadDebounce;
+
+    private Task? _uploadLoop;
+
+    /// <summary>作业自动备份的对外状态。</summary>
+    private ControlHomeworkBackupState _homeworkBackup = ControlHomeworkBackupState.Initial;
+
+    /// <summary>上一次成功上传时的内容指纹；一样就不重复传。</summary>
+    private string? _lastUploadedFingerprint;
+
+    /// <summary>上一次成功上传时的板上作业条数（指纹之外的第二个判据）。</summary>
+    private int _lastUploadedNoteCount;
+
+    /// <summary>板子变化 / 连接状态是否已经挂上（重连与停服要成对增删）。</summary>
+    private bool _uploadTriggersAttached;
+
+    /// <summary>上一次记过 warning 的错误键：同一个错误连续失败只记一次日志。</summary>
+    private string? _lastLoggedBackupErrorKey;
+
+    /// <summary>接入之后一直没备份成功时，只弹一次普通提示。</summary>
+    private bool _backupFailureToasted;
 
     private ControlNodeLinkState _snapshot = ControlNodeLinkState.Initial;
 
@@ -90,6 +134,7 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
 
         _configHandler.Reloaded += OnConfigReloaded;
         SubscribeControlCenter();
+        SubscribeUploadTriggers();
         _fingerprint = CreateFingerprint(_configHandler.Data.ControlCenter);
     }
 
@@ -105,6 +150,19 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
 
     /// <summary>状态变化通知。<b>可能来自后台线程</b>，界面订阅者要自己切回 UI 线程。</summary>
     public event EventHandler<ControlNodeLinkState>? SnapshotChanged;
+
+    /// <summary>作业自动备份的当前状态（供设置页画「最近备份」）。</summary>
+    public ControlHomeworkBackupState HomeworkBackup
+    {
+        get
+        {
+            lock (_uploadStateGate)
+                return _homeworkBackup;
+        }
+    }
+
+    /// <summary>作业自动备份状态变化通知。<b>可能来自后台线程</b>，界面订阅者要自己切回 UI 线程。</summary>
+    public event EventHandler<ControlHomeworkBackupState>? HomeworkBackupChanged;
 
     /// <summary>本机是否已经有完整的设备凭证（= 已接入过集控）。</summary>
     public bool IsConfigured => _credentials.Current is { IsComplete: true };
@@ -238,6 +296,7 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
             }
 
             await StartClientAsync(stoppingToken).ConfigureAwait(false);
+            StartUploadLoop();
 
             await Task.Delay(Timeout.InfiniteTimeSpan, stoppingToken).ConfigureAwait(false);
         }
@@ -257,6 +316,9 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
         _disposed = true;
         UnsubscribeConfig();
         CancelPendingRestart();
+        UnsubscribeUploadTriggers();
+        CancelUploadLoop();
+        DisposeUploadApi();
 
         await StopAndDisposeClientAsync().ConfigureAwait(false);
         await base.StopAsync(cancellationToken).ConfigureAwait(false);
@@ -276,6 +338,9 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
         _disposed = true;
         UnsubscribeConfig();
         CancelPendingRestart();
+        UnsubscribeUploadTriggers();
+        CancelUploadLoop();
+        DisposeUploadApi();
 
         await StopAndDisposeClientAsync().ConfigureAwait(false);
         base.Dispose();
@@ -288,6 +353,9 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
         _disposed = true;
         UnsubscribeConfig();
         CancelPendingRestart();
+        UnsubscribeUploadTriggers();
+        CancelUploadLoop();
+        DisposeUploadApi();
 
         // 同步释放路径上不等网络：先摘掉引用，销毁在后台完成（客户端自己的 DisposeAsync 不带网络等待）。
         _ = StopAndDisposeClientAsync();
@@ -511,6 +579,281 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
     }
 
     // ------------------------------------------------------------------
+    // 作业自动备份：板子一变（防抖 8s）→ 传一份只读快照；连上补传一次；10 分钟兜底
+    // ------------------------------------------------------------------
+
+    /// <summary>订阅「板子变了」与「连上了」两个触发点；停服 / 释放前成对退订。</summary>
+    private void SubscribeUploadTriggers()
+    {
+        if (_uploadTriggersAttached)
+            return;
+
+        _uploadTriggersAttached = true;
+        _boardService.Changed += OnBoardChanged;
+        SnapshotChanged += OnSnapshotChangedForUpload;
+    }
+
+    private void UnsubscribeUploadTriggers()
+    {
+        if (!_uploadTriggersAttached)
+            return;
+
+        _uploadTriggersAttached = false;
+        _boardService.Changed -= OnBoardChanged;
+        SnapshotChanged -= OnSnapshotChangedForUpload;
+
+        // 待发的那一次直接扔掉（服务要停了 / 已经断线，再传没有意义）。
+        _uploadDebounce?.Cancel();
+    }
+
+    private void OnBoardChanged(object? sender, EventArgs e) => ScheduleUpload();
+
+    /// <summary>连上集控（或换班）后补传一次：断线期间攒下的变化不能等 10 分钟巡检。</summary>
+    private void OnSnapshotChangedForUpload(object? sender, ControlNodeLinkState state)
+    {
+        if (state.IsConnected)
+            ScheduleUpload();
+    }
+
+    /// <summary>安排一次上传（防抖 8 秒）：连续的编辑只会传停手后的最后一次。</summary>
+    private void ScheduleUpload()
+    {
+        if (_disposed)
+            return;
+
+        // DebounceTimer 基于 DispatcherTimer，必须在 UI 线程上建 / 排；板子的 Changed 本来就在 UI 线程，
+        // 快照回调等后台来源则先切过去。
+        if (Dispatcher.UIThread.CheckAccess())
+            ScheduleUploadCore();
+        else
+            Dispatcher.UIThread.Post(ScheduleUploadCore);
+    }
+
+    private void ScheduleUploadCore()
+    {
+        if (_disposed)
+            return;
+
+        _uploadDebounce ??= new DebounceTimer(UploadDebounce);
+        _uploadDebounce.Schedule(() => _ = UploadHomeworkSnapshotAsync());
+    }
+
+    /// <summary>启动 10 分钟兜底巡检（只跑一次；<see cref="ExecuteAsync" /> 里调）。</summary>
+    private void StartUploadLoop()
+    {
+        lock (_uploadStateGate)
+        {
+            if (_uploadLoop is not null || _disposed)
+                return;
+
+            _uploadLoop = RunUploadLoopAsync(_uploadLoopCts.Token);
+        }
+    }
+
+    private async Task RunUploadLoopAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            // 先等一个周期：刚启动时的补传由「连上集控」那条路直接触发，不用抢在启动瞬间传。
+            using var timer = new PeriodicTimer(UploadHeartbeatInterval);
+            while (await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false))
+                _ = UploadHomeworkSnapshotAsync();
+        }
+        catch (OperationCanceledException)
+        {
+            // 正常停服。
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "作业自动备份的兜底巡检循环异常退出");
+        }
+    }
+
+    private void CancelUploadLoop()
+    {
+        try
+        {
+            _uploadLoopCts.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // 已经取消过了。
+        }
+    }
+
+    private bool HasClient()
+    {
+        lock (_clientGate)
+            return _client is not null;
+    }
+
+    /// <summary>取（或按当前站点地址换一个）作业备份用的 HTTP 客户端。</summary>
+    private ControlNodeEnrollmentApi GetUploadApi(string serverUrl)
+    {
+        lock (_uploadStateGate)
+        {
+            if (_uploadApi is not null && string.Equals(_uploadApiServerUrl, serverUrl, StringComparison.Ordinal))
+                return _uploadApi;
+
+            _uploadApi?.Dispose();
+            _uploadApiServerUrl = serverUrl;
+            _uploadApi = new ControlNodeEnrollmentApi(new ControlNodeConnectOptions { ServerUrl = serverUrl });
+            return _uploadApi;
+        }
+    }
+
+    private void DisposeUploadApi()
+    {
+        lock (_uploadStateGate)
+        {
+            _uploadApi?.Dispose();
+            _uploadApi = null;
+        }
+    }
+
+    /// <summary>
+    ///     传一份只读作业快照。
+    ///     <para>
+    ///         内容与上次成功传的那份一样（指纹 + 条数都没变）就跳过：防抖与 10 分钟巡检会频繁走到这里，
+    ///         每次都传一份一模一样的快照只会白占服务端配额。
+    ///     </para>
+    ///     <para>
+    ///         失败只记一次 warning、不弹 toast（后台行为，打断用户写作业更糟）；
+    ///         只有「接入之后一直没备份成功过」的那一段才弹一条普通级别提示。
+    ///     </para>
+    /// </summary>
+    private async Task UploadHomeworkSnapshotAsync()
+    {
+        if (_disposed)
+            return;
+
+        if (!ControlHomeworkBackup.ShouldUpload(
+                _configHandler.Data.ControlCenter,
+                _credentials.Current,
+                Snapshot,
+                HasClient()))
+            return;
+
+        await _uploadGate.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            if (_disposed)
+                return;
+
+            // 等闸门期间状态可能已经变了（刚断线 / 关掉了备份），进来后再判一次。
+            var config = _configHandler.Data.ControlCenter;
+            var credential = _credentials.Current;
+            if (!ControlHomeworkBackup.ShouldUpload(config, credential, Snapshot, HasClient()))
+                return;
+
+            // 作业集合会随用户编辑在 UI 线程上变动，而这里是后台线程——拷贝、算指纹、拼快照都在 UI 线程做完。
+            var now = DateTimeOffset.Now;
+            var (snapshot, fingerprint, noteCount) = await Dispatcher.UIThread
+                .InvokeAsync<(JsonObject? Snapshot, string Fingerprint, int NoteCount)>(() =>
+                {
+                    var notes = _boardService.Notes.ToList();
+                    var built = ControlHomeworkSnapshot.Build(
+                        notes,
+                        _boardService.Subjects.ToList(),
+                        _boardService.SubjectOrder.ToList(),
+                        now);
+                    return (built, ControlHomeworkBackup.CreateContentFingerprint(notes), notes.Count(note => note.IsOnBoard));
+                })
+                .GetTask()
+                .ConfigureAwait(false);
+
+            if (snapshot is null)
+                return;
+
+            lock (_uploadStateGate)
+            {
+                // 上次成功传的就是这一份，别重复传。
+                if (_lastUploadedFingerprint == fingerprint && _lastUploadedNoteCount == noteCount)
+                    return;
+            }
+
+            var classId = string.IsNullOrWhiteSpace(config.SelectedClassId) ? null : config.SelectedClassId;
+            var result = await GetUploadApi(config.ServerUrl)
+                .UploadHomeworkSnapshotAsync(credential!, snapshot, classId)
+                .ConfigureAwait(false);
+
+            if (result.Ok)
+            {
+                lock (_uploadStateGate)
+                {
+                    _lastUploadedFingerprint = fingerprint;
+                    _lastUploadedNoteCount = noteCount;
+                    _homeworkBackup = new ControlHomeworkBackupState(
+                        DateTimeOffset.Now,
+                        _homeworkBackup.UploadedCount + 1);
+                }
+
+                _lastLoggedBackupErrorKey = null;
+                _backupFailureToasted = false;
+                RaiseHomeworkBackupChanged();
+                return;
+            }
+
+            RecordBackupFailure(result.ErrorKey, result.Message);
+        }
+        finally
+        {
+            _uploadGate.Release();
+        }
+    }
+
+    /// <summary>记一次失败：同一个错误连续出现只记一次日志，接入后从没成功过时弹一次提示。</summary>
+    private void RecordBackupFailure(string? errorKey, string? message)
+    {
+        var key = string.IsNullOrWhiteSpace(errorKey) ? ControlApiErrorKeys.Unknown : errorKey;
+
+        bool log;
+        bool toast;
+        lock (_uploadStateGate)
+        {
+            log = !string.Equals(_lastLoggedBackupErrorKey, key, StringComparison.Ordinal);
+            _lastLoggedBackupErrorKey = key;
+
+            toast = !_backupFailureToasted && _homeworkBackup.LastSuccessAt is null;
+            if (toast)
+                _backupFailureToasted = true;
+
+            _homeworkBackup = _homeworkBackup with { LastErrorKey = key, LastErrorText = message };
+        }
+
+        if (log)
+            _logger.LogWarning("作业自动备份失败：{ErrorKey} {Message}", key, message);
+
+        RaiseHomeworkBackupChanged();
+
+        if (toast)
+            _toastService.Show(Resources.Settings_Control_HomeworkBackup_FailedToast, ToastSeverity.Info);
+    }
+
+    private void RaiseHomeworkBackupChanged()
+    {
+        EventHandler<ControlHomeworkBackupState>? handler;
+        ControlHomeworkBackupState state;
+        lock (_uploadStateGate)
+        {
+            handler = HomeworkBackupChanged;
+            state = _homeworkBackup;
+        }
+
+        if (handler is null)
+            return;
+
+        try
+        {
+            handler(this, state);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "作业备份状态订阅者抛出了异常");
+        }
+    }
+
+    // ------------------------------------------------------------------
     // 配置监听：开关 / 地址 / 设备名变化 → 停止或重建客户端
     // ------------------------------------------------------------------
 
@@ -566,11 +909,19 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
                 else if (!enabled && wasEnabled)
                 {
                     // 关掉只停连接、不再重连；等重新打开时再整体重建。
+                    _uploadDebounce?.Cancel();
                     _ = StopForDisabledAsync();
                 }
 
                 break;
             }
+            case nameof(ControlCenterSettingsConfig.HomeworkBackupEnabled):
+                // 刚打开就传一次（板子可能已经改过、而上次成功之后又断了一段时间）。
+                if (config.HomeworkBackupEnabled)
+                    ScheduleUpload();
+                else
+                    _uploadDebounce?.Cancel();
+                break;
             case nameof(ControlCenterSettingsConfig.ServerUrl):
             case nameof(ControlCenterSettingsConfig.DisplayName):
                 _fingerprint = CreateFingerprint(config);

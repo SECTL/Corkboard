@@ -1394,4 +1394,17 @@ public static string Settings_Widgets_ShowWeatherTomorrow => ResourceManager.Get
     public static string Settings_Control_Error_InvalidResponse => ResourceManager.GetString(nameof(Settings_Control_Error_InvalidResponse), Culture)!;
     public static string Settings_Control_Error_NotEnrolled => ResourceManager.GetString(nameof(Settings_Control_Error_NotEnrolled), Culture)!;
     public static string Settings_Control_Error_Unknown => ResourceManager.GetString(nameof(Settings_Control_Error_Unknown), Culture)!;
+    public static string Settings_Control_Error_BadRequest => ResourceManager.GetString(nameof(Settings_Control_Error_BadRequest), Culture)!;
+    public static string Settings_Control_Error_PayloadTooLarge => ResourceManager.GetString(nameof(Settings_Control_Error_PayloadTooLarge), Culture)!;
+    public static string Settings_Control_Error_BadSecret => ResourceManager.GetString(nameof(Settings_Control_Error_BadSecret), Culture)!;
+    public static string Settings_Control_Error_Forbidden => ResourceManager.GetString(nameof(Settings_Control_Error_Forbidden), Culture)!;
+    public static string Settings_Control_Error_DeviceNotFound => ResourceManager.GetString(nameof(Settings_Control_Error_DeviceNotFound), Culture)!;
+    public static string Settings_Control_Error_RateLimited => ResourceManager.GetString(nameof(Settings_Control_Error_RateLimited), Culture)!;
+    public static string Settings_Control_HomeworkBackup_Title => ResourceManager.GetString(nameof(Settings_Control_HomeworkBackup_Title), Culture)!;
+    public static string Settings_Control_HomeworkBackup_Description => ResourceManager.GetString(nameof(Settings_Control_HomeworkBackup_Description), Culture)!;
+    public static string Settings_Control_HomeworkBackup_Status => ResourceManager.GetString(nameof(Settings_Control_HomeworkBackup_Status), Culture)!;
+    public static string Settings_Control_HomeworkBackup_StatusFormat => ResourceManager.GetString(nameof(Settings_Control_HomeworkBackup_StatusFormat), Culture)!;
+    public static string Settings_Control_HomeworkBackup_Never => ResourceManager.GetString(nameof(Settings_Control_HomeworkBackup_Never), Culture)!;
+    public static string Settings_Control_HomeworkBackup_Failed => ResourceManager.GetString(nameof(Settings_Control_HomeworkBackup_Failed), Culture)!;
+    public static string Settings_Control_HomeworkBackup_FailedToast => ResourceManager.GetString(nameof(Settings_Control_HomeworkBackup_FailedToast), Culture)!;
 }
