@@ -3973,7 +3973,7 @@ Continuing to use it means you understand and accept the above.</value>
   </data>
   <data name="Settings_Control_Title" xml:space="preserve"><value>Control Center</value></data>
   <data name="Settings_Control_Enabled" xml:space="preserve"><value>Enable control center</value></data>
-  <data name="Settings_Control_EnabledDescription" xml:space="preserve"><value>Connects to the control center to receive notices from teachers</value></data>
+  <data name="Settings_Control_EnabledDescription" xml:space="preserve"><value>Connects to the control center so teachers can take the class and view homework</value></data>
   <data name="Settings_Control_Status" xml:space="preserve"><value>Connection status</value></data>
   <data name="Settings_Control_Status_Disabled" xml:space="preserve"><value>Off</value></data>
   <data name="Settings_Control_Status_Unpaired" xml:space="preserve"><value>Not paired</value></data>

@@ -3971,7 +3971,7 @@
   </data>
   <data name="Settings_Control_Title" xml:space="preserve"><value>集控</value></data>
   <data name="Settings_Control_Enabled" xml:space="preserve"><value>启用集控</value></data>
-  <data name="Settings_Control_EnabledDescription" xml:space="preserve"><value>打开后连到集控中心，接收老师下发的公告</value></data>
+  <data name="Settings_Control_EnabledDescription" xml:space="preserve"><value>打开后连到集控中心，由老师占班和查看作业</value></data>
   <data name="Settings_Control_Status" xml:space="preserve"><value>连接状态</value></data>
   <data name="Settings_Control_Status_Disabled" xml:space="preserve"><value>已关闭</value></data>
   <data name="Settings_Control_Status_Unpaired" xml:space="preserve"><value>未接入</value></data>
