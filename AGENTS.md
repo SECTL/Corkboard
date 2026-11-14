@@ -418,6 +418,13 @@ dotnet test Corkboard.Core.Tests\Corkboard.Core.Tests.csproj
 dotnet run --project Corkboard.Desktop\Corkboard.Desktop.csproj
 ```
 
+⚠️ **构建一次只跑一个**：同一个 checkout 里并发 `dotnet build`（多个 agent、IDE 后台构建、或构建时还开着
+`Corkboard.Desktop`）会互相覆盖 Avalonia 的 XAML 编译产物，产物里的 `Corkboard.dll` 丢掉预编译 XAML，
+程序一启动就是 `Avalonia.Markup.Xaml.XamlLoadException: No precompiled XAML found for Corkboard.App`，
+接着被崩溃恢复反复重启（实测刷出上万份崩溃报告）。构建前先关掉在跑的 Corkboard；exe/dll 被占用时
+`MSB3061` 只是 warning，产物却是半截的。中招了必须 `dotnet clean Corkboard.sln` 再 `dotnet build`
+（只重跑 build 修不好——增量构建认为产物是最新的）。
+
 ## 注意事项
 
 - **主窗口拖动用手动位移**（捕获指针 + `Window.Position`，见 `MainView`），不要用 `Window.BeginMoveDrag`：
