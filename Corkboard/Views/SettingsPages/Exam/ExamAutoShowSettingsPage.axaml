@@ -6,6 +6,7 @@
              xmlns:vm="using:Corkboard.ViewModels.SettingsPages.Exam"
              xmlns:core="using:Corkboard.Core.Langs.Common"
              xmlns:icons="using:Corkboard.Core.Icons"
+             xmlns:local="using:Corkboard.Views.SettingsPages.Exam"
              mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="700"
              x:Class="Corkboard.Views.SettingsPages.Exam.ExamAutoShowSettingsPage"
              x:DataType="vm:ExamAutoShowSettingsPageViewModel">
@@ -107,6 +108,15 @@
                     </StackPanel>
                 </fa:FASettingsExpander.Footer>
             </fa:FASettingsExpander>
+
+            <!--
+                时间同步（原「时间同步」页整块搬进来）：自动放映靠它准点，
+                所以「什么时候弹」与「现在几点」放在同一页。
+                它自己带 DataContext 与 Attach/Detach，宿主只管摆位置。
+            -->
+            <TextBlock Classes="section-title"
+                       Text="{x:Static core:Resources.Settings_Exam_Time_Title}" />
+            <local:ExamTimeSettingsPage />
         </StackPanel>
     </ScrollViewer>
 </UserControl>

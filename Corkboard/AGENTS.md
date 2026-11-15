@@ -14,7 +14,9 @@
   "settings.board.group", FluentIcons.BoardFilled))` 后接一串带 `groupId` 的页面），点它才展开**六个**子页：常规（`settings.board`）／内容与样式（`settings.board.content`）／
   科目与分类（`settings.board.sections`）／自动化与数据（`settings.board.automation`）／
   窗口与收纳（`settings.board.window`）／导出（`settings.board.export`）；**紧接着是「考试看板」**
-  （`groupId = "settings.exam.group"`，`FluentIcons.CalendarFilled`），子页是考试安排／看板显示／看板布局／看板主题／最小化与浮窗／**看板字号**（`settings.exam.font`）／时间同步；
+  （`groupId = "settings.exam.group"`，`FluentIcons.CalendarFilled`），子页**只有四页**：考试安排／看板显示／
+  看板外观／放映与时间（2026-11-15 从 8 页收敛：布局并进看板外观、最小化与浮窗并进看板显示、时间同步并进放映与时间，
+  「看板字号」页删除、字号只在布局编辑窗里调；旧页 Id 由 `SettingsView.ResolvePageId` 转到新页）；
   **作业板专属的设置项一律进作业板组、考试专属的进考试看板组，基础设置里不许再放**。
   底部的「更新」「关于」由 `PageInfo.Location = Bottom` 沉到页脚，与注册顺序无关。
   **「账号」「云同步」两页当前入口隐藏**（页面 `PageInfo` 上 `isHide: true`，`PageItemsExtensions.ToNavigationViewItems`
@@ -162,7 +164,7 @@
   `TitleTextBlockStyle` 自带的 SemiBold 压回常规（MiSans 的 SemiBold 会解析成 Bold，看着就是加粗），
   `Margin="0 4 0 0"` 收上边距——三个都写，缺 `FontWeight="Normal"` 就是那一页标题突然变粗。
   ⚠️ **标题下面不要再挂一句副标题**（灰字简介那一行）：页级说明放进卡片的 `Description`，
-  或者干脆别写。以前「看板模式」那几页与「看板字号」页都在标题下面挂了一句灰字，
+  或者干脆别写。以前「看板模式」那几页都在标题下面挂了一句灰字，
   用户指着说「标题上面为什么还有副标题、为什么加粗了」——已经全部删掉，别再加回来。
 - **「关于」页＝粘滞页头 + 四张卡 + 右侧抽屉**（`Corkboard/Views/SettingsPages/About/`，
   整体照上游 SecRandom-C 的那一页抄过来，但内容全是 Corkboard 自己的）：
@@ -349,7 +351,8 @@
   ①只注册 `reloadConfig`（回 `{reloaded:true}` 后 **延迟 ~200ms** 再 `configHandler.Reload()`，
   不要在回执前重建连接）②配置变化（`Config.ControlCenter.PropertyChanged` 与
   `MainConfigHandler.Reloaded`，按 Enabled/ServerUrl/DisplayName 指纹）重建客户端，400ms 防抖；
-  ③接入 / 清空接入（不再暴露占班、下课、取班级树：设置页只留给用户一个「清空」）。
+  ③接入 / 清空接入 / 换班（`GetTreeAsync` + `SelectClassAsync` 给设置页的班级卡用；
+  **占班、下课、刷新班级这些按钮已下架**，换班 = 选下拉框，清空 = `ForgetEnrollmentAsync`）。
 - **作业自动备份**：开关是 `Config.ControlCenter.HomeworkBackupEnabled`（默认开，设置页卡片）。
   开集控且勾选时，作业板变化经 **8s 防抖**（`Corkboard/Helpers/DebounceTimer`）后
   `POST /control/api/device/homework-snapshots`（设备凭证，走
@@ -364,7 +367,7 @@
   超预算的笔迹直接不带（`ink: null`）并把 `truncated` 置真。
 - ⚠️ **不要把公告卡 / 推图浮层加回来**：首版照 SecRandom-C 做过 `ControlCenterPresenter` +
   `ControlNoticeWindow` + `ControlImageWindow`，用户明确要求删掉（2026-11-14）。
-  集控这边只保留连接状态与配置重载；确实要提示用户时用既有的 `IToastService`，
+  集控这边只保留连接状态、班级与配置重载；确实要提示用户时用既有的 `IToastService`，
   **不要再开新的顶层窗口**。
 - **设置页**是顶层项 `settings.control`（`Views|ViewModels/SettingsPages/Control/`，
   `[PageInfo("settings.control", FluentIcons.LinkFilled)]`，不带 `groupId`）。
@@ -372,6 +375,16 @@
   会生成子命名空间、把既有 SettingsPages 文件里的 `Avalonia.Controls.Control` 遮蔽掉（21 处 CS0118）。
   文件路径仍在 `Views/SettingsPages/Control/`。
   输入一律「草稿 + 失焦/离页 `CommitAll()`」，别双向绑 `TextBox.Text` 到配置。
+  设备名草稿在配置为空时显示电脑名（`Environment.MachineName`），提交时若等于电脑名则写回空串——
+  「空 = 跟随电脑名」的语义不变，也不会把机器名带进云同步。
+  页面是**四张折叠卡**：连接（启用集控 / 连接状态 / 自动备份作业）、设备与连接（设备名 / 设备 ID，
+  Footer 里那颗 HyperlinkButton 打开网页控制台）、班级（年级 / 当前班级 / 选择班级下拉）、
+  接入（未接入＝地点 ID + 配对码 + 接入；已接入＝`清空接入`）。
+  ⚠️ 连接状态**在线时只画一颗绿点 + 「在线」**，详情行整行收起——不要写「等老师下发」那类说明（用户明确要求）；
+  其余状态（未接入 / 连接中 / 已失效）才显示一句补充。
+  班级卡只读显示 + 一个下拉框（选完立即发 `class.select`），**没有**占班 / 下课 / 刷新班级按钮；
+  年级与班级名要从结构树查（设备端只有班级 ID），离线时保留上一次拉到的名字。
+  站点点位（`ServerUrl`）设置页已不再提供输入，私有部署改 `settings.json`。
 - **凭证不进 `settings.json`**：`device_id` + `secret` 在 `NodeEnrollmentStore`（AES-GCM，
   `data/config/security/control-node.json`），导出/云同步设置都不会带走；`enabled` 只由用户亲手打开。
   地点 ID 用 `SC-XXXXXX`、配对码 8 位一次性的，接入支持把网页上整句粘进地点 ID 框。

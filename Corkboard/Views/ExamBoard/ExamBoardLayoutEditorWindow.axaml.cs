@@ -8,6 +8,7 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Corkboard.Core.Abstraction;
 using Corkboard.Core.Exam;
+using Corkboard.Core.Exam.Layout;
 using Corkboard.Services.Exam;
 using Corkboard.ViewModels.ExamBoard;
 using Corkboard.Views.Common;
@@ -49,9 +50,9 @@ public partial class ExamBoardLayoutEditorWindow : Window
         AddHandler(PointerReleasedEvent, OnWindowPointerReleased, RoutingStrategies.Bubble, handledEventsToo: true);
         AddHandler(RangeBase.ValueChangedEvent, OnFontSliderValueChanged, RoutingStrategies.Bubble, handledEventsToo: true);
 
-        // 属性面板整块都可以按住拖走（只有下拉框、按钮、数值框、滑块留着自己的指针行为）。
-        // 拖动处理器必须挂在宿主自己身上：拖动期间事件只从捕获元素往上冒泡，
-        // 挂在手柄那种子元素上，面板别处按下去一个事件都收不到。
+        // 属性面板只有头部那颗拖动柄能拖，别处一律不拖——整块可拖会把下拉框、数值框的按下一并吃掉，
+        // 用户反馈过「面板上的东西点不动」。处理器仍挂在宿主自己身上（拖动期间事件只从捕获元素往上冒泡），
+        // 但按下点必须落在拖动柄里才认。
         Inspector.AddHandler(PointerPressedEvent, OnInspectorDragPressed, RoutingStrategies.Bubble,
             handledEventsToo: true);
         Inspector.AddHandler(PointerMovedEvent, OnInspectorDragMoved, RoutingStrategies.Bubble,
@@ -84,7 +85,13 @@ public partial class ExamBoardLayoutEditorWindow : Window
             viewModel.CloseRequested += OnCloseRequested;
             viewModel.PropertyChanged += OnViewModelPropertyChanged;
             viewModel.Attach();
-            PositionInspector();
+
+            // 等第一帧布局量完再摆面板 / 抄位置。
+            Dispatcher.UIThread.Post(() =>
+            {
+                CaptureSystemPlacement();
+                PositionInspector();
+            }, DispatcherPriority.Loaded);
         };
         Closed += (_, _) =>
         {
@@ -121,8 +128,60 @@ public partial class ExamBoardLayoutEditorWindow : Window
             or nameof(ExamBoardLayoutEditorViewModel.SelectedStatus))
         {
             // 等新选中项布局完再量区块位置，否则拿到的是上一次的 Bounds。
-            Dispatcher.UIThread.Post(PositionInspector, DispatcherPriority.Loaded);
+            // 顺手把系统版式实测出来的位置抄进草稿：预览切到面板时区块不会跳。
+            Dispatcher.UIThread.Post(() =>
+            {
+                CaptureSystemPlacement();
+                PositionInspector();
+            }, DispatcherPriority.Loaded);
         }
+    }
+
+    /// <summary>
+    ///     把默认 Grid 实测出来的五个矩形抄进草稿（只对还没自定义过的状态有意义）。
+    ///     预览在未自定义的状态下走的就是默认 Grid，所以抄完之后「第一次改数值」切到面板时，
+    ///     区块还待在原处，不会因为兜底百分比和实测位置不一样而跳一下。
+    /// </summary>
+    private void CaptureSystemPlacement()
+    {
+        if (ViewModel is not { } viewModel)
+        {
+            return;
+        }
+
+        if (viewModel.SelectedStatusLayout.IsCustomized)
+        {
+            return;
+        }
+
+        var size = BoardView.Bounds.Size;
+        if (size.Width <= 0 || size.Height <= 0)
+        {
+            return;
+        }
+
+        var placements = new List<ExamBoardPlacement>();
+        foreach (var component in Enum.GetValues<ExamBoardLayoutComponentId>())
+        {
+            if (!BoardView.TryGetComponentBounds(component, out var bounds))
+            {
+                continue;
+            }
+
+            // 被「看板显示」设置藏起来的区块量出来是 0，这种就别抄了，留着原来的兜底值。
+            if (bounds.Width < 12 || bounds.Height < 8)
+            {
+                continue;
+            }
+
+            placements.Add(new ExamBoardPlacement(component,
+                bounds.X / size.Width * 100,
+                bounds.Y / size.Height * 100,
+                bounds.Width / size.Width * 100,
+                bounds.Height / size.Height * 100));
+        }
+
+        viewModel.CapturePlacement(placements);
     }
 
     /// <summary>把属性面板摆到被选中区块的右侧（放不下就翻到左侧），并夹在窗口内。</summary>
@@ -186,14 +245,8 @@ public partial class ExamBoardLayoutEditorWindow : Window
             return;
         }
 
-        // 下拉框、按钮、数值框、滑块要留着自己的指针行为，按在它们身上不算拖面板。
-        if (IsInteractiveSource(e.Source as Visual))
-        {
-            return;
-        }
-
-        // 面板内容是 ScrollViewer，触摸时整块拖动会把触屏滚动抢走，所以只让头部当拖动面。
-        if (e.Pointer.Type != PointerType.Mouse && !IsWithinHeader(e.Source as Visual))
+        // 只有左上角那颗拖动柄是拖动面：别处按住就是点控件、拖滚动条，不能变成拖面板。
+        if (!IsWithinDragHandle(e.Source as Visual))
         {
             return;
         }
@@ -281,29 +334,13 @@ public partial class ExamBoardLayoutEditorWindow : Window
         return false;
     }
 
-    /// <summary>按下点是否落在面板里的交互控件上（这些控件不参与拖动面板）。</summary>
-    private bool IsInteractiveSource(Visual? source)
+    /// <summary>按下点是否落在左上角那颗拖动柄里（面板上唯一的拖动面）。</summary>
+    private bool IsWithinDragHandle(Visual? source)
     {
         for (var visual = source; visual is not null && visual != Inspector;
              visual = visual.GetVisualParent())
         {
-            if (visual is Button or ComboBox or NumericUpDown or Slider or TextBox or ScrollBar
-                or ToggleSwitch)
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /// <summary>按下点是否落在面板头部（拖动柄、组件下拉、关闭钮那一行）。</summary>
-    private bool IsWithinHeader(Visual? source)
-    {
-        for (var visual = source; visual is not null && visual != Inspector;
-             visual = visual.GetVisualParent())
-        {
-            if (visual == InspectorHeader)
+            if (visual == InspectorDragHandle)
             {
                 return true;
             }

@@ -4,7 +4,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="using:Corkboard.ViewModels.ExamBoard"
         xmlns:local="using:Corkboard.Views.ExamBoard"
-        xmlns:settings="using:Corkboard.ViewModels.SettingsPages.Exam"
+        
         xmlns:icons="using:Corkboard.Core.Icons"
         xmlns:core="using:Corkboard.Core.Langs.Common"
         mc:Ignorable="d" d:DesignWidth="1600" d:DesignHeight="900"
@@ -65,7 +65,7 @@
                     IsVisible="{Binding HasSelection}">
                 <ScrollViewer HorizontalScrollBarVisibility="Disabled">
                     <StackPanel Spacing="10">
-                        <Grid x:Name="InspectorHeader" ColumnDefinitions="Auto,*,32">
+                        <Grid ColumnDefinitions="Auto,*,32">
                             <Border x:Name="InspectorDragHandle"
                                     Grid.Column="0"
                                     Width="24"
@@ -135,13 +135,13 @@
                         <Slider Minimum="0.2" Maximum="1" TickFrequency="0.05" IsSnapToTickEnabled="True"
                                 Value="{Binding SelectedLayout.Opacity, Mode=TwoWay}" />
 
-                        <!-- 与「设置 → 考试看板 → 看板字号」同一份配置、同一张表，只列当前组件用到的那几项。 -->
+                        <!-- 与「看板外观 → 布局」同一份配置、同一张字号表，只列当前组件用到的那几项。 -->
                         <TextBlock Text="{x:Static core:Resources.Settings_Exam_Layout_Fonts}"
                                    FontWeight="SemiBold"
                                    Margin="0,6,0,0" />
                         <ItemsControl ItemsSource="{Binding FontItems}">
                             <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="settings:ExamFontSizeItem">
+                                <DataTemplate x:DataType="vm:ExamFontSizeItem">
                                     <StackPanel Spacing="2" Margin="0,4">
                                         <Grid ColumnDefinitions="*,Auto">
                                             <TextBlock Grid.Column="0"

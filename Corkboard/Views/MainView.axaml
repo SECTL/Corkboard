@@ -175,7 +175,7 @@
                             收纳：把作业板收起来，屏幕上只留一颗展开按钮。放在标题栏里而不是「更多」菜单：
                             老师上课要收板子时得一眼看得到，不能先点开「更多」再找。
                             默认显示，可以在「设置 → 作业板 → 界面入口」里关掉；
-                            「启用收纳」关着时整颗也不显示（ShowTitleBarDock）。
+                            「启用收纳」关着时整颗也不显示（ShowTitleBarDock，只看 DockEnabled 一个开关）。
                         -->
                         <Button Classes="titlebar-icon"
                                 IsVisible="{Binding ViewModel.ShowTitleBarDock}"

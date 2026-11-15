@@ -14,6 +14,10 @@ public static class Utils
 {
     public const string PackageRootEnvironmentVariable = "CORKBOARD_PACKAGE_ROOT";
     public const string PackageMarkerFileName = "Corkboard.package.json";
+
+    /// <summary>便携包根目录里的启动器文件名（Windows 的可执行文件带扩展名）。</summary>
+    public static string LauncherFileName => OperatingSystem.IsWindows() ? "CorkboardLauncher.exe" : "CorkboardLauncher";
+
     private const string ConfigDirectoryName = "config";
     private const string UnixHiddenEntriesFileName = ".hidden";
     private static readonly object DataRootGate = new();
@@ -28,6 +32,37 @@ public static class Utils
         string? ErrorMessage);
 
     public static string PackageRoot => ResolvePackageRoot();
+
+    /// <summary>
+    ///     便携包里该被拉起的入口：包根目录下那个启动器；不是便携包布局、或启动器文件不在时为
+    ///     <see langword="null" />。
+    ///     <para>
+    ///         系统集成（开机自启项、<c>corkboard://</c> 协议）与「重启」一律走它：这些地方要记住的是
+    ///         一个稳定入口，而不是每次更新都会换目录的 <c>app-*</c> 里的应用本体。
+    ///     </para>
+    /// </summary>
+    public static string? LauncherPath =>
+        FindLauncherPath(AppContext.BaseDirectory,
+            Environment.GetEnvironmentVariable(PackageRootEnvironmentVariable));
+
+    /// <summary>
+    ///     按「应用目录 + 可选的包根」解析启动器路径，不读环境变量、不碰进程状态（单测用）。
+    ///     <para>
+    ///         只有 <paramref name="appDirectory" /> 本身是 <c>app-*</c> 便携包布局、且包根下真有启动器时
+    ///         才返回路径；其余情况（开发构建、安装版、老包没有启动器）返回 <see langword="null" />，
+    ///         调用方应退回当前进程自己去启动。
+    ///     </para>
+    /// </summary>
+    public static string? FindLauncherPath(string appDirectory, string? packageRoot = null)
+    {
+        var normalizedAppDirectory = NormalizeDirectory(appDirectory);
+        var root = ResolvePortablePackageRoot(normalizedAppDirectory, packageRoot);
+        if (root is null)
+            return null;
+
+        var launcherPath = Path.Combine(root, LauncherFileName);
+        return File.Exists(launcherPath) ? launcherPath : null;
+    }
 
     public static string DataRoot
     {
@@ -196,12 +231,30 @@ public static class Utils
     private static string ResolvePackageRoot()
     {
         var appDirectory = Path.GetFullPath(AppContext.BaseDirectory);
-        var configuredRoot = Environment.GetEnvironmentVariable(PackageRootEnvironmentVariable);
-        if (IsPortablePackageRoot(configuredRoot, appDirectory))
-            return Path.GetFullPath(configuredRoot!);
+        return ResolvePortablePackageRoot(appDirectory,
+                   Environment.GetEnvironmentVariable(PackageRootEnvironmentVariable))
+               ?? appDirectory;
+    }
 
-        var parent = Directory.GetParent(appDirectory)?.FullName;
-        return IsPortablePackageRoot(parent, appDirectory) ? Path.GetFullPath(parent!) : appDirectory;
+    /// <summary>
+    ///     目录路径统一成「完整路径 + 不带结尾分隔符」：<see cref="AppContext.BaseDirectory" /> 带结尾分隔符，
+    ///     而 <see cref="Directory.GetParent(string)" /> 对带结尾分隔符的路径返回的是目录自己——不先剪掉
+    ///     就永远算不到父目录，<c>app-*</c> 布局会被误当成包根。
+    /// </summary>
+    private static string NormalizeDirectory(string path)
+    {
+        return Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
+    }
+
+    /// <summary>包根只认「应用目录的父目录 + <c>app-*</c> + 包标记」这一种布局，其余一律 <see langword="null" />。</summary>
+    private static string? ResolvePortablePackageRoot(string appDirectory, string? configuredRoot)
+    {
+        var normalizedAppDirectory = NormalizeDirectory(appDirectory);
+        if (IsPortablePackageRoot(configuredRoot, normalizedAppDirectory))
+            return NormalizeDirectory(configuredRoot!);
+
+        var parent = Directory.GetParent(normalizedAppDirectory)?.FullName;
+        return IsPortablePackageRoot(parent, normalizedAppDirectory) ? NormalizeDirectory(parent!) : null;
     }
 
     private static string GetDesktopFallbackDataRoot()
@@ -279,8 +332,8 @@ public static class Utils
         if (string.IsNullOrWhiteSpace(candidate) || !Directory.Exists(candidate))
             return false;
 
-        var root = Path.GetFullPath(candidate);
-        var normalizedAppDirectory = Path.GetFullPath(appDirectory);
+        var root = NormalizeDirectory(candidate);
+        var normalizedAppDirectory = NormalizeDirectory(appDirectory);
         var parent = Directory.GetParent(normalizedAppDirectory)?.FullName;
         if (!string.Equals(root, parent, OperatingSystem.IsWindows()
                 ? StringComparison.OrdinalIgnoreCase

@@ -71,8 +71,15 @@ public static class LegacyNoteContentConverter
     {
         ArgumentNullException.ThrowIfNull(note);
 
-        if (note.ContentKind == RichTextContentKind.Html)
+        // 手写作业没有 Markdown 正文可转；硬转会走 SetHtmlContent，那会把手写笔迹清掉
+        // （存储层虽然有「空内容不覆盖笔迹」的兜底，但文件会被原样重写一遍，下次加载又转一次——
+        // 文件监视打开后就成了「重写 → 监视 → 重读 → 重写」的死循环）。
+        if (note.ContentKind == RichTextContentKind.Html
+            || note.ContentKind == RichTextContentKind.Handwriting
+            || !string.IsNullOrWhiteSpace(note.Handwriting))
+        {
             return false;
+        }
 
         note.SetHtmlContent(BuildHtml(note.Content, note.Formats, note.ContentFontSize));
         return true;

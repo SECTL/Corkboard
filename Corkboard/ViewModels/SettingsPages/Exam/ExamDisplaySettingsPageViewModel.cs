@@ -1,8 +1,11 @@
+using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Corkboard.Core.Enums.Configs;
 using Corkboard.Core.Exam;
+using Corkboard.Core.Exam.Theme;
 using Corkboard.Core.Models.SubConfigs.Exam;
 using Corkboard.Core.Services.Config;
+using Corkboard.Services.Exam;
 using Corkboard.ViewModels;
 using CR = Corkboard.Core.Langs.Common.Resources;
 
@@ -16,6 +19,11 @@ namespace Corkboard.ViewModels.SettingsPages.Exam;
 ///         标题、副标题与考试安排跟着看板文件走，在「考试安排」页里编辑。
 ///     </para>
 ///     <para>
+///         **看板主题的来源也在这一页**（背景分区下面那张下拉卡）：背景到底透哪套底色，
+///         取决于这里挑的是「跟随应用外观 / 某套预设 / 自定义」。13 项具体颜色仍在「看板外观」页，
+///         两处以同一份 <see cref="ExamBoardThemeConfig" /> 为准，别各存一份。
+///     </para>
+///     <para>
 ///         文本与数值都绑草稿，失焦 / 回车 / 离开页面才提交——<see cref="MainConfigHandler" />
 ///         每次属性变化都落一次盘，双向绑等于每敲一个字符写一遍 <c>settings.json</c>。
 ///         开关与下拉是离散动作，直接双向绑配置。
@@ -23,18 +31,83 @@ namespace Corkboard.ViewModels.SettingsPages.Exam;
 /// </summary>
 public partial class ExamDisplaySettingsPageViewModel : ViewModelBase
 {
+    private readonly MainConfigHandler _configHandler;
+    private readonly ExamBoardThemeService _themeService;
+    private ExamBoardThemeConfig? _observedTheme;
     private bool _isAttached;
 
-    public ExamDisplaySettingsPageViewModel(MainConfigHandler configHandler) : base(configHandler)
+    public ExamDisplaySettingsPageViewModel(MainConfigHandler configHandler, ExamBoardThemeService themeService)
+        : base(configHandler)
     {
+        _configHandler = configHandler;
+        _themeService = themeService;
+
         ClockSideOptions =
         [
             new(ExamBoardClockSide.Left, CR.Settings_Exam_Display_ClockSide_Left),
             new(ExamBoardClockSide.Right, CR.Settings_Exam_Display_ClockSide_Right)
         ];
 
+        ThemeChoices = BuildThemeChoices();
+
         ResetDrafts();
     }
+
+    /// <summary>背景用的那套主题：跟随应用外观 / 5 套预设 / 自定义。顺序即下拉顺序。</summary>
+    public IReadOnlyList<ExamBoardThemeChoice> ThemeChoices { get; }
+
+    /// <summary>
+    ///     「看板主题」下拉的选中项。写配置时只落 <c>Source</c> / <c>PresetId</c>，
+    ///     自定义覆盖色一项都不动（那些在「看板外观」页里改）。
+    /// </summary>
+    public ExamBoardThemeChoice SelectedThemeChoice
+    {
+        get
+        {
+            var theme = CurrentTheme;
+            return ThemeChoices.FirstOrDefault(choice => choice.Matches(theme.Source, theme.PresetId))
+                   ?? ThemeChoices[0];
+        }
+        set
+        {
+            if (value is null)
+                return;
+
+            var theme = CurrentTheme;
+            if (value.Matches(theme.Source, theme.PresetId))
+                return;
+
+            theme.Source = value.Source;
+            if (value.Source == ExamBoardThemeSource.Preset && value.PresetId is { } presetId)
+                theme.PresetId = presetId;
+
+            // 看板窗口靠这个服务换资源字典，写完必须让它重算一次颜色。
+            _themeService.Refresh();
+            OnPropertyChanged();
+        }
+    }
+
+    private ExamBoardThemeConfig CurrentTheme => _configHandler.Data.ExamBoardTheme;
+
+    private static IReadOnlyList<ExamBoardThemeChoice> BuildThemeChoices()
+    {
+        var choices = new List<ExamBoardThemeChoice>
+        {
+            new(ExamBoardThemeSource.FollowApp, null,
+                CR.Settings_Exam_Theme_Source_FollowApp)
+        };
+
+        foreach (var preset in ExamBoardThemePresets.All)
+            choices.Add(new ExamBoardThemeChoice(ExamBoardThemeSource.Preset, preset.Id, Text(preset.NameKey)));
+
+        choices.Add(new ExamBoardThemeChoice(ExamBoardThemeSource.Custom, null,
+            CR.Settings_Exam_Theme_Source_Custom));
+
+        return choices;
+    }
+
+    /// <summary>按资源键现取文案：Core 层只给键，不依赖界面资源类。</summary>
+    private static string Text(string key) => CR.ResourceManager.GetString(key, CR.Culture) ?? key;
 
     public ExamBoardSettingsConfig Settings => Config.ExamBoard;
 
@@ -71,6 +144,7 @@ public partial class ExamDisplaySettingsPageViewModel : ViewModelBase
 
         _isAttached = true;
         Settings.PropertyChanged += OnSettingsChanged;
+        AttachTheme();
         ResetDrafts();
     }
 
@@ -82,6 +156,33 @@ public partial class ExamDisplaySettingsPageViewModel : ViewModelBase
 
         _isAttached = false;
         Settings.PropertyChanged -= OnSettingsChanged;
+        DetachTheme();
+    }
+
+    /// <summary>主题配置在「看板外观」页里也会被改，这里跟着刷新下拉的选中项。</summary>
+    private void AttachTheme()
+    {
+        DetachTheme();
+
+        _observedTheme = CurrentTheme;
+        _observedTheme.PropertyChanged += OnThemeChanged;
+    }
+
+    private void DetachTheme()
+    {
+        if (_observedTheme is not null)
+            _observedTheme.PropertyChanged -= OnThemeChanged;
+
+        _observedTheme = null;
+    }
+
+    private void OnThemeChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(ExamBoardThemeConfig.Source)
+            or nameof(ExamBoardThemeConfig.PresetId) or null)
+        {
+            OnPropertyChanged(nameof(SelectedThemeChoice));
+        }
     }
 
     /// <summary>把还压在草稿里的数值立刻写进配置（失焦 / 回车 / 离开页面时调）。</summary>
@@ -147,3 +248,18 @@ public partial class ExamDisplaySettingsPageViewModel : ViewModelBase
 
 /// <summary>时钟位置下拉项。</summary>
 public sealed record ExamClockSideOption(ExamBoardClockSide Side, string DisplayName);
+
+/// <summary>
+///     「看板主题」下拉的一行：跟随应用外观 / 某套预设 / 自定义。
+///     <para>
+///         <c>Source</c> 与 <c>PresetId</c> 与 <see cref="ExamBoardThemeConfig" /> 完全一致——
+///         这一页只是把「选哪套主题」搬到了背景下面，没有第二份数据。
+///     </para>
+/// </summary>
+public sealed record ExamBoardThemeChoice(ExamBoardThemeSource Source, string? PresetId, string DisplayName)
+{
+    /// <summary>这一行是不是就是配置里现在那一档（预设还要比 <c>PresetId</c>）。</summary>
+    public bool Matches(ExamBoardThemeSource source, string? presetId) =>
+        Source == source
+        && (Source != ExamBoardThemeSource.Preset || string.Equals(PresetId, presetId, StringComparison.Ordinal));
+}

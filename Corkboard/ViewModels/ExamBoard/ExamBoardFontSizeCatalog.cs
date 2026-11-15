@@ -1,7 +1,6 @@
 using Corkboard.Core.Exam;
 using Corkboard.Core.Exam.Layout;
 using Corkboard.Core.Models.SubConfigs.Exam;
-using Corkboard.ViewModels.SettingsPages.Exam;
 using CR = Corkboard.Core.Langs.Common.Resources;
 
 namespace Corkboard.ViewModels.ExamBoard;
@@ -9,9 +8,11 @@ namespace Corkboard.ViewModels.ExamBoard;
 /// <summary>
 ///     看板字号的**唯一一份表**：16 项字号各自的名字、简介、默认值与读写委托。
 ///     <para>
-///         「设置 → 考试看板 → 看板字号」整页用它；布局编辑窗选中某个组件后，右侧面板里
-///         也只列这个组件用到的那几项（<see cref="IdsFor" />）。两边共用同一张表，
-///         才不会出现「设置页能调、编辑窗调的不是同一项」这种漂移。
+///         布局编辑窗选中某个组件后，右侧属性面板只列这个组件用到的那几项（<see cref="IdsFor" />）。
+///         原来那张「看板字号」设置页已经下架（16 个滑块塞不进合并后的页），**这是现在唯一的入口**。
+///     </para>
+///     <para>
+///         ⚠️ 改这里不用动任何 XAML：加一项字号只要在这张表里加一行、再补三个资源键。
 ///     </para>
 /// </summary>
 public static class ExamBoardFontSizeCatalog

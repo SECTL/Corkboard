@@ -232,6 +232,13 @@ public static class CrashRecoveryRuntime
         var startInfos = new List<ProcessStartInfo>();
         var baseDirectory = AppContext.BaseDirectory;
 
+        // 0) 便携包：先起包根目录的启动器，由它按 .current 挑这次该跑哪份 app-*。
+        //    更新刚把新版本搬进新目录时，当前进程还停在旧目录里；照着 ProcessPath 重启
+        //    等于把新版本晾在一边，下次开机也还是落在这个旧目录上。
+        var launcherPath = Utils.LauncherPath;
+        if (!string.IsNullOrWhiteSpace(launcherPath))
+            AddStartInfo(startInfos, launcherPath, Utils.PackageRoot, arguments);
+
         // 1) 当前进程自己就是一个 apphost（发布版）——直接复制它。
         var processPath = Environment.ProcessPath;
         if (!string.IsNullOrWhiteSpace(processPath) &&

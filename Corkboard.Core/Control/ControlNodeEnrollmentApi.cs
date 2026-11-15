@@ -314,6 +314,37 @@ public sealed class ControlNodeEnrollmentApi : IDisposable
     }
 
     /// <summary>
+    ///     设备自助退订（协议 §2.10.3）：凭 device secret 删掉服务端这一台设备记录。
+    ///     <para>
+    ///         失败不抛、只返回 <c>false</c>：401 <c>bad_secret</c> / 404 <c>device_not_found</c>
+    ///         都表示服务端已经没有这台设备，调用方按「已完成」继续清本地凭据即可。
+    ///     </para>
+    /// </summary>
+    public async Task<bool> UnenrollAsync(
+        ControlNodeCredential credential,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(credential);
+        if (!credential.IsComplete)
+            return false;
+
+        var payload = new JsonObject
+        {
+            ["deviceId"] = credential.DeviceId,
+            ["secret"] = credential.Secret
+        };
+
+        var (responseOk, root, _) = await PostJsonAsync(
+            _options.ResolveHttpEndpoint(ControlV4Protocol.DeviceUnenrollPath),
+            payload,
+            ControlApiErrorKeys.Network,
+            ControlApiErrorKeys.InvalidResponse,
+            cancellationToken).ConfigureAwait(false);
+
+        return responseOk && root is not null;
+    }
+
+    /// <summary>
     ///     用设备凭证读结构树（年级 → 班级）。
     ///     <para>凭证走**请求体**，绝不进 URL 或 Authorization 头（会被反代日志原样记下来）。</para>
     /// </summary>

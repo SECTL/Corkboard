@@ -398,7 +398,7 @@ public sealed class UpdateCenterService(
         Directory.Move(appDirectory, targetDirectory);
         File.Delete(Path.Combine(targetDirectory, ".partial"));
 
-        var launcherName = OperatingSystem.IsWindows() ? "CorkboardLauncher.exe" : "CorkboardLauncher";
+        var launcherName = Utils.LauncherFileName;
         var stagedLauncher = Path.Combine(stagingRoot, launcherName);
         if (!File.Exists(stagedLauncher))
             throw new InvalidDataException(Text("M_ZipLauncherMissing"));

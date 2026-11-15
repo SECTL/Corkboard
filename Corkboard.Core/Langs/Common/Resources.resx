@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <resheader name="resmimetype">
     <value>text/microsoft-resx</value>
@@ -2427,7 +2427,7 @@
     <value>这块看板到点自动放映</value>
   </data>
   <data name="Settings_Exam_AutoShow_Title" xml:space="preserve">
-    <value>自动放映</value>
+    <value>放映与时间</value>
   </data>
   <data name="Settings_Exam_AutoShow_Status" xml:space="preserve">
     <value>放映状态</value>
@@ -3692,7 +3692,7 @@
     <value>立即放映</value>
   </data>
   <data name="Settings_Exam_Theme_Title" xml:space="preserve">
-    <value>看板主题</value>
+    <value>看板外观</value>
   </data>
   <data name="Settings_Exam_Theme_Source_Title" xml:space="preserve">
     <value>主题来源</value>

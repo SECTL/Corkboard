@@ -2,16 +2,18 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Corkboard.Core.Abstraction;
-using Corkboard.Core.Attributes;
-using Corkboard.Core.Icons;
 using Corkboard.ViewModels.SettingsPages.Exam;
 
 namespace Corkboard.Views.SettingsPages.Exam;
 
 /// <summary>
-///     「时间同步」设置页：NTP 开关、同步源清单、间隔与超时、立即同步与当前校时状态。
+///     时间同步这一段：NTP 开关、同步源清单、间隔与超时、立即同步与当前校时状态。
+///     <para>
+///         ⚠️ 它**不是**一个设置页了（没有 <c>[PageInfo]</c>、不进导航、不自己滚）：
+///         整块嵌在「放映与时间」页里（<c>ExamAutoShowSettingsPage.axaml</c>），
+///         所以 DataContext 必须在这里自己设成自己的 ViewModel。
+///     </para>
 /// </summary>
-[PageInfo("settings.exam.time", FluentIcons.GlobeFilled, "settings.exam.group")]
 public partial class ExamTimeSettingsPage : UserControl
 {
     public ExamTimeSettingsPage()

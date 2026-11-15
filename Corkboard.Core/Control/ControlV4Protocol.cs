@@ -38,6 +38,9 @@ public static class ControlV4Protocol
     /// <summary>设备自助改自己所属的班（凭证放请求体）。</summary>
     public const string DeviceAssignPath = "/control/api/device/assign";
 
+    /// <summary>设备自助退订：凭 device secret 删掉自己这一台设备记录（协议 §2.10.3）。</summary>
+    public const string DeviceUnenrollPath = "/control/api/device/unenroll";
+
     /// <summary>上传作业板只读快照（凭证放请求体，快照形状同 <c>homework.read</c> 回执）。</summary>
     public const string DeviceHomeworkPath = "/control/api/device/homework-snapshots";
 

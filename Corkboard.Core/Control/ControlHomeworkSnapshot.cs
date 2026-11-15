@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json.Nodes;
 using Corkboard.Core.Export;
+using Corkboard.Core.Homework;
 using Corkboard.Core.Notes;
 
 namespace Corkboard.Core.ControlCenter;
@@ -18,12 +19,16 @@ namespace Corkboard.Core.ControlCenter;
 ///         <code>
 ///         {
 ///           "generatedAt": "...", "truncated": false, "noteCount": 12,
+///           "catalog": { "subjects": [ { "subject": "语文", "sections": ["第一单元"] } ] },
 ///           "subjects": [ { "subject": "语文", "items": [
 ///               { "id": "...", "section": "第一单元"|null, "content": "...",
 ///                 "dueDate": "2026-11-15"|null, "handwriting": false,
 ///                 "ink": null|"CORKBOARD-INK/2…", "createdAt": "..." } ] } ]
 ///         }
 ///         </code>
+///         <c>catalog</c> 是**设置里维护的科目 / 二级分类定义**（不是板子上碰巧出现的名字）：
+///         网页控制台用它做科目与分类输入框的下拉快选，同时仍允许老师自由输入。它和
+///         <c>subjects</c> 是两件事——<c>subjects</c> 只列有作业的科目，<c>catalog</c> 连空科目也列。
 ///     </para>
 ///     <para>
 ///         手写作业额外带 <c>ink</c>：就是 <see cref="Note.Handwriting" /> 的原文（自有文本格式
@@ -63,6 +68,19 @@ public static class ControlHomeworkSnapshot
     /// </summary>
     public const int MaxTotalInkLength = 96 * 1024;
 
+    /// <summary>科目目录最多带多少个科目（远大于种子科目数，只是防脏数据的上限）。</summary>
+    public const int MaxCatalogSubjects = 100;
+
+    /// <summary>目录里每个科目最多带多少个二级分类。</summary>
+    public const int MaxCatalogSectionsPerSubject = 200;
+
+    /// <summary>
+    ///     目录的 UTF-8 字节预算。目录与作业正文共用 256 KiB 的整份快照上限，
+    ///     科目/分类都是用户自己填的名字，极端配置（上百科目 × 上百分类）能把整份快照顶爆，
+    ///     反而让备份上传整条失败；超出预算就停手，少给几个名字不影响老师自由输入。
+    /// </summary>
+    public const int MaxCatalogBytes = 32 * 1024;
+
     /// <summary>
     ///     生成快照。
     /// </summary>
@@ -76,6 +94,10 @@ public static class ControlHomeworkSnapshot
     /// </param>
     /// <param name="days">同步最近多少天的作业（含今天，1–30）；默认只同步今天。</param>
     /// <param name="examBoard">考试看板快照（见 <see cref="ControlExamBoardSnapshot" />），可空。</param>
+    /// <param name="sections">
+    ///     设置里维护的二级分类定义（<see cref="HomeworkSection" />）；为空时目录只列科目。
+    ///     加在末尾是为了不破坏既有位置参数调用。
+    /// </param>
     public static JsonObject Build(
         IReadOnlyList<Note> notes,
         IEnumerable<string> subjects,
@@ -83,7 +105,8 @@ public static class ControlHomeworkSnapshot
         DateTimeOffset now,
         int inkBudget = MaxTotalInkLength,
         int days = 1,
-        JsonObject? examBoard = null)
+        JsonObject? examBoard = null,
+        IEnumerable<HomeworkSection>? sections = null)
     {
         var windowDays = Math.Clamp(days, 1, 30);
         var today = now.Date;
@@ -142,6 +165,52 @@ public static class ControlHomeworkSnapshot
         var truncated = false;
         var inkLeft = Math.Max(0, inkBudget);
 
+        // 科目 / 二级分类目录：给网页控制台「布置作业」表单做下拉快选，同时允许老师自由输入。
+        // 与 payloadSubjects 分开——后者只列有作业的科目，这里连空科目也列。
+        var catalogSubjects = new JsonArray();
+        var catalogBytes = 0;
+        foreach (var subject in orderedSubjects)
+        {
+            if (subject.Length == 0 || catalogSubjects.Count >= MaxCatalogSubjects)
+                continue;
+
+            var subjectBytes = Encoding.UTF8.GetByteCount(subject);
+            if (catalogBytes + subjectBytes > MaxCatalogBytes)
+                break;
+            catalogBytes += subjectBytes;
+
+            var sectionNames = new JsonArray();
+            var seenSections = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (sections is not null)
+            {
+                foreach (var section in sections)
+                {
+                    if (sectionNames.Count >= MaxCatalogSectionsPerSubject)
+                        break;
+
+                    if (!string.Equals((section.Subject ?? string.Empty).Trim(), subject, StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    var name = (section.Name ?? string.Empty).Trim();
+                    if (name.Length == 0 || !seenSections.Add(name))
+                        continue;
+
+                    var nameBytes = Encoding.UTF8.GetByteCount(name);
+                    if (catalogBytes + nameBytes > MaxCatalogBytes)
+                        break;
+                    catalogBytes += nameBytes;
+
+                    sectionNames.Add(name);
+                }
+            }
+
+            catalogSubjects.Add(new JsonObject
+            {
+                ["subject"] = subject,
+                ["sections"] = sectionNames
+            });
+        }
+
         foreach (var subject in orderedSubjects)
         {
             if (!bySubject.TryGetValue(subject, out var group) || group.Count == 0)
@@ -182,6 +251,7 @@ public static class ControlHomeworkSnapshot
             ["days"] = windowDays,
             ["noteCount"] = noteCount,
             ["truncated"] = truncated,
+            ["catalog"] = new JsonObject { ["subjects"] = catalogSubjects },
             ["subjects"] = payloadSubjects
         };
 

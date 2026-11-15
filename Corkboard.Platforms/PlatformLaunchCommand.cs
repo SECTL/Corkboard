@@ -1,16 +1,26 @@
 using System.Diagnostics;
+using Corkboard.Shared;
 
 namespace Corkboard.Platforms;
 
 /// <summary>
 ///     解析「重新启动本应用」要执行的命令行。开机自启项（注册表 / 桌面项 / LaunchAgent）
 ///     必须记住与当前进程一致的启动方式，因此统一从这里取，不在各平台实现里各写一遍。
+///     <para>
+///         便携包一律交给包根目录的启动器：只有它知道 <c>.current</c> 指向哪一份 <c>app-*</c>。
+///         记住进程自己的路径会把自启项钉死在「这次更新之前的那个目录」上，更新之后
+///         每次开机启动的都是旧版本。
+///     </para>
 /// </summary>
 internal static class PlatformLaunchCommand
 {
     /// <summary>当前可执行文件与其参数；拿不到可执行文件路径时返回 <see langword="null" />。</summary>
     public static (string FileName, IReadOnlyList<string> Arguments)? Resolve()
     {
+        var launcherPath = Utils.LauncherPath;
+        if (!string.IsNullOrWhiteSpace(launcherPath))
+            return (launcherPath, []);
+
         var executable = Environment.ProcessPath;
         if (string.IsNullOrWhiteSpace(executable))
             return null;

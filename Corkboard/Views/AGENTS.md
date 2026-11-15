@@ -334,12 +334,15 @@
   `HomeworkAssignmentForm.axaml.cs` 的 `RefreshHandwritingState()` **必须**把 `_canvas.Data` 显式写回
   `ViewModel.HandwritingData`——漏了它，保存出来的作业没有笔迹（「手写内容关掉再打开就没了」就是这么来的）。
 - **标题栏右上角的按钮可以在设置里逐颗隐藏**（「设置 → 作业板 → 常规 → 顶部按钮」卡）：配置是
-  `BoardSettingsConfig.ShowTitleBarSettings/Sort/Assign/Export/Replay/Dock/Display`（全部默认 `true`），
-  界面只看 `MainViewModel.ShowTitleBar*` 这七个**计算属性**——配置开关只决定「允不允许显示」，
+  `BoardSettingsConfig.ShowTitleBarSettings/Sort/Assign/Export/Replay/Display`（全部默认 `true`），
+  界面只看 `MainViewModel.ShowTitleBar*` 这六个**计算属性**——配置开关只决定「允不允许显示」，
   各自还要叠原有条件：布置作业在回放中不显示（`!_replay.IsActive`）、回放入口没作业时不显示
-  （`_replay.CanEnterReplay`）、收纳要求 `DockEnabled` 也开着；「看板模式」那颗（`ShowTitleBarDisplay`）
+  （`_replay.CanEnterReplay`）；「看板模式」那颗（`ShowTitleBarDisplay`）
   与「设置」同档，只读态也照旧可用（它只开另一扇窗，不动板子）。`MainViewModel` 因此多了个
   `BoardReplayService` 构造参数，并在 `OnReplayChanged` 里补通知。
+  ⚠️ **收纳那颗不在这张卡里**：它只有一个开关——「设置 → 作业板 → 窗口与收纳 → 收纳作业板」
+  （`DockSettings.DockEnabled`），`MainViewModel.ShowTitleBarDock` 也只读它。以前「界面入口」卡里还挂过一颗
+  `ShowTitleBarDock` 跟它是与关系（开关收纳要拨两下），已删，别再挂回来。
   ⚠️ **标题栏那颗锁不进这组开关**：解锁态下它是把窗口锁回去的唯一入口，藏掉就再也锁不回来，
   它跟「设置」「导出」「收纳」一样在解锁态照旧可用（都只读不写，遮罩也盖不到自绘标题栏）；
   ⚠️ 别把这些计算属性挂到 `MainView` 上——`UserControl` 的 `OnPropertyChanged(string)` 是 Avalonia 属性

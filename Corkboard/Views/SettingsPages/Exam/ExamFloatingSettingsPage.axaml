@@ -9,18 +9,16 @@
              mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="700"
              x:Class="Corkboard.Views.SettingsPages.Exam.ExamFloatingSettingsPage"
              x:DataType="vm:ExamFloatingSettingsPageViewModel">
-    <ScrollViewer>
-        <StackPanel Classes="page-container">
-            <TextBlock Margin="0 4 0 0"
-                       FontWeight="Normal"
-                       Text="{x:Static core:Resources.Settings_Exam_Floating_Title}"
-                       Theme="{StaticResource TitleTextBlockStyle}" />
+    <!--
+        最小化与浮窗：原「最小化与浮窗」设置页，现在作为「看板显示」页里的一段嵌进去
+        （外层自己滚、自己画页标题，所以这里**不再**包 ScrollViewer / page-container、也不要页标题）。
+        它的 DataContext 在 code-behind 里设成自己的 ViewModel，宿主页的 DataContext 影响不到它。
 
-            <!--
-                这一页按「最小化 / 浮窗按钮 / 浮窗外观 / 位置」四张卡分组，卡里一行一项。
-                ⚠️ 卡里只能是 fa:FASettingsExpanderItem（行），**不能**再套一张 fa:FASettingsExpander：
-                FA 的展开动画会在内容还没挂到可视树时去量里层卡，直接 NullReferenceException（整程序崩）。
-            -->
+        这一页按「最小化 / 浮窗按钮 / 浮窗外观 / 位置」四张卡分组，卡里一行一项。
+        ⚠️ 卡里只能是 fa:FASettingsExpanderItem（行），**不能**再套一张 fa:FASettingsExpander：
+        FA 的展开动画会在内容还没挂到可视树时去量里层卡，直接 NullReferenceException（整程序崩）。
+    -->
+    <StackPanel Spacing="4">
             <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Exam_Floating_GroupMinimize}"
                                    Description="{x:Static core:Resources.Settings_Exam_Floating_GroupMinimizeDescription}">
                 <!--
@@ -238,5 +236,4 @@
                     Content="{x:Static core:Resources.Settings_Exam_Floating_Reset}"
                     Click="ResetButton_OnClick" />
         </StackPanel>
-    </ScrollViewer>
 </UserControl>

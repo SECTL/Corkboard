@@ -5,8 +5,15 @@
 ## 考试看板与 NTP 校时
 
 考试看板是**与作业板并列的第二块板子**，设置侧边栏里排在「作业板」分组正下方
-（`groupId = "settings.exam.group"`，子页依次是：考试安排 / 看板显示 / 看板布局 / 看板主题 / 最小化与浮窗 / 看板字号 / 时间同步 / 自动放映）。
-**自动放映的全局参数在「设置 → 考试看板 → 自动放映」页**（`settings.exam.autoplay`），见下面「自动放映」一节。
+（`groupId = "settings.exam.group"`，子页只有四页：考试安排 / 看板显示 / 看板外观 / 放映与时间）。
+⚠️ **2026-11-15 起从 8 页收敛到 4 页**，原来的「看板布局」「最小化与浮窗」「时间同步」不再是独立设置页，
+而是各自拆成 `ExamLayoutSettingsPage` / `ExamFloatingSettingsPage` / `ExamTimeSettingsPage` 这三个
+**无 `PageInfo`、无 ScrollViewer、无页标题的普通 UserControl**，由宿主页当一整块控件嵌进来
+（布局 → 看板外观、浮窗 → 看板显示、时间同步 → 放映与时间）；**别把它们注册回导航，也别再给它们套
+`page-container` / 页标题**，嵌进来会和宿主页的容器、标题重复。「看板字号」页已整页删除，字号只剩
+布局编辑窗属性面板一个入口（见下面「看板字号」一节）。旧页 Id（`settings.exam.layout` / `floating` /
+`font` / `time`）在 `SettingsView.ResolvePageId` 里转成新页 Id，深链与 `--open-exam-*` 冒烟开关因此照旧能跳。
+**自动放映的全局参数在「设置 → 考试看板 → 放映与时间」页**（`settings.exam.autoplay`），见下面「自动放映」一节。
 
 ### 一块看板 = 一个文件（多份看板可切换）
 
@@ -162,8 +169,9 @@
 - **左下角长按 2 秒退出**：进度圈 + 蓝→红渐变全在 ViewModel 里（`BeginHold` / `CancelHold` / `HoldSweepAngle` / `HoldRingBrush`），
   窗口 code-behind 只负责捕获指针。⚠️ **窗口里不要自己写 `InitializeComponent()`**——那会顶掉 XAML 生成的同名方法，
   `x:Name` 字段恒为 null，按住一下就是空引用崩溃（这条踩过两次，`TrayMenuWindow` 一次、这里一次）。
-- **最小化代替退出（考试场景，只在考试进行中）**：「设置 → 考试看板 → 最小化与浮窗」（`PageInfo("settings.exam.floating")`，
-  `ExamFloatingSettingsPage` + `ExamFloatingSettingsPageViewModel`）里用下拉挑**什么时候**那颗按钮是「最小化」——
+- **最小化代替退出（考试场景，只在考试进行中）**：「设置 → 考试看板 → 看板显示」里那一整块「最小化与浮窗」
+  （`ExamFloatingSettingsPage` + `ExamFloatingSettingsPageViewModel`，**已不是独立页**：无 `PageInfo`、
+  无 ScrollViewer / 页标题，由看板显示页嵌进来，见本节开头那条）用下拉挑**什么时候**那颗按钮是「最小化」——
   `ExamBoardSettingsConfig.MinimizeMode`（`ExamBoardMinimizeMode`：`Off = 0` / `InProgress = 1`（默认）/
   `InProgressOrUpcoming = 2` / `Always = 3`，**按数字落盘、只能末尾追加**，`Normalize()` 里 `Enum.IsDefined` 兜底）。
   ⚠️ **默认不是「一直」而是 `InProgress`**：用户的原话是「应该是在考试进行中才是最小化，平常都是只有退出」——
@@ -334,13 +342,22 @@
   内容用 `ExamBoardSampleContentSource`（固定 2026-06-07 三场示例考试）+ `ExamBoardPreviewTimeSource`
   （切状态直接把假时钟拨到对应时刻，状态仍由 `ExamStatusPolicy` 算）。**点画布上的区块才出现属性面板**
   （点空白或 × 收起，组件下拉会同步到刚点中的区块，也可用它切到被「看板显示」隐藏的区块）；
+  ⚠️ **预览必须和成品走同一套渲染分支**：编辑窗**不覆写** `ExamBoardViewModel.ForceCustomLayout`，
+  没自定义过的状态照样是默认 `Grid`（它会按 `ShowList` / `ClockSide` 把时钟居中），自定义过的才走
+  `ExamBoardLayoutPanel`。别为了「拖了就看见」把编辑窗改成恒用面板——用户报过「右侧不显示时成品是居中的，
+  你这东西和成品不一样」。第一次改动某个组件的值会把它所属状态标成「已自定义」，预览随即切到面板；
+  切之前要把默认 `Grid` 实测出来的矩形抄进草稿（`ExamBoardLayoutEditorViewModel.CapturePlacement`，
+  窗口在 `Opened` / 换状态 / 换选中组件时按 `ExamBoardView.TryGetComponentBounds` 量一遍），
+  抄录期间用 `_capturingPlacement` 压住「标成已自定义」，否则预览会当场换分支。
+  默认 `Grid` 分支的点击选中在 `ExamBoardView.OnDefaultLayoutPressed`（往上找五个 `Default*` 区块），
+  与面板那条 `ComponentPressed` 各管一条分支，**两条都要接**，否则默认版式里点区块没反应。
   面板**浮在选中区块旁边**（放不下就翻到左侧，夹在窗口内；**高度封顶 700**——`MaxPanelHeight`，
   多出来的属性交给面板自己的滚动条，封顶前它会长到「窗口高 − 96」，几乎占满整屏、上下就没得挪了），
-  **整块面板都能按住拖走**
-  ——头部那颗拖动柄只是提示，不用非得按它：拖动处理器挂在面板自己身上
+  ⚠️ **只有头部那颗拖动柄能拖面板**：处理器虽然挂在面板自己身上
   （`AddHandler(..., RoutingStrategies.Bubble, handledEventsToo: true)`，捕获也打到面板上），
-  只有下拉框/按钮/数值框/滑块留着自己的指针行为；触摸与笔没有「左键按下」状态，按下即拖，
-  但触摸时只认头部那一行，否则会把面板内容的触屏滚动抢走。改选中组件的
+  但按下点必须落在 `InspectorDragHandle` 里（`IsWithinDragHandle`）才认。别做成「整块面板都能拖」——
+  用户明确要求过「只有左上角那个按钮能拖，其他地方别给我拖」，整块可拖会把下拉框、数值框的按下一并吃掉，
+  表现就是面板上的控件点不动。鼠标只认左键；触摸与笔没有「左键按下」状态，按手柄即拖。改选中组件的
   百分比/对齐/缩放/透明度，并列出这个组件用到的字号滑块。
   ⚠️ **点头部那颗拖动柄之前，图标必须走 `{DynamicResource FluentSystemIconsResizeable}`**：
   写成字面量 `FontFamily="FluentSystemIconsResizeable"` 解析不到字体键，静默回退到 MiSans，
@@ -371,50 +388,37 @@
   对应的那个属性（`RefreshFontSizes()` 从配置搬过来、夹一次）；写死的那个用户就改不动。
   Style 里的 `Setter` 优先级高于本地值，所以 `Border.exit-hint TextBlock.icon` 那条样式**只留前景色**，
   字号挂在 `TextBlock` 自己的 `FontSize="{Binding ExitIconSize}"` 上。
-- **设置页是单开的「看板字号」页**（`PageInfo("settings.exam.font")`，`ExamFontSettingsPage(.axaml|.cs)` +
-  `ExamFontSettingsPageViewModel`），外观是**四张按区域分组的可折叠卡**：标题与副标题 / 时钟 /
-  时钟下面的考试信息 / 考试表格与其他（含空状态与退出图标）。分组在
-  `ExamFontSettingsPageViewModel.BuildGroups()` 里按 `ExamFontSizeItem.Id` 归拢，
-  **默认全部收起**（用户明确要求：一页看到四个组名，点开才见具体字号）。
-  ⚠️ **卡就是 `fa:FASettingsExpander`（Header 组名、Description 组简介），卡里每一行是
-  `fa:FASettingsExpanderItem`（Content 名称、Description 简介、Footer 放滑块）**——与「作业板」设置页同一套组件。
-  不写 `IsExpanded`（默认收起）、不写 `Margin`（页面栈的 `page-container` 间距管卡间距）。
-  **别退回手写的 `Border.setting-group` / `Border.setting-row` 行**：那版被用户指着说过
-  「单独设置框换成组件里的设置项、不要用之前那种，全部换掉」；也别在卡里再嵌一层卡。
+- ⚠️ **「看板字号」设置页 2026-11-15 整页删掉了**（`ExamFontSettingsPage` / `ExamFontSettingsPageViewModel` /
+  `settings.exam.font` 的 `PageInfo` 全没了）：字号只剩**布局编辑窗右侧属性面板**一个入口——
+  点画布上的区块，面板下半部列出这个组件用到的字号滑块（`FontItems` ←
+  `ExamBoardFontSizeCatalog.Create(Config.ExamBoard)` 再按 `IdsFor(组件)` 过滤）。旧深链
+  `settings.exam.font` 由 `SettingsView.ResolvePageId` 转到「看板外观」页，`--open-exam-font` 冒烟开关连同
+  `App.Consts.cs` 里的 `SettingsExamFontPageId` 一并下架。**别把这个页加回来**：用户原话「看板字号的话删掉」。
 - **一项字号 = `ExamFontSizeItem` 一行**（`Id` / 名称 / 简介 / 默认值 / 是否时钟 / 读写两个委托），
-  页面遍历 `FontSizeGroups` 画，**不给每项单写一遍 XAML**；加一项新文字只要在
-  `ExamBoardFontSizeCatalog.Create()` 加一行、在 `BuildGroups()` 归到某组、再加三个资源键（名称 / 简介 / …），
-  `Resources.Designer.cs` 同步。
+  类型现在住在 `Corkboard/ViewModels/ExamBoard/ExamFontSizeItem.cs`（namespace `Corkboard.ViewModels.ExamBoard`，
+  不再在设置页 VM 里；标签页用的分组类型 `ExamFontGroup` 随页面一起删了）。
+  面板遍历 `FontItems` 画，**不给每项单写一遍 XAML**；加一项新文字只要在
+  `ExamBoardFontSizeCatalog.Create()` 加一行（`IdsFor(组件)` 决定它出现在哪个区块的面板里），
+  再加名称 / 单位那几个资源键并同步 `Resources.Designer.cs`。
 - **字号用滑块调，不设精确输入框**（用户明确要求「把输入框改成滑块」+「不留精确输入」）：
   `Slider` 的 `Minimum` / `Maximum` 直接读 `ExamFontSizeItem.Minimum` / `Maximum`（下限 8、一般上限 120、
   时钟那两档 480），`TickFrequency="1"` + `IsSnapToTickEnabled` 保证只出整数；当前值显示在滑块右边那一行
   （`ValueText`＝「108 号」/「108 pt」，单位走 `Settings_Exam_Font_Unit`）。
   ⚠️ **没有 `NumericUpDown`，也别再加回去**：`Slider` 只吃 `double`，草稿仍是 `decimal?`，
   两者由 `ExamFontSizeItem.SliderValue` 这层适配（取整 + 夹取）转接。
-- **拖动期间浮窗只放预览，不放数值**（用户：「浮窗上面字号去掉，就在滑块右边就行」）：`Popup` 挂在滑块上
-  （`PlacementTarget="{Binding #SizeSlider}"`、`Placement="Top"`、`IsLightDismissEnabled="False"`），
-  内容是「按当前字号渲染的一句预览」——预览文字就用这一项自己的名字（`SampleText`＝`Name`，
-  所以 16 项不用各写一句示例），退出图标那一项画字形（`SampleGlyph` = `FluentIcons.ArrowExitFilled`）。
-  ⚠️ **预览字号封顶 96**（`ExamFontSizeItem.PreviewMaxFontSize`）：时钟能到 480，照实数渲染会把浮窗撑出屏幕；
-  超过这一档在浮窗里补一句 `Settings_Exam_Font_PreviewScaled`（「预览最多放到 96，数值照实」）。
-  ⚠️ **`Popup` 必须 `IsHitTestVisible="False"`**：它挂在滑块上方，能吃掉指针的话拖到一半就断了。
-- **拖动状态由页面置位、不是绑 `IsPointerOver`**（`ExamFontSettingsPage.axaml.cs`）：`PointerPressed` 把
-  `ExamFontSizeItem.IsDragging` 置真（浮窗随之打开）、`PointerReleased` / `PointerCaptureLost` 收回并 `CommitAll()`。
-  处理器挂在**页面**这一层、`Tunnel | Bubble` 全写、`handledEventsToo: true`——滑块的指针事件有一部分被
-  Thumb / 轨道自己吃掉，逐个滑块去挂要跟着模板复用走，容易漏挂或多挂。
-  键盘调（方向键）不经过指针，所以另外挂了 `RangeBase.ValueChangedEvent`：不在拖的时候值一变就提交。
-- **数值走草稿 + 松手提交**（`decimal? Draft`，松手 / 离开页面 `CommitAll()`）：配置没有防抖，直接双向绑等于
-  拖一路写几十遍盘。
-- 「恢复默认字号」一把把十六项写回默认值（不做二次确认）；
-  那句 `Settings_Exam_Font_ResetHint` 就写在这颗按钮旁边。
-  ⚠️ **它不套 `FASettingsExpander`**：一行说明 + 一颗按钮，套上去白给一个折叠箭头、
-  点开里面什么都没有（用户明确说过「没必要搞展开设置框」），直接用 `Border Classes="card"`
-  加一张 `Grid ColumnDefinitions="*,Auto"`。
-- 页面标题也不套卡：顶部一段 `TextBlock` + 一行简介（`Settings_Exam_Font_PageTitle` /
-  `PageDescription`），与「看板显示」「自动放映」等考试设置页一致。
-- 版式冒烟开关 `--open-exam-font`（`AppConsts.SettingsExamFontPageId`）直接落到这一页，
-  与 `--open-settings` / `--open-about` / `--open-exam-board` / `--open-oobe` 都在
-  `App.StartHostAsync` 末尾那一段。
+- **面板里的滑块照旧「拖动期间只改草稿、松手才写配置」**（`ExamBoardLayoutEditorWindow.axaml.cs`）：
+  `RangeBase.ValueChangedEvent` 挂在**窗口**上（`Bubble` + `handledEventsToo: true`），指针按住滑块期间
+  （`_fontPointerDown`，判据 `IsWithinSlider`）只更新 `Draft`；`PointerReleased` 一进来就
+  `ViewModel.CommitFontDrafts()` 把十六项一次提交（每项内部再 `Clamp` 一次，值没变就不写盘）。
+  键盘调（方向键）不经过指针，所以不在拖的时候值一变就提交。另有三处兜底提交：
+  窗口 `Deactivated`（指针在窗口外松开就收不到 `Released`）、`Closed`、以及换选中组件 / 换状态重建
+  `FontItems` 之前（`RefreshFontItems` 里），漏了最后一处「拖完立刻点别的区块」的草稿就丢了。
+- **没有预览浮层、没有「恢复默认字号」**：`SampleText` / `SampleGlyph` / `PreviewMaxFontSize` / `IsDragging`
+  这些字段是随字号页一起下架的浮层与页面状态，面板只画名称 + 数值 + 滑块，**别再往面板里接 Popup**；
+  整页「恢复默认」按钮也没了，字号默认值仍只在 `Corkboard.Core/Exam/ExamBoardTextStyle` 里定义
+  （catalog 的 `DefaultValue` 从这里取）。`Settings_Exam_Font_*` 那批键现在只剩 `Unit` 与各项名称/简介还在用，
+  `PageTitle` / `PageDescription` / `ResetHint` / `PreviewScaled` 等已无人引用，**键冻结、保留不删**
+  （删了还得同步 `LocalizationTests`）。
 
 ### NTP 校时
 

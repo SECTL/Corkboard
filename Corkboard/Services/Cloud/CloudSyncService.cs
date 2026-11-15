@@ -616,7 +616,9 @@ public sealed class CloudSyncService : ICloudSyncService, IDisposable
                                 .SaveAll(merged.Notes);
 
                             CopyBoardFiles(staging, BoardDirectory, overwrite: false);
-                            _board.Reload();
+
+                            // 重读会整份换掉内存里的作业集合，必须在 UI 线程上做：下面这段一直跑在线程池里。
+                            await Dispatcher.UIThread.InvokeAsync(() => _board.Reload());
                         }
                         finally
                         {
@@ -950,7 +952,8 @@ public sealed class CloudSyncService : ICloudSyncService, IDisposable
                     else
                         ReplaceDirectory(staging, BoardDirectory);
 
-                    _board.Reload();
+                    // 重读会整份换掉内存里的作业集合，必须在 UI 线程上做：上面几个下载都 ConfigureAwait(false) 了。
+                    await Dispatcher.UIThread.InvokeAsync(() => _board.Reload());
                 }
                 catch (Exception exception) when (exception is InvalidDataException or FormatException or IOException)
                 {

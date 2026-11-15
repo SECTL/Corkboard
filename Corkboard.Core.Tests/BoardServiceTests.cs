@@ -504,6 +504,92 @@ public class BoardServiceTests
         Assert.NotEqual(Path.GetDirectoryName(new MainConfigModel().ConfigFilePath),
             Path.GetDirectoryName(boardPath));
     }
+
+    [Fact]
+    public void Reload_WithoutChanges_DoesNotRaiseChangedAndKeepsTheSameNotes()
+    {
+        var store = new InMemoryNoteStore();
+        var note = new Note();
+        note.SetHtmlContent("<p>原样</p>");
+        store.Seed([note]);
+
+        var (service, _, _) = CreateService(store: store);
+        var changed = 0;
+        service.Changed += (_, _) => changed++;
+
+        // 文件监视会把本服务自己的落盘也回读一遍：内容没变时必须什么都不做。
+        Assert.False(service.Reload());
+        Assert.Equal(0, changed);
+        Assert.Same(note, service.Notes[0]);
+    }
+
+    [Fact]
+    public void Reload_WithHandwritingNote_DoesNotRewriteTheInk()
+    {
+        var store = new InMemoryNoteStore();
+        var note = new Note();
+        note.SetHandwriting("CORKBOARD-INK/2\naspect=1\n#FF000000|6|0|0,0");
+        store.Seed([note]);
+
+        var (service, _, _) = CreateService(store: store);
+        var changed = 0;
+        var savesBefore = store.SaveCount;
+        service.Changed += (_, _) => changed++;
+
+        // 手写作业没有 Markdown 正文可转；以前这里会「转成空 HTML → 清掉 ink → 存储层把旧笔迹写回」，
+        // 每回读一次就重写一遍文件，文件监视跟着再触发一次——重读与落盘互相追着跑。
+        Assert.False(service.Reload());
+        Assert.Equal(0, changed);
+        Assert.Equal(savesBefore, store.SaveCount);
+        Assert.Equal(RichTextContentKind.Handwriting, service.Notes[0].ContentKind);
+        Assert.Equal(note.Handwriting, service.Notes[0].Handwriting);
+    }
+
+    [Fact]
+    public void Reload_AfterAnExternalNoteEdit_RefreshesTheNoteAndRaisesChanged()
+    {
+        var store = new InMemoryNoteStore();
+        var original = new Note();
+        original.SetHtmlContent("<p>旧内容</p>");
+        store.Seed([original]);
+
+        var (service, _, _) = CreateService(store: store);
+        var changed = 0;
+        service.Changed += (_, _) => changed++;
+
+        // 模拟外部工具改了这一条文件：Id、创建与更新时刻都没动，只有正文变了。
+        var edited = new Note
+        {
+            Id = original.Id,
+            CreatedAt = original.CreatedAt,
+            UpdatedAt = original.UpdatedAt
+        };
+        edited.SetHtmlContent("<p>外部改过的内容</p>");
+        store.Seed([edited]);
+
+        Assert.True(service.Reload());
+        Assert.Equal(1, changed);
+        Assert.Equal("<p>外部改过的内容</p>", service.Notes.Single(current => current.Id == original.Id).Content);
+    }
+
+    [Fact]
+    public void Reload_AfterAnExternalDefinitionChange_RefreshesSubjectsAndRaisesChanged()
+    {
+        var config = new InMemoryConfigService();
+        var (service, _, _) = CreateService(config);
+        var changed = 0;
+        service.Changed += (_, _) => changed++;
+
+        config.Saved[new HomeworkConfig().ConfigFilePath] = new HomeworkConfig
+        {
+            Subjects = ["物理"]
+        };
+
+        Assert.True(service.Reload());
+        Assert.Equal(1, changed);
+        Assert.Equal(["物理"], service.Subjects);
+    }
+
 }
 
 /// <summary>

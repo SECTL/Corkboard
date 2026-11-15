@@ -203,10 +203,30 @@ public partial class SettingsView : ContentPage, IFANavigationPageFactory
 
     public void SelectNavigationItemById(string id)
     {
+        id = ResolvePageId(id);
         var info = PagesRegistryService.SettingsItems.FirstOrDefault(item => item.Id == id);
         if (info != null)
             Navigate(info, pushHistory: false);
     }
+
+    /// <summary>
+    ///     旧页面 Id → 现在装它的那一页。
+    ///     <para>
+    ///         考试看板从 8 页并到 4 页：看板布局并进「看板外观」、最小化与浮窗并进「看板显示」、
+    ///         时间同步并进「放映与时间」、看板字号整页删掉（字号改到布局编辑窗里调）。
+    ///         旧书签 / 旧冒烟参数（<c>--open-exam-floating</c>）仍写着旧 Id，不转一下就静默停在默认页。
+    ///         ⚠️ 这张表只服务「并掉的那几页」，**不要**拿它当通用重定向机制往里塞新东西。
+    ///     </para>
+    /// </summary>
+    private static string ResolvePageId(string id) => id switch
+    {
+        AppConsts.SettingsExamFloatingPageId => AppConsts.SettingsExamDisplayPageId,
+        AppConsts.SettingsExamLayoutPageId => AppConsts.SettingsExamThemePageId,
+        // 字号现在只在布局编辑窗的属性面板里调，落点就给「看板外观」（布局在那一段里）。
+        AppConsts.SettingsExamFontPageId => AppConsts.SettingsExamThemePageId,
+        AppConsts.SettingsExamTimePageId => AppConsts.SettingsExamAutoShowPageId,
+        _ => id
+    };
 
     /// <summary>
     ///     按页面 Id 导航（托盘菜单的「关于」入口用它）。找不到这个 Id 就保持当前页不变。
@@ -224,6 +244,8 @@ public partial class SettingsView : ContentPage, IFANavigationPageFactory
     {
         if (string.IsNullOrWhiteSpace(pageId))
             return;
+
+        pageId = ResolvePageId(pageId);
 
         var info = PagesRegistryService.SettingsItems.FirstOrDefault(item => item.Id == pageId);
         if (info is null)

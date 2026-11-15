@@ -100,5 +100,13 @@ public interface IBoardService
     /// <summary>把当前内存状态整份写回 <c>board.json</c>，并通知 <see cref="Changed" />。</summary>
     void Save();
 
-    void Reload();
+    /// <summary>
+    ///     从磁盘重读科目定义与全部作业（作业文件被外部改过、或云同步恢复之后走这里）。
+    ///     <para>
+    ///         磁盘上的内容与内存里完全一致时什么都不做、也不发 <see cref="Changed" />——
+    ///         本服务自己落盘也会触发文件监视，这个判断让那些回读不会造成界面抖动与历史重复。
+    ///     </para>
+    /// </summary>
+    /// <returns>内存里的板子是否真的跟着磁盘变了（没变时调用方不必再刷新任何界面）。</returns>
+    bool Reload();
 }

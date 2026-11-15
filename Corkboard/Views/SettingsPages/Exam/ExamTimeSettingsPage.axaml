@@ -9,12 +9,12 @@
              mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="700"
              x:Class="Corkboard.Views.SettingsPages.Exam.ExamTimeSettingsPage"
              x:DataType="vm:ExamTimeSettingsPageViewModel">
-    <ScrollViewer>
-        <StackPanel Classes="page-container">
-            <TextBlock Margin="0 4 0 0"
-                       FontWeight="Normal"
-                       Text="{x:Static core:Resources.Settings_Exam_Time_Title}"
-                       Theme="{StaticResource TitleTextBlockStyle}" />
+    <!--
+        时间同步：原「时间同步」设置页，现在作为「放映与时间」页里的一段嵌进去
+        （外层自己滚、自己画页标题，所以这里**不再**包 ScrollViewer / page-container、也不要页标题）。
+        它的 DataContext 在 code-behind 里设成自己的 ViewModel。
+    -->
+    <StackPanel Spacing="4">
 
             <!--
                 校时总开关：「立即同步」放在同一张卡的 Footer 上，因为它作用于整张卡。
@@ -140,5 +140,4 @@
                 </fa:FASettingsExpander.Footer>
             </fa:FASettingsExpander>
         </StackPanel>
-    </ScrollViewer>
 </UserControl>

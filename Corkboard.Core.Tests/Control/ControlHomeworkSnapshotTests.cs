@@ -1,4 +1,5 @@
 using Corkboard.Core.ControlCenter;
+using Corkboard.Core.Homework;
 using Corkboard.Core.Notes;
 
 namespace Corkboard.Core.Tests;
@@ -19,6 +20,7 @@ public class ControlHomeworkSnapshotTests
         Assert.Equal(0, snapshot["noteCount"]!.GetValue<int>());
         Assert.False(snapshot["truncated"]!.GetValue<bool>());
         Assert.Empty(snapshot["subjects"]!.AsArray());
+        Assert.Empty(snapshot["catalog"]!["subjects"]!.AsArray());
         Assert.Equal(Now.ToString("O"), snapshot["generatedAt"]!.GetValue<string>());
     }
 
@@ -280,6 +282,72 @@ public class ControlHomeworkSnapshotTests
         var content = snapshot["subjects"]![0]!["items"]![0]!["content"]!.GetValue<string>();
 
         Assert.Equal("第一段 第二段加粗", content);
+    }
+
+    [Fact]
+    public void Build_CatalogListsConfiguredSubjectsEvenWhenBoardIsEmpty()
+    {
+        var snapshot = ControlHomeworkSnapshot.Build(
+            [],
+            ["语文", "数学"],
+            [],
+            Now,
+            sections:
+            [
+                new HomeworkSection { Subject = "语文", Name = "第一单元" },
+                new HomeworkSection { Subject = "语文", Name = "第二单元" }
+            ]);
+
+        var catalog = snapshot["catalog"]!["subjects"]!.AsArray();
+
+        // 目录记的是「设置里有什么科目」，与板子上有没有作业无关。
+        Assert.Equal(["语文", "数学"], catalog.Select(node => node!["subject"]!.GetValue<string>()).ToList());
+        Assert.Equal(
+            ["第一单元", "第二单元"],
+            catalog[0]!["sections"]!.AsArray().Select(node => node!.GetValue<string>()).ToList());
+        Assert.Empty(catalog[1]!["sections"]!.AsArray());
+        Assert.Empty(snapshot["subjects"]!.AsArray());
+    }
+
+    [Fact]
+    public void Build_CatalogTrimsAndDeduplicatesSectionsIgnoringCase()
+    {
+        var snapshot = ControlHomeworkSnapshot.Build(
+            [],
+            ["语文"],
+            [],
+            Now,
+            sections:
+            [
+                new HomeworkSection { Subject = " 语文 ", Name = " 第一单元 " },
+                new HomeworkSection { Subject = "语文", Name = "第一单元" },
+                new HomeworkSection { Subject = "语文", Name = "   " },
+                new HomeworkSection { Subject = "数学", Name = "第一单元" }
+            ]);
+
+        var catalog = snapshot["catalog"]!["subjects"]!.AsArray();
+        var sections = catalog[0]!["sections"]!.AsArray();
+
+        // 只列科目清单里有的科目；分类定义里出现、但科目表里没有的「数学」不进目录。
+        Assert.Single(catalog);
+        Assert.Equal("语文", catalog[0]!["subject"]!.GetValue<string>());
+        Assert.Equal(["第一单元"], sections.Select(node => node!.GetValue<string>()).ToList());
+    }
+
+    [Fact]
+    public void Build_CatalogFollowsSubjectOrderAndIncludesAdHocSubjects()
+    {
+        var snapshot = ControlHomeworkSnapshot.Build(
+            [NoteIn("临时科目")],
+            ["语文", "数学"],
+            ["数学"],
+            Now);
+
+        var catalog = snapshot["catalog"]!["subjects"]!.AsArray();
+
+        Assert.Equal(
+            ["数学", "语文", "临时科目"],
+            catalog.Select(node => node!["subject"]!.GetValue<string>()).ToList());
     }
 
     private static Note NoteIn(string subject) => new()

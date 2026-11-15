@@ -8,6 +8,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\Corkboard.Platforms.Abstractions\Corkboard.Platforms.Abstractions.csproj" />
+        <ProjectReference Include="..\Corkboard.Shared\Corkboard.Shared.csproj" />
     </ItemGroup>
 
 </Project>

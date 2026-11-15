@@ -443,6 +443,10 @@ public partial class App : Application
         // 作业板自动存档：板子改完等几秒把整块板面存成 PNG，按「设置 → 作业板 → 自动化与数据」的规则裁剪。
         services.AddSingleton<BoardAutoSaveService>();
 
+        // 作业文件监视：作业文件与科目定义被外部改动（云同步、集控、手动替换文件）后自动重读作业板，
+        // 主页面与看板模式都跟着刷新。哪些文件算作业板数据由 Core 的 BoardFileWatchPolicy 判断。
+        services.AddHostedService<BoardFileWatcherHostedService>();
+
         // 看板模式底部那一行一言 / 右上角那行天气：单例缓存（窗口开开关关共用一份），
         // 拉取时机由窗口决定，所以不挂后台轮询（见两个服务各自的注释）。
         services.AddSingleton<QuoteService>();
@@ -501,7 +505,6 @@ public partial class App : Application
         services.AddTransient<ExamThemeSettingsPageViewModel>();
         services.AddTransient<ExamTimeSettingsPageViewModel>();
         services.AddTransient<ExamAutoShowSettingsPageViewModel>();
-        services.AddTransient<ExamFontSettingsPageViewModel>();
         services.AddTransient<ExamFloatingSettingsPageViewModel>();
         services.AddTransient<DisplayBoardViewModel>();
         services.AddTransient<DisplaySettingsPageViewModel>();
@@ -535,19 +538,16 @@ public partial class App : Application
         // 「导出」在作业板分组里：导出的就是作业板，放顶层会让人找不着。
         services.AddSettingsPage<ExportSettingsPage>(CR.Settings_Export_Title);
 
-        // 「考试看板」是第二个可折叠分组，排在「作业板」下面：考试安排、看板显示、看板字号、时间同步、自动放映。
+        // 「考试看板」是第二个可折叠分组，排在「作业板」下面。
+        // ⚠️ 只有四页（用户要求「分类太多，能合的合到一起」）：
+        //   考试安排 = 看板列表；看板显示 = 显示什么 + 背景与主题来源 + 最小化与浮窗；
+        //   看板外观 = 四档状态布局 + 13 项颜色；放映与时间 = 自动放映 + NTP 校时。
+        // 原来那四页（看板布局 / 看板字号 / 最小化与浮窗 / 时间同步）不再注册导航，
+        // 页面要么整块嵌进上面这几页（布局 / 浮窗 / 时间同步），要么整页删掉（看板字号）。
         services.AddGroup(new PageGroupInfo(CR.Settings_Exam_Group, "settings.exam.group", FluentIcons.CalendarFilled));
         services.AddSettingsPage<ExamScheduleSettingsPage>(CR.Settings_Exam_Schedule_Title);
         services.AddSettingsPage<ExamDisplaySettingsPage>(CR.Settings_Exam_Display_Title);
-        // 「看板布局」紧跟「看板显示」：先决定显示什么，再决定各组件摆在哪。
-        services.AddSettingsPage<ExamLayoutSettingsPage>(CR.Settings_Exam_Layout_Title);
-        // 「看板主题」跟在「看板布局」后面：布局定结构、主题定配色，两页挨着最好找。
         services.AddSettingsPage<ExamThemeSettingsPage>(CR.Settings_Exam_Theme_Title);
-        // 「最小化与浮窗」紧跟在「看板显示」后面：两者都是「看板长什么样、怎么用」。
-        services.AddSettingsPage<ExamFloatingSettingsPage>(CR.Settings_Exam_Floating_Title);
-        // 「看板字号」单开一页：看板上每一处文字各有一个字号，塞进「看板显示」会把那一页撑到十几张卡。
-        services.AddSettingsPage<ExamFontSettingsPage>(CR.Settings_Exam_Font_PageTitle);
-        services.AddSettingsPage<ExamTimeSettingsPage>(CR.Settings_Exam_Time_Title);
         services.AddSettingsPage<ExamAutoShowSettingsPage>(CR.Settings_Exam_AutoShow_Title);
 
         // 「账号」「云同步」暂不开放入口：两个页面的 PageInfo 上标了 isHide: true，不进侧边栏。
@@ -601,17 +601,16 @@ public partial class App : Application
             if (args.Contains("--open-about", StringComparer.OrdinalIgnoreCase))
                 ShowSettingsWindow(AppConsts.SettingsAboutPageId);
 
-            // 同上：带 --open-exam-font 时直接落到「看板字号」页，方便对分组版式截图。
-            if (args.Contains("--open-exam-font", StringComparer.OrdinalIgnoreCase))
-                ShowSettingsWindow(AppConsts.SettingsExamFontPageId);
-
-            // 同上：带 --open-exam-floating 时直接落到「最小化与浮窗」页，方便对设置卡截图。
+            // 同上：带 --open-exam-floating 时落到「看板显示」页——浮窗那张分区已经并进这一页，
+            // 旧 Id 由 SettingsView 的 alias 表现在会转到 settings.exam.display。
             if (args.Contains("--open-exam-floating", StringComparer.OrdinalIgnoreCase))
                 ShowSettingsWindow(AppConsts.SettingsExamFloatingPageId);
 
             // 同上：带 --open-exam-board 时直接铺开全屏考试看板，方便对版式截图。
             if (args.Contains("--open-exam-board", StringComparer.OrdinalIgnoreCase))
                 ShowExamBoardWindow();
+
+            
 
             // 正式启动参数（不只是冒烟）：带 --open-exam-board-panel 时直接打开「考试看板」面板窗口，
             // 这样快捷方式 / 开机自启 / 其它程序的命令行都能一步到「放映哪一块」。
@@ -1660,10 +1659,9 @@ public partial class App : Application
     /// </summary>
     public async Task RestartThroughLauncherAsync()
     {
-        var launcherName = OperatingSystem.IsWindows() ? "CorkboardLauncher.exe" : "CorkboardLauncher";
-        var launcherPath = Path.Combine(Utils.PackageRoot, launcherName);
-        if (!File.Exists(launcherPath))
-            throw new FileNotFoundException("便携版 Launcher 不存在。", launcherPath);
+        var launcherPath = Utils.LauncherPath
+                           ?? throw new FileNotFoundException("便携版 Launcher 不存在。",
+                               Path.Combine(Utils.PackageRoot, Utils.LauncherFileName));
 
         await StopCoreAsync().ConfigureAwait(true);
 
@@ -1709,10 +1707,15 @@ public partial class App : Application
         }
     }
 
-    /// <summary>重启：直接拉起当前可执行文件后退出。便携版更新请用 <see cref="RestartThroughLauncherAsync" />。</summary>
+    /// <summary>
+    ///     重启：便携包交给包根目录的启动器（由它按 <c>.current</c> 决定跑哪份 <c>app-*</c>），
+    ///     安装版与开发构建直接拉起当前可执行文件。
+    ///     便携版更新之后的重新启动请用 <see cref="RestartThroughLauncherAsync" />——那条路会先把 Host 停干净。
+    /// </summary>
     public void Restart()
     {
-        var executable = Environment.ProcessPath;
+        var launcherPath = Utils.LauncherPath;
+        var executable = launcherPath ?? Environment.ProcessPath;
         if (string.IsNullOrWhiteSpace(executable))
             return;
 
@@ -1720,7 +1723,14 @@ public partial class App : Application
         // 否则新进程只会弹一句「已经在运行」然后自己退出。
         SingleInstanceGate.Release();
 
-        Process.Start(new ProcessStartInfo(executable) { UseShellExecute = true });
+        var startInfo = launcherPath is null
+            ? new ProcessStartInfo(executable) { UseShellExecute = true }
+            : new ProcessStartInfo(executable)
+            {
+                WorkingDirectory = Utils.PackageRoot,
+                UseShellExecute = false
+            };
+        Process.Start(startInfo);
         _ = StopAsync();
     }
 }

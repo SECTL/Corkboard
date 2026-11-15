@@ -208,10 +208,39 @@ public sealed class HomeworkSectionCatalog
         _configService.SaveConfig(_config);
     }
 
-    /// <summary>从磁盘重读定义并刷新内存集合（云同步恢复设置/科目后走这里）。</summary>
-    public void Reload()
+    /// <summary>
+    ///     从磁盘重读定义并刷新内存集合（<c>board.json</c> 被外部改过、或云同步恢复设置后走这里）。
+    ///     <para>
+    ///         ⚠️ 读出来的内容与内存里一致时<b>集合一个都不动</b>、返回 <see langword="false" />：
+    ///         调用方（<c>BoardService.Reload</c>）据此跳过整块重建。本服务自己落盘也会触发文件监视，
+    ///         不挡掉这一下的话，每存一次盘都会让科目列表与作业板白刷新一遍。
+    ///     </para>
+    /// </summary>
+    /// <returns>内存里的定义是否真的跟着变了。</returns>
+    public bool Reload()
     {
-        _config = _configService.LoadConfig(new HomeworkConfig());
+        var config = _configService.LoadConfig(new HomeworkConfig());
+
+        var sections = new List<HomeworkSection>(config.Sections.Count);
+        foreach (var section in config.Sections)
+        {
+            if (string.IsNullOrWhiteSpace(section.Subject) || string.IsNullOrWhiteSpace(section.Name))
+                continue;
+
+            sections.Add(new HomeworkSection
+            {
+                Subject = section.Subject.Trim(),
+                Name = section.Name.Trim()
+            });
+        }
+
+        if (SameSubjects(config.Subjects) && SameSubjectOrder(config.SubjectOrder) && SameSections(sections))
+        {
+            _config = config;
+            return false;
+        }
+
+        _config = config;
 
         Subjects.Clear();
         foreach (var subject in _config.Subjects)
@@ -221,16 +250,44 @@ public sealed class HomeworkSectionCatalog
         _subjectOrder.AddRange(_config.SubjectOrder);
 
         _sections.Clear();
-        foreach (var section in _config.Sections)
-        {
-            if (string.IsNullOrWhiteSpace(section.Subject) || string.IsNullOrWhiteSpace(section.Name))
-                continue;
+        _sections.AddRange(sections);
 
-            _sections.Add(new HomeworkSection
-            {
-                Subject = section.Subject.Trim(),
-                Name = section.Name.Trim()
-            });
+        return true;
+    }
+
+    /// <summary>内存里的科目清单与刚从磁盘读到的是不是一模一样（顺序也算）。</summary>
+    private bool SameSubjects(IReadOnlyList<string> subjects)
+    {
+        if (Subjects.Count != subjects.Count)
+            return false;
+
+        for (var i = 0; i < subjects.Count; i++)
+        {
+            if (!string.Equals(Subjects[i], subjects[i], StringComparison.Ordinal))
+                return false;
         }
+
+        return true;
+    }
+
+    private bool SameSubjectOrder(IReadOnlyList<string> order) =>
+        _subjectOrder.SequenceEqual(order, StringComparer.Ordinal);
+
+    /// <summary>分类定义按「科目 + 名字」逐条比，顺序也算（顺序就是板子上的分组先后）。</summary>
+    private bool SameSections(IReadOnlyList<HomeworkSection> sections)
+    {
+        if (_sections.Count != sections.Count)
+            return false;
+
+        for (var i = 0; i < sections.Count; i++)
+        {
+            if (!string.Equals(_sections[i].Subject, sections[i].Subject, StringComparison.Ordinal)
+                || !string.Equals(_sections[i].Name, sections[i].Name, StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

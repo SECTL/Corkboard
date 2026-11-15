@@ -582,11 +582,16 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
                     now,
                     inkBudget,
                     days,
-                    examBoard);
+                    examBoard,
+                    _boardService.Sections.ToList());
 
                 var homeworkFingerprint = ControlHomeworkBackup.CreateContentFingerprint(notes);
+
+                // 只改科目表或二级分类时作业内容指纹不变，所以目录也要进指纹，否则网页那边的
+                // 下拉快选会一直停在旧目录上（8s 防抖里的这一次上传会被去重掉）。
+                var catalogSignature = built["catalog"]?.ToJsonString() ?? string.Empty;
                 var examSignature = examBoard is null ? string.Empty : examBoard.ToJsonString();
-                var fingerprint = CombineFingerprint(homeworkFingerprint, examSignature);
+                var fingerprint = CombineFingerprint(homeworkFingerprint, catalogSignature, examSignature);
 
                 return (built, fingerprint, notes.Count(note => note.IsOnBoard));
             })
@@ -594,13 +599,15 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
             .ConfigureAwait(false);
     }
 
-    /// <summary>把「作业内容指纹」与「考试日程签名」合成一个指纹（都变了才算变）。</summary>
-    private static string CombineFingerprint(string contentFingerprint, string examSignature)
+    /// <summary>把「作业内容指纹」「科目目录签名」与「考试日程签名」合成一个指纹（都变了才算变）。</summary>
+    private static string CombineFingerprint(string contentFingerprint, params string[] signatures)
     {
-        if (string.IsNullOrEmpty(examSignature))
+        var parts = signatures.Where(signature => !string.IsNullOrEmpty(signature)).ToList();
+        if (parts.Count == 0)
             return contentFingerprint;
 
-        var bytes = Encoding.UTF8.GetBytes(string.Concat(contentFingerprint, "\u001f", examSignature));
+        parts.Insert(0, contentFingerprint);
+        var bytes = Encoding.UTF8.GetBytes(string.Join('\u001f', parts));
         return Convert.ToHexString(SHA256.HashData(bytes));
     }
 

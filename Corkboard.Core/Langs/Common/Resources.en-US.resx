@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <resheader name="resmimetype">
     <value>text/microsoft-resx</value>
@@ -2429,7 +2429,7 @@
     <value>This board plays automatically at exam time</value>
   </data>
   <data name="Settings_Exam_AutoShow_Title" xml:space="preserve">
-    <value>Auto play</value>
+    <value>Playback &amp; time</value>
   </data>
   <data name="Settings_Exam_AutoShow_Status" xml:space="preserve">
     <value>Playback status</value>
@@ -3694,7 +3694,7 @@ Continuing to use it means you understand and accept the above.</value>
     <value>Present now</value>
   </data>
   <data name="Settings_Exam_Theme_Title" xml:space="preserve">
-    <value>Board theme</value>
+    <value>Board appearance</value>
   </data>
   <data name="Settings_Exam_Theme_Source_Title" xml:space="preserve">
     <value>Theme source</value>

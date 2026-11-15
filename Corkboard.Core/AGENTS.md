@@ -46,6 +46,19 @@
   排除）：它按 `Directory.EnumerateFiles(root, "notes.json", AllDirectories)` 扫，遗留回收目录里的
   `notes.json` 会被当成活作业读回界面，紧接着被 `SaveAll` 的「删掉这轮没写过的文件」连同目录一起删掉；
   旧版本已经归档的数据不能被这次改动动到。
+- **磁盘上的作业数据被外部改动后，界面自动跟着换**：`BoardFileWatcherHostedService`（`BackgroundService`，
+  注册在 `App.axaml.cs` 的 `AddHostedService`，与 `BoardAutoSaveService` 相邻）递归监视 `data/board/`，
+  事件攒 700ms 后切到 UI 线程调 `IBoardService.Reload()`；主页面与看板模式里嵌的 `BoardPage` 都订阅
+  `Changed`，所以两边一起重建。哪些文件算「作业板数据」由 `Corkboard.Core/Board/BoardFileWatchPolicy` 判定
+  （有单测）：`*.cbnote`、任意层级的旧版 `notes.json`、数据根那一份 `board.json`；`_trash/` 子树与
+  `.tmp` 写盘临时文件一律不算。
+- **`IBoardService.Reload()` 返回 `bool`，磁盘与内存一致时提前返回**：按 Id 配对、按值比较
+  （创建/更新时间、顺序、内容、手写、科目、分类、截止、清理标记、字号、标签），再加上
+  `HomeworkSectionCatalog.Reload()` 返回的「定义有没有变」；没变就**不发 `Changed`、不 `SeedHistory`**。
+  这条是给自己落盘兜底的——本服务每存一次盘都会触发一次文件事件、跟着一次重读，不挡掉这一下，
+  作业板与看板模式会白重建一遍、历史里还可能多记一条。云同步那两处重读（`CloudSyncService` 的融合与
+  恢复）必须 `await Dispatcher.UIThread.InvokeAsync(...)`：它们跑在 `ConfigureAwait(false)` 之后的线程池上，
+  而重读会 `Clear` + 重填 `Notes` 这个绑定集合。
 - **批量清理走 `IBoardService.CleanMany(ids, cleanedAt)`**：只给 `CleanedAt is null` 的作业打标记、
   只落盘一次、集合变更只通知一次；**不要**循环调 `Update`（那会一条落盘一次、界面重建一次）。
 - **清理规则只有一条：过了截止日期才算过期**（`HomeworkExpiryPolicy.IsExpired`，纯函数、`today` 从参数进来）。
@@ -118,6 +131,10 @@
 - **`Note.Formats` / `ContentFontSize` 只是读旧数据的遗留通道**（`LegacyTextFormatRange` 因此退化成旧数据 DTO）：
   旧作业由 `BoardService` 在装载时经 `LegacyNoteContentConverter` 一次性转成 HTML 并立刻落盘，
   只在 `ContentKind == Markdown` 时动作（天然幂等）；转完这两项为空，序列化时整项省略。
+  ⚠️ **手写作业（`ContentKind == Handwriting`，或只要 `Handwriting` 非空）一律跳过转换**：转换走
+  `SetHtmlContent`，那会清掉笔迹；存储层虽有「空内容不覆盖笔迹」的兜底，但文件会被原样重写一遍、
+  下一次加载又转一次。文件监视打开后这就是「重写 → 监视 → 重读 → 重写」的自激循环（实机冒烟踩到过，
+  `LegacyNoteContentConverterTests` 与 `BoardServiceTests.Reload_WithHandwritingNote_DoesNotRewriteTheInk` 钉着）。
   **新代码不要再往里写东西**；等确认没有旧数据了，可以连同 `LegacyTextFormatRange` 与 `Markdig` 依赖一起删掉。
 - 数据根只能通过 `Corkboard.Shared/Utils.cs` 访问，新增持久化目录走 `Utils.GetFilePath/GetDirectoryPath`。
 - 枚举按数字落盘，因此只能在末尾增删枚举成员。
@@ -314,6 +331,13 @@
 **接入**是「地点 ID + 一次性配对码」双因子，成功后服务端下发 `deviceId` + `secret`；凭证只在本地加密保存。
 `StartAsync` 在配置里同时有 `SiteId` + `PairCode` 时会先自动接入并把一次性码写回空串——
 **配对码不留在配置里**（`settings.json` 会被云同步带走）。
+
+**设备名**：`DisplayName` 留空 = 用 `Environment.MachineName`，构造会话、`SyncOptions` 与 `EnrollAsync`
+共用 `ControlNodeClient.EffectiveDeviceName`（空 → 电脑名，非空 Trim）。**接入时必须带上这个名字**：
+服务端只把 enroll 的 `deviceName` 写进设备记录，hello 的 `device_name` 不会回写设备记录（协议 §2.10.1），
+漏了就会在网页控制台上永久显示「未命名设备」，之后再连接也改不回来。
+「清空接入」走 `ForgetEnrollmentAsync` → `POST /control/api/device/unenroll`（协议 §2.10.3）：
+best-effort、2 秒上限，离线或凭据已失效都只记日志，本地凭据照常清干净。
 
 **配置**：`Models/SubConfigs/ControlCenter/ControlCenterSettingsConfig`（`Enabled` 默认 false、`ServerUrl`
 默认 `https://sectl.cn`、`DisplayName`、`SiteId`、`PairCode`、`SelectedClassId`），挂在

@@ -3,18 +3,20 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Corkboard.Core.Abstraction;
-using Corkboard.Core.Attributes;
-using Corkboard.Core.Icons;
 using Corkboard.ViewModels.SettingsPages.Exam;
 using CR = Corkboard.Core.Langs.Common.Resources;
 
 namespace Corkboard.Views.SettingsPages.Exam;
 
 /// <summary>
-///     「最小化与浮窗」设置页：考试中把左下角那颗退出按钮换成最小化（单击还是长按可选），
+///     「最小化与浮窗」这一段：考试中把左下角那颗退出按钮换成最小化（单击还是长按可选），
 ///     以及最小化之后屏幕上的那颗浮窗按钮——文字、大小、停在哪儿。
+///     <para>
+///         ⚠️ 它**不是**一个设置页了（没有 <c>[PageInfo]</c>、不进导航、不自己滚）：
+///         整块嵌在「看板显示」页里（<c>ExamDisplaySettingsPage.axaml</c>），
+///         所以 DataContext 必须在这里自己设成自己的 ViewModel，不能靠宿主页继承。
+///     </para>
 /// </summary>
-[PageInfo("settings.exam.floating", FluentIcons.ArrowMinimizeFilled, "settings.exam.group")]
 public partial class ExamFloatingSettingsPage : UserControl
 {
     public ExamFloatingSettingsPage()

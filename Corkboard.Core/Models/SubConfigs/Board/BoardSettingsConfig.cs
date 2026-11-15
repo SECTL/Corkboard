@@ -86,8 +86,10 @@ public partial class BoardSettingsConfig : ObservableObject
     /// <inheritdoc cref="_showTitleBarSettings" />
     [ObservableProperty] private bool _showTitleBarReplay = true;
 
-    /// <summary>收纳按钮：还要 <see cref="DockEnabled" /> 也开着才显示。</summary>
-    [ObservableProperty] private bool _showTitleBarDock = true;
+    // 已经删掉的键：show_title_bar_dock（「界面入口」里那颗收纳按钮开关）。
+    // 收纳只有一个开关 DockEnabled（「窗口与收纳」页），原来那个键跟它是「与」的关系，
+    // 同一件事要拨两下才生效；老配置里的这个键读进来会被 JSON 反序列化静默忽略，
+    // 不需要迁移；**也不要**为了兼容加回来。
 
     /// <summary>
     ///     看板模式入口：标题栏上那颗「看板模式」，点一下直接铺全屏（与托盘菜单、<c>corkboard://display</c> 同一个动作）。
@@ -225,8 +227,13 @@ public partial class BoardSettingsConfig : ObservableObject
     public ObservableCollection<string> QuickTags { get; set; } = [];
 
     /// <summary>
-    ///     主界面标题栏是否显示「收纳」按钮。关掉之后整块收纳功能都不露头，
-    ///     已经收起来的按钮也会跟着展开主窗口——用户要的是「能藏干净」。
+    ///     收纳功能的总开关（全软件只有这一个）：关掉之后标题栏不再画「收纳」按钮，
+    ///     已经收起来的浮钮也会跟着展开主窗口——用户要的是「能藏干净」。
+    ///     <para>
+    ///         ⚠️ 别再为「界面上哪颗按钮显示不显示」单开一个键：原来「界面入口」卡里
+    ///         还有一颗 <c>show_title_bar_dock</c>，跟这个键是「与」的关系，
+    ///         开关一件事要拨两下、关一处不生效（已删）。
+    ///     </para>
     /// </summary>
     [ObservableProperty] private bool _dockEnabled = true;
 

@@ -30,6 +30,14 @@ public sealed class NoteStore : INoteStore
     /// <summary>旧版本的「一天一个文件」名字：只用于读取兼容与迁移后清理，不再写入。</summary>
     public const string NotesFileName = "notes.json";
 
+    /// <summary>
+    ///     旧版回收目录名：整棵子树都不算活作业，读写与文件监视都要排除。
+    ///     <para>
+    ///         现在的清理只给作业打「已清理」标记、不再往里写，但用户机器上可能还留着以前归档的批次。
+    ///     </para>
+    /// </summary>
+    public const string LegacyArchiveDirectoryName = "_trash";
+
     private readonly ILogger<NoteStore> _logger;
     private readonly string _rootDirectory;
     private readonly string _legacyFilePath;
@@ -308,8 +316,7 @@ public sealed class NoteStore : INoteStore
         var rootFull = Path.GetFullPath(root).TrimEnd(Path.DirectorySeparatorChar);
 
         // 旧版回收目录名。清理不再往里写，但历史上可能已经存在，仍然要整棵子树排除。
-        const string legacyArchiveDirectoryName = "_trash";
-        var archivePrefix = Path.Combine(rootFull, legacyArchiveDirectoryName) + Path.DirectorySeparatorChar;
+        var archivePrefix = Path.Combine(rootFull, LegacyArchiveDirectoryName) + Path.DirectorySeparatorChar;
 
         return Directory
             .EnumerateFiles(root, searchPattern, SearchOption.AllDirectories)

@@ -85,6 +85,8 @@ Corkboard/
 那时 SDK 已经把空 `Version` 填成 1.0.0，「为空才赋值」的条件再也不成立。
 
 依赖方向单向：`Shared` ← `Core` ← `Corkboard` ← `Desktop`；`Platforms.Abstractions` 不依赖 Core。
+`Corkboard.Platforms` 可以引用 `Shared`（`Utils` 里的便携包布局与启动器路径是系统集成共用的契约），
+但**不要**让它引用 `Core`。
 
 ## 作业板域代码怎么归类（以后加别的板子照这个来）
 
@@ -396,6 +398,14 @@ public partial class BoardSettingsConfig : ObservableObject
   更新时新版本搬进新的 `app-*/` 目录，启动器只认「带 `.current` 标记」的那一版；`.current` 由
   `DeployPortableAsync` 维护（新目录写、旧目录删），Launcher 自己**不写也不删**。旧 `app-*` 目录不自动清理
   （留着可回滚），`.partial` 目录切换未完成、启动器会跳过。
+- **便携版的所有「启动这个应用」入口都指向包根启动器，不指向 `app-*/Corkboard.Desktop.exe`**：
+  自启项 / `corkboard://` 协议 / 重启 / 崩溃重启一律先取 `Utils.LauncherPath`
+  （`PlatformLaunchCommand.Resolve()`、`App.Restart()`、`CrashRecoveryRuntime.CreateRestartStartInfos`），
+  只有不在便携包布局里才退回当前进程。
+  ⚠️ 应用本体自己还有一道改道：`Corkboard.Desktop` 的 `Main` 发现自己是 `app-*` 里的那份、
+  且没带 `CORKBOARD_PACKAGE_ROOT`（说明是被人直接双击的，不是启动器拉起的），就先启动包根启动器再退出——
+  老快捷方式、老自启项、命令行直接点旧版 exe 也都会被带回正确入口。启动器给子进程设了那个环境变量，
+  所以改道只发生一次，不会循环。
 - **安装器形态**：Inno `Setup.iss`（`/DMyAppVersion` `/DMyAppOutDir` `/DBuildArch<Arch>`），装到
   `{localappdata}\SECTL\Corkboard`、三语（中/日/英）；安装版更新走带 `/S` 静默参数的安装器，装完由安装器拉起应用。
 - **`Corkboard.Launcher`**（`Corkboard.Launcher/`，`PublishSingleFile`）是**照上游 `SecRandom.Launcher` 一比一搬的**
@@ -536,7 +546,7 @@ dotnet run --project Corkboard.Desktop\Corkboard.Desktop.csproj
 | 位置 | 管什么 |
 | --- | --- |
 | `Corkboard.Core/AGENTS.md` | 配置管道与自动保存、本机专属项 `[LocalOnly]`、历史存储与时空回放、字体、平台统计上报 |
-| `Corkboard.Core/Exam/AGENTS.md` | 考试看板（多份看板、编辑窗口、快速布置、模板、全屏三档、自动放映、导入导出、看板字号）与 NTP 校时 |
+| `Corkboard.Core/Exam/AGENTS.md` | 考试看板（多份看板、编辑窗口、快速布置、模板、全屏三档、自动放映、导入导出、主题与背景、布局与看板字号）与 NTP 校时 |
 | `Corkboard/AGENTS.md` | 壳层与导航（主界面/设置界面标题栏、那颗锁、收纳、弹层、账号与云同步页）、应用图标、首次运行引导（OOBE） |
 | `Corkboard/Views/AGENTS.md` | 看板模式（全屏大时钟 + 一言/天气）、作业板界面功能（便签、富文本、手写、排序、清理入口、导出） |
 

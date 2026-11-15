@@ -162,7 +162,11 @@ public partial class ControlCenterSettingsPageViewModel(
     public void Attach()
     {
         var settings = Config.ControlCenter;
-        DisplayNameDraft = settings.DisplayName;
+        // 配置里空 = 跟随电脑名；界面上要把这个默认值直接显示出来，
+        // 否则用户看到的是一个空框，而网页控制台上却写着「未命名设备」。
+        DisplayNameDraft = string.IsNullOrWhiteSpace(settings.DisplayName)
+            ? Environment.MachineName
+            : settings.DisplayName;
         SiteIdDraft = settings.SiteId;
         PairCodeDraft = settings.PairCode;
 
@@ -202,9 +206,20 @@ public partial class ControlCenterSettingsPageViewModel(
     {
         var settings = Config.ControlCenter;
 
-        var displayName = (DisplayNameDraft ?? string.Empty).Trim();
+        var rawDisplayName = DisplayNameDraft ?? string.Empty;
+        var displayName = rawDisplayName.Trim();
+
+        // 「电脑名」就是默认值本身：草稿被清空后再显示出来、或用户原样没改，
+        // 都继续存空串，不把机器名写进 settings.json（它会跟着云同步跑到别的机器上）。
+        if (string.Equals(displayName, Environment.MachineName, StringComparison.OrdinalIgnoreCase))
+            displayName = string.Empty;
+
         if (settings.DisplayName != displayName)
             settings.DisplayName = displayName;
+
+        // 清空输入框 = 回到默认：框里继续显示电脑名，用户不会以为名字丢了。
+        if (rawDisplayName.Length == 0)
+            DisplayNameDraft = Environment.MachineName;
 
         var siteId = (SiteIdDraft ?? string.Empty).Trim();
         if (settings.SiteId != siteId)

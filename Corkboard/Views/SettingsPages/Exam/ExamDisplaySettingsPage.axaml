@@ -6,9 +6,15 @@
              xmlns:vm="using:Corkboard.ViewModels.SettingsPages.Exam"
              xmlns:core="using:Corkboard.Core.Langs.Common"
              xmlns:bg="using:Corkboard.Views.Common"
+             xmlns:local="using:Corkboard.Views.SettingsPages.Exam"
              mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="700"
              x:Class="Corkboard.Views.SettingsPages.Exam.ExamDisplaySettingsPage"
              x:DataType="vm:ExamDisplaySettingsPageViewModel">
+    <!--
+        一页管「看板长什么样」：显示什么 / 怎么收 / 背景与主题 / 最小化与浮窗。
+        「最小化与浮窗」那张分区是原来单独一页（ExamFloatingSettingsPage），现在整块嵌进来——
+        它自己带 DataContext 与 Attach/Detach，宿主只管摆位置，别把两者的 ViewModel 合成一个。
+    -->
     <ScrollViewer>
         <StackPanel Classes="page-container">
             <TextBlock Margin="0 4 0 0"
@@ -118,6 +124,14 @@
             </fa:FASettingsExpander>
 
             <!--
+                最小化与浮窗（原「最小化与浮窗」页，整块搬进来）：
+                什么时候退出钮变成最小化、浮窗一颗按钮长什么样、点开分别在哪。
+            -->
+            <TextBlock Classes="section-title"
+                       Text="{x:Static core:Resources.Settings_Exam_Floating_Title}" />
+            <local:ExamFloatingSettingsPage />
+
+            <!--
                 背景：与「看板模式 → 背景」是同一个编辑控件，只是各存一份配置。
                 图片会复制进软件数据目录，暗化 / 模糊是为了让时钟与表格的字看得清。
 
@@ -136,6 +150,26 @@
                        Classes="caption"
                        Text="{x:Static core:Resources.Settings_Background_TitleDescription}" />
             <bg:BoardBackgroundEditor Settings="{Binding Settings}" />
+
+            <!--
+                背景用哪套底色：跟随应用外观 / 5 套预设 / 自定义。
+                用户要求「看板主题做进背景显示里，用下拉框挑」——所以来源选在这里，
+                13 项具体颜色仍留在「看板外观」页，两处共用同一份 ExamBoardThemeConfig。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Exam_Theme_Source_Title}"
+                                   Description="{x:Static core:Resources.Settings_Exam_Theme_Source_Description}">
+                <fa:FASettingsExpander.Footer>
+                    <ComboBox MinWidth="180"
+                              ItemsSource="{Binding ThemeChoices}"
+                              SelectedItem="{Binding SelectedThemeChoice, Mode=TwoWay}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ExamBoardThemeChoice">
+                                <TextBlock Text="{Binding DisplayName}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

@@ -29,6 +29,9 @@ public sealed class ControlNodeClient : IAsyncDisposable
     private readonly ControlNodeConnectOptions _options;
     private readonly ControlNodeSession _session;
 
+    /// <summary>「清空接入」时等退订请求的上限：离线也不能把清空动作卡住。</summary>
+    private const int UnenrollTimeoutSeconds = 2;
+
     private bool _enabled;
     private ControlNodeLinkState _state;
 
@@ -63,7 +66,7 @@ public sealed class ControlNodeClient : IAsyncDisposable
             stateStore,
             transportFactory,
             logger,
-            string.IsNullOrWhiteSpace(config.DisplayName) ? Environment.MachineName : config.DisplayName);
+            EffectiveDeviceName);
         _session.StateChanged += OnSessionStateChanged;
 
         _enabled = config.Enabled;
@@ -71,6 +74,16 @@ public sealed class ControlNodeClient : IAsyncDisposable
             ? new ControlNodeLinkState(ControlNodeLinkStatus.Unpaired, ControlDetailKeys.Unpaired)
             : ControlNodeLinkState.Initial;
     }
+
+    /// <summary>
+    ///     实际报给服务端的设备名：设置里留空就用电脑名，前后空白一律裁掉。
+    ///     <para>
+    ///         接入与长连接共用这一个值——只给长连接的 hello 报机器名没用，服务端不会拿 hello
+    ///     的 <c>device_name</c> 回写设备记录（协议 §2.10.1），设备列表永远显示接入时那个空名字。
+    ///     </para>
+    /// </summary>
+    public string EffectiveDeviceName =>
+        string.IsNullOrWhiteSpace(_config.DisplayName) ? Environment.MachineName : _config.DisplayName.Trim();
 
     /// <summary>当前状态快照。</summary>
     public ControlNodeLinkState State
@@ -229,8 +242,11 @@ public sealed class ControlNodeClient : IAsyncDisposable
             if (siteId is null || code is null)
                 return (false, ControlEnrollErrorKeys.CodeInvalid);
 
+            // 接入是设备记录里名字的唯一来源：这里留空，服务端就落成「未命名设备」，
+            // 之后再怎么连、怎么改设置都不会自动改名。所以显式名字为空时也必须带上电脑名。
+            var effectiveName = string.IsNullOrWhiteSpace(deviceName) ? EffectiveDeviceName : deviceName.Trim();
             var result = await _enrollmentApi
-                .EnrollAsync(siteId, code, deviceName ?? _config.DisplayName, DeclaredCapabilities, cancellationToken)
+                .EnrollAsync(siteId, code, effectiveName, DeclaredCapabilities, cancellationToken)
                 .ConfigureAwait(false);
 
             if (!result.Ok || result.Credential is null)
@@ -264,13 +280,37 @@ public sealed class ControlNodeClient : IAsyncDisposable
     }
 
     /// <summary>
-    ///     忘记接入：清凭证文件、停止重连、回到「未接入」。地点 id 保留（重新接入时不用重填）。
+    ///     忘记接入：先在服务端退订这一台设备，再清凭证文件、停止重连、回到「未接入」。
+    ///     地点 id 保留（重新接入时不用重填）。
+    ///     <para>
+    ///         服务端退订是 best-effort：离线 / 凭据已失效都只记日志，本地照常清干净。
+    ///         不发这一条的话，设备记录会一直挂在网页控制台上（名字还是接入时那个），
+    ///         清空重接只会多出一条新记录。
+    ///     </para>
     /// </summary>
     public async Task ForgetEnrollmentAsync()
     {
         try
         {
             await _session.StopAsync().ConfigureAwait(false);
+
+            try
+            {
+                var credential = _credentials.Current ??
+                                 await _credentials.LoadAsync().ConfigureAwait(false);
+                if (credential is { IsComplete: true })
+                {
+                    using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(UnenrollTimeoutSeconds));
+                    var removed = await _enrollmentApi.UnenrollAsync(credential, timeout.Token).ConfigureAwait(false);
+                    if (!removed)
+                        _logger?.LogInformation("服务端设备记录未删除（离线或凭据已失效），只清本地凭证");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogDebug(ex, "集控退订请求失败，继续清本地凭证");
+            }
+
             await _credentials.ClearAsync().ConfigureAwait(false);
             _config.PairCode = string.Empty;
             _config.SelectedClassId = string.Empty;
@@ -349,9 +389,7 @@ public sealed class ControlNodeClient : IAsyncDisposable
     private void SyncOptions()
     {
         _options.ServerUrl = ControlCenterSettingsConfig.NormalizeServerUrl(_config.ServerUrl);
-        _session.DeviceName = string.IsNullOrWhiteSpace(_config.DisplayName)
-            ? Environment.MachineName
-            : _config.DisplayName.Trim();
+        _session.DeviceName = EffectiveDeviceName;
         _session.IsRemoteControlAllowed = _config.Enabled;
         _session.DeclaredCapabilities = DeclaredCapabilities;
     }

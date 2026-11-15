@@ -370,14 +370,27 @@ public class BoardService : IBoardService
         Persist();
     }
 
-    public void Reload()
+    /// <summary>
+    ///     从磁盘重读科目定义与全部作业（作业文件被外部改过、或云同步恢复之后走这里）。
+    ///     <para>
+    ///         ⚠️ 磁盘上的内容与内存里的完全一致时<b>提前返回</b>：不发 <see cref="Changed" />、也不
+    ///         <see cref="SeedHistory" />。本服务自己落盘同样会触发文件监视，不挡掉这一下的话，
+    ///         每存一次盘都会让作业板与看板模式整块重建一遍、历史里还可能多记一条。
+    ///         判断按值（<c>LoadAll</c> 每次都给新对象），簿记字段（创建/更新时间、顺序）也要一起比。
+    ///     </para>
+    /// </summary>
+    /// <returns>内存里的板子是否真的跟着磁盘变了（没变时调用方不必再刷新任何界面）。</returns>
+    public bool Reload()
     {
-        _sections.Reload();
+        var sectionsChanged = _sections.Reload();
 
         var notes = _noteStore.LoadAll();
         var converted = ConvertLegacyContent(notes);
         if (converted > 0)
             _noteStore.SaveAll(notes);
+
+        if (!sectionsChanged && converted == 0 && HasSameNotes(notes))
+            return false;
 
         _notes.Clear();
         foreach (var note in notes)
@@ -388,6 +401,42 @@ public class BoardService : IBoardService
         SeedHistory();
 
         Changed?.Invoke(this, EventArgs.Empty);
+        return true;
+    }
+
+    /// <summary>
+    ///     磁盘上读出来的这一组作业与内存里的是不是同一条不差：按 Id 配对，内容与簿记字段都比。
+    ///     <para>
+    ///         <see cref="NoteStore.LoadAll" /> 每次都给新对象，不能比引用；这里只服务 <see cref="Reload" />
+    ///         的「没变就别动」判断，所以 <c>Formats</c> 这类只在迁移期出现的字段不参与比较（内容按已转换的算）。
+    ///     </para>
+    /// </summary>
+    private bool HasSameNotes(IReadOnlyList<Note> notes)
+    {
+        if (notes.Count != _notes.Count)
+            return false;
+
+        var byId = new Dictionary<Guid, Note>(_notes.Count);
+        foreach (var note in _notes)
+            byId[note.Id] = note;
+
+        foreach (var loaded in notes)
+        {
+            if (!byId.TryGetValue(loaded.Id, out var current))
+                return false;
+
+            if (current.CreatedAt != loaded.CreatedAt
+                || current.UpdatedAt != loaded.UpdatedAt
+                || current.Order != loaded.Order)
+            {
+                return false;
+            }
+
+            if (!HasSameContent(current, loaded))
+                return false;
+        }
+
+        return true;
     }
 
     /// <summary>

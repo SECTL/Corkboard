@@ -1,3 +1,5 @@
+using System.ComponentModel;
+using System.Diagnostics;
 using Avalonia;
 using Avalonia.Media;
 using Corkboard.Core;
@@ -24,6 +26,32 @@ internal sealed class Program
     {
         // 版本元数据由头程序集承载，显式发布让解析路径与将来可能的移动头保持一致。
         GlobalConstants.SetVersionAssembly(typeof(Program).Assembly);
+
+        // 便携版的应用本体住在 app-*/ 里，直接双击它（或老快捷方式、老自启项指向它）要先改道到包根
+        // 的启动器：由启动器按 .current 选版本、设好 CORKBOARD_PACKAGE_ROOT 再拉起应用。
+        // 启动器拉起的子进程带着那个环境变量，所以这里不会再来一次（防循环）。
+        // 不在便携包布局里、或包里没有启动器时 LauncherPath 为 null，退回自己启动。
+        if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable(Utils.PackageRootEnvironmentVariable))
+            && Utils.LauncherPath is { } launcherPath)
+        {
+            var launcherStartInfo = new ProcessStartInfo(launcherPath)
+            {
+                UseShellExecute = false,
+                WorkingDirectory = Utils.PackageRoot
+            };
+            foreach (var argument in args)
+                launcherStartInfo.ArgumentList.Add(argument);
+
+            try
+            {
+                using var launcherProcess = Process.Start(launcherStartInfo);
+                return;
+            }
+            catch (Exception exception) when (exception is Win32Exception or IOException or UnauthorizedAccessException)
+            {
+                // 启动器起不来时退回自己启动：什么都不显示比多一层兜底更糟。
+            }
+        }
 
         // 数据根必须在第一条持久化路径被解析之前选定。
         Utils.PrepareDesktopDataRoot();

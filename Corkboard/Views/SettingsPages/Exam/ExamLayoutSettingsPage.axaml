@@ -9,46 +9,42 @@
              x:Class="Corkboard.Views.SettingsPages.Exam.ExamLayoutSettingsPage"
              x:DataType="vm:ExamLayoutSettingsPageViewModel">
     <!--
-        看板布局设置页：四档考试状态各存一套组件摆法，默认走原版式（零变化），
+        看板布局：四档考试状态各存一套组件摆法，默认走原版式（零变化），
         点「编辑」在独立的全屏编辑窗里用示例考试调整，改完一次性写回配置。
+
+        ⚠️ 它**不是**一个设置页了（没有 [PageInfo]、不自己滚）：整块嵌在「看板外观」页里，
+        所以 DataContext 由 code-behind 设成自己的 ViewModel，宿主页的 DataContext 影响不到它。
     -->
-    <ScrollViewer>
-        <StackPanel Classes="page-container">
-            <TextBlock Margin="0 4 0 0"
-                       FontWeight="Normal"
-                       Text="{x:Static core:Resources.Settings_Exam_Layout_Title}"
-                       Theme="{StaticResource TitleTextBlockStyle}" />
+    <StackPanel Spacing="4">
+        <!--
+            四档状态一行一项：点「编辑」开全屏编辑窗，「恢复默认」只在这一档被改过时才可点。
+        -->
+        <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Exam_Layout_States_Title}"
+                               Description="{x:Static core:Resources.Settings_Exam_Layout_States_Description}"
+                               ItemsSource="{Binding Rows}"
+                               IsExpanded="True">
+            <fa:FASettingsExpander.ItemTemplate>
+                <DataTemplate x:DataType="vm:ExamLayoutStatusRow">
+                    <fa:FASettingsExpanderItem Content="{Binding Name}"
+                                               Description="{Binding StateText}">
+                        <fa:FASettingsExpanderItem.Footer>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button Content="{x:Static core:Resources.Settings_Exam_Layout_Edit}"
+                                        Command="{Binding EditCommand}" />
+                                <Button Content="{x:Static core:Resources.Settings_Exam_Layout_ResetState}"
+                                        Command="{Binding ResetCommand}"
+                                        IsEnabled="{Binding IsCustomized}" />
+                            </StackPanel>
+                        </fa:FASettingsExpanderItem.Footer>
+                    </fa:FASettingsExpanderItem>
+                </DataTemplate>
+            </fa:FASettingsExpander.ItemTemplate>
+        </fa:FASettingsExpander>
 
-            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Exam_Layout_Intro_Title}"
-                                   Description="{x:Static core:Resources.Settings_Exam_Layout_Intro_Description}" />
-
-            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Exam_Layout_States_Title}"
-                                   Description="{x:Static core:Resources.Settings_Exam_Layout_States_Description}"
-                                   ItemsSource="{Binding Rows}"
-                                   IsExpanded="True">
-                <fa:FASettingsExpander.ItemTemplate>
-                    <DataTemplate x:DataType="vm:ExamLayoutStatusRow">
-                        <fa:FASettingsExpanderItem Content="{Binding Name}"
-                                                   Description="{Binding StateText}">
-                            <fa:FASettingsExpanderItem.Footer>
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <Button Content="{x:Static core:Resources.Settings_Exam_Layout_Edit}"
-                                            Command="{Binding EditCommand}" />
-                                    <Button Content="{x:Static core:Resources.Settings_Exam_Layout_ResetState}"
-                                            Command="{Binding ResetCommand}"
-                                            IsEnabled="{Binding IsCustomized}" />
-                                </StackPanel>
-                            </fa:FASettingsExpanderItem.Footer>
-                        </fa:FASettingsExpanderItem>
-                    </DataTemplate>
-                </fa:FASettingsExpander.ItemTemplate>
-            </fa:FASettingsExpander>
-
-            <Border Classes="card" Margin="0 8 0 0">
-                <TextBlock TextWrapping="Wrap"
-                           Text="{x:Static core:Resources.Settings_Exam_Layout_Hint}"
-                           Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
-            </Border>
-        </StackPanel>
-    </ScrollViewer>
+        <Border Classes="card" Margin="0 8 0 0">
+            <TextBlock TextWrapping="Wrap"
+                       Text="{x:Static core:Resources.Settings_Exam_Layout_Hint}"
+                       Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+        </Border>
+    </StackPanel>
 </UserControl>

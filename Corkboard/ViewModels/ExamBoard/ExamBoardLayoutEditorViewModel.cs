@@ -9,7 +9,7 @@ using Corkboard.Core.Exam.Layout;
 using Corkboard.Core.Models.SubConfigs.Exam;
 using Corkboard.Core.Services.Config;
 using Corkboard.Services.Exam;
-using Corkboard.ViewModels.SettingsPages.Exam;
+
 using CR = Corkboard.Core.Langs.Common.Resources;
 
 namespace Corkboard.ViewModels.ExamBoard;
@@ -23,10 +23,19 @@ public sealed record ExamBoardComponentOption(ExamBoardLayoutComponentId Value, 
 /// <summary>布局编辑窗里的一个对齐选项。</summary>
 public sealed record ExamBoardAlignmentOption(ExamBoardContentAlignment Value, string Name);
 
+/// <summary>系统版式实测出来的一块百分比矩形：编辑窗开局用它把草稿摆到和成品一样的地方。</summary>
+public readonly record struct ExamBoardPlacement(ExamBoardLayoutComponentId Component,
+    double X, double Y, double Width, double Height);
+
 /// <summary>
 ///     独立布局编辑窗的 ViewModel：继承放映窗的 VM，但内容换成示例考试、时间换成假时钟，
-///     布局换成一份内存草稿。<see cref="ExamBoardViewModel.LayoutConfig" /> 被草稿覆盖，
-///     <see cref="ExamBoardViewModel.ForceCustomLayout" /> 为真，所以整窗始终显示自定义面板。
+///     布局换成一份内存草稿。<see cref="ExamBoardViewModel.LayoutConfig" /> 被草稿覆盖。
+///     <para>
+///         渲染分支**与放映窗完全一致**（没自定义过的状态走默认 Grid，自定义过的走面板）——所以这里刻意
+///         不覆写 <see cref="ExamBoardViewModel.ForceCustomLayout" />：预览必须和成品长得一样，
+///         连「右侧列表不显示时时钟居中」这种由系统版式带出来的行为也一样。
+///         第一次改某个组件的值时，草稿会被标成「已自定义」，预览随即切到面板，从实测位置接着摆。
+///     </para>
 ///     <para>
 ///         编辑期间**不写配置**：所有改动只落在 <see cref="_draft" /> 上；点「完成」时把整份
 ///         <see cref="ExamBoardLayoutConfig" /> 一次性赋给配置（ConfigHandlerBase 只落一次盘），
@@ -39,6 +48,7 @@ public partial class ExamBoardLayoutEditorViewModel : ExamBoardViewModel, IExamB
     private readonly ExamBoardLayoutConfig _draft;
     private ExamStatus _editStatus = ExamStatus.NotStarted;
     private bool _saved;
+    private bool _capturingPlacement;
     private IReadOnlyList<ExamFontSizeItem> _fontItems = [];
 
     public ExamBoardLayoutEditorViewModel(
@@ -67,9 +77,6 @@ public partial class ExamBoardLayoutEditorViewModel : ExamBoardViewModel, IExamB
 
     /// <summary>编辑中的草稿；放映窗的布局服务不碰它。</summary>
     public override ExamBoardLayoutConfig LayoutConfig => _draft;
-
-    /// <summary>即使当前状态没自定义过也用自定义面板渲染，否则拖动时看不到效果。</summary>
-    protected override bool ForceCustomLayout => true;
 
     /// <summary>关闭编辑窗（完成或取消由调用方读 <see cref="IsSaved" /> 判断）。</summary>
     public event EventHandler? CloseRequested;
@@ -132,6 +139,43 @@ public partial class ExamBoardLayoutEditorViewModel : ExamBoardViewModel, IExamB
     /// <summary>收起属性面板（画布空白处或面板右上角那颗 ×）。</summary>
     [RelayCommand]
     private void ClearSelection() => HasSelection = false;
+
+    /// <summary>
+    ///     把「系统版式实测出来的位置」抄进当前编辑的状态草稿（只在还没自定义过时有用）。
+    ///     <para>
+    ///         预览在没自定义的状态下走的是默认 Grid（和成品同一套分支），Grid 的摆位是量出来的、不是
+    ///         那几条兜底百分比。先抄一遍，第一次改动切到面板时区块才不会原地跳一下——面板接手的位置
+    ///         就是区块刚才待的地方。
+    ///     </para>
+    ///     <para>
+    ///         抄写本身**不算编辑**：这里的赋值不能再把状态标成「已自定义」，否则预览会立刻换分支。
+    ///     </para>
+    /// </summary>
+    public void CapturePlacement(IReadOnlyList<ExamBoardPlacement> placements)
+    {
+        var layout = SelectedStatusLayout;
+        if (layout.IsCustomized || placements.Count == 0)
+        {
+            return;
+        }
+
+        _capturingPlacement = true;
+        try
+        {
+            foreach (var placement in placements)
+            {
+                var target = layout.For(placement.Component);
+                target.X = placement.X;
+                target.Y = placement.Y;
+                target.Width = placement.Width;
+                target.Height = placement.Height;
+            }
+        }
+        finally
+        {
+            _capturingPlacement = false;
+        }
+    }
 
     /// <summary>当前正在编辑的状态布局。</summary>
     public ExamBoardStatusLayout SelectedStatusLayout => _draft.For(_editStatus);
@@ -329,6 +373,12 @@ public partial class ExamBoardLayoutEditorViewModel : ExamBoardViewModel, IExamB
     private void OnComponentPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (sender is not ExamBoardComponentLayout component)
+        {
+            return;
+        }
+
+        // 抄录系统版式的位置不是用户编辑，别把状态标成「已自定义」。
+        if (_capturingPlacement)
         {
             return;
         }

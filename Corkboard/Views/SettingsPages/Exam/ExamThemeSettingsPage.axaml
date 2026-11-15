@@ -6,15 +6,17 @@
              xmlns:vm="using:Corkboard.ViewModels.SettingsPages.Exam"
              xmlns:core="using:Corkboard.Core.Langs.Common"
              xmlns:icons="using:Corkboard.Core.Icons"
+             xmlns:local="using:Corkboard.Views.SettingsPages.Exam"
              mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="900"
              x:Class="Corkboard.Views.SettingsPages.Exam.ExamThemeSettingsPage"
              x:DataType="vm:ExamThemeSettingsPageViewModel">
     <!--
-        看板主题设置页：考试看板的 13 个语义颜色从哪来、以及自定义时逐项改色。
+        看板外观：看板长什么样 = 四档状态摆哪些组件（布局） + 13 个语义颜色（主题）。
 
-        版式照其它考试设置页那套设置卡：标题一行、来源/自定义底各一张卡、
-        13 项颜色按用途分成四张卡（卡里一行一项，行右侧是色块 + 色值 + 拾色 + 重置），
-        最后两张卡是「恢复默认主题」与「恢复所有颜色」。
+        版式照其它考试设置页那套设置卡：分区标题 + 卡片，卡里一行一项。
+        ⚠️ 「主题来源」（跟随应用外观 / 5 套预设 / 自定义）**不在这里**了：
+        它跟背景是一件事，挪到了「看板显示 → 背景」下面那个下拉（用户要求），
+        这一页只负责自定义时逐项改色。
         拾色面板是**页内展开**的：点调色按钮把 Avalonia 的 ColorView（带 alpha）铺在那一行下面，
         不用 ColorPicker、也不塞 Flyout —— Flyout 里的 DataContext 不继承，颜色会静默写不回配置。
     -->
@@ -27,25 +29,15 @@
                        Theme="{StaticResource TitleTextBlockStyle}" />
 
             <!--
-                「主题来源」：7 个单选（跟随应用外观 / 5 套预设 / 自定义）。
-                选预设会立刻把 Source=Preset + PresetId 写进配置，看板窗口马上跟着换色。
+                布局（原「看板布局」页整块搬进来）：四档状态各存一套组件摆法。
+                它自己带 DataContext 与 Attach/Detach，宿主只管摆位置。
             -->
-            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Exam_Theme_Source_Title}"
-                                   Description="{x:Static core:Resources.Settings_Exam_Theme_Source_Description}"
-                                   ItemsSource="{Binding SourceOptions}"
-                                   IsExpanded="True">
-                <fa:FASettingsExpander.ItemTemplate>
-                    <DataTemplate x:DataType="vm:ExamThemeSourceOption">
-                        <fa:FASettingsExpanderItem Content="{Binding DisplayName}"
-                                                   Description="{Binding Description}">
-                            <fa:FASettingsExpanderItem.Footer>
-                                <RadioButton GroupName="ExamThemeSource"
-                                             IsChecked="{Binding IsSelected, Mode=TwoWay}" />
-                            </fa:FASettingsExpanderItem.Footer>
-                        </fa:FASettingsExpanderItem>
-                    </DataTemplate>
-                </fa:FASettingsExpander.ItemTemplate>
-            </fa:FASettingsExpander>
+            <TextBlock Classes="section-title"
+                       Text="{x:Static core:Resources.Settings_Exam_Layout_Title}" />
+            <TextBlock Margin="0 0 0 4"
+                       Classes="caption"
+                       Text="{x:Static core:Resources.Settings_Exam_Layout_Intro_Description}" />
+            <local:ExamLayoutSettingsPage />
 
             <!--
                 「自定义基于」：自定义时其余颜色从哪套底来。只在自定义来源下生效，

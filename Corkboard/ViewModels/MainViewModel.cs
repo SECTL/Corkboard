@@ -105,8 +105,11 @@ public partial class MainViewModel : ViewModelBase
     public bool ShowTitleBarReplay =>
         Config.BoardSettings.ShowTitleBarReplay && _replay.CanEnterReplay && Config.Basic.WindowFixed;
 
-    /// <summary>收纳（两个开关都开着才显示）。</summary>
-    public bool ShowTitleBarDock => Config.BoardSettings.ShowTitleBarDock && Config.BoardSettings.DockEnabled;
+    /// <summary>
+    ///     收纳（只看「窗口与收纳」页那唯一一个开关）。
+    ///     以前这里还叠了一个「界面入口」里的按钮开关，同一件事要拨两处，已合并掉。
+    /// </summary>
+    public bool ShowTitleBarDock => Config.BoardSettings.DockEnabled;
 
     /// <summary>
     ///     标题栏那颗「更多」画不画：排序 / 导出 / 时空回放三件事全收在它的菜单里，
