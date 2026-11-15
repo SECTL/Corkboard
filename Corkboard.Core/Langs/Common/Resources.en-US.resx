@@ -350,9 +350,7 @@
   <data name="Settings_Board_TitleBarReplay" xml:space="preserve">
     <value>Time replay button</value>
   </data>
-  <data name="Settings_Board_TitleBarDock" xml:space="preserve">
-    <value>Dock button</value>
-  </data>
+  
   <data name="Settings_Board_TitleBarDisplay" xml:space="preserve">
     <value>Display mode button</value>
   </data>
@@ -4014,6 +4012,13 @@ Continuing to use it means you understand and accept the above.</value>
   <data name="Settings_Control_Enroll_Failed" xml:space="preserve"><value>Pairing failed: {0}</value></data>
   
   <data name="Settings_Control_SectionConnection" xml:space="preserve"><value>Connection</value></data>
+  <data name="Settings_Control_ClassSection" xml:space="preserve"><value>Class</value></data>
+  <data name="Settings_Control_ClassDescription" xml:space="preserve"><value>Switching applies right away; no extra button</value></data>
+  <data name="Settings_Control_ClassGrade" xml:space="preserve"><value>Grade</value></data>
+  <data name="Settings_Control_ClassCurrent" xml:space="preserve"><value>Current class</value></data>
+  <data name="Settings_Control_ClassNone" xml:space="preserve"><value>No class selected</value></data>
+  <data name="Settings_Control_ClassPending" xml:space="preserve"><value>Shown once connected</value></data>
+  <data name="Settings_Control_ClassPick" xml:space="preserve"><value>Choose class</value></data>
   
   <data name="Settings_Control_Enroll_Error_Network" xml:space="preserve"><value>Network unreachable; try again later</value></data>
   <data name="Settings_Control_Enroll_Error_InvalidResponse" xml:space="preserve"><value>The control center returned an unexpected response</value></data>
@@ -4047,4 +4052,43 @@ Continuing to use it means you understand and accept the above.</value>
   <data name="Settings_Control_HomeworkBackup_Never" xml:space="preserve"><value>Not backed up yet</value></data>
   <data name="Settings_Control_HomeworkBackup_Failed" xml:space="preserve"><value>The last backup failed</value></data>
   <data name="Settings_Control_HomeworkBackup_FailedToast" xml:space="preserve"><value>Automatic backup keeps failing; teachers may not see the board</value></data>
+  <data name="Settings_Board_SyncSection" xml:space="preserve">
+    <value>Sync to control center</value>
+  </data>
+  <data name="Settings_Board_HomeworkBackupDays" xml:space="preserve">
+    <value>Days of homework to sync</value>
+  </data>
+  <data name="Settings_Board_HomeworkBackupDaysDescription" xml:space="preserve">
+    <value>Uploads homework from this period when connected</value>
+  </data>
+  <data name="Settings_Board_HomeworkBackupDaysOption" xml:space="preserve">
+    <value>Last {0} days</value>
+  </data>
+  <data name="Settings_Board_ExamSync" xml:space="preserve">
+    <value>Exam schedule</value>
+  </data>
+  <data name="Settings_Board_ExamSyncDescription" xml:space="preserve">
+    <value>Shares upcoming exams with the control center</value>
+  </data>
+  <data name="Settings_Board_ExamSyncEnabled" xml:space="preserve">
+    <value>Sync exam schedule</value>
+  </data>
+  <data name="Settings_Board_ExamSyncRecent" xml:space="preserve">
+    <value>How many exams</value>
+  </data>
+  <data name="Settings_Board_ExamSyncRecentDescription" xml:space="preserve">
+    <value>Only the most recent exams are shared</value>
+  </data>
+  <data name="Settings_Board_ExamSyncRecentOption" xml:space="preserve">
+    <value>Last {0}</value>
+  </data>
+  <data name="Settings_Board_ExamAutoClean" xml:space="preserve">
+    <value>Clean up finished exams</value>
+  </data>
+  <data name="Settings_Board_ExamAutoCleanDescription" xml:space="preserve">
+    <value>Exams a week past their end are removed</value>
+  </data>
+  <data name="Settings_About_Homepage" xml:space="preserve">
+    <value>Official site</value>
+  </data>
 </root>

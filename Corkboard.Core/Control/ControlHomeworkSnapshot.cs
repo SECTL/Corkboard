@@ -74,15 +74,34 @@ public static class ControlHomeworkSnapshot
     ///     <c>ink</c> 字段总共最多带多少字符；超预算的笔迹**不带**（<c>ink</c> 为 null，
     ///     <c>handwriting</c> 仍为 true），并把 <c>truncated</c> 置真。默认 <see cref="MaxTotalInkLength" />。
     /// </param>
+    /// <param name="days">同步最近多少天的作业（含今天，1–30）；默认只同步今天。</param>
+    /// <param name="examBoard">考试看板快照（见 <see cref="ControlExamBoardSnapshot" />），可空。</param>
     public static JsonObject Build(
         IReadOnlyList<Note> notes,
         IEnumerable<string> subjects,
         IEnumerable<string> subjectOrder,
         DateTimeOffset now,
-        int inkBudget = MaxTotalInkLength)
+        int inkBudget = MaxTotalInkLength,
+        int days = 1,
+        JsonObject? examBoard = null)
     {
-        // 只回还在板子上的作业：已清理的那些用户自己也看不见，没必要送到网页上。
-        var onBoard = notes.Where(note => note.IsOnBoard).ToList();
+        var windowDays = Math.Clamp(days, 1, 30);
+        var today = now.Date;
+        var windowStart = today.AddDays(-(windowDays - 1));
+
+        // 板子上还看得见的作业永远带上（它们可能好几天前就贴上了，按「N 天窗口」筛会把
+        // 整块板子筛空）；已经清理的只留最近 N 天——那正是「最近几天布置过什么」的历史，
+        // 而「今天当场清掉」的不带（用户清掉就是不想让人看）。
+        var inWindow = notes
+            .Where(note =>
+            {
+                if (note.IsOnBoard)
+                    return true;
+
+                var day = note.CreatedAt.Date;
+                return day >= windowStart && day < today;
+            })
+            .ToList();
 
         // 科目顺序：手动顺序 → 设置里的科目表 → 只在作业里出现的科目（按首次出现）。
         var orderedSubjects = new List<string>();
@@ -103,7 +122,7 @@ public static class ControlHomeworkSnapshot
         }
 
         var bySubject = new Dictionary<string, List<Note>>(StringComparer.OrdinalIgnoreCase);
-        foreach (var note in onBoard)
+        foreach (var note in inWindow)
         {
             var key = (note.Subject ?? string.Empty).Trim();
             if (!bySubject.TryGetValue(key, out var list))
@@ -135,7 +154,7 @@ public static class ControlHomeworkSnapshot
             }
 
             var items = new JsonArray();
-            foreach (var note in group.OrderBy(n => n.DueDate is null).ThenBy(n => n.DueDate).ThenByDescending(n => n.CreatedAt))
+            foreach (var note in group.OrderByDescending(n => n.CreatedAt.Date).ThenBy(n => n.DueDate is null).ThenBy(n => n.DueDate).ThenByDescending(n => n.CreatedAt))
             {
                 if (items.Count >= MaxItemsPerSubject || noteCount >= MaxItemsTotal)
                 {
@@ -157,13 +176,20 @@ public static class ControlHomeworkSnapshot
             });
         }
 
-        return new JsonObject
+        var result = new JsonObject
         {
             ["generatedAt"] = now.ToString("O", CultureInfo.InvariantCulture),
+            ["days"] = windowDays,
             ["noteCount"] = noteCount,
             ["truncated"] = truncated,
             ["subjects"] = payloadSubjects
         };
+
+        // 考试看板随作业一起送（同一份快照 / 同一次 homework.read），网页按模式切换显示。
+        if (examBoard is not null)
+            result["examBoard"] = examBoard;
+
+        return result;
     }
 
     /// <summary>单条作业：正文归一化成一行、截断，日期按日期格式给。</summary>
@@ -202,6 +228,8 @@ public static class ControlHomeworkSnapshot
             ["dueDate"] = note.DueDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
             ["handwriting"] = handwriting,
             ["ink"] = ink,
+            ["day"] = note.CreatedAt.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            ["cleaned"] = note.IsOnBoard ? null : true,
             ["createdAt"] = note.CreatedAt.ToString("O", CultureInfo.InvariantCulture)
         };
     }

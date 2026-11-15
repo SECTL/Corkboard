@@ -348,9 +348,7 @@
   <data name="Settings_Board_TitleBarReplay" xml:space="preserve">
     <value>时空回放按钮</value>
   </data>
-  <data name="Settings_Board_TitleBarDock" xml:space="preserve">
-    <value>收纳按钮</value>
-  </data>
+  
   <data name="Settings_Board_TitleBarDisplay" xml:space="preserve">
     <value>看板模式按钮</value>
   </data>
@@ -4012,6 +4010,13 @@
   <data name="Settings_Control_Enroll_Failed" xml:space="preserve"><value>接入失败：{0}</value></data>
   
   <data name="Settings_Control_SectionConnection" xml:space="preserve"><value>连接</value></data>
+  <data name="Settings_Control_ClassSection" xml:space="preserve"><value>班级</value></data>
+  <data name="Settings_Control_ClassDescription" xml:space="preserve"><value>换班后立即生效，不用再点按钮</value></data>
+  <data name="Settings_Control_ClassGrade" xml:space="preserve"><value>年级</value></data>
+  <data name="Settings_Control_ClassCurrent" xml:space="preserve"><value>当前班级</value></data>
+  <data name="Settings_Control_ClassNone" xml:space="preserve"><value>还没选班级</value></data>
+  <data name="Settings_Control_ClassPending" xml:space="preserve"><value>等连上后显示</value></data>
+  <data name="Settings_Control_ClassPick" xml:space="preserve"><value>选择班级</value></data>
   
   <data name="Settings_Control_Enroll_Error_Network" xml:space="preserve"><value>网络不通，稍后重试</value></data>
   <data name="Settings_Control_Enroll_Error_InvalidResponse" xml:space="preserve"><value>集控中心返回了无法识别的内容</value></data>
@@ -4045,4 +4050,43 @@
   <data name="Settings_Control_HomeworkBackup_Never" xml:space="preserve"><value>还没备份过</value></data>
   <data name="Settings_Control_HomeworkBackup_Failed" xml:space="preserve"><value>上次备份失败</value></data>
   <data name="Settings_Control_HomeworkBackup_FailedToast" xml:space="preserve"><value>自动备份一直没成功，老师那边可能看不到作业</value></data>
+  <data name="Settings_Board_SyncSection" xml:space="preserve">
+    <value>同步到集控</value>
+  </data>
+  <data name="Settings_Board_HomeworkBackupDays" xml:space="preserve">
+    <value>同步最近多少天的作业</value>
+  </data>
+  <data name="Settings_Board_HomeworkBackupDaysDescription" xml:space="preserve">
+    <value>连上集控后把这段时间里的作业一起传上去</value>
+  </data>
+  <data name="Settings_Board_HomeworkBackupDaysOption" xml:space="preserve">
+    <value>最近 {0} 天</value>
+  </data>
+  <data name="Settings_Board_ExamSync" xml:space="preserve">
+    <value>考试日程</value>
+  </data>
+  <data name="Settings_Board_ExamSyncDescription" xml:space="preserve">
+    <value>把最近几场考试一起传给集控</value>
+  </data>
+  <data name="Settings_Board_ExamSyncEnabled" xml:space="preserve">
+    <value>同步考试日程</value>
+  </data>
+  <data name="Settings_Board_ExamSyncRecent" xml:space="preserve">
+    <value>同步最近多少场</value>
+  </data>
+  <data name="Settings_Board_ExamSyncRecentDescription" xml:space="preserve">
+    <value>越新的考试越靠前，更早的不传</value>
+  </data>
+  <data name="Settings_Board_ExamSyncRecentOption" xml:space="preserve">
+    <value>最近 {0} 场</value>
+  </data>
+  <data name="Settings_Board_ExamAutoClean" xml:space="preserve">
+    <value>考完的考试自动清理</value>
+  </data>
+  <data name="Settings_Board_ExamAutoCleanDescription" xml:space="preserve">
+    <value>考完超过一周的考试从看板上移除</value>
+  </data>
+  <data name="Settings_About_Homepage" xml:space="preserve">
+    <value>官网</value>
+  </data>
 </root>

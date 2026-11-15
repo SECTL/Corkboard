@@ -35,6 +35,8 @@ public partial class BoardAutomationSettingsPage : UserControl
         {
             ViewModel?.History.RefreshStatistics();
             ViewModel?.AutoSave.Attach();
+            // 集控同步那几张卡要听服务的备份状态（单例事件），也是进页面才挂、走时摘。
+            ViewModel?.Attach();
         };
 
         // 时刻与三个数值框都是草稿式的：用户可能没让控件失焦就关了页面，离开时补交一次。
@@ -45,6 +47,7 @@ public partial class BoardAutomationSettingsPage : UserControl
             ViewModel?.History.CommitAll();
             ViewModel?.AutoSave.CommitAutoSave();
             ViewModel?.AutoSave.Detach();
+            ViewModel?.Detach();
         };
     }
 

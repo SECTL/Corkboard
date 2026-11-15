@@ -180,6 +180,10 @@
                                 </Style>
                             </WrapPanel.Styles>
                             <HyperlinkButton Command="{Binding OpenUriCommand}"
+                                             CommandParameter="https://corkboard.sectl.cn">
+                                <TextBlock Text="{x:Static core:Resources.Settings_About_Homepage}" />
+                            </HyperlinkButton>
+                            <HyperlinkButton Command="{Binding OpenUriCommand}"
                                              CommandParameter="https://github.com/SECTL/Corkboard">
                                 <TextBlock Text="{x:Static core:Resources.Settings_About_Repository}" />
                             </HyperlinkButton>

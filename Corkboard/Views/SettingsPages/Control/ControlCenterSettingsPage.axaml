@@ -67,26 +67,7 @@
                     </fa:FASettingsExpanderItem.Footer>
                 </fa:FASettingsExpanderItem>
 
-                <!--
-                    作业自动备份：默认开，只往集控传一份只读快照（不是远程控制）。
-                    状态行由服务推送，最近一次成功时间 / 上次失败 / 还没备份过。
-                -->
-                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Control_HomeworkBackup_Title}"
-                                           Description="{x:Static core:Resources.Settings_Control_HomeworkBackup_Description}">
-                    <fa:FASettingsExpanderItem.Footer>
-                        <StackPanel Spacing="4" HorizontalAlignment="Right">
-                            <ToggleSwitch HorizontalAlignment="Right"
-                                          IsChecked="{Binding Config.ControlCenter.HomeworkBackupEnabled, Mode=TwoWay}" />
-                            <TextBlock MaxWidth="320"
-                                       FontSize="12"
-                                       TextAlignment="Right"
-                                       TextWrapping="Wrap"
-                                       Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                       Text="{Binding HomeworkBackupStatusText}" />
-                        </StackPanel>
-                    </fa:FASettingsExpanderItem.Footer>
-                </fa:FASettingsExpanderItem>
-            </fa:FASettingsExpander>
+                </fa:FASettingsExpander>
 
             <!-- ============================== 设备 ============================== -->
             <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Control_DeviceSection}"
@@ -124,6 +105,51 @@
                                              TextAlignment="Right"
                                              TextWrapping="Wrap"
                                              Text="{Binding DeviceIdText}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+            </fa:FASettingsExpander>
+
+            <!-- ============================== 班级 ============================== -->
+            <!--
+                只显示这台设备现在在哪个年级、哪个班，外加一个换班下拉框（选完立即生效）。
+                没有占班 / 下课 / 刷新班级按钮——用户明确说那些没必要。
+                下拉框只在拿到结构树时出现；没拿到就只看当前班级两行。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Control_ClassSection}"
+                                   Description="{x:Static core:Resources.Settings_Control_ClassDescription}"
+                                   IsVisible="{Binding IsConfigured}"
+                                   IsExpanded="True">
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Control_ClassGrade}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <TextBlock MaxWidth="320"
+                                   TextAlignment="Right"
+                                   TextWrapping="Wrap"
+                                   Text="{Binding GradeText}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Control_ClassCurrent}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <TextBlock MaxWidth="320"
+                                   FontWeight="SemiBold"
+                                   TextAlignment="Right"
+                                   TextWrapping="Wrap"
+                                   Text="{Binding ClassText}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Control_ClassPick}"
+                                           IsVisible="{Binding HasClassOptions}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ComboBox MinWidth="200"
+                                  ItemsSource="{Binding ClassOptions}"
+                                  SelectedItem="{Binding SelectedClassOption, Mode=TwoWay}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ControlClassOption">
+                                    <TextBlock Text="{Binding DisplayName}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
                     </fa:FASettingsExpanderItem.Footer>
                 </fa:FASettingsExpanderItem>
             </fa:FASettingsExpander>

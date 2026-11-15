@@ -29,6 +29,27 @@ public partial class ControlCenterSettingsConfig : ObservableObject
     /// <summary>站点默认地址。</summary>
     public const string DefaultServerUrl = "https://sectl.cn";
 
+    /// <summary>作业备份默认同步天数。</summary>
+    public const int DefaultHomeworkBackupDays = 7;
+
+    /// <summary>作业备份同步天数的上下限。</summary>
+    public const int MinHomeworkBackupDays = 1;
+
+    /// <summary>作业备份同步天数的上限。</summary>
+    public const int MaxHomeworkBackupDays = 30;
+
+    /// <summary>考试看板默认同步场次。</summary>
+    public const int DefaultExamSyncRecentCount = 20;
+
+    /// <summary>考试看板同步场次的下限。</summary>
+    public const int MinExamSyncRecentCount = 1;
+
+    /// <summary>考试看板同步场次的上限。</summary>
+    public const int MaxExamSyncRecentCount = 50;
+
+    /// <summary>考完多少天之后才自动删（留几天给老师核对成绩/改安排）。</summary>
+    public const int ExamAutoCleanGraceDays = 7;
+
     /// <summary>是否启用集控（默认关；导入设置不许替用户打开）。</summary>
     [ObservableProperty] private bool _enabled;
 
@@ -41,6 +62,21 @@ public partial class ControlCenterSettingsConfig : ObservableObject
     ///     </para>
     /// </summary>
     [ObservableProperty] private bool _homeworkBackupEnabled = true;
+
+    /// <summary>作业备份同步最近多少天（含今天；1–30）。</summary>
+    [ObservableProperty] private int _homeworkBackupDays = DefaultHomeworkBackupDays;
+
+    /// <summary>考试看板是否随作业一起同步（默认开）。</summary>
+    [ObservableProperty] private bool _examSyncEnabled = true;
+
+    /// <summary>考试看板同步最近多少场考试（按开考时间倒序取，1–50）。</summary>
+    [ObservableProperty] private int _examSyncRecentCount = DefaultExamSyncRecentCount;
+
+    /// <summary>
+    ///     已经考完的考试自动从看板删掉（默认开，只删结束超过 <see cref="ExamAutoCleanGraceDays" />
+    ///     天的那些——刚考完还留着给老师核对，别一考完就消失）。
+    /// </summary>
+    [ObservableProperty] private bool _examAutoCleanFinished = true;
 
     /// <summary>集控中心地址（缺 <c>https://</c> 时由 <see cref="Normalize" /> 补上）。</summary>
     [ObservableProperty] private string _serverUrl = DefaultServerUrl;
@@ -65,7 +101,21 @@ public partial class ControlCenterSettingsConfig : ObservableObject
     {
         ServerUrl = NormalizeServerUrl(ServerUrl);
         SiteId = NormalizeSiteId(SiteId);
+        HomeworkBackupDays = ClampHomeworkBackupDays(HomeworkBackupDays);
+        ExamSyncRecentCount = ClampExamSyncRecentCount(ExamSyncRecentCount);
     }
+
+    /// <summary>把「同步最近多少天」夹进合法区间；非法值回默认值。</summary>
+    public static int ClampHomeworkBackupDays(int value) =>
+        value < MinHomeworkBackupDays || value > MaxHomeworkBackupDays
+            ? DefaultHomeworkBackupDays
+            : value;
+
+    /// <summary>把「同步最近多少场考试」夹进合法区间；非法值回默认值。</summary>
+    public static int ClampExamSyncRecentCount(int value) =>
+        value < MinExamSyncRecentCount || value > MaxExamSyncRecentCount
+            ? DefaultExamSyncRecentCount
+            : value;
 
     /// <summary>地址归一：空 → 默认值；没协议 → 补 <c>https://</c>；去掉尾部斜杠。</summary>
     public static string NormalizeServerUrl(string? value)

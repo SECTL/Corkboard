@@ -330,6 +330,79 @@
                 </fa:FASettingsExpanderItem>
             </fa:FASettingsExpander>
 
+            <!-- ============================== 同步到集控 ============================== -->
+
+            <TextBlock Classes="section-title"
+                       Text="{x:Static core:Resources.Settings_Board_SyncSection}" />
+
+            <!--
+                作业自动备份：默认开，只往集控传一份只读快照（不是远程控制）。
+                状态行由集控服务推送，最近一次成功时间 / 上次失败 / 还没备份过。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Control_HomeworkBackup_Title}"
+                                   Description="{x:Static core:Resources.Settings_Control_HomeworkBackup_Description}">
+                <fa:FASettingsExpander.Footer>
+                    <StackPanel Spacing="4" HorizontalAlignment="Right">
+                        <ToggleSwitch HorizontalAlignment="Right"
+                                      IsChecked="{Binding Config.ControlCenter.HomeworkBackupEnabled, Mode=TwoWay}" />
+                        <TextBlock MaxWidth="320"
+                                   FontSize="12"
+                                   TextAlignment="Right"
+                                   TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                                   Text="{Binding HomeworkBackupStatusText}" />
+                    </StackPanel>
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_HomeworkBackupDays}"
+                                   Description="{x:Static core:Resources.Settings_Board_HomeworkBackupDaysDescription}">
+                <fa:FASettingsExpander.Footer>
+                    <ComboBox MinWidth="160"
+                              ItemsSource="{Binding HomeworkBackupDayOptions}"
+                              SelectedItem="{Binding SelectedHomeworkBackupDayOption, Mode=TwoWay}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:HomeworkBackupDayOption">
+                                <TextBlock Text="{Binding DisplayName}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </fa:FASettingsExpander.Footer>
+            </fa:FASettingsExpander>
+
+            <!-- 考试日程：跟作业一样只传只读快照；「考完自动清理」清的是本机的考试看板。 -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_ExamSync}"
+                                   Description="{x:Static core:Resources.Settings_Board_ExamSyncDescription}">
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_ExamSyncEnabled}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ToggleSwitch IsChecked="{Binding Config.ControlCenter.ExamSyncEnabled, Mode=TwoWay}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_ExamSyncRecent}"
+                                           Description="{x:Static core:Resources.Settings_Board_ExamSyncRecentDescription}"
+                                           IsVisible="{Binding Config.ControlCenter.ExamSyncEnabled}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ComboBox MinWidth="160"
+                                  ItemsSource="{Binding ExamSyncRecentOptions}"
+                                  SelectedItem="{Binding SelectedExamSyncRecentOption, Mode=TwoWay}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ExamSyncRecentOption">
+                                    <TextBlock Text="{Binding DisplayName}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_ExamAutoClean}"
+                                           Description="{x:Static core:Resources.Settings_Board_ExamAutoCleanDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ToggleSwitch IsChecked="{Binding Config.ControlCenter.ExamAutoCleanFinished, Mode=TwoWay}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+            </fa:FASettingsExpander>
+
             <TextBlock Classes="section-title"
                        Text="{x:Static core:Resources.Settings_Section_Maintenance}" />
 

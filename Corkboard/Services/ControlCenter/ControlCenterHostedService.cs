@@ -1,10 +1,13 @@
 using System.ComponentModel;
 using System.Globalization;
 using System.Resources;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json.Nodes;
 using Avalonia.Threading;
 using Corkboard.Core.Board;
 using Corkboard.Core.ControlCenter;
+using Corkboard.Core.Exam;
 using Corkboard.Core.Langs.Common;
 using Corkboard.Core.Models.SubConfigs.ControlCenter;
 using Corkboard.Core.Services.Config;
@@ -59,6 +62,7 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
     private readonly MainConfigHandler _configHandler;
     private readonly IControlNodeCredentialProvider _credentials;
     private readonly IBoardService _boardService;
+    private readonly IExamService _examService;
     private readonly IToastService _toastService;
     private readonly ILogger<ControlCenterHostedService> _logger;
 
@@ -129,12 +133,14 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
         MainConfigHandler configHandler,
         IControlNodeCredentialProvider credentials,
         IBoardService boardService,
+        IExamService examService,
         IToastService toastService,
         ILogger<ControlCenterHostedService> logger)
     {
         _configHandler = configHandler;
         _credentials = credentials;
         _boardService = boardService;
+        _examService = examService;
         _toastService = toastService;
         _logger = logger;
 
@@ -265,6 +271,13 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
             RaiseSnapshotChanged();
         }
     }
+
+    /// <summary>读设备结构树（年级 → 班级）。失败返回空列表（Core 已兜底，不抛）。</summary>
+    public Task<IReadOnlyList<ControlGradeNode>> GetTreeAsync(CancellationToken ct = default) =>
+        EnsureClient().GetDeviceTreeAsync(ct);
+
+    /// <summary>换班（<c>class.select</c>）：离线时只记住，重连后自动重占。</summary>
+    public Task SelectClassAsync(string classId) => EnsureClient().SelectClassAsync(classId);
 
     /// <summary>
     ///     重建集控客户端：停掉旧连接、按当前配置造一个新的再启动。
@@ -560,19 +573,106 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
     ///         这条命令只是「看」：不写作业、不改配置、不弹界面，所以也算不上需要注意的操作。
     ///     </para>
     /// </summary>
+    /// <summary>备份快照允许带的笔迹总预算（比 <c>homework.read</c> 大，但服务端仍限 256 KiB）。</summary>
+    private const int MaxTotalInkLengthForBackup = ControlHomeworkSnapshot.MaxTotalInkLength;
+
+    /// <summary>
+    ///     在 UI 线程上拷一份「作业 + 考试看板」并压成快照：作业集合与考试集合都只在 UI 线程变，
+    ///     后台线程直接读可能拿到半改的集合。指纹把作业内容与考试日程一起算进去——考试改了也要重传。
+    /// </summary>
+    private async Task<(JsonObject? Snapshot, string Fingerprint, int NoteCount)> BuildSnapshotAsync(
+        int inkBudget,
+        int days,
+        DateTimeOffset now)
+    {
+        var config = _configHandler.Data.ControlCenter;
+        var examEnabled = config.ExamSyncEnabled;
+        var examRecentCount = config.ExamSyncRecentCount;
+
+        return await Dispatcher.UIThread
+            .InvokeAsync<(JsonObject? Snapshot, string Fingerprint, int NoteCount)>(() =>
+            {
+                var notes = _boardService.Notes.ToList();
+                var examBoard = examEnabled
+                    ? ControlExamBoardSnapshot.Build(
+                        _examService.ActiveBoard,
+                        _examService.Exams.ToList(),
+                        now,
+                        examRecentCount)
+                    : null;
+
+                var built = ControlHomeworkSnapshot.Build(
+                    notes,
+                    _boardService.Subjects.ToList(),
+                    _boardService.SubjectOrder.ToList(),
+                    now,
+                    inkBudget,
+                    days,
+                    examBoard);
+
+                var homeworkFingerprint = ControlHomeworkBackup.CreateContentFingerprint(notes);
+                var examSignature = examBoard is null ? string.Empty : examBoard.ToJsonString();
+                var fingerprint = CombineFingerprint(homeworkFingerprint, examSignature);
+
+                return (built, fingerprint, notes.Count(note => note.IsOnBoard));
+            })
+            .GetTask()
+            .ConfigureAwait(false);
+    }
+
+    /// <summary>把「作业内容指纹」与「考试日程签名」合成一个指纹（都变了才算变）。</summary>
+    private static string CombineFingerprint(string contentFingerprint, string examSignature)
+    {
+        if (string.IsNullOrEmpty(examSignature))
+            return contentFingerprint;
+
+        var bytes = Encoding.UTF8.GetBytes(string.Concat(contentFingerprint, "\u001f", examSignature));
+        return Convert.ToHexString(SHA256.HashData(bytes));
+    }
+
+    /// <summary>
+    ///     考完的考试按配置自动清掉（宽限 <see cref="ControlCenterSettingsConfig.ExamAutoCleanGraceDays" /> 天，
+    ///     免得「刚考完还在看排名/补录」时被抢走）。
+    /// </summary>
+    private void CleanFinishedExams()
+    {
+        if (_disposed)
+            return;
+
+        var config = _configHandler.Data.ControlCenter;
+        if (!config.ExamAutoCleanFinished)
+            return;
+
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            Dispatcher.UIThread.Post(CleanFinishedExams);
+            return;
+        }
+
+        var ids = ControlExamBoardSnapshot.SelectFinishedForRemoval(
+            _examService.Exams,
+            DateTimeOffset.Now,
+            ControlCenterSettingsConfig.ExamAutoCleanGraceDays);
+
+        if (ids.Count == 0)
+            return;
+
+        foreach (var id in ids)
+            _examService.Remove(id);
+
+        _logger.LogInformation("集控：已自动清理 {Count} 场考完的考试", ids.Count);
+        ScheduleUpload();
+    }
+
     private async Task<object?> HandleHomeworkReadAsync(JsonObject args, CancellationToken cancellationToken)
     {
         var now = DateTimeOffset.Now;
 
-        return await Dispatcher.UIThread
-            .InvokeAsync<object?>(() => ControlHomeworkSnapshot.Build(
-                _boardService.Notes.ToList(),
-                _boardService.Subjects.ToList(),
-                _boardService.SubjectOrder.ToList(),
-                now,
-                HomeworkReadInkBudget))
-            .GetTask()
+        // homework.read 是「看一次」：只带当天，免得一次性回太多（WS 单帧 64 KiB）。
+        var built = await BuildSnapshotAsync(HomeworkReadInkBudget, days: 1, now)
             .ConfigureAwait(false);
+
+        return built.Snapshot;
     }
 
     // ------------------------------------------------------------------
@@ -587,6 +687,7 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
 
         _uploadTriggersAttached = true;
         _boardService.Changed += OnBoardChanged;
+        _examService.Changed += OnBoardChanged;
         SnapshotChanged += OnSnapshotChangedForUpload;
     }
 
@@ -597,6 +698,7 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
 
         _uploadTriggersAttached = false;
         _boardService.Changed -= OnBoardChanged;
+        _examService.Changed -= OnBoardChanged;
         SnapshotChanged -= OnSnapshotChangedForUpload;
 
         // 待发的那一次直接扔掉（服务要停了 / 已经断线，再传没有意义）。
@@ -654,7 +756,10 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
             // 先等一个周期：刚启动时的补传由「连上集控」那条路直接触发，不用抢在启动瞬间传。
             using var timer = new PeriodicTimer(UploadHeartbeatInterval);
             while (await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false))
+            {
+                CleanFinishedExams();
                 _ = UploadHomeworkSnapshotAsync();
+            }
         }
         catch (OperationCanceledException)
         {
@@ -745,19 +850,12 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
 
             // 作业集合会随用户编辑在 UI 线程上变动，而这里是后台线程——拷贝、算指纹、拼快照都在 UI 线程做完。
             var now = DateTimeOffset.Now;
-            var (snapshot, fingerprint, noteCount) = await Dispatcher.UIThread
-                .InvokeAsync<(JsonObject? Snapshot, string Fingerprint, int NoteCount)>(() =>
-                {
-                    var notes = _boardService.Notes.ToList();
-                    var built = ControlHomeworkSnapshot.Build(
-                        notes,
-                        _boardService.Subjects.ToList(),
-                        _boardService.SubjectOrder.ToList(),
-                        now);
-                    return (built, ControlHomeworkBackup.CreateContentFingerprint(notes), notes.Count(note => note.IsOnBoard));
-                })
-                .GetTask()
+            var days = config.HomeworkBackupDays;
+            var built = await BuildSnapshotAsync(MaxTotalInkLengthForBackup, days, now)
                 .ConfigureAwait(false);
+            var snapshot = built.Snapshot;
+            var fingerprint = built.Fingerprint;
+            var noteCount = built.NoteCount;
 
             if (snapshot is null)
                 return;
