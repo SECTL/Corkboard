@@ -121,7 +121,7 @@ public partial class ControlCenterSettingsPageViewModel(
     /// <summary>结构树拿到了才有下拉框可选；拿不到就只显示当前班级。</summary>
     public bool HasClassOptions => ClassOptions.Count > 0;
 
-    /// <summary>「最近备份」那一行：成功时是本地时间，没成功过 / 失败时给对应文案。</summary>
+    /// <summary>「最近同步」那一行：成功时是本地时间，没成功过 / 失败时给对应文案。</summary>
     [ObservableProperty] private string _homeworkBackupStatusText = string.Empty;
 
     [ObservableProperty]
@@ -463,7 +463,7 @@ public partial class ControlCenterSettingsPageViewModel(
         NotifyCommandStates();
     }
 
-    /// <summary>备份状态可能在后台线程推送，先切回 UI 线程再改可观察属性。</summary>
+    /// <summary>同步状态可能在后台线程推送，先切回 UI 线程再改可观察属性。</summary>
     private void OnHomeworkBackupChanged(object? sender, ControlHomeworkBackupState state)
     {
         if (Dispatcher.UIThread.CheckAccess())
@@ -472,7 +472,7 @@ public partial class ControlCenterSettingsPageViewModel(
             Dispatcher.UIThread.Post(() => ApplyHomeworkBackup(state));
     }
 
-    /// <summary>「自动备份作业」的状态行：最近一次成功的本地时间 / 上次失败 / 还没备份过。</summary>
+    /// <summary>「自动同步作业」的状态行：最近一次成功的本地时间 / 上次失败 / 还没同步过。</summary>
     private void ApplyHomeworkBackup(ControlHomeworkBackupState state)
     {
         string value;

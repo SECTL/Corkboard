@@ -41,6 +41,15 @@ public static class ControlV4Protocol
     /// <summary>上传作业板只读快照（凭证放请求体，快照形状同 <c>homework.read</c> 回执）。</summary>
     public const string DeviceHomeworkPath = "/control/api/device/homework-snapshots";
 
+    /// <summary>拉取老师布置的作业（服务端契约要求凭证放 query，见 <c>homework-assignments</c>）。</summary>
+    public const string DeviceHomeworkAssignmentsPath = "/control/api/device/homework-assignments";
+
+    /// <summary>
+    ///     一条布置的回执路径（<c>POST /control/api/device/homework-assignments/&lt;id&gt;/ack</c>）。
+    /// </summary>
+    public static string HomeworkAssignmentAckPath(string assignmentId) =>
+        DeviceHomeworkAssignmentsPath + "/" + Uri.EscapeDataString(assignmentId) + "/ack";
+
     /// <summary>服务端默认的单条指令超时；握手回包 <c>limits.cmdTimeoutMs</c> 有值就以服务端为准。</summary>
     public const int DefaultCommandTimeoutMs = 5000;
 

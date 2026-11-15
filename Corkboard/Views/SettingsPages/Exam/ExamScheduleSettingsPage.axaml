@@ -303,6 +303,47 @@
                                TextWrapping="Wrap" />
                 </StackPanel>
             </fa:FASettingsExpander>
+
+            <!-- ============================== 同步到集控 ============================== -->
+
+            <TextBlock Classes="section-title"
+                       Text="{x:Static core:Resources.Settings_Board_SyncSection}" />
+
+            <!--
+                考试日程：只往集控传一份只读快照（不是远程控制）；「考完自动清理」清的是本机的考试看板。
+                这三项原本挂在作业板设置页，现在跟考试数据放在同一页；配置项与资源键都没变。
+            -->
+            <fa:FASettingsExpander Header="{x:Static core:Resources.Settings_Board_ExamSync}"
+                                   Description="{x:Static core:Resources.Settings_Board_ExamSyncDescription}">
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_ExamSyncEnabled}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ToggleSwitch IsChecked="{Binding Config.ControlCenter.ExamSyncEnabled, Mode=TwoWay}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_ExamSyncRecent}"
+                                           Description="{x:Static core:Resources.Settings_Board_ExamSyncRecentDescription}"
+                                           IsVisible="{Binding Config.ControlCenter.ExamSyncEnabled}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ComboBox MinWidth="160"
+                                  ItemsSource="{Binding ExamSyncRecentOptions}"
+                                  SelectedItem="{Binding SelectedExamSyncRecentOption, Mode=TwoWay}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ExamSyncRecentOption">
+                                    <TextBlock Text="{Binding DisplayName}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+
+                <fa:FASettingsExpanderItem Content="{x:Static core:Resources.Settings_Board_ExamAutoClean}"
+                                           Description="{x:Static core:Resources.Settings_Board_ExamAutoCleanDescription}">
+                    <fa:FASettingsExpanderItem.Footer>
+                        <ToggleSwitch IsChecked="{Binding Config.ControlCenter.ExamAutoCleanFinished, Mode=TwoWay}" />
+                    </fa:FASettingsExpanderItem.Footer>
+                </fa:FASettingsExpanderItem>
+            </fa:FASettingsExpander>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

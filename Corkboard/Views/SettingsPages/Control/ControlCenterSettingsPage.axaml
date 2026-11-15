@@ -18,7 +18,7 @@
                        Theme="{StaticResource TitleTextBlockStyle}" />
 
             <!--
-                四张卡（同时可见三张）：连接（开关 + 状态 + 自动备份）、设备（名字 / ID / 网页控制台）、
+                四张卡（同时可见三张）：连接（开关 + 状态 + 自动同步）、设备（名字 / ID / 网页控制台）、
                 接入集控（未接入才显示）、清空接入（已接入才显示）。
                 卡里按行放 FASettingsExpanderItem——名称与简介在左、控件在右。
                 注意**不能卡套卡**：外层展开时内层会抛 NullReferenceException。

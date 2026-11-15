@@ -1,14 +1,19 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Corkboard.Core.Exam;
+using Corkboard.Core.Models.SubConfigs.ControlCenter;
 using Corkboard.Core.Models.SubConfigs.Exam;
 using Corkboard.Core.Services.Config;
 using Corkboard.ViewModels;
 using CR = Corkboard.Core.Langs.Common.Resources;
 
 namespace Corkboard.ViewModels.SettingsPages.Exam;
+
+/// <summary>「同步最近多少场考试」下拉里的一项。</summary>
+public sealed record ExamSyncRecentOption(int Count, string DisplayName);
 
 /// <summary>
 ///     「考试安排」设置页：这里只当**看板文件列表**——每一行是一份看板（自带标题、副标题与考试安排），
@@ -55,6 +60,23 @@ public partial class ExamScheduleSettingsPageViewModel : ViewModelBase
     /// <summary>看板显示偏好：这里只用它的「即将开始」阈值，好让列表里的状态与看板一致。</summary>
     public ExamBoardSettingsConfig Settings => Config.ExamBoard;
 
+    /// <summary>集控配置：页面末尾那张「同步到集控」卡直接改这三项。</summary>
+    public ControlCenterSettingsConfig ControlCenter => Config.ControlCenter;
+
+    /// <summary>「同步最近多少场考试」的可选值：5、10、20、30、50 场。</summary>
+    public IReadOnlyList<ExamSyncRecentOption> ExamSyncRecentOptions { get; } =
+        new[] { 5, 10, 20, 30, 50 }
+            .Where(count => count is >= ControlCenterSettingsConfig.MinExamSyncRecentCount
+                and <= ControlCenterSettingsConfig.MaxExamSyncRecentCount)
+            .Select(count => new ExamSyncRecentOption(
+                count,
+                string.Format(CultureInfo.CurrentCulture, CR.Settings_Board_ExamSyncRecentOption, count)))
+            .ToList();
+
+    /// <summary>下拉选中的场数；改了就直接落进配置（配置 handler 自己会落盘）。</summary>
+    [ObservableProperty]
+    private ExamSyncRecentOption? _selectedExamSyncRecentOption;
+
     /// <summary>全部看板文件（按创建先后）。</summary>
     public ObservableCollection<ExamBoardItem> Items { get; }
 
@@ -80,6 +102,7 @@ public partial class ExamScheduleSettingsPageViewModel : ViewModelBase
         _statusTimer.Start();
         Rebuild();
         RebuildTemplates();
+        SyncExamSyncSelection();
     }
 
     /// <summary>断开订阅（页面离开可视树时调）。</summary>
@@ -130,6 +153,20 @@ public partial class ExamScheduleSettingsPageViewModel : ViewModelBase
     {
         if (item is not null)
             _examService.SelectBoard(item.Id);
+    }
+
+    /// <summary>把考试同步的下拉对齐到当前配置（进页面时调一次）。</summary>
+    private void SyncExamSyncSelection()
+    {
+        SelectedExamSyncRecentOption =
+            ExamSyncRecentOptions.FirstOrDefault(option => option.Count == ControlCenter.ExamSyncRecentCount)
+            ?? ExamSyncRecentOptions[0];
+    }
+
+    partial void OnSelectedExamSyncRecentOptionChanged(ExamSyncRecentOption? value)
+    {
+        if (value is not null && ControlCenter.ExamSyncRecentCount != value.Count)
+            ControlCenter.ExamSyncRecentCount = value.Count;
     }
 
     /// <summary>重建整个列表。</summary>

@@ -12,8 +12,7 @@ namespace Corkboard.ViewModels.SettingsPages.Board;
 /// <summary>「同步最近多少天作业」下拉里的一项。</summary>
 public sealed record HomeworkBackupDayOption(int Days, string DisplayName);
 
-/// <summary>「同步最近多少场考试」下拉里的一项。</summary>
-public sealed record ExamSyncRecentOption(int Count, string DisplayName);
+
 
 /// <summary>
 ///     「作业板 → 自动化与数据」设置页的 ViewModel：自动清理、历史与回放、自动保存、同步到集控、数据维护。
@@ -38,7 +37,7 @@ public partial class BoardAutomationSettingsPageViewModel(
     /// <summary>自动保存（开关、保存时机、保留天数、保存位置、立即保存一张）的子 VM。绑定加 <c>AutoSave.</c> 前缀。</summary>
     public AutoSaveSettingsPageViewModel AutoSave { get; } = autoSave;
 
-    /// <summary>集控相关的配置（开关、天数、考试同步）。绑定直接写 <c>Config.ControlCenter.Xxx</c>。</summary>
+    /// <summary>集控相关的配置（开关、天数）。绑定直接写 <c>Config.ControlCenter.Xxx</c>。</summary>
     public ControlCenterSettingsConfig ControlCenter => Config.ControlCenter;
 
     /// <summary>「同步最近多少天作业」的可选值：1、3、7、14、30 天。</summary>
@@ -51,29 +50,15 @@ public partial class BoardAutomationSettingsPageViewModel(
                 string.Format(CultureInfo.CurrentCulture, CR.Settings_Board_HomeworkBackupDaysOption, days)))
             .ToList();
 
-    /// <summary>「同步最近多少场考试」的可选值：5、10、20、30、50 场。</summary>
-    public IReadOnlyList<ExamSyncRecentOption> ExamSyncRecentOptions { get; } =
-        new[] { 5, 10, 20, 30, 50 }
-            .Where(count => count is >= ControlCenterSettingsConfig.MinExamSyncRecentCount
-                and <= ControlCenterSettingsConfig.MaxExamSyncRecentCount)
-            .Select(count => new ExamSyncRecentOption(
-                count,
-                string.Format(CultureInfo.CurrentCulture, CR.Settings_Board_ExamSyncRecentOption, count)))
-            .ToList();
-
     /// <summary>下拉选中的天数；改了就直接落进配置（配置 handler 自己会落盘）。</summary>
     [ObservableProperty]
     private HomeworkBackupDayOption? _selectedHomeworkBackupDayOption;
 
-    /// <summary>下拉选中的场数。</summary>
-    [ObservableProperty]
-    private ExamSyncRecentOption? _selectedExamSyncRecentOption;
-
-    /// <summary>「最近备份」那一行：成功时是本地时间，没成功过 / 失败时给对应文案。</summary>
+    /// <summary>「最近同步」那一行：成功时是本地时间，没成功过 / 失败时给对应文案。</summary>
     [ObservableProperty]
     private string _homeworkBackupStatusText = string.Empty;
 
-    /// <summary>页面出现时开始听集控服务的备份状态，并把下拉对齐到当前配置。</summary>
+    /// <summary>页面出现时开始听集控服务的同步状态，并把下拉对齐到当前配置。</summary>
     public void Attach()
     {
         controlService.HomeworkBackupChanged -= OnHomeworkBackupChanged;
@@ -91,21 +76,11 @@ public partial class BoardAutomationSettingsPageViewModel(
             ControlCenter.HomeworkBackupDays = value.Days;
     }
 
-    partial void OnSelectedExamSyncRecentOptionChanged(ExamSyncRecentOption? value)
-    {
-        if (value is not null && ControlCenter.ExamSyncRecentCount != value.Count)
-            ControlCenter.ExamSyncRecentCount = value.Count;
-    }
-
     private void SyncSelectionFromConfig()
     {
         SelectedHomeworkBackupDayOption =
             HomeworkBackupDayOptions.FirstOrDefault(option => option.Days == ControlCenter.HomeworkBackupDays)
             ?? HomeworkBackupDayOptions[0];
-
-        SelectedExamSyncRecentOption =
-            ExamSyncRecentOptions.FirstOrDefault(option => option.Count == ControlCenter.ExamSyncRecentCount)
-            ?? ExamSyncRecentOptions[0];
     }
 
     private void OnHomeworkBackupChanged(object? sender, ControlHomeworkBackupState state)
@@ -116,7 +91,7 @@ public partial class BoardAutomationSettingsPageViewModel(
             Dispatcher.UIThread.Post(() => ApplyHomeworkBackup(state));
     }
 
-    /// <summary>状态行：最近一次成功的本地时间 / 上次失败 / 还没备份过。</summary>
+    /// <summary>状态行：最近一次成功的本地时间 / 上次失败 / 还没同步过。</summary>
     private void ApplyHomeworkBackup(ControlHomeworkBackupState state)
     {
         HomeworkBackupStatusText = state.LastSuccessAt is { } successAt

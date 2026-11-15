@@ -10,6 +10,7 @@ using Corkboard.Core.ControlCenter;
 using Corkboard.Core.Exam;
 using Corkboard.Core.Langs.Common;
 using Corkboard.Core.Models.SubConfigs.ControlCenter;
+using Corkboard.Core.Notes;
 using Corkboard.Core.Services.Config;
 using Corkboard.Helpers;
 using Corkboard.Services.Ui;
@@ -22,8 +23,11 @@ namespace Corkboard.Services.ControlCenter;
 ///     集控（SECTL control center）的应用层运行时服务。
 ///     <para>
 ///         Core 的 <see cref="ControlNodeClient" /> 只负责协议、连接与凭证；<b>用户可见的副作用</b>
-///         （接入 / 配对的 toast、重载配置、回传作业快照）都在这里通过 <see cref="ControlNodeClient.RegisterHandler" />
-///         挂上去。这样 Core 不依赖 Avalonia，也不会在处理指令时直接碰界面。
+///         （接入 / 配对的 toast、状态上报）都在这里装配。这样 Core 不依赖 Avalonia。
+///     </para>
+///     <para>
+///         服务端给 corkboard 的命令表已经清空：客户端<b>只连接、上报状态</b>，不再注册任何指令处理器；
+///         作业由本服务的定时同步上传（见下面的上传循环）。配置变化由配置监听处理，不用指令触发重载。
 ///     </para>
 ///     <para>
 ///         客户端本身不监听配置：开关、服务器地址、设备名发生变化时由本服务重建客户端
@@ -47,17 +51,8 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
     /// <summary>兜底巡检间隔：板子没动也隔一阵补传一次（服务端丢了、网络刚恢复都能补上）。</summary>
     private static readonly TimeSpan UploadHeartbeatInterval = TimeSpan.FromMinutes(10);
 
-    /// <summary>唯一注册的命令：重载配置（不弹任何界面）。</summary>
-    private const string CommandReloadConfig = "reloadConfig";
-
-    /// <summary>只读查询：把作业板上的作业压成快照回给网页控制台（老师「查看作业」）。</summary>
-    private const string CommandHomeworkRead = "homework.read";
-
-    /// <summary>
-    ///     <c>homework.read</c> 回执里手写笔迹的字符预算。走 WebSocket 单帧（上限 64 KiB），
-    ///     正文与元数据还要占地方，所以比备份上传（96 KiB）留得更紧。
-    /// </summary>
-    private const int HomeworkReadInkBudget = 32 * 1024;
+    /// <summary>末拉取老师布置作业的轮询间隔。</summary>
+    private static readonly TimeSpan HomeworkAssignmentPollInterval = TimeSpan.FromSeconds(15);
 
     private readonly MainConfigHandler _configHandler;
     private readonly IControlNodeCredentialProvider _credentials;
@@ -91,7 +86,7 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
 
     private ControlNodeClient? _client;
 
-    /// <summary>作业备份的 HTTP 客户端：站点地址变了就换一个（地址只影响请求目标）。</summary>
+    /// <summary>作业同步的 HTTP 客户端：站点地址变了就换一个（地址只影响请求目标）。</summary>
     private ControlNodeEnrollmentApi? _uploadApi;
 
     private string _uploadApiServerUrl = string.Empty;
@@ -101,7 +96,21 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
 
     private Task? _uploadLoop;
 
-    /// <summary>作业自动备份的对外状态。</summary>
+    /// <summary>作业布置的轮询循环（15 秒一次）与它的取消源。</summary>
+    private readonly CancellationTokenSource _assignmentLoopCts = new();
+
+    private Task? _assignmentLoop;
+
+    /// <summary>串行化作业布置的拉取：定时循环与「刚连上」那条路可能同时进来。</summary>
+    private readonly SemaphoreSlim _assignmentGate = new(1, 1);
+
+    /// <summary>
+    ///     进程内已处理过的布置 id：服务端回执成功才会停止下发，这里再兜一层，
+    ///     免得回执慢一拍时同一条作业被建两遍。
+    /// </summary>
+    private readonly HashSet<string> _processedAssignments = [];
+
+    /// <summary>作业自动同步的对外状态。</summary>
     private ControlHomeworkBackupState _homeworkBackup = ControlHomeworkBackupState.Initial;
 
     /// <summary>上一次成功上传时的内容指纹；一样就不重复传。</summary>
@@ -116,7 +125,10 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
     /// <summary>上一次记过 warning 的错误键：同一个错误连续失败只记一次日志。</summary>
     private string? _lastLoggedBackupErrorKey;
 
-    /// <summary>接入之后一直没备份成功时，只弹一次普通提示。</summary>
+    /// <summary>拉取作业布置时上一次记过 warning 的错误键（15 秒一轮，别刷屏）。</summary>
+    private string? _lastLoggedAssignmentErrorKey;
+
+    /// <summary>接入之后一直没同步成功时，只弹一次普通提示。</summary>
     private bool _backupFailureToasted;
 
     private ControlNodeLinkState _snapshot = ControlNodeLinkState.Initial;
@@ -163,7 +175,7 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
     /// <summary>状态变化通知。<b>可能来自后台线程</b>，界面订阅者要自己切回 UI 线程。</summary>
     public event EventHandler<ControlNodeLinkState>? SnapshotChanged;
 
-    /// <summary>作业自动备份的当前状态（供设置页画「最近备份」）。</summary>
+    /// <summary>作业自动同步的当前状态（供设置页画「最近同步」）。</summary>
     public ControlHomeworkBackupState HomeworkBackup
     {
         get
@@ -173,7 +185,7 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
         }
     }
 
-    /// <summary>作业自动备份状态变化通知。<b>可能来自后台线程</b>，界面订阅者要自己切回 UI 线程。</summary>
+    /// <summary>作业自动同步状态变化通知。<b>可能来自后台线程</b>，界面订阅者要自己切回 UI 线程。</summary>
     public event EventHandler<ControlHomeworkBackupState>? HomeworkBackupChanged;
 
     /// <summary>本机是否已经有完整的设备凭证（= 已接入过集控）。</summary>
@@ -306,6 +318,7 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
 
             await StartClientAsync(stoppingToken).ConfigureAwait(false);
             StartUploadLoop();
+            StartAssignmentLoop();
 
             await Task.Delay(Timeout.InfiniteTimeSpan, stoppingToken).ConfigureAwait(false);
         }
@@ -327,6 +340,7 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
         CancelPendingRestart();
         UnsubscribeUploadTriggers();
         CancelUploadLoop();
+        CancelAssignmentLoop();
         DisposeUploadApi();
 
         await StopAndDisposeClientAsync().ConfigureAwait(false);
@@ -349,6 +363,7 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
         CancelPendingRestart();
         UnsubscribeUploadTriggers();
         CancelUploadLoop();
+        CancelAssignmentLoop();
         DisposeUploadApi();
 
         await StopAndDisposeClientAsync().ConfigureAwait(false);
@@ -364,6 +379,7 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
         CancelPendingRestart();
         UnsubscribeUploadTriggers();
         CancelUploadLoop();
+        CancelAssignmentLoop();
         DisposeUploadApi();
 
         // 同步释放路径上不等网络：先摘掉引用，销毁在后台完成（客户端自己的 DisposeAsync 不带网络等待）。
@@ -372,7 +388,7 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
         GC.SuppressFinalize(this);
     }
 
-    /// <summary>构造客户端并挂上命令处理器（重载配置 / 读取作业）与状态订阅。</summary>
+    /// <summary>构造客户端并订阅状态变化（不再挂任何指令处理器：服务端命令表已清空）。</summary>
     private ControlNodeClient CreateClient()
     {
         var client = new ControlNodeClient(
@@ -380,8 +396,6 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
             logger: null,
             credentials: _credentials);
 
-        client.RegisterHandler(CommandReloadConfig, HandleReloadConfigAsync);
-        client.RegisterHandler(CommandHomeworkRead, HandleHomeworkReadAsync);
         client.StateChanged += OnClientStateChanged;
         return client;
     }
@@ -530,50 +544,10 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
     }
 
     // ------------------------------------------------------------------
-    // 命令处理器（在后台线程上跑；返回值会被序列化进 cmd.result.data）
+    // 定时上传（在后台线程上跑；不处理服务端指令）
     // ------------------------------------------------------------------
 
-    /// <summary>
-    ///     <c>reloadConfig</c>：让应用重新读一次 <c>settings.json</c>。
-    ///     <para>
-    ///         <b>绝不能在这里同步调 <c>Reload()</c></b>：重载会把配置对象整个换掉，
-    ///         连接参数随之变化，回执帧就可能在连接重建的过程中发不出去。
-    ///         所以先返回成功，等回执走完之后再延迟重载。
-    ///     </para>
-    /// </summary>
-    private Task<object?> HandleReloadConfigAsync(JsonObject args, CancellationToken cancellationToken)
-    {
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                await Task.Delay(200).ConfigureAwait(false);
-                if (_disposed)
-                    return;
-
-                _configHandler.Reload();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "集控指令触发的配置重载失败");
-            }
-        });
-
-        return Task.FromResult<object?>(new { reloaded = true });
-    }
-
-    /// <summary>
-    ///     <c>homework.read</c>：把当前作业板上的作业压成一份只读快照，作为回执数据回给网页控制台。
-    ///     <para>
-    ///         作业集合会随用户编辑在 UI 线程上变动，而处理器跑在后台线程——所以整份拷贝
-    ///         （<c>ToList</c>）必须在 UI 线程做完再交给纯逻辑的
-    ///         <see cref="ControlHomeworkSnapshot.Build" />，否则可能拿到半改的集合。
-    ///     </para>
-    ///     <para>
-    ///         这条命令只是「看」：不写作业、不改配置、不弹界面，所以也算不上需要注意的操作。
-    ///     </para>
-    /// </summary>
-    /// <summary>备份快照允许带的笔迹总预算（比 <c>homework.read</c> 大，但服务端仍限 256 KiB）。</summary>
+    /// <summary>同步快照允许带的笔迹总预算（服务端限 256 KiB）。</summary>
     private const int MaxTotalInkLengthForBackup = ControlHomeworkSnapshot.MaxTotalInkLength;
 
     /// <summary>
@@ -664,19 +638,8 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
         ScheduleUpload();
     }
 
-    private async Task<object?> HandleHomeworkReadAsync(JsonObject args, CancellationToken cancellationToken)
-    {
-        var now = DateTimeOffset.Now;
-
-        // homework.read 是「看一次」：只带当天，免得一次性回太多（WS 单帧 64 KiB）。
-        var built = await BuildSnapshotAsync(HomeworkReadInkBudget, days: 1, now)
-            .ConfigureAwait(false);
-
-        return built.Snapshot;
-    }
-
     // ------------------------------------------------------------------
-    // 作业自动备份：板子一变（防抖 8s）→ 传一份只读快照；连上补传一次；10 分钟兜底
+    // 作业自动同步：板子一变（防抖 8s）→ 传一份只读快照；连上补传一次；10 分钟兜底
     // ------------------------------------------------------------------
 
     /// <summary>订阅「板子变了」与「连上了」两个触发点；停服 / 释放前成对退订。</summary>
@@ -710,8 +673,13 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
     /// <summary>连上集控（或换班）后补传一次：断线期间攒下的变化不能等 10 分钟巡检。</summary>
     private void OnSnapshotChangedForUpload(object? sender, ControlNodeLinkState state)
     {
-        if (state.IsConnected)
-            ScheduleUpload();
+        if (!state.IsConnected)
+            return;
+
+        ScheduleUpload();
+
+        // 刚连上就拉一次老师布置的作业，不用等 15 秒那一轮。
+        _ = PollHomeworkAssignmentsAsync(_assignmentLoopCts.Token);
     }
 
     /// <summary>安排一次上传（防抖 8 秒）：连续的编辑只会传停手后的最后一次。</summary>
@@ -767,7 +735,7 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "作业自动备份的兜底巡检循环异常退出");
+            _logger.LogWarning(ex, "作业自动同步的兜底巡检循环异常退出");
         }
     }
 
@@ -783,13 +751,232 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
         }
     }
 
+    // ------------------------------------------------------------------
+    // 作业布置：连上集控后每 15 秒拉一次；拉到就在 UI 线程建便签、再回执
+    // ------------------------------------------------------------------
+
+    /// <summary>启动作业布置轮询（只跑一次；<see cref="ExecuteAsync" /> 里调）。</summary>
+    private void StartAssignmentLoop()
+    {
+        if (_disposed || _assignmentLoop is not null)
+            return;
+
+        _assignmentLoop = RunAssignmentPollLoopAsync(_assignmentLoopCts.Token);
+    }
+
+    private async Task RunAssignmentPollLoopAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await PollHomeworkAssignmentsAsync(cancellationToken).ConfigureAwait(false);
+
+            using var timer = new PeriodicTimer(HomeworkAssignmentPollInterval);
+            while (await timer.WaitForNextTickAsync(cancellationToken).ConfigureAwait(false))
+                await PollHomeworkAssignmentsAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            // 正常停服。
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "作业布置轮询循环异常退出");
+        }
+    }
+
+    private void CancelAssignmentLoop()
+    {
+        try
+        {
+            _assignmentLoopCts.Cancel();
+        }
+        catch (ObjectDisposedException)
+        {
+            // 已经取消过了。
+        }
+    }
+
+    /// <summary>现在能不能拉作业布置：集控开着、接入过、连接在线（断线 / 未配置 / 关掉都不拉）。</summary>
+    private bool CanPollHomeworkAssignments()
+    {
+        var config = _configHandler.Data.ControlCenter;
+        var credential = _credentials.Current;
+        return config.Enabled
+               && credential is { IsComplete: true }
+               && Snapshot.IsConnected;
+    }
+
+    /// <summary>
+    ///     拉一次待处理的老师布置。建便签必须在 UI 线程（作业集合只在 UI 线程变），
+    ///     回执在后台发；每条布置最多处理一次（<see cref="_processedAssignments" /> 兜底去重）。
+    /// </summary>
+    private async Task PollHomeworkAssignmentsAsync(CancellationToken cancellationToken)
+    {
+        if (_disposed || !CanPollHomeworkAssignments())
+            return;
+
+        try
+        {
+            await _assignmentGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        try
+        {
+            if (_disposed || !CanPollHomeworkAssignments())
+                return;
+
+            var config = _configHandler.Data.ControlCenter;
+            var credential = _credentials.Current;
+            if (credential is null)
+                return;
+
+            ControlHomeworkAssignmentPullResult result;
+            try
+            {
+                result = await GetUploadApi(config.ServerUrl)
+                    .PullHomeworkAssignmentsAsync(credential, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "拉取老师布置的作业失败");
+                return;
+            }
+
+            if (!result.Ok || result.Pull is null)
+            {
+                // 每 15 秒一次，同一个错误只记一次日志，免得刷屏。
+                var key = result.ErrorKey ?? ControlApiErrorKeys.Unknown;
+                if (!string.Equals(_lastLoggedAssignmentErrorKey, key, StringComparison.Ordinal))
+                {
+                    _lastLoggedAssignmentErrorKey = key;
+                    _logger.LogWarning("拉取老师布置的作业失败：{ErrorKey} {Message}", key, result.Message);
+                }
+
+                return;
+            }
+
+            _lastLoggedAssignmentErrorKey = null;
+
+            var pending = result.Pull.Items.Where(item => !_processedAssignments.Contains(item.Id)).ToList();
+            if (pending.Count == 0)
+                return;
+
+            var applied = await Dispatcher.UIThread
+                .InvokeAsync(() => ApplyHomeworkAssignments(pending))
+                .GetTask()
+                .ConfigureAwait(false);
+
+            // 处理过的 id 立刻记账：回执失败时下次拉回来也不会再建一份重复的作业。
+            foreach (var (assignment, _, _) in applied)
+                _processedAssignments.Add(assignment.Id);
+
+            var createdCount = applied.Count(item => item.Note is not null);
+            if (createdCount > 0)
+            {
+                _toastService.Show(
+                    string.Format(
+                        CultureInfo.CurrentCulture,
+                        Resources.Settings_Control_HomeworkAssignment_Synced,
+                        createdCount),
+                    ToastSeverity.Success);
+            }
+
+            foreach (var (assignment, note, error) in applied)
+            {
+                if (cancellationToken.IsCancellationRequested)
+                    return;
+
+                try
+                {
+                    var ack = note is null
+                        ? await GetUploadApi(config.ServerUrl)
+                            .AckHomeworkAssignmentAsync(credential, assignment.Id, false, null, error, cancellationToken)
+                            .ConfigureAwait(false)
+                        : await GetUploadApi(config.ServerUrl)
+                            .AckHomeworkAssignmentAsync(credential, assignment.Id, true, note.Id.ToString(), null,
+                                cancellationToken)
+                            .ConfigureAwait(false);
+
+                    if (!ack.Ok)
+                        _logger.LogDebug("回执作业布置失败：{Id} {ErrorKey} {Message}", assignment.Id, ack.ErrorKey, ack.Message);
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug(ex, "回执作业布置时出错：{Id}", assignment.Id);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "处理老师布置的作业时出错");
+        }
+        finally
+        {
+            _assignmentGate.Release();
+        }
+    }
+
+    /// <summary>
+    ///     在 UI 线程把一批布置变成作业板上的便签（只建、不改已有内容）。
+    ///     单条失败只记下原因（回执时作为 <c>applied:false</c> 的理由），不影响同批其它条。
+    /// </summary>
+    private (ControlHomeworkAssignment Assignment, Note? Note, string? Error)[] ApplyHomeworkAssignments(
+        IReadOnlyList<ControlHomeworkAssignment> assignments)
+    {
+        var results = new (ControlHomeworkAssignment Assignment, Note? Note, string? Error)[assignments.Count];
+        var uncategorized = Resources.Board_Uncategorized;
+
+        for (var i = 0; i < assignments.Count; i++)
+        {
+            var assignment = assignments[i];
+            try
+            {
+                var note = new Note
+                {
+                    Subject = string.IsNullOrWhiteSpace(assignment.Subject)
+                        ? uncategorized
+                        : assignment.Subject.Trim(),
+                    Section = string.IsNullOrWhiteSpace(assignment.Section) ? null : assignment.Section.Trim(),
+                    DueDate = assignment.ResolveDueDate(),
+                    CreatedAt = DateTimeOffset.Now,
+                    UpdatedAt = DateTimeOffset.Now
+                };
+
+                // 老师写的是纯文本：转义后再按行拆段，避免尖括号被富文本控件当成标签。
+                note.SetHtmlContent(ControlHomeworkAssignmentHtml.ToHtml(assignment.Content));
+                _boardService.Add(note);
+                results[i] = (assignment, note, null);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "把老师布置的作业落到作业板失败：{Id}", assignment.Id);
+                results[i] = (assignment, null, ex.Message);
+            }
+        }
+
+        return results;
+    }
+
     private bool HasClient()
     {
         lock (_clientGate)
             return _client is not null;
     }
 
-    /// <summary>取（或按当前站点地址换一个）作业备份用的 HTTP 客户端。</summary>
+    /// <summary>取（或按当前站点地址换一个）作业同步用的 HTTP 客户端。</summary>
     private ControlNodeEnrollmentApi GetUploadApi(string serverUrl)
     {
         lock (_uploadStateGate)
@@ -821,7 +1008,7 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
     ///     </para>
     ///     <para>
     ///         失败只记一次 warning、不弹 toast（后台行为，打断用户写作业更糟）；
-    ///         只有「接入之后一直没备份成功过」的那一段才弹一条普通级别提示。
+    ///         只有「接入之后一直没同步成功过」的那一段才弹一条普通级别提示。
     ///     </para>
     /// </summary>
     private async Task UploadHomeworkSnapshotAsync()
@@ -842,7 +1029,7 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
             if (_disposed)
                 return;
 
-            // 等闸门期间状态可能已经变了（刚断线 / 关掉了备份），进来后再判一次。
+            // 等闸门期间状态可能已经变了（刚断线 / 关掉了自动同步），进来后再判一次。
             var config = _configHandler.Data.ControlCenter;
             var credential = _credentials.Current;
             if (!ControlHomeworkBackup.ShouldUpload(config, credential, Snapshot, HasClient()))
@@ -917,7 +1104,7 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
         }
 
         if (log)
-            _logger.LogWarning("作业自动备份失败：{ErrorKey} {Message}", key, message);
+            _logger.LogWarning("作业自动同步失败：{ErrorKey} {Message}", key, message);
 
         RaiseHomeworkBackupChanged();
 
@@ -944,7 +1131,7 @@ public sealed class ControlCenterHostedService : BackgroundService, IAsyncDispos
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "作业备份状态订阅者抛出了异常");
+            _logger.LogWarning(ex, "作业同步状态订阅者抛出了异常");
         }
     }
 

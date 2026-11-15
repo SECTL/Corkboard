@@ -90,6 +90,42 @@ public sealed record ControlHomeworkUploadResult(
         new(false, null, null, errorKey, message, 0);
 }
 
+/// <summary>
+///     拉取老师布置的作业（<c>GET /control/api/device/homework-assignments</c>）的结果。
+/// </summary>
+/// <param name="Ok">是否拉到。</param>
+/// <param name="Pull">成功时的条目与 <c>classRequired</c>。</param>
+/// <param name="ErrorKey">失败时的本地化错误键。</param>
+/// <param name="Message">服务端给的人话。</param>
+public sealed record ControlHomeworkAssignmentPullResult(
+    bool Ok,
+    ControlHomeworkAssignmentPull? Pull,
+    string? ErrorKey,
+    string? Message)
+{
+    /// <summary>成功。</summary>
+    public static ControlHomeworkAssignmentPullResult Success(ControlHomeworkAssignmentPull pull) =>
+        new(true, pull, null, null);
+
+    /// <summary>失败。</summary>
+    public static ControlHomeworkAssignmentPullResult Failure(string errorKey, string? message = null) =>
+        new(false, null, errorKey, message);
+}
+
+/// <summary>一条作业布置的回执（<c>POST …/&lt;id&gt;/ack</c>）的结果。</summary>
+/// <param name="Ok">服务端是否收下。</param>
+/// <param name="ErrorKey">失败时的本地化错误键。</param>
+/// <param name="Message">服务端给的人话。</param>
+public sealed record ControlHomeworkAssignmentAckResult(bool Ok, string? ErrorKey, string? Message)
+{
+    /// <summary>成功。</summary>
+    public static ControlHomeworkAssignmentAckResult Success() => new(true, null, null);
+
+    /// <summary>失败。</summary>
+    public static ControlHomeworkAssignmentAckResult Failure(string errorKey, string? message = null) =>
+        new(false, errorKey, message);
+}
+
 /// <summary>接入失败的本地化键（下一波在 resx 里补中文；测试直接比常量）。</summary>
 public static class ControlEnrollErrorKeys
 {
@@ -405,7 +441,7 @@ public sealed class ControlNodeEnrollmentApi : IDisposable
             var error = root["error"] as JsonObject;
             var code = ReadString(error, "code") ?? ReadString(root, "code");
             var message = ReadString(error, "message") ?? ReadString(root, "message");
-            return ControlHomeworkUploadResult.Failure(MapHomeworkUploadErrorKey(code, statusCode), message);
+            return ControlHomeworkUploadResult.Failure(MapDeviceApiErrorKey(code, statusCode), message);
         }
 
         var data = root["data"] as JsonObject ?? root;
@@ -413,6 +449,105 @@ public sealed class ControlNodeEnrollmentApi : IDisposable
             ReadString(data, "snapshotId") ?? ReadString(data, "snapshot_id"),
             ReadDateTimeOffset(data, "receivedAt") ?? ReadDateTimeOffset(data, "received_at"),
             ControlJson.ReadInt32(data, "evicted"));
+    }
+
+    /// <summary>
+    ///     拉取老师布置、还没落到本机作业板上的作业
+    ///     （<c>GET /control/api/device/homework-assignments?deviceId=…&amp;secret=…</c>）。
+    ///     <para>
+    ///         ⚠️ 这个接口的凭证按服务端契约放在 **query** 里（与其它设备自助接口不同）。
+    ///         <c>content</c> 是纯文本，要经 <see cref="ControlHomeworkAssignmentHtml.ToHtml" /> 转富文本。
+    ///     </para>
+    /// </summary>
+    public async Task<ControlHomeworkAssignmentPullResult> PullHomeworkAssignmentsAsync(
+        ControlNodeCredential credential,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(credential);
+        if (!credential.IsComplete)
+            return ControlHomeworkAssignmentPullResult.Failure(ControlApiErrorKeys.NotEnrolled);
+
+        var path = ControlV4Protocol.DeviceHomeworkAssignmentsPath +
+                   "?deviceId=" + Uri.EscapeDataString(credential.DeviceId) +
+                   "&secret=" + Uri.EscapeDataString(credential.Secret);
+
+        var (responseOk, root, failureKey, statusCode) = await SendJsonAsync(
+            HttpMethod.Get,
+            _options.ResolveHttpEndpoint(path),
+            null,
+            ControlApiErrorKeys.Network,
+            ControlApiErrorKeys.InvalidResponse,
+            cancellationToken).ConfigureAwait(false);
+
+        if (root is null)
+            return ControlHomeworkAssignmentPullResult.Failure(failureKey ?? ControlApiErrorKeys.InvalidResponse);
+
+        if (!responseOk)
+        {
+            var error = root["error"] as JsonObject;
+            return ControlHomeworkAssignmentPullResult.Failure(
+                MapDeviceApiErrorKey(ReadString(error, "code") ?? ReadString(root, "code"), statusCode),
+                ReadString(error, "message") ?? ReadString(root, "message"));
+        }
+
+        var data = root["data"] as JsonObject ?? root;
+        var pull = ControlHomeworkAssignmentPull.TryParse(data);
+        return pull is null
+            ? ControlHomeworkAssignmentPullResult.Failure(ControlApiErrorKeys.InvalidResponse)
+            : ControlHomeworkAssignmentPullResult.Success(pull);
+    }
+
+    /// <summary>
+    ///     回执一条作业布置：<c>{applied:true,noteId}</c> 或 <c>{applied:false,reason}</c>
+    ///     （<c>POST /control/api/device/homework-assignments/&lt;id&gt;/ack</c>）。
+    ///     <para>服务端收下就不会再下发同一条；本地建完作业必须回执，否则下次还会拉回来。</para>
+    /// </summary>
+    public async Task<ControlHomeworkAssignmentAckResult> AckHomeworkAssignmentAsync(
+        ControlNodeCredential credential,
+        string assignmentId,
+        bool applied,
+        string? noteId,
+        string? reason,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(credential);
+        ArgumentException.ThrowIfNullOrWhiteSpace(assignmentId);
+
+        if (!credential.IsComplete)
+            return ControlHomeworkAssignmentAckResult.Failure(ControlApiErrorKeys.NotEnrolled);
+
+        var payload = new JsonObject
+        {
+            ["applied"] = applied
+        };
+        if (applied)
+            payload["noteId"] = string.IsNullOrWhiteSpace(noteId) ? null : noteId.Trim();
+        else
+            payload["reason"] = string.IsNullOrWhiteSpace(reason) ? "failed" : reason.Trim();
+
+        // 这一族设备接口按服务端契约把凭证放 query（与拉取那条同一写法）；body 只放回执本身。
+        var path = ControlV4Protocol.HomeworkAssignmentAckPath(assignmentId) +
+                   "?deviceId=" + Uri.EscapeDataString(credential.DeviceId) +
+                   "&secret=" + Uri.EscapeDataString(credential.Secret);
+
+        var (responseOk, root, failureKey, statusCode) = await SendJsonAsync(
+            HttpMethod.Post,
+            _options.ResolveHttpEndpoint(path),
+            payload,
+            ControlApiErrorKeys.Network,
+            ControlApiErrorKeys.InvalidResponse,
+            cancellationToken).ConfigureAwait(false);
+
+        if (root is null)
+            return ControlHomeworkAssignmentAckResult.Failure(failureKey ?? ControlApiErrorKeys.InvalidResponse);
+
+        if (responseOk)
+            return ControlHomeworkAssignmentAckResult.Success();
+
+        var error = root["error"] as JsonObject;
+        return ControlHomeworkAssignmentAckResult.Failure(
+            MapDeviceApiErrorKey(ReadString(error, "code") ?? ReadString(root, "code"), statusCode),
+            ReadString(error, "message") ?? ReadString(root, "message"));
     }
 
     /// <summary>释放自己建的 <see cref="HttpClient" />（注入进来的不归我管）。</summary>
@@ -430,15 +565,40 @@ public sealed class ControlNodeEnrollmentApi : IDisposable
         string invalidResponseKey,
         CancellationToken cancellationToken)
     {
+        var (responseOk, root, failureKey, _) = await SendJsonAsync(
+            HttpMethod.Post,
+            uri,
+            payload,
+            networkErrorKey,
+            invalidResponseKey,
+            cancellationToken).ConfigureAwait(false);
+        return (responseOk, root, failureKey);
+    }
+
+    /// <summary>
+    ///     发一个 JSON 请求（GET 时 <paramref name="payload" /> 传 <c>null</c>）。
+    ///     返回 HTTP 成功与否、解析出的根对象、失败时的本地化键与状态码。
+    /// </summary>
+    private async Task<(bool ResponseOk, JsonObject? Root, string? FailureKey, HttpStatusCode StatusCode)>
+        SendJsonAsync(
+            HttpMethod method,
+            Uri uri,
+            JsonObject? payload,
+            string networkErrorKey,
+            string invalidResponseKey,
+            CancellationToken cancellationToken)
+    {
         string text;
         HttpStatusCode statusCode;
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Post, uri)
+            using var request = new HttpRequestMessage(method, uri);
+            if (payload is not null)
             {
-                Content = new StringContent(payload.ToJsonString(ControlV4Protocol.JsonOptions),
-                    Encoding.UTF8, "application/json")
-            };
+                request.Content = new StringContent(payload.ToJsonString(ControlV4Protocol.JsonOptions),
+                    Encoding.UTF8, "application/json");
+            }
+
             using var response = await _http.SendAsync(request, cancellationToken).ConfigureAwait(false);
             statusCode = response.StatusCode;
             text = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
@@ -446,11 +606,11 @@ public sealed class ControlNodeEnrollmentApi : IDisposable
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
             // HttpClient.Timeout 到点也抛 OperationCanceledException（没带取消令牌），按网络失败处理。
-            return (false, null, networkErrorKey);
+            return (false, null, networkErrorKey, HttpStatusCode.RequestTimeout);
         }
         catch (HttpRequestException)
         {
-            return (false, null, networkErrorKey);
+            return (false, null, networkErrorKey, HttpStatusCode.ServiceUnavailable);
         }
 
         JsonObject? root;
@@ -464,10 +624,10 @@ public sealed class ControlNodeEnrollmentApi : IDisposable
         }
 
         if (root is null)
-            return (false, null, invalidResponseKey);
+            return (false, null, invalidResponseKey, statusCode);
 
         var ok = ReadBool(root, "ok") ?? IsSuccessStatusCode(statusCode);
-        return (ok, root, null);
+        return (ok, root, null, statusCode);
     }
 
     private static bool IsSuccessStatusCode(HttpStatusCode statusCode) =>
@@ -501,7 +661,7 @@ public sealed class ControlNodeEnrollmentApi : IDisposable
         _ => ControlEnrollErrorKeys.Unknown
     };
 
-    private static string MapHomeworkUploadErrorKey(string? code, HttpStatusCode statusCode) => code switch
+    private static string MapDeviceApiErrorKey(string? code, HttpStatusCode statusCode) => code switch
     {
         "bad_request" or "invalid_request" => ControlApiErrorKeys.BadRequest,
         "payload_too_large" or "too_large" => ControlApiErrorKeys.PayloadTooLarge,
