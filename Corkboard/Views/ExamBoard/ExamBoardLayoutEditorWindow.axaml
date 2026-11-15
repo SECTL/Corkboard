@@ -65,7 +65,7 @@
                     IsVisible="{Binding HasSelection}">
                 <ScrollViewer HorizontalScrollBarVisibility="Disabled">
                     <StackPanel Spacing="10">
-                        <Grid ColumnDefinitions="Auto,*,32">
+                        <Grid x:Name="InspectorHeader" ColumnDefinitions="Auto,*,32">
                             <Border x:Name="InspectorDragHandle"
                                     Grid.Column="0"
                                     Width="24"
@@ -73,13 +73,9 @@
                                     Margin="0,0,6,0"
                                     Background="Transparent"
                                     Cursor="SizeAll"
-                                    ToolTip.Tip="{x:Static core:Resources.Settings_Exam_Layout_DragPanel}"
-                                    PointerPressed="OnInspectorDragPressed"
-                                    PointerMoved="OnInspectorDragMoved"
-                                    PointerReleased="OnInspectorDragReleased"
-                                    PointerCaptureLost="OnInspectorDragCaptureLost">
+                                    ToolTip.Tip="{x:Static core:Resources.Settings_Exam_Layout_DragPanel}">
                                 <TextBlock Text="{x:Static icons:FluentIcons.ReOrderDotsVerticalFilled}"
-                                           FontFamily="FluentSystemIconsResizeable"
+                                           FontFamily="{DynamicResource FluentSystemIconsResizeable}"
                                            FontSize="16"
                                            HorizontalAlignment="Center"
                                            VerticalAlignment="Center"

@@ -334,8 +334,22 @@
   内容用 `ExamBoardSampleContentSource`（固定 2026-06-07 三场示例考试）+ `ExamBoardPreviewTimeSource`
   （切状态直接把假时钟拨到对应时刻，状态仍由 `ExamStatusPolicy` 算）。**点画布上的区块才出现属性面板**
   （点空白或 × 收起，组件下拉会同步到刚点中的区块，也可用它切到被「看板显示」隐藏的区块）；
-  面板**浮在选中区块旁边**（放不下就翻到左侧，顶部那颗拖动手柄可以挪开），改选中组件的
+  面板**浮在选中区块旁边**（放不下就翻到左侧，夹在窗口内；**高度封顶 700**——`MaxPanelHeight`，
+  多出来的属性交给面板自己的滚动条，封顶前它会长到「窗口高 − 96」，几乎占满整屏、上下就没得挪了），
+  **整块面板都能按住拖走**
+  ——头部那颗拖动柄只是提示，不用非得按它：拖动处理器挂在面板自己身上
+  （`AddHandler(..., RoutingStrategies.Bubble, handledEventsToo: true)`，捕获也打到面板上），
+  只有下拉框/按钮/数值框/滑块留着自己的指针行为；触摸与笔没有「左键按下」状态，按下即拖，
+  但触摸时只认头部那一行，否则会把面板内容的触屏滚动抢走。改选中组件的
   百分比/对齐/缩放/透明度，并列出这个组件用到的字号滑块。
+  ⚠️ **点头部那颗拖动柄之前，图标必须走 `{DynamicResource FluentSystemIconsResizeable}`**：
+  写成字面量 `FontFamily="FluentSystemIconsResizeable"` 解析不到字体键，静默回退到 MiSans，
+  那颗 `ReOrderDotsVerticalFilled` 就画成一个豆腐块（用户报过「左上角图标显示有问题」）。
+  ⚠️ **点区块认的是面板直接托管的包装 `ContentControl`**（判据 `Children.Contains(visual)`）：
+  `UserControl` 自己也是 `ContentControl`，从被点中的区块往上找第一个 `ContentControl`，命中的是
+  区块本身，而它的 `Component` 附加属性从没设过、读出来是默认的 `Title`——表现就是
+  「点哪个区块，组件下拉都跳回标题」。`ExamBoardView.TryGetComponentBounds` 一直用的是
+  `LayoutPanel.Children.OfType<ContentControl>()`，两处必须同一个口径。
   缩放锚点按区块所在半区朝屏幕内侧（左上角的往右下长），别用中心锚点把边缘区块顶出屏幕。
   **编辑期间只改内存草稿**，点「完成」才原子写回，点「取消」丢弃。编辑窗同样要注入主题资源字典，
   否则看到的不是放映时的颜色。

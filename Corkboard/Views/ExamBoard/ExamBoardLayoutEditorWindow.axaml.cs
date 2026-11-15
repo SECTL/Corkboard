@@ -21,6 +21,9 @@ namespace Corkboard.Views.ExamBoard;
 /// </summary>
 public partial class ExamBoardLayoutEditorWindow : Window
 {
+    /// <summary>属性面板的高度上限（与 XAML 的 MaxHeight 一致）。</summary>
+    private const double MaxPanelHeight = 700;
+
     private readonly ExamBoardThemeService _theme;
     private readonly ResourceDictionary _themeDictionary;
 
@@ -45,6 +48,19 @@ public partial class ExamBoardLayoutEditorWindow : Window
         AddHandler(PointerPressedEvent, OnWindowPointerPressed, RoutingStrategies.Tunnel, handledEventsToo: true);
         AddHandler(PointerReleasedEvent, OnWindowPointerReleased, RoutingStrategies.Bubble, handledEventsToo: true);
         AddHandler(RangeBase.ValueChangedEvent, OnFontSliderValueChanged, RoutingStrategies.Bubble, handledEventsToo: true);
+
+        // 属性面板整块都可以按住拖走（只有下拉框、按钮、数值框、滑块留着自己的指针行为）。
+        // 拖动处理器必须挂在宿主自己身上：拖动期间事件只从捕获元素往上冒泡，
+        // 挂在手柄那种子元素上，面板别处按下去一个事件都收不到。
+        Inspector.AddHandler(PointerPressedEvent, OnInspectorDragPressed, RoutingStrategies.Bubble,
+            handledEventsToo: true);
+        Inspector.AddHandler(PointerMovedEvent, OnInspectorDragMoved, RoutingStrategies.Bubble,
+            handledEventsToo: true);
+        Inspector.AddHandler(PointerReleasedEvent, OnInspectorDragReleased, RoutingStrategies.Bubble,
+            handledEventsToo: true);
+        Inspector.AddHandler(PointerCaptureLostEvent, OnInspectorDragCaptureLost,
+            RoutingStrategies.Direct | RoutingStrategies.Bubble | RoutingStrategies.Tunnel,
+            handledEventsToo: true);
 
         SizeChanged += (_, _) => PositionInspector();
 
@@ -117,7 +133,9 @@ public partial class ExamBoardLayoutEditorWindow : Window
             return;
         }
 
-        Inspector.MaxHeight = Math.Max(240, Bounds.Height - 96);
+        // 面板高度封顶（XAML 里也是 700）：铺满整屏高的话上下根本挪不动，
+        // 属性多出来的部分交给面板自己的 ScrollViewer。
+        Inspector.MaxHeight = Math.Clamp(Bounds.Height - 96, 240, MaxPanelHeight);
         Inspector.Measure(new Size(Inspector.Width, Inspector.MaxHeight));
 
         var panelWidth = Inspector.Width;
@@ -161,7 +179,21 @@ public partial class ExamBoardLayoutEditorWindow : Window
 
     private void OnInspectorDragPressed(object? sender, PointerPressedEventArgs e)
     {
-        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        // 鼠标只认左键；触摸与笔没有「左键按下」这个状态，按下就开始拖。
+        if (e.Pointer.Type == PointerType.Mouse
+            && !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        {
+            return;
+        }
+
+        // 下拉框、按钮、数值框、滑块要留着自己的指针行为，按在它们身上不算拖面板。
+        if (IsInteractiveSource(e.Source as Visual))
+        {
+            return;
+        }
+
+        // 面板内容是 ScrollViewer，触摸时整块拖动会把触屏滚动抢走，所以只让头部当拖动面。
+        if (e.Pointer.Type != PointerType.Mouse && !IsWithinHeader(e.Source as Visual))
         {
             return;
         }
@@ -180,7 +212,8 @@ public partial class ExamBoardLayoutEditorWindow : Window
             _panelStartTop = 0;
         }
 
-        e.Pointer.Capture(InspectorDragHandle);
+        // 捕获打到面板自己身上，移动/松手事件才会一路冒到上面那几个处理器。
+        e.Pointer.Capture(Inspector);
         e.Handled = true;
     }
 
@@ -240,6 +273,37 @@ public partial class ExamBoardLayoutEditorWindow : Window
         for (var visual = source; visual is not null; visual = visual.GetVisualParent())
         {
             if (visual is Slider)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>按下点是否落在面板里的交互控件上（这些控件不参与拖动面板）。</summary>
+    private bool IsInteractiveSource(Visual? source)
+    {
+        for (var visual = source; visual is not null && visual != Inspector;
+             visual = visual.GetVisualParent())
+        {
+            if (visual is Button or ComboBox or NumericUpDown or Slider or TextBox or ScrollBar
+                or ToggleSwitch)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>按下点是否落在面板头部（拖动柄、组件下拉、关闭钮那一行）。</summary>
+    private bool IsWithinHeader(Visual? source)
+    {
+        for (var visual = source; visual is not null && visual != Inspector;
+             visual = visual.GetVisualParent())
+        {
+            if (visual == InspectorHeader)
             {
                 return true;
             }

@@ -77,7 +77,10 @@ public class ExamBoardLayoutPanel : Panel
         for (var visual = e.Source as Visual; visual is not null && visual != this;
              visual = visual.GetVisualParent())
         {
-            if (visual is ContentControl content)
+            // ⚠️ 只认面板直接托管的那个包装 ContentControl：UserControl 自己也是 ContentControl，
+            // 从被点中的区块往上第一个命中的往往是区块本身，它的 Component 附加属性没设过、
+            // 读出来是默认的 Title——表现就是「点哪个区块，下拉框都跳回标题」。
+            if (visual is ContentControl content && Children.Contains(content))
             {
                 ComponentPressed?.Invoke(this, GetComponent(content));
                 return;
